@@ -18,12 +18,11 @@ package io.netty.channel.local;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -40,7 +39,7 @@ public class LocalTransportThreadModelTest2 {
 
     @Test
     @Timeout(value = 15000, unit = TimeUnit.MILLISECONDS)
-    public void testSocketReuse() throws InterruptedException {
+    public void testSocketReuse() throws Exception {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
@@ -59,7 +58,7 @@ public class LocalTransportThreadModelTest2 {
 
         int count = 100;
         for (int i = 1; i < count + 1; i ++) {
-            Channel ch = clientBootstrap.connect().sync().channel();
+            Channel ch = clientBootstrap.connect().get();
 
             // SPIN until we get what we are looking for.
             int target = i * messageCountPerRun;
@@ -98,16 +97,20 @@ public class LocalTransportThreadModelTest2 {
         localChannel.closeFuture().awaitUninterruptibly();
     }
 
-    @Sharable
-    static class LocalHandler extends ChannelInboundHandlerAdapter {
+    static class LocalHandler implements ChannelInboundHandler {
         private final String name;
 
-        public volatile ChannelFuture lastWriteFuture;
+        public volatile Future<Void> lastWriteFuture;
 
         public final AtomicInteger count = new AtomicInteger(0);
 
         LocalHandler(String name) {
             this.name = name;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

@@ -24,11 +24,12 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.codec.quic.QuicChannel;
@@ -52,7 +53,7 @@ public final class QuicClientZeroRTTExample {
                 applicationProtocols("http/0.9").earlyData(true).build();
 
         newChannelAndSendData(context, null);
-        newChannelAndSendData(context, new ChannelInboundHandlerAdapter() {
+        newChannelAndSendData(context, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslEarlyDataReadyEvent) {
@@ -64,7 +65,7 @@ public final class QuicClientZeroRTTExample {
                         }
                     });
                 }
-                super.userEventTriggered(ctx, evt);
+                ctx.fireUserEventTriggered(evt);
             }
         });
     }
@@ -85,10 +86,10 @@ public final class QuicClientZeroRTTExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             QuicChannelBootstrap quicChannelBootstrap = QuicChannel.newBootstrap(channel)
-                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                    .streamHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             // As we did not allow any remote initiated streams we will never see this method called.
@@ -107,10 +108,10 @@ public final class QuicClientZeroRTTExample {
                     .connect()
                     .get();
 
-            QuicStreamChannel streamChannel = createStream(quicChannel).sync().getNow();
+            QuicStreamChannel streamChannel = createStream(quicChannel).get();
             // Write the data and send the FIN. After this its not possible anymore to write any more data.
             streamChannel.writeAndFlush(Unpooled.copiedBuffer("Bye\r\n", CharsetUtil.US_ASCII))
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    .addListener(f -> streamChannel.shutdown(ChannelShutdownType.newOutbound()));
             streamChannel.closeFuture().sync();
             quicChannel.closeFuture().sync();
             channel.close().sync();
@@ -121,7 +122,7 @@ public final class QuicClientZeroRTTExample {
 
     static Future<QuicStreamChannel> createStream(QuicChannel quicChannel) {
         return quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         ByteBuf byteBuf = (ByteBuf) msg;
@@ -130,8 +131,8 @@ public final class QuicClientZeroRTTExample {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             // Close the connection once the remote peer did send the FIN for this stream.
                             ((QuicChannel) ctx.channel().parent()).close(true, 0,
                                     ctx.alloc().directBuffer(16)

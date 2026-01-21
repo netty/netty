@@ -16,10 +16,9 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
 
@@ -35,7 +34,7 @@ import java.net.SocketAddress;
  * flexibility to respond to rejected (denied) connections. If you do not want to send a response, just have it return
  * null.  Take a look at {@link RuleBasedIpFilter} for details.
  */
-public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> extends ChannelInboundHandlerAdapter {
+public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> implements ChannelInboundHandler {
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
@@ -68,9 +67,9 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> exten
         if (accept(ctx, remoteAddress)) {
             channelAccepted(ctx, remoteAddress);
         } else {
-            ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
+            Future<Void> rejectedFuture = channelRejected(ctx, remoteAddress);
             if (rejectedFuture != null) {
-                rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+                rejectedFuture.addListener(f -> ctx.close());
             } else {
                 ctx.close();
             }
@@ -99,11 +98,11 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> exten
      * {@link #accept(ChannelHandlerContext, SocketAddress)}.  You should override it if you would like to handle
      * (e.g. respond to) rejected addresses.
      *
-     * @return A {@link ChannelFuture} if you perform I/O operations, so that
+     * @return A {@link Future} if you perform I/O operations, so that
      *         the {@link Channel} can be closed once it completes. Null otherwise.
      */
     @SuppressWarnings("UnusedParameters")
-    protected ChannelFuture channelRejected(ChannelHandlerContext ctx, T remoteAddress) {
+    protected Future<Void> channelRejected(ChannelHandlerContext ctx, T remoteAddress) {
         return null;
     }
 }

@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageCodec;
@@ -56,7 +55,6 @@ import java.util.List;
  * For simplicity, it converts to chunked encoding unless the entire stream
  * is a single header.
  */
-@Sharable
 public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Http2StreamFrame, HttpObject> {
 
     private static final AttributeKey<HttpScheme> SCHEME_ATTR_KEY =
@@ -74,6 +72,11 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer) {
         this(isServer, true);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

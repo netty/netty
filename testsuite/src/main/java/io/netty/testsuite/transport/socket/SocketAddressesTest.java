@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -63,23 +63,23 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
         try {
             final Promise<SocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             final Promise<SocketAddress> remoteAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+            serverChannel = sb.childHandler(new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     localAddressPromise.setSuccess(ctx.channel().localAddress());
                     remoteAddressPromise.setSuccess(ctx.channel().remoteAddress());
                 }
-            }).bind().syncUninterruptibly().channel();
+            }).bind().get();
 
-            clientChannel = cb.handler(new ChannelInboundHandlerAdapter()).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().get();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
 
             if (withLocalAddress) {
-                clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).syncUninterruptibly().channel();
+                clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).get();
             } else {
-                clientChannel.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+                clientChannel.connect(serverChannel.localAddress()).get();
             }
 
             assertAddress(clientChannel.localAddress());

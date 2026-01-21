@@ -22,11 +22,10 @@ import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,10 +109,10 @@ public class Http2FrameRoundtripTest {
                 return Unpooled.buffer((Integer) in.getArguments()[0]);
             }
         }).when(alloc).buffer(anyInt());
-        doAnswer(new Answer<ChannelPromise>() {
+        doAnswer(new Answer<>() {
             @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
+            public Promise<Void> answer(InvocationOnMock invocation) throws Throwable {
+                return ImmediateEventExecutor.INSTANCE.newPromise();
             }
         }).when(ctx).newPromise();
 
@@ -447,7 +446,7 @@ public class Http2FrameRoundtripTest {
 
     private ByteBuf captureWrites() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx, atLeastOnce()).write(captor.capture(), isA(ChannelPromise.class));
+        verify(ctx, atLeastOnce()).write(captor.capture(), isA(Promise.class));
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());

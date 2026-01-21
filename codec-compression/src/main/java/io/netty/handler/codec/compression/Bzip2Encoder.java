@@ -16,13 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
@@ -170,44 +169,45 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Close this {@link Bzip2Encoder} and so finish the encoding.
      *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
+     * The returned {@link Future} will be notified once the operation completes.
      */
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
+    public Future<Void> close() {
+        Promise<Void> promise = ctx().newPromise();
+        close(promise);
+        return promise;
     }
 
     /**
      * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
+     * The given {@link Future} will be notified once the operation
      * completes and will also be returned.
      */
-    public ChannelFuture close(final ChannelPromise promise) {
+    public void close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
-                    PromiseNotifier.cascade(f, promise);
+                    finishEncode(ctx(), promise);
                 }
             });
-            return promise;
         }
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+        Promise<Void> p = ctx().newPromise();
+        finishEncode(ctx, p);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            promise.setSuccess(null);
+            return;
         }
         finished = true;
 
@@ -224,7 +224,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         } finally {
             blockCompressor = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
     }
 
     private ChannelHandlerContext ctx() {

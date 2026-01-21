@@ -77,7 +77,7 @@ public final class SpdyServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new SpdyServerInitializer(sslCtx));
 
-            Channel ch = b.bind(PORT).sync().channel();
+            Channel ch = b.bind(PORT).get();
 
             System.err.println("Open your SPDY-enabled web browser and navigate to https://127.0.0.1:" + PORT + '/');
             System.err.println("If using Chrome browser, check your SPDY sessions at chrome://net-internals/#spdy");

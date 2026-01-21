@@ -47,7 +47,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link EventLoop} to also do other work. Care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
-public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
+
+public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
+    private static final Runnable WAKEUP_TASK = () -> {
+        // NOOP
+    };
     private static final int ST_STARTED = 0;
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
@@ -143,8 +147,16 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         state = new AtomicInteger(ST_STARTED);
     }
 
+    /**
+     * This allows to specify additional blocking conditions which will be used by the {@link IoHandler} to decide
+     * whether it is allowed to block or not.
+     */
+    protected boolean canBlock() {
+        return true;
+    }
+
     @Override
-    public Ticker ticker() {
+    public final Ticker ticker() {
         return ticker;
     }
 
@@ -154,7 +166,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *
      * @param timeoutNanos the maximum time in nanoseconds to run tasks.
      */
-    public int runNonBlockingTasks(long timeoutNanos) {
+    public final int runNonBlockingTasks(long timeoutNanos) {
         return runAllTasks(timeoutNanos, true);
     }
 
@@ -266,7 +278,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @return the number of IO and tasks executed.
      * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
      */
-    public int runNow(long runAllTasksTimeoutNanos) {
+    public final int runNow(long runAllTasksTimeoutNanos) {
         checkCurrentThread();
         return run(nonBlockingContext, runAllTasksTimeoutNanos);
     }
@@ -280,7 +292,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *
      * @return the number of IO and tasks executed.
      */
-    public int runNow() {
+    public final int runNow() {
         checkCurrentThread();
         return run(nonBlockingContext, 0);
     }
@@ -299,7 +311,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
-    public int run(long waitNanos, long runAllTasksTimeoutNanos) {
+    public final int run(long waitNanos, long runAllTasksTimeoutNanos) {
         checkCurrentThread();
 
         final IoHandlerContext context;
@@ -324,7 +336,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
-    public int run(long waitNanos) {
+    public final int run(long waitNanos) {
         return run(waitNanos, 0);
     }
 
@@ -337,7 +349,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     /**
      * Force a wakeup and so the {@link #run(long)} method will unblock and return even if there was nothing to do.
      */
-    public void wakeup() {
+    public final void wakeup() {
         if (isShuttingDown()) {
             return;
         }
@@ -345,7 +357,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public ManualIoEventLoop next() {
+    public final ManualIoEventLoop next() {
         return this;
     }
 
@@ -355,7 +367,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public Future<IoRegistration> register(final IoHandle handle) {
+    public final Future<IoRegistration> register(final IoHandle handle) {
         Promise<IoRegistration> promise = newPromise();
         if (inEventLoop()) {
             registerForIo0(handle, promise);
@@ -379,17 +391,17 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+    public final boolean isCompatible(Class<? extends IoHandle> handleType) {
         return handler.isCompatible(handleType);
     }
 
     @Override
-    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+    public final boolean isIoType(Class<? extends IoHandler> handlerType) {
         return handler.getClass().equals(handlerType);
     }
 
     @Override
-    public boolean inEventLoop(Thread thread) {
+    public final boolean inEventLoop(Thread thread) {
         return this.owningThread.get() == thread;
     }
 
@@ -399,7 +411,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *
      * @param owningThread The owning thread
      */
-    public void setOwningThread(Thread owningThread) {
+    public final void setOwningThread(Thread owningThread) {
         Objects.requireNonNull(owningThread, "owningThread");
         if (!this.owningThread.compareAndSet(null, owningThread)) {
             throw new IllegalStateException("Owning thread already set");
@@ -438,12 +450,14 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
 
         if (wakeup) {
+            // same as AbstractScheduledEventExecutor.WAKEUP_TASK
+            taskQueue.offer(WAKEUP_TASK);
             handler.wakeup();
         }
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         ObjectUtil.checkPositiveOrZero(quietPeriod, "quietPeriod");
         if (timeout < quietPeriod) {
             throw new IllegalArgumentException(
@@ -457,37 +471,37 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     @Deprecated
-    public void shutdown() {
+    public final void shutdown() {
         shutdown0(-1, -1, ST_SHUTDOWN);
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public final Future<?> terminationFuture() {
         return terminationFuture;
     }
 
     @Override
-    public boolean isShuttingDown() {
+    public final boolean isShuttingDown() {
         return state.get() >= ST_SHUTTING_DOWN;
     }
 
     @Override
-    public boolean isShutdown() {
+    public final boolean isShutdown() {
         return state.get() >= ST_SHUTDOWN;
     }
 
     @Override
-    public boolean isTerminated() {
+    public final boolean isTerminated() {
         return state.get() == ST_TERMINATED;
     }
 
     @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+    public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         return terminationFuture.await(timeout, unit);
     }
 
     @Override
-    public void execute(Runnable command) {
+    public final void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
         boolean inEventLoop = inEventLoop();
         if (inEventLoop) {
@@ -572,14 +586,15 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException, ExecutionException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
         return super.invokeAny(tasks);
     }
 
     @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
@@ -587,7 +602,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+    public final <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
             throws InterruptedException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
@@ -595,7 +610,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
+    public final <T> List<java.util.concurrent.Future<T>> invokeAll(
             Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
@@ -609,13 +624,14 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     }
 
-    private final class BlockingIoHandlerContext implements IoHandlerContext {
+    private class BlockingIoHandlerContext implements IoHandlerContext {
+        // this is a positive amount of nanos or Long.MAX_VALUE for no limit
         long maxBlockingNanos = Long.MAX_VALUE;
 
         @Override
         public boolean canBlock() {
             assert inEventLoop();
-            return !hasTasks() && !hasScheduledTasks();
+            return !hasTasks() && !hasScheduledTasks() && ManualIoEventLoop.this.canBlock();
         }
 
         @Override
@@ -628,11 +644,16 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         public long deadlineNanos() {
             assert inEventLoop();
             long next = nextScheduledTaskDeadlineNanos();
-            long maxDeadlineNanos = ticker.nanoTime() + maxBlockingNanos;
-            if (next == -1) {
-                return maxDeadlineNanos;
+            if (maxBlockingNanos == Long.MAX_VALUE) {
+                // next == -1? -1 : next i.e. return next
+                return next;
             }
-            return Math.min(next, maxDeadlineNanos);
+            long now = ticker.nanoTime();
+            // we cannot just check Math.min as nanoTime can be negative or wrap around!
+            if (next == -1 || next - now > maxBlockingNanos) {
+                return now + maxBlockingNanos;
+            }
+            return next;
         }
-    };
+    }
 }

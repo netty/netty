@@ -133,7 +133,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                 }
             });
 
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
 
             final int numBuffers = 16;
             final int segmentSize = 512;
@@ -153,7 +153,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                         latch.countDown();
                     }
                 }
-            }).bind(newSocketAddress()).sync().channel();
+            }).bind(newSocketAddress()).get();
 
             if (sc instanceof EpollDatagramChannel) {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));

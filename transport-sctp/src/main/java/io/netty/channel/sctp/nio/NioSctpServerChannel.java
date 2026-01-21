@@ -17,28 +17,36 @@ package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
-import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
-import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.channel.nio.NioIoOps;
+import io.netty.channel.sctp.SctpChannelOption;
+import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * {@link io.netty.channel.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
@@ -49,7 +57,6 @@ import java.util.Set;
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private static SctpServerChannel newSocket() {
         try {
@@ -60,26 +67,26 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         }
     }
 
-    private final SctpServerChannelConfig config;
+    private final NioSctpServerChannelConfig config;
     private final EventLoopGroup childEventLoopGroup;
     /**
      * Create a new instance
      */
     public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(eventLoop, null, newSocket(), NioIoOps.ACCEPT, false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioSctpServerChannelConfig(this, javaChannel());
     }
 
     @Override
-    public EventLoopGroup childEventExecutorGroup() {
-        return childEventLoopGroup;
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -97,7 +104,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public SctpServerChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -135,13 +142,25 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getBacklog());
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            javaChannel().bind(localAddress, config.getBacklog());
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
+    protected void doClose(Promise<Void> promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
@@ -155,16 +174,11 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public ChannelFuture bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public void bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }
@@ -176,20 +190,14 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 }
             });
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture unbindAddress(InetAddress localAddress) {
-        return unbindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public void unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }
@@ -201,7 +209,6 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 }
             });
         }
-        return promise;
     }
 
     // Unnecessary stuff
@@ -222,8 +229,8 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect(Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -236,9 +243,116 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
-    private final class NioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
+    private final class NioSctpServerChannelConfig extends DefaultChannelConfig {
+
+        private final SctpServerChannel javaChannel;
+        private volatile int backlog = NetUtil.SOMAXCONN;
+
         private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
-            super(channel, javaChannel);
+            super(channel, new ServerChannelRecvByteBufAllocator());
+            this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
+        }
+
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            return getOptions(
+                    super.getOptions(),
+                    ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.SO_BACKLOG,
+                    SctpChannelOption.SCTP_INIT_MAXSTREAMS);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == ChannelOption.SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == ChannelOption.SO_SNDBUF) {
+                return (T) Integer.valueOf(getSendBufferSize());
+            }
+            if (option == ChannelOption.SO_BACKLOG) {
+                return (T) Integer.valueOf(getBacklog());
+            }
+            if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
+                return (T) getInitMaxStreams();
+            }
+            return super.getOption(option);
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            validate(option, value);
+
+            if (option == ChannelOption.SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == ChannelOption.SO_SNDBUF) {
+                setSendBufferSize((Integer) value);
+            } else if (option == SctpChannelOption.SO_BACKLOG) {
+                setBacklog((Integer) value);
+            } else if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
+                setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
+            } else {
+                return super.setOption(option, value);
+            }
+
+            return true;
+        }
+
+        private int getSendBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_SNDBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        private void setSendBufferSize(int sendBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_SNDBUF, sendBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        private int getReceiveBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_RCVBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        private void setReceiveBufferSize(int receiveBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        SctpStandardSocketOptions.InitMaxStreams getInitMaxStreams() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        private void setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        int getBacklog() {
+            return backlog;
+        }
+
+        private void setBacklog(int backlog) {
+            checkPositiveOrZero(backlog, "backlog");
+            this.backlog = backlog;
         }
 
         @Override

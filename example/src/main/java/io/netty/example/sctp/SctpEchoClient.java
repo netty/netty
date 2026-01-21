@@ -16,7 +16,7 @@
 package io.netty.example.sctp;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -24,6 +24,7 @@ import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.channel.sctp.nio.NioSctpChannel;
+import io.netty.util.concurrent.Future;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -57,10 +58,10 @@ public final class SctpEchoClient {
              });
 
             // Start the client.
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            Future<Channel> f = b.connect(HOST, PORT).sync();
 
             // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
             group.shutdownGracefully();

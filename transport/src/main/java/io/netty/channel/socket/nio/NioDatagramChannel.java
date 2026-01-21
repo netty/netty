@@ -16,27 +16,22 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
@@ -54,7 +49,6 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
@@ -77,24 +71,19 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
 /**
  * An NIO datagram {@link Channel} that sends and receives an
- * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
+ * {@link DatagramPacket}.
  *
- * @see AddressedEnvelope
  * @see DatagramPacket
  */
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
-            StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    private final DatagramChannelConfig config;
+    private final NioDatagramChannelConfig config;
 
     private Map<InetAddress, List<MembershipKey>> memberships;
 
@@ -163,17 +152,12 @@ public final class NioDatagramChannel
      * @param channel       the underlying {@link DatagramChannel}.
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel channel) {
-        super(eventLoop, null, channel, SelectionKey.OP_READ);
+        super(eventLoop, null, channel, NioIoOps.READ, true);
         config = new NioDatagramChannelConfig(this, channel);
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
-    public DatagramChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -184,6 +168,11 @@ public final class NioDatagramChannel
         return ch.isOpen() && (
                 config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                 || localAddress0() != null);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -215,8 +204,14 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            doBind0(localAddress);
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
@@ -237,7 +232,7 @@ public final class NioDatagramChannel
             return true;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }
@@ -248,20 +243,32 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        javaChannel().disconnect();
+    protected void doDisconnect(Promise<Void> promise) {
+        try {
+            javaChannel().disconnect();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
+    protected void doClose(Promise<Void> promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        DatagramChannelConfig config = config();
-        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        ChannelConfig config = config();
+        RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
 
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         allocHandle.attemptedBytesRead(data.writableBytes());
@@ -293,11 +300,10 @@ public final class NioDatagramChannel
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         final SocketAddress remoteAddress;
         final ByteBuf data;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, SocketAddress> envelope = (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
-            remoteAddress = envelope.recipient();
-            data = envelope.content();
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            remoteAddress = packet.recipient();
+            data = packet.content();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -319,9 +325,9 @@ public final class NioDatagramChannel
         return writtenBytes > 0;
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
             throw new UnresolvedAddressException();
         }
     }
@@ -330,7 +336,7 @@ public final class NioDatagramChannel
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket p = (DatagramPacket) msg;
-            checkUnresolved(p);
+            checkUnresolved(p.recipient());
             ByteBuf content = p.content();
             if (isSingleDirectBuffer(content)) {
                 return p;
@@ -344,19 +350,6 @@ public final class NioDatagramChannel
                 return buf;
             }
             return newDirectBuffer(buf);
-        }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
-            if (e.content() instanceof ByteBuf) {
-                ByteBuf content = (ByteBuf) e.content();
-                if (isSingleDirectBuffer(content)) {
-                    return e;
-                }
-                return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(newDirectBuffer(e, content), e.recipient());
-            }
         }
 
         throw new UnsupportedOperationException(
@@ -380,58 +373,29 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
             NetworkInterface iface = config.getNetworkInterface();
             if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+                iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
             }
-            return joinGroup(
-                    multicastAddress, iface, null, promise);
+            joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelPromise promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            Promise<Void> promise) {
+        joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress source, ChannelPromise promise) {
+            InetAddress source, Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -458,53 +422,34 @@ public final class NioDatagramChannel
                 keys.add(key);
             }
 
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (Throwable e) {
             promise.setFailure(e);
         }
-
-        return promise;
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+            leaveGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelPromise promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            NetworkInterface networkInterface, Promise<Void> promise) {
+        leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelPromise promise) {
+            Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -532,27 +477,16 @@ public final class NioDatagramChannel
             }
         }
 
-        promise.setSuccess();
-        return promise;
+        promise.setSuccess(null);
     }
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
      */
     @Override
-    public ChannelFuture block(
+    public void block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    /**
-     * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
-     */
-    @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock, ChannelPromise promise) {
+            InetAddress sourceToBlock, Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
@@ -567,13 +501,13 @@ public final class NioDatagramChannel
                             key.block(sourceToBlock);
                         } catch (IOException e) {
                             promise.setFailure(e);
+                            return;
                         }
                     }
                 }
             }
         }
-        promise.setSuccess();
-        return promise;
+        promise.setSuccess(null);
     }
 
     /**
@@ -581,26 +515,15 @@ public final class NioDatagramChannel
      *
      */
     @Override
-    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
-
-    /**
-     * Block the given sourceToBlock address for the given multicastAddress
-     *
-     */
-    @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
+    public void block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
         try {
-            return block(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
+            block(multicastAddress,
+                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
@@ -634,7 +557,7 @@ public final class NioDatagramChannel
         return allocHandle.continueReading();
     }
 
-    private static final class NioDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
+    private static final class NioDatagramChannelConfig extends DefaultChannelConfig {
         private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannelConfig.class);
 
         final DatagramChannel jdkChannel;
@@ -645,7 +568,7 @@ public final class NioDatagramChannel
          */
         NioDatagramChannelConfig(io.netty.channel.socket.DatagramChannel channel,
                                         DatagramChannel jdkChannel) {
-            super(channel, new FixedRecvByteBufAllocator(2048));
+            super(channel, new FixedRecvByteBufAllocator(2048), 16);
             this.jdkChannel = ObjectUtil.checkNotNull(jdkChannel, "jdkChannel");
         }
 
@@ -738,8 +661,7 @@ public final class NioDatagramChannel
             this.activeOnOpen = activeOnOpen;
         }
 
-        @Override
-        public boolean isBroadcast() {
+        boolean isBroadcast() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_BROADCAST);
             } catch (IOException e) {
@@ -747,8 +669,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setBroadcast(boolean broadcast) {
+        private void setBroadcast(boolean broadcast) {
             try {
                 // See: https://github.com/netty/netty/issues/576
                 if (broadcast &&
@@ -773,11 +694,9 @@ public final class NioDatagramChannel
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public InetAddress getInterface() {
+        InetAddress getInterface() {
             NetworkInterface iface = getNetworkInterface();
             if (iface != null) {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
@@ -789,18 +708,15 @@ public final class NioDatagramChannel
             return null;
         }
 
-        @Override
-        public DatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+        private void setInterface(InetAddress interfaceAddress) {
             try {
                 setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
             } catch (SocketException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public boolean isLoopbackModeDisabled() {
+        boolean isLoopbackModeDisabled() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
             } catch (IOException e) {
@@ -808,18 +724,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public NetworkInterface getNetworkInterface() {
+        NetworkInterface getNetworkInterface() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
             } catch (IOException e) {
@@ -827,18 +740,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+        private void setNetworkInterface(NetworkInterface networkInterface) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public boolean isReuseAddress() {
+        private boolean isReuseAddress() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_REUSEADDR);
             } catch (IOException e) {
@@ -846,18 +756,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public int getReceiveBufferSize() {
+        private int getReceiveBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_RCVBUF);
             } catch (IOException e) {
@@ -865,18 +772,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public int getSendBufferSize() {
+        private int getSendBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_SNDBUF);
             } catch (IOException e) {
@@ -884,18 +788,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+        private void setSendBufferSize(int sendBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public int getTimeToLive() {
+        private int getTimeToLive() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
             } catch (IOException e) {
@@ -903,18 +804,15 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setTimeToLive(int ttl) {
+        private void setTimeToLive(int ttl) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        @Override
-        public int getTrafficClass() {
+        private int getTrafficClass() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_TOS);
             } catch (IOException e) {
@@ -922,87 +820,12 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setTrafficClass(int trafficClass) {
+        private void setTrafficClass(int trafficClass) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoClose(boolean autoClose) {
-            super.setAutoClose(autoClose);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-            super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-            return this;
         }
 
         @Override

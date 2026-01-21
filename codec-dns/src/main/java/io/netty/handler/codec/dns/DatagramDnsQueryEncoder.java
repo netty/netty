@@ -17,7 +17,6 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -29,7 +28,6 @@ import java.util.List;
  * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
  * {@link DatagramPacket}.
  */
-@ChannelHandler.Sharable
 public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEnvelope<DnsQuery, InetSocketAddress>> {
 
     private final DnsQueryEncoder encoder;
@@ -46,6 +44,11 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      */
     public DatagramDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
         this.encoder = new DnsQueryEncoder(recordEncoder);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

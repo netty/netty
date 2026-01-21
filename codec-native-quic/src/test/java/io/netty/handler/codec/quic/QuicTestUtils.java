@@ -18,7 +18,6 @@ package io.netty.handler.codec.quic;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -61,7 +60,7 @@ final class QuicTestUtils {
             new MultiThreadIoEventLoopGroup(EpollIoHandler.newFactory()) :
             new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
-    static final ChannelHandlerAdapter NOOP_HANDLER = new ChannelHandlerAdapter() {
+    static final ChannelHandler NOOP_HANDLER = new ChannelHandler() {
         @Override
         public boolean isSharable() {
             return true;
@@ -103,7 +102,7 @@ final class QuicTestUtils {
         return newBootstrap()
                 // We don't want any special handling of the channel so just use a dummy handler.
                 .handler(builder.build())
-                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).sync().channel();
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).get();
     }
 
     static QuicChannelBootstrap newQuicChannelBootstrap(Channel channel) {
@@ -180,7 +179,7 @@ final class QuicTestUtils {
                              ChannelHandler handler, ChannelHandler streamHandler)
             throws Exception {
         return newServerBootstrap(serverBuilder, tokenHandler, handler, streamHandler)
-                .bind().sync().channel();
+                .bind().get();
     }
 
     static Channel newServer(Executor sslTaskExecutor, QuicTokenHandler tokenHandler,

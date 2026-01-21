@@ -19,8 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
@@ -193,15 +192,15 @@ public class Http3ServerPushStreamManagerTest {
         assertTrue(channel.isActive());
     }
 
-    private static class PushStreamListener extends ChannelOutboundHandlerAdapter {
+    private static class PushStreamListener implements ChannelOutboundHandler {
         final List<Http3PushStreamFrame> framesWritten = new ArrayList<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             if (msg instanceof Http3PushStreamFrame) {
                 framesWritten.add((Http3PushStreamFrame) msg);
             }
-            super.write(ctx, msg, promise);
+            ctx.write(msg, promise);
         }
     }
 

@@ -15,7 +15,6 @@
  */
 package io.netty.example.socksproxy;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.socksx.SocksMessage;
@@ -34,12 +33,16 @@ import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
 import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthRequest;
 import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthStatus;
 
-@ChannelHandler.Sharable
 public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksMessage> {
 
     public static final SocksServerHandler INSTANCE = new SocksServerHandler();
 
     private SocksServerHandler() { }
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, SocksMessage socksRequest) throws Exception {

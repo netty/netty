@@ -21,10 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -67,7 +65,7 @@ public class Http2MultiplexCodecBuilderTest {
     }
 
     @BeforeEach
-    public void setUp() throws InterruptedException {
+    public void setUp() throws Exception {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         LocalAddress serverAddress = new LocalAddress(getClass());
         serverLastInboundHandler = new SharableLastInboundHandler();
@@ -82,25 +80,25 @@ public class Http2MultiplexCodecBuilderTest {
 
                             @Override
                             protected void initChannel(Channel ch) throws Exception {
-                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                ch.pipeline().addLast(new ChannelInboundHandler() {
                                     private boolean writable;
 
                                     @Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelActive(ctx);
+                                        ctx.fireChannelActive();
                                     }
 
                                     @Override
                                     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelWritabilityChanged(ctx);
+                                        ctx.fireChannelWritabilityChanged();
                                     }
 
                                     @Override
                                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                         assertTrue(writable);
-                                        super.channelInactive(ctx);
+                                        ctx.fireChannelInactive();
                                     }
                                 });
                                 ch.pipeline().addLast(serverLastInboundHandler);
@@ -109,7 +107,7 @@ public class Http2MultiplexCodecBuilderTest {
                         serverChannelLatch.countDown();
                     }
                 });
-        serverChannel = sb.bind(serverAddress).sync().channel();
+        serverChannel = sb.bind(serverAddress).get();
 
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
@@ -120,7 +118,7 @@ public class Http2MultiplexCodecBuilderTest {
                         fail("Should not be called for outbound streams");
                     }
                 }).build());
-        clientChannel = cb.connect(serverAddress).sync().channel();
+        clientChannel = cb.connect(serverAddress).get();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
@@ -146,8 +144,8 @@ public class Http2MultiplexCodecBuilderTest {
         }
     }
 
-    private Http2StreamChannel newOutboundStream(ChannelHandler handler) {
-        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().syncUninterruptibly().getNow();
+    private Http2StreamChannel newOutboundStream(ChannelHandler handler) throws Exception {
+        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().get();
     }
 
     @Test
@@ -219,8 +217,12 @@ public class Http2MultiplexCodecBuilderTest {
         }
     }
 
-    @Sharable
     private static class SharableLastInboundHandler extends LastInboundHandler {
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -233,18 +235,14 @@ public class Http2MultiplexCodecBuilderTest {
         }
     }
 
-    private static class SharableChannelHandler1 extends ChannelHandlerAdapter {
+    private static class SharableChannelHandler1 implements ChannelHandler {
         @Override
         public boolean isSharable() {
             return true;
         }
     }
 
-    @Sharable
-    private static class SharableChannelHandler2 extends ChannelHandlerAdapter {
-    }
-
-    private static class UnsharableChannelHandler extends ChannelHandlerAdapter {
+    private static class UnsharableChannelHandler implements ChannelHandler {
         @Override
         public boolean isSharable() {
             return false;
@@ -254,7 +252,6 @@ public class Http2MultiplexCodecBuilderTest {
     @Test
     public void testSharableCheck() {
         assertNotNull(Http2MultiplexCodecBuilder.forServer(new SharableChannelHandler1()));
-        assertNotNull(Http2MultiplexCodecBuilder.forServer(new SharableChannelHandler2()));
     }
 
     @Test

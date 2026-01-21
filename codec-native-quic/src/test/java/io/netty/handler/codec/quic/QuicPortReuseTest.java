@@ -19,10 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Timeout;
@@ -59,7 +58,7 @@ public class QuicPortReuseTest extends AbstractQuicTest {
                                 .connectionIdAddressGenerator(idGenerator)
                                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                                 .handler(QuicTestUtils.NOOP_HANDLER)
-                                .streamHandler(new ChannelInboundHandlerAdapter() {
+                                .streamHandler(new ChannelInboundHandler() {
 
                                     @Override
                                     public boolean isSharable() {
@@ -84,9 +83,9 @@ public class QuicPortReuseTest extends AbstractQuicTest {
         for (int i = 0; i < numBinds; i++) {
             Channel bindChannel;
             if (bindAddress == null) {
-                bindChannel = serverBootstrap.bind().sync().channel();
+                bindChannel = serverBootstrap.bind().get();
             } else {
-                bindChannel = serverBootstrap.bind(bindAddress).sync().channel();
+                bindChannel = serverBootstrap.bind(bindAddress).get();
             }
             serverChannels.add(bindChannel);
             if (bindAddress == null) {
@@ -110,11 +109,11 @@ public class QuicPortReuseTest extends AbstractQuicTest {
 
             for (QuicChannel quicChannel: channels) {
                 quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                        new ChannelInboundHandlerAdapter() {
+                        new ChannelInboundHandler() {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) {
                                 ctx.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes))
-                                        .addListener(ChannelFutureListener.CLOSE);
+                                        .addListener(f -> ctx.close());
                             }
                         });
             }

@@ -42,7 +42,7 @@ public final class WorldClockServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new WorldClockServerInitializer(ServerUtil.buildSslContext()));
 
-            b.bind(PORT).sync().channel().closeFuture().sync();
+            b.bind(PORT).get().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

@@ -20,18 +20,15 @@ import java.util.Collections;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -65,7 +62,7 @@ public class HttpServerUpgradeHandlerTest {
             assertNotNull(ctx.pipeline().get(HttpServerUpgradeHandler.class));
 
             // Add a marker handler to signal that the upgrade has happened
-            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandlerAdapter());
+            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandler() { });
           }
     }
 
@@ -79,7 +76,7 @@ public class HttpServerUpgradeHandlerTest {
             }
         };
 
-        ChannelHandler testInStackFrame = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             // marker boolean to signal that we're in the `channelRead` method
             private boolean inReadCall;
             private boolean writeUpgradeMessage;
@@ -92,7 +89,7 @@ public class HttpServerUpgradeHandlerTest {
 
                 inReadCall = true;
                 try {
-                    super.channelRead(ctx, msg);
+                    ctx.fireChannelRead(msg);
                     // All in the same call stack, the upgrade codec should receive the message,
                     // written the upgrade response, and upgraded the pipeline.
                     assertTrue(writeUpgradeMessage);
@@ -105,7 +102,7 @@ public class HttpServerUpgradeHandlerTest {
             }
 
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
                 // We ensure that we're in the read call and defer the write so we can
                 // make sure the pipeline was reformed irrespective of the flush completing.
                 assertTrue(inReadCall);
@@ -116,18 +113,13 @@ public class HttpServerUpgradeHandlerTest {
                         ctx.write(msg, promise);
                     }
                 });
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        writeFlushed = true;
-                    }
-                });
+                promise.addListener(future -> writeFlushed = true);
             }
-        };
+        }
 
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
 
-        EmbeddedChannel channel = new EmbeddedChannel(testInStackFrame, httpServerCodec, upgradeHandler);
+        EmbeddedChannel channel = new EmbeddedChannel(new TestHandler(), httpServerCodec, upgradeHandler);
 
         String upgradeString = "GET / HTTP/1.1\r\n" +
             "Host: example.com\r\n" +

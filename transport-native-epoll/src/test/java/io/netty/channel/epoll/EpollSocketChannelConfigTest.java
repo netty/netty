@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -60,12 +60,12 @@ public class EpollSocketChannelConfigTest {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .handler(new ChannelInboundHandler() { })
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterEach
@@ -91,8 +91,8 @@ public class EpollSocketChannelConfigTest {
         final long expected = randLong(0, 0xFFFFFFFFL);
         final long actual;
         try {
-            ch.config().setTcpNotSentLowAt(expected);
-            actual = ch.config().getTcpNotSentLowAt();
+            ch.config().setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, expected);
+            actual = ch.config().getOption(EpollChannelOption.TCP_NOTSENT_LOWAT);
         } catch (RuntimeException e) {
             throw new TestAbortedException("assumeNoException", e);
         }
@@ -103,7 +103,7 @@ public class EpollSocketChannelConfigTest {
     public void testInvalidHighTcpNotSentLowAt() {
         try {
             final long value = 0xFFFFFFFFL + 1;
-            ch.config().setTcpNotSentLowAt(value);
+            ch.config().setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, value);
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
@@ -116,7 +116,7 @@ public class EpollSocketChannelConfigTest {
     public void testInvalidLowTcpNotSentLowAt() {
         try {
             final long value = -1;
-            ch.config().setTcpNotSentLowAt(value);
+            ch.config().setOption(EpollChannelOption.TCP_NOTSENT_LOWAT, value);
         } catch (IllegalArgumentException e) {
             return;
         } catch (RuntimeException e) {
@@ -127,18 +127,18 @@ public class EpollSocketChannelConfigTest {
 
     @Test
     public void testTcpCork() {
-        ch.config().setTcpCork(false);
-        assertFalse(ch.config().isTcpCork());
-        ch.config().setTcpCork(true);
-        assertTrue(ch.config().isTcpCork());
+        ch.config().setOption(EpollChannelOption.TCP_CORK, false);
+        assertFalse(ch.config().getOption(EpollChannelOption.TCP_CORK));
+        ch.config().setOption(EpollChannelOption.TCP_CORK, true);
+        assertTrue(ch.config().getOption(EpollChannelOption.TCP_CORK));
     }
 
     @Test
     public void testTcpQickAck() {
-        ch.config().setTcpQuickAck(false);
-        assertFalse(ch.config().isTcpQuickAck());
-        ch.config().setTcpQuickAck(true);
-        assertTrue(ch.config().isTcpQuickAck());
+        ch.config().setOption(EpollChannelOption.TCP_QUICKACK, false);
+        assertFalse(ch.config().getOption(EpollChannelOption.TCP_QUICKACK));
+        ch.config().setOption(EpollChannelOption.TCP_QUICKACK, true);
+        assertTrue(ch.config().getOption(EpollChannelOption.TCP_QUICKACK));
     }
 
     // For this test to pass, we are relying on the sockets file descriptor not being reused after the socket is closed.
@@ -150,7 +150,7 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().setSoLinger(0);
+                ch.config().setOption(ChannelOption.SO_LINGER, 0);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
@@ -165,7 +165,7 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().getSoLinger();
+                ch.config().getOption(ChannelOption.SO_LINGER);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);

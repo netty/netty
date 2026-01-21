@@ -111,21 +111,22 @@ public final class QuicStreamChannelBootstrap {
      * @return  the {@link Future} that is notified once the operation completes.
      */
     public Future<QuicStreamChannel> create() {
-        return create(parent.executor().newPromise());
+        Promise<QuicStreamChannel> promise = parent.executor().newPromise();
+        create(promise);
+        return promise;
     }
 
     /**
      * Creates a new {@link QuicStreamChannel} and notifies the {@link Future}.
      *
-     * @param promise   the {@link Promise} that is notified once the operation completes.
-     * @return          the {@link Future} that is notified once the operation completes.
+     * @param promise the {@link Promise} that is notified once the operation completes.
      */
-    public Future<QuicStreamChannel> create(Promise<QuicStreamChannel> promise) {
+    public void create(Promise<QuicStreamChannel> promise) {
         if (handler == null) {
             throw new IllegalStateException("streamHandler not set");
         }
 
-        return parent.createStream(type, new QuicStreamChannelBootstrapHandler(handler,
+        parent.createStream(type, new QuicStreamChannelBootstrapHandler(handler,
                 Quic.toOptionsArray(options), Quic.toAttributesArray(attrs)), promise);
     }
 

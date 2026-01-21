@@ -18,18 +18,16 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
@@ -99,13 +97,6 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  */
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
-    static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            registerDone(future);
-        }
-    };
-
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
@@ -142,17 +133,12 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
 
-    static void registerDone(ChannelFuture future) {
+    static void registerDone(Future<? extends Void> future, Channel childChannel) {
         // Handle any errors that occurred on the local thread while registering. Even though
         // failures can happen after this point, they will be handled by the channel by closing the
         // childChannel.
         if (!future.isSuccess()) {
-            Channel childChannel = future.channel();
-            if (childChannel.isRegistered()) {
-                childChannel.close();
-            } else {
-                childChannel.unsafe().closeForcibly();
-            }
+            childChannel.close();
         }
     }
 
@@ -249,11 +235,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
                         }
-                        ChannelFuture future = ch.register();
+                        Future<Void> future = ch.register();
                         if (future.isDone()) {
-                            registerDone(future);
+                            registerDone(future, ch);
                         } else {
-                            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
+                            future.addListener(f -> registerDone(f, ch));
                         }
                         break;
                     case CLOSED:
@@ -269,14 +255,26 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
-        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
-        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
-            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
-        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+        if (evt == SslCloseCompletionEvent.SUCCESS) {
             forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
         }
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        switch(type.direction()) {
+            case Outbound:
+                forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+                break;
+            case Inbound:
+                forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+                break;
+            default:
+                break;
+        }
+        super.channelShutdown(ctx, type);
     }
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.

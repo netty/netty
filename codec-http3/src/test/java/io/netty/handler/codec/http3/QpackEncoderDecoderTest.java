@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -509,7 +509,7 @@ public class QpackEncoderDecoderTest {
                 is(receivedCount == 0 ? 0 : receivedCount % (2 * maxEntries) + 1));
     }
 
-    private static final class ForwardWriteToReadOnOtherHandler extends ChannelOutboundHandlerAdapter {
+    private static final class ForwardWriteToReadOnOtherHandler implements ChannelOutboundHandler {
 
         private final ChannelInboundHandler other;
         private final BlockingQueue<Callable<Void>> suspendQueue;
@@ -525,18 +525,30 @@ public class QpackEncoderDecoderTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             if (msg instanceof ByteBuf) {
                 if (suspendQueue != null) {
                     suspendQueue.offer(() -> {
-                        other.channelRead(ctx, msg);
+                        try {
+                            other.channelRead(ctx, msg);
+                        } catch (Exception e) {
+                            promise.setFailure(e);
+                            return null;
+                        }
+                        promise.setSuccess(null);
                         return null;
                     });
                 } else {
-                    other.channelRead(ctx, msg);
+                    try {
+                        other.channelRead(ctx, msg);
+                    } catch (Exception e) {
+                        promise.setFailure(e);
+                        return;
+                    }
+                    promise.setSuccess(null);
                 }
             } else {
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
             }
         }
     }

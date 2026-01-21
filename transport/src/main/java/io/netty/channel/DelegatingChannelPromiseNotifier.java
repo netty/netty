@@ -15,8 +15,10 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -29,26 +31,26 @@ import java.util.concurrent.TimeoutException;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 @UnstableApi
-public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
+public final class DelegatingChannelPromiseNotifier implements Promise<Void>, FutureListener<Void> {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DelegatingChannelPromiseNotifier.class);
-    private final ChannelPromise delegate;
+    private final Promise<Void> delegate;
     private final boolean logNotifyFailure;
 
-    public DelegatingChannelPromiseNotifier(ChannelPromise delegate) {
+    public DelegatingChannelPromiseNotifier(Promise<Void> delegate) {
         this(delegate, true);
     }
 
-    public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
+    public DelegatingChannelPromiseNotifier(Promise<Void> delegate, boolean logNotifyFailure) {
         this.delegate = checkNotNull(delegate, "delegate");
         this.logNotifyFailure = logNotifyFailure;
     }
 
     @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
+    public void operationComplete(Future<? extends Void> future) {
         InternalLogger internalLogger = logNotifyFailure ? logger : null;
         if (future.isSuccess()) {
-            Void result = future.get();
+            Void result = future.getNow();
             PromiseNotificationUtil.trySuccess(delegate, result, internalLogger);
         } else if (future.isCancelled()) {
             PromiseNotificationUtil.tryCancel(delegate, internalLogger);
@@ -59,25 +61,9 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public Channel channel() {
-        return delegate.channel();
-    }
-
-    @Override
-    public ChannelPromise setSuccess(Void result) {
+    public Promise<Void> setSuccess(Void result) {
         delegate.setSuccess(result);
         return this;
-    }
-
-    @Override
-    public ChannelPromise setSuccess() {
-        delegate.setSuccess();
-        return this;
-    }
-
-    @Override
-    public boolean trySuccess() {
-        return delegate.trySuccess();
     }
 
     @Override
@@ -86,32 +72,20 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public ChannelPromise setFailure(Throwable cause) {
+    public Promise<Void> setFailure(Throwable cause) {
         delegate.setFailure(cause);
         return this;
     }
 
     @Override
-    public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+    public Promise<Void> addListener(FutureListener<? super Void> listener) {
         delegate.addListener(listener);
         return this;
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        delegate.addListeners(listeners);
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+    public Promise<Void> removeListener(FutureListener<? super Void> listener) {
         delegate.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        delegate.removeListeners(listeners);
         return this;
     }
 
@@ -121,18 +95,13 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public boolean setUncancellable() {
-        return delegate.setUncancellable();
-    }
-
-    @Override
-    public ChannelPromise await() throws InterruptedException {
+    public Promise<Void> await() throws InterruptedException {
         delegate.await();
         return this;
     }
 
     @Override
-    public ChannelPromise awaitUninterruptibly() {
+    public Promise<Void> awaitUninterruptibly() {
         delegate.awaitUninterruptibly();
         return this;
     }
@@ -188,13 +157,13 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public ChannelPromise sync() throws InterruptedException {
+    public Promise<Void> sync() throws InterruptedException {
         delegate.sync();
         return this;
     }
 
     @Override
-    public ChannelPromise syncUninterruptibly() {
+    public Promise<Void> syncUninterruptibly() {
         delegate.syncUninterruptibly();
         return this;
     }
@@ -212,5 +181,10 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     @Override
     public Throwable cause() {
         return delegate.cause();
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return delegate.executor();
     }
 }

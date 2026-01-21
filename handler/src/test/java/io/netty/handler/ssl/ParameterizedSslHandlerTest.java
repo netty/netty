@@ -20,10 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -43,7 +41,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -60,7 +57,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -170,7 +166,7 @@ public class ParameterizedSslHandlerTest {
                                 handler.setWrapDataSize(-1);
                             }
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private boolean sentData;
                                 private Throwable writeCause;
 
@@ -185,13 +181,10 @@ public class ParameterizedSslHandlerTest {
                                                 buf.writerIndex(buf.writerIndex() + singleComponentSize);
                                                 content.addComponent(true, buf);
                                             }
-                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
-                                                @Override
-                                                public void operationComplete(ChannelFuture future) throws Exception {
-                                                    writeCause = future.cause();
-                                                    if (writeCause == null) {
-                                                        sentData = true;
-                                                    }
+                                            ctx.writeAndFlush(content).addListener(future -> {
+                                                writeCause = future.cause();
+                                                if (writeCause == null) {
+                                                    sentData = true;
                                                 }
                                             });
                                         } else {
@@ -214,7 +207,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -227,7 +220,7 @@ public class ParameterizedSslHandlerTest {
                             } else {
                                 ch.pipeline().addLast(new SslHandler(sslClientCtx.newEngine(ch.alloc())));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private int bytesSeen;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -263,7 +256,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             donePromise.get();
         } finally {
@@ -336,7 +329,7 @@ public class ParameterizedSslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     // Just trigger a close
@@ -344,7 +337,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -353,7 +346,7 @@ public class ParameterizedSslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (cause.getCause() instanceof SSLException) {
@@ -363,7 +356,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             promise.syncUninterruptibly();
         } finally {
@@ -440,18 +433,15 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (!future.isSuccess()) {
-                                        // Something bad happened during handshake fail the promise!
-                                        serverPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (!future.isSuccess()) {
+                                    // Something bad happened during handshake fail the promise!
+                                    serverPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -461,7 +451,7 @@ public class ParameterizedSslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             final AtomicBoolean closeSent = new AtomicBoolean();
                             if (timeout) {
-                                ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                                ch.pipeline().addFirst(new ChannelInboundHandler() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                         if (closeSent.get()) {
@@ -469,7 +459,7 @@ public class ParameterizedSslHandlerTest {
                                             // close_notify.
                                             ReferenceCountUtil.release(msg);
                                         } else {
-                                            super.channelRead(ctx, msg);
+                                            ctx.fireChannelRead(msg);
                                         }
                                     }
                                 });
@@ -478,21 +468,18 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (future.isSuccess()) {
-                                        closeSent.compareAndSet(false, true);
-                                        future.getNow().close();
-                                    } else {
-                                        // Something bad happened during handshake fail the promise!
-                                        clientPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (future.isSuccess()) {
+                                    closeSent.compareAndSet(false, true);
+                                    future.getNow().close();
+                                } else {
+                                    // Something bad happened during handshake fail the promise!
+                                    clientPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverPromise.awaitUninterruptibly();
             clientPromise.awaitUninterruptibly();
@@ -602,7 +589,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
-                    }).bind(bindAddress).syncUninterruptibly().channel();
+                    }).bind(bindAddress).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -615,7 +602,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverLatch.await();
             assertEquals(expectedContent, serverQueue.toString());

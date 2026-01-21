@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -63,7 +63,7 @@ public abstract class RenegotiateTest {
                             SslHandler handler = context.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private boolean renegotiate;
 
                                 @Override
@@ -81,15 +81,12 @@ public abstract class RenegotiateTest {
                                             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
 
                                             renegotiate = true;
-                                            handler.renegotiate().addListener(new FutureListener<Channel>() {
-                                                @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
-                                                    if (!future.isSuccess()) {
-                                                        error.compareAndSet(null, future.cause());
-                                                        ctx.close();
-                                                    }
-                                                    latch.countDown();
+                                            handler.renegotiate().addListener(future -> {
+                                                if (!future.isSuccess()) {
+                                                    error.compareAndSet(null, future.cause());
+                                                    ctx.close();
                                                 }
+                                                latch.countDown();
                                             });
                                         } else {
                                             error.compareAndSet(null, event.cause());
@@ -102,7 +99,7 @@ public abstract class RenegotiateTest {
                             });
                         }
                     });
-            Channel channel = sb.bind(new LocalAddress("RenegotiateTest")).syncUninterruptibly().channel();
+            Channel channel = sb.bind(new LocalAddress("RenegotiateTest")).get();
 
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -118,7 +115,7 @@ public abstract class RenegotiateTest {
                             SslHandler handler = clientContext.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void userEventTriggered(
                                         ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -135,7 +132,7 @@ public abstract class RenegotiateTest {
                         }
                     });
 
-            Channel clientChannel = bootstrap.connect(channel.localAddress()).syncUninterruptibly().channel();
+            Channel clientChannel = bootstrap.connect(channel.localAddress()).get();
             latch.await();
             clientChannel.close().syncUninterruptibly();
             channel.close().syncUninterruptibly();

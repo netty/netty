@@ -21,8 +21,9 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -35,7 +36,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
+ * {@link ChannelInboundHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
  * another Message type.
  * <p>
  * For example here is an implementation which reads all readable bytes from
@@ -75,7 +76,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
  * to avoid leaking memory.
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
@@ -191,8 +192,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private int discardAfterReads = 16;
     private int numReads;
 
-    protected ByteToMessageDecoder() {
-        ensureNotSharable();
+    @Override
+    public final boolean isSharable() {
+        return false;
     }
 
     /**
@@ -343,7 +345,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     /**
      * Get {@code numElements} out of the {@link List} and forward these through the pipeline.
      */
-    static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
+    private static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
         if (msgs instanceof CodecOutputList) {
             fireChannelRead(ctx, (CodecOutputList) msgs, numElements);
         } else {
@@ -356,7 +358,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     /**
      * Get {@code numElements} out of the {@link CodecOutputList} and forward these through the pipeline.
      */
-    static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
+    private static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
             ctx.fireChannelRead(msgs.getUnsafe(i));
         }
@@ -393,14 +395,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof ChannelInputShutdownEvent) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             // The decodeLast method is invoked when a channelInactive event is encountered.
             // This method is responsible for ending requests in some situations and must be called
             // when the input has been shutdown.
             channelInputClosed(ctx, false);
         }
-        super.userEventTriggered(ctx, evt);
+
+        ctx.fireChannelShutdown(type);
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) {
@@ -435,9 +439,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     /**
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
-     * {@link ChannelInputShutdownEvent}.
+     * {@link #channelShutdown(ChannelHandlerContext, ChannelShutdownType}.
      */
-    void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
+    private void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation, out);
             // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
@@ -461,7 +465,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
      */
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    private void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             while (in.isReadable()) {
                 final int outSize = out.size();
@@ -538,7 +542,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    private void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
         decodeState = STATE_CALLING_CHILD_DECODE;
         try {
@@ -571,7 +575,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
     }
 
-    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
+    private static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
         int oldBytes = oldCumulation.readableBytes();
         int newBytes = in.readableBytes();
         int totalBytes = oldBytes + newBytes;

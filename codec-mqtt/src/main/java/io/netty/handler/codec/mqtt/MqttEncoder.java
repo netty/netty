@@ -19,7 +19,6 @@ package io.netty.handler.codec.mqtt;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -66,13 +65,17 @@ import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
  * or v5.0 as described here <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">MQTTv5.0</a> -
  * depending on the version specified in the first CONNECT message that goes through the channel.
  */
-@ChannelHandler.Sharable
 public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
     private MqttEncoder() {
         super(MqttMessage.class);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

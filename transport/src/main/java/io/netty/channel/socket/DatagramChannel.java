@@ -16,23 +16,48 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOption;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
 /**
- * A UDP/IP {@link Channel}.
+ * A Datagram {@link Channel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link Channel},
+ * {@link DatagramChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_BROADCAST}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_ADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_LOOP_DISABLED}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_IF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_MULTICAST_TTL}</td>
+ * </tr><tr>
+ * <td>{@link ChannelOption#IP_TOS}</td>
+ * </tr>
+ * </table>
  */
 public interface DatagramChannel extends Channel {
-    @Override
-    DatagramChannelConfig config();
-    @Override
-    InetSocketAddress localAddress();
-    @Override
-    InetSocketAddress remoteAddress();
 
     /**
      * Return {@code true} if the {@link DatagramChannel} is connected to the remote peer.
@@ -40,126 +65,158 @@ public interface DatagramChannel extends Channel {
     boolean isConnected();
 
     /**
-     * Joins a multicast group and notifies the {@link ChannelFuture} once the operation completes.
+     * Joins a multicast group and notifies the {@link Future} once the operation completes.
      */
-    ChannelFuture joinGroup(InetAddress multicastAddress);
+    default Future<Void> joinGroup(InetAddress multicastAddress) {
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, promise);
+        return promise;
+    }
 
     /**
-     * Joins a multicast group and notifies the {@link ChannelFuture} once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * Joins a multicast group and notifies the {@link Future} once the operation completes.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future);
+    void joinGroup(InetAddress multicastAddress, Promise<Void> future);
 
     /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
+     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
      */
-    ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    default Future<Void> joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, networkInterface, promise);
+        return promise;
+    }
 
     /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
+     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelPromise future);
+    void joinGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
 
     /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
+     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
      */
-    ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
+    default Future<Void> joinGroup(InetAddress multicastAddress,
+                                   NetworkInterface networkInterface, InetAddress source) {
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, networkInterface, source, promise);
+        return promise;
+    }
 
     /**
-     * Joins the specified multicast group at the specified interface and notifies the {@link ChannelFuture}
+     * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, ChannelPromise future);
+    void joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, Promise<Void> future);
 
     /**
-     * Leaves a multicast group and notifies the {@link ChannelFuture} once the operation completes.
+     * Leaves a multicast group and notifies the {@link Future} once the operation completes.
      */
-    ChannelFuture leaveGroup(InetAddress multicastAddress);
+    default Future<Void> leaveGroup(InetAddress multicastAddress) {
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, promise);
+        return promise;
+    }
 
     /**
-     * Leaves a multicast group and notifies the {@link ChannelFuture} once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * Leaves a multicast group and notifies the {@link Future} once the operation completes.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future);
+    void leaveGroup(InetAddress multicastAddress, Promise<Void> future);
 
     /**
-     * Leaves a multicast group on a specified local interface and notifies the {@link ChannelFuture} once the
+     * Leaves a multicast group on a specified local interface and notifies the {@link Future} once the
      * operation completes.
      */
-    ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
+    default Future<Void> leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, networkInterface, promise);
+        return promise;
+    }
 
     /**
-     * Leaves a multicast group on a specified local interface and notifies the {@link ChannelFuture} once the
+     * Leaves a multicast group on a specified local interface and notifies the {@link Future} once the
      * operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface, ChannelPromise future);
+    void leaveGroup(
+            InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
 
     /**
      * Leave the specified multicast group at the specified interface using the specified source and notifies
-     * the {@link ChannelFuture} once the operation completes.
+     * the {@link Future} once the operation completes.
      *
      */
-    ChannelFuture leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source);
+    default Future<Void> leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, networkInterface, source, promise);
+        return promise;
+    }
 
     /**
      * Leave the specified multicast group at the specified interface using the specified source and notifies
-     * the {@link ChannelFuture} once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * the {@link Future} once the operation completes.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture leaveGroup(
+    void leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
-            ChannelPromise future);
+            Promise<Void> future);
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface and notifies
-     * the {@link ChannelFuture} once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * the {@link Future} once the operation completes.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture block(
+    default Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock);
+            InetAddress sourceToBlock) {
+        Promise<Void> promise = newPromise();
+        block(multicastAddress, networkInterface, sourceToBlock, promise);
+        return promise;
+    }
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface and notifies
-     * the {@link ChannelFuture} once the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * the {@link Future} once the operation completes.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture block(
+    void block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock, ChannelPromise future);
+            InetAddress sourceToBlock, Promise<Void> future);
 
     /**
-     * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link ChannelFuture} once
+     * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link Future} once
      * the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock);
+    default Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        Promise<Void> promise = newPromise();
+        block(multicastAddress, sourceToBlock, promise);
+        return promise;
+    }
 
     /**
-     * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link ChannelFuture} once
+     * Block the given sourceToBlock address for the given multicastAddress and notifies the {@link Future} once
      * the operation completes.
-     *
-     * The given {@link ChannelFuture} will be notified and also returned.
+     * <p>
+     * The given {@link Future} will be notified and also returned.
      */
-    ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future);
+    void block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future);
 }

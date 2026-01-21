@@ -65,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -110,10 +111,10 @@ public class MqttCodecTest {
         MockitoAnnotations.initMocks(this);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(ALLOCATOR);
-        when(ctx.fireChannelRead(any())).then((Answer<ChannelHandlerContext>) invocation -> {
-            out.add(invocation.getArguments()[0]);
-            return ctx;
-        });
+        doAnswer(invocationOnMock -> {
+            out.add(invocationOnMock.getArgument(0));
+            return null;
+        }).when(ctx).fireChannelRead(any());
         when(channel.attr(MqttCodecUtil.MQTT_VERSION_KEY)).thenReturn(versionAttrMock);
     }
 

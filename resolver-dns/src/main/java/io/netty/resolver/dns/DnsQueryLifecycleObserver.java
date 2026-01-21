@@ -15,10 +15,10 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -32,7 +32,7 @@ import java.util.List;
  * OR
  * <ol>
  *     <li>Object creation</li>
- *     <li>{@link #queryWritten(InetSocketAddress, ChannelFuture)}</li>
+ *     <li>{@link #queryWritten(InetSocketAddress, Future)}</li>
  *     <li>{@link #queryRedirected(List)} or {@link #queryCNAMEd(DnsQuestion)} or
  *     {@link #queryNoAnswer(DnsResponseCode)} or {@link #queryCancelled(int)} or
  *     {@link #queryFailed(Throwable)} or {@link #querySucceed()}</li>
@@ -48,7 +48,7 @@ public interface DnsQueryLifecycleObserver {
      * @param dnsServerAddress The DNS server address which the query was sent to.
      * @param future The future which represents the status of the write operation for the DNS query.
      */
-    void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future);
+    void queryWritten(InetSocketAddress dnsServerAddress, Future<Void> future);
 
     /**
      * The query may have been written but it was cancelled at some point.

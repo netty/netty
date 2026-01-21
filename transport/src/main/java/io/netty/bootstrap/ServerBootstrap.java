@@ -17,11 +17,9 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -168,8 +166,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return channelFactory.newChannel(eventLoop, childGroup);
     }
 
-    @Override
-    void init(Channel channel) {
+    void init(Channel channel) throws Throwable {
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -228,7 +225,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return this;
     }
 
-    private static class ServerBootstrapAcceptor extends ChannelInboundHandlerAdapter {
+    private static class ServerBootstrapAcceptor implements ChannelInboundHandler {
 
         private final EventLoopGroup childGroup;
         private final ChannelHandler childHandler;
@@ -276,7 +273,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private void initChildChannel(Channel child) {
             child.pipeline().addLast(childHandler);
 
-            setChannelOptions(child, childOptions, logger);
+            try {
+                setChannelOptions(child, childOptions, logger);
+            } catch (Throwable cause) {
+                forceClose(child, cause);
+                return;
+            }
             setAttributes(child, childAttrs);
 
             if (!extensions.isEmpty()) {
@@ -290,12 +292,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
 
             try {
-                child.register().addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            forceClose(child, future.cause());
-                        }
+                child.register().addListener(future -> {
+                    if (!future.isSuccess()) {
+                        forceClose(child, future.cause());
                     }
                 });
             } catch (Throwable t) {
@@ -304,7 +303,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         private static void forceClose(Channel child, Throwable t) {
-            child.unsafe().closeForcibly();
+            child.close();
             logger.warn("Failed to register an accepted channel: {}", child, t);
         }
 

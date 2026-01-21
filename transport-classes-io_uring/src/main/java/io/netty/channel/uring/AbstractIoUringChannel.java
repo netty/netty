@@ -23,20 +23,16 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
+import io.netty.channel.DefaultChannelId;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
@@ -44,23 +40,20 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
-import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
@@ -72,6 +65,7 @@ import static io.netty.util.internal.StringUtil.className;
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIoUringChannel.class);
     final LinuxSocket socket;
+    private final IoUringIoHandle ioHandle = new IoUringIoHandleImpl();
     protected volatile boolean active;
 
     // Different masks for outstanding I/O operations.
@@ -103,25 +97,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean inReadComplete;
     private boolean socketHasMoreData;
 
-    private static final class DelayedClose {
-        private final ChannelPromise promise;
-        private final Throwable cause;
-        private final ClosedChannelException closeCause;
-
-        DelayedClose(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
-            this.promise = promise;
-            this.cause = cause;
-            this.closeCause = closeCause;
-        }
-    }
-    private DelayedClose delayedClose;
+    private Promise<Void> delayedClose;
     private boolean inputClosedSeenErrorOnRead;
+    private boolean socketIsEmpty;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Promise<Void> connectPromise;
     private SocketAddress requestedRemoteAddress;
     private CleanableDirectBuffer cleanable;
     private ByteBuffer remoteAddressMemory;
@@ -132,8 +115,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active) {
-        super(eventLoop, IoUringIoHandle.class, parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active,
+                           boolean hasDisconnect) {
+        super(eventLoop, IoUringIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(socket, "fd");
 
         if (active) {
@@ -147,8 +131,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         logger.trace("Create {} Socket: {}", this instanceof ServerChannel ? "Server" : "Channel", socket.intValue());
     }
 
-    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(eventLoop, IoUringIoHandle.class, parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote,
+                           boolean hasDisconnect) {
+        super(eventLoop, IoUringIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
 
@@ -215,10 +200,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return socket;
     }
 
-    private AbstractUringUnsafe ioUringUnsafe() {
-        return (AbstractUringUnsafe) unsafe();
-    }
-
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
         return newDirectBuffer(buf, buf);
     }
@@ -273,7 +254,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites);
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect(Promise<Void> promise) {
+        doClose(promise);
     }
 
     private void freeRemoteAddressMemory() {
@@ -292,19 +274,59 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doClose() throws Exception {
-        active = false;
-
+    protected void doClose(Promise<Void> promise) {
         if (registration != null) {
+            if (delayedClose == null) {
+                // We have a write operation pending that should be completed asap.
+                // We will do the actual close operation one this write result is returned as otherwise
+                // we may get into trouble as we may close the fd while we did not process the write yet.
+                delayedClose = newPromise();
+                delayedClose.addListener(f -> {
+                    if (delayedClose.isSuccess()) {
+                        active = false;
+                        promise.setSuccess(null);
+                    } else {
+                        promise.setFailure(f.cause());
+                    }
+                });
+            } else {
+                delayedClose.addListener(new PromiseNotifier<>(false, promise));
+                return;
+            }
+
+            boolean cancelConnect = false;
+            try {
+                Promise<Void> connectPromise = AbstractIoUringChannel.this.connectPromise;
+                if (connectPromise != null) {
+                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                    connectPromise.tryFailure(new ClosedChannelException());
+                    cancelConnect = true;
+                }
+            } finally {
+                // It's important we cancel all outstanding connect, write and read operations now so
+                // we will be able to process a delayed close if needed.
+                cancelOps(cancelConnect);
+            }
+
             if (socket.markClosed()) {
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
-                registration.submit(ops);
+                if (registration.submit(ops) != 0) {
+                    return;
+                }
             }
+            delayedClose.setFailure(new ClosedChannelException());
         } else {
-            // This one was never registered just use a syscall to close.
-            socket.close();
-            ioUringUnsafe().unregistered();
+            try {
+                // This one was never registered just use a syscall to close.
+                socket.close();
+                ioHandle.unregistered();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            active = false;
+            promise.setSuccess(null);
         }
     }
 
@@ -338,9 +360,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // read as POLLIN might be edge-triggered (in case of POLL_ADD_MULTI).
                 socketHasMoreData) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
-            ioUringUnsafe().scheduleFirstReadIfNeeded();
+            scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
-            ioUringUnsafe().schedulePollIn();
+            schedulePollIn();
         }
     }
 
@@ -380,13 +402,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         Object msg = in.current();
 
         if (msgCount > 1 && in.current() instanceof ByteBuf) {
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
+            numOutstandingWrites = (short) scheduleWriteMultiple(in);
         } else if (msg instanceof ByteBuf && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     (msg instanceof ByteBufHolder && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
             // We also need some special handling for CompositeByteBuf
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
+            numOutstandingWrites = (short) scheduleWriteMultiple(in);
         } else {
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteSingle(msg);
+            numOutstandingWrites = (short) scheduleWriteSingle(msg);
         }
         // Ensure we never overflow
         assert numOutstandingWrites > 0;
@@ -424,25 +446,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         remote = socket.remoteAddress();
     }
 
-    protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
-        private IoUringRecvByteAllocatorHandle allocHandle;
+    @Override
+    protected final boolean isWriteFlushedScheduled() {
+        return (ioState & POLL_OUT_SCHEDULED) != 0;
+    }
+
+    private final class IoUringIoHandleImpl implements IoUringIoHandle {
         private boolean closed;
-        private boolean socketIsEmpty;
-
-        /**
-         * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
-         */
-        protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
-
-        /**
-         * Schedule the write of a single message and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
-         */
-        protected abstract int scheduleWriteSingle(Object msg);
 
         @Override
-        public final void handle(IoRegistration registration, IoEvent ioEvent) {
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
             IoUringIoEvent event = (IoUringIoEvent) ioEvent;
             byte op = event.opcode();
             int res = event.res();
@@ -479,9 +492,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_CLOSE:
                     if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                        if (delayedClose != null) {
-                            delayedClose.promise.setSuccess();
-                        }
                         closed = true;
                     }
                     break;
@@ -503,669 +513,548 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-        }
-
-        private void handleDelayedClosed() {
-            if (delayedClose != null && canCloseNow()) {
-                closeNow();
-            }
-        }
-
-        private void pollAddComplete(int res, int flags, short data) {
-            if ((res & Native.POLLOUT) != 0) {
-                pollOut(res);
-            }
-            if ((res & Native.POLLIN) != 0) {
-                pollIn(res, flags, data);
-            }
-            if ((res & Native.POLLRDHUP) != 0) {
-                pollRdHup(res);
-            }
+            AbstractIoUringChannel.this.unregistered();
         }
 
         @Override
-        public final void close() throws Exception {
-            close(newPromise());
+        public void close() {
+            ioTransport().close(newPromise());
         }
+    }
 
-        @Override
-        protected void close(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
-            if (closeFuture().isDone()) {
-                // Closed already before.
-                safeSetSuccess(promise);
-                return;
-            }
-            if (delayedClose == null) {
-                // We have a write operation pending that should be completed asap.
-                // We will do the actual close operation one this write result is returned as otherwise
-                // we may get into trouble as we may close the fd while we did not process the write yet.
-                delayedClose = new DelayedClose(promise, cause, closeCause);
+    protected void unregistered() {
+        freeMsgHdrArray();
+        freeRemoteAddressMemory();
+    }
+
+    @Override
+    protected RecvByteBufAllocator.Handle newRecvBufAllocHandle() {
+        return new IoUringRecvByteAllocatorHandle(
+                (RecvByteBufAllocator.ExtendedHandle) super.newRecvBufAllocHandle());
+    }
+
+    /**
+     * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
+     * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+     */
+    protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
+
+    /**
+     * Schedule the write of a single message and returns the number of
+     * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+     */
+    protected abstract int scheduleWriteSingle(Object msg);
+
+    private void handleDelayedClosed() {
+        if (delayedClose != null && canCloseNow()) {
+            delayedClose.trySuccess(null);
+        }
+    }
+
+    private void pollAddComplete(int res, int flags, short data) {
+        if ((res & Native.POLLOUT) != 0) {
+            pollOut(res);
+        }
+        if ((res & Native.POLLIN) != 0) {
+            pollIn(res, flags, data);
+        }
+        if ((res & Native.POLLRDHUP) != 0) {
+            pollRdHup(res);
+        }
+    }
+
+    private void cancelOps(boolean cancelConnect) {
+        if (registration == null || !registration.isValid()) {
+            return;
+        }
+        byte flags = (byte) 0;
+        if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
+            long id = registration.submit(
+                    IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
+            assert id != 0;
+            pollRdhupId = 0;
+        }
+        if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
+            long id = registration.submit(
+                    IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
+            assert id != 0;
+            pollInId = 0;
+        }
+        if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
+            long id = registration.submit(
+                    IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
+            assert id != 0;
+            pollOutId = 0;
+        }
+        if (cancelConnect && connectId != 0) {
+            // Best effort to cancel the already submitted connect request.
+            long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
+            assert id != 0;
+            connectId = 0;
+        }
+        cancelOutstandingReads(registration, numOutstandingReads);
+        cancelOutstandingWrites(registration, numOutstandingWrites);
+    }
+
+    private boolean canCloseNow() {
+        // Currently there are is no WRITE and READ scheduled, we can close the channel now without
+        // problems related to re-ordering of completions.
+        return canCloseNow0() && (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+    }
+
+    protected boolean canCloseNow0() {
+        return true;
+    }
+
+    final void shutdownInput(boolean allDataRead) {
+        if (!socket.isInputShutdown()) {
+            if (isAllowHalfClosure()) {
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), newPromise());
             } else {
-                delayedClose.promise.addListener(new PromiseNotifier<>(false, promise));
-                return;
-            }
-
-            boolean cancelConnect = false;
-            try {
-                ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
-                if (connectPromise != null) {
-                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    connectPromise.tryFailure(new ClosedChannelException());
-                    AbstractIoUringChannel.this.connectPromise = null;
-                    cancelConnect = true;
-                }
-
-                cancelConnectTimeoutFuture();
-            } finally {
-                // It's important we cancel all outstanding connect, write and read operations now so
-                // we will be able to process a delayed close if needed.
-                cancelOps(cancelConnect);
-            }
-
-            if (canCloseNow()) {
-                // Currently there are is no WRITE and READ scheduled so we can start to teardown the channel.
-                closeNow();
-            }
-        }
-
-        private void cancelOps(boolean cancelConnect) {
-            if (registration == null || !registration.isValid()) {
-                return;
-            }
-            byte flags = (byte) 0;
-            if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
-                long id = registration.submit(
-                        IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
-                assert id != 0;
-                pollRdhupId = 0;
-            }
-            if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
-                long id = registration.submit(
-                        IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
-                assert id != 0;
-                pollInId = 0;
-            }
-            if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
-                long id = registration.submit(
-                        IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
-                assert id != 0;
-                pollOutId = 0;
-            }
-            if (cancelConnect && connectId != 0) {
-                // Best effort to cancel the already submitted connect request.
-                long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
-                assert id != 0;
-                connectId = 0;
-            }
-            cancelOutstandingReads(registration, numOutstandingReads);
-            cancelOutstandingWrites(registration, numOutstandingWrites);
-        }
-
-        private boolean canCloseNow() {
-            // Currently there are is no WRITE and READ scheduled, we can close the channel now without
-            // problems related to re-ordering of completions.
-            return canCloseNow0() && (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
-        }
-
-        protected boolean canCloseNow0() {
-            return true;
-        }
-
-        private void closeNow() {
-            super.close(newPromise(), delayedClose.cause, delayedClose.closeCause);
-        }
-
-        @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if ((ioState & POLL_OUT_SCHEDULED) == 0) {
-                super.flush0();
-            }
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(cause);
-            closeIfClosed();
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-            active = true;
-
-            if (local == null) {
-                local = socket.localAddress();
-            }
-            computeRemote();
-
-            // Register POLLRDHUP
-            schedulePollRdHup();
-
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
-            // We still need to ensure we call fireChannelActive() in this case.
-            boolean active = isActive();
-
-            // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
-
-            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-            // because what happened is what happened.
-            if (!wasActive && active) {
-                pipeline().fireChannelActive();
-            }
-
-            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
-                close(newPromise());
-            }
-        }
-
-        @Override
-        public final IoUringRecvByteAllocatorHandle recvBufAllocHandle() {
-            if (allocHandle == null) {
-                allocHandle = new IoUringRecvByteAllocatorHandle(
-                        (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
-            }
-            return allocHandle;
-        }
-
-        final void shutdownInput(boolean allDataRead) {
-            logger.trace("shutdownInput Fd: {}", fd().intValue());
-            if (!socket.isInputShutdown()) {
-                if (isAllowHalfClosure(config())) {
-                    try {
-                        socket.shutdown(true, false);
-                    } catch (IOException ignored) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                        return;
-                    } catch (NotYetConnectedException ignore) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                    }
-                    pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    // Handle this same way as if we did read all data so we don't schedule another read.
-                    inputClosedSeenErrorOnRead = true;
-                    close(newPromise());
-                    return;
-                }
-            }
-            if (allDataRead && !inputClosedSeenErrorOnRead) {
+                // Handle this same way as if we did read all data so we don't schedule another read.
                 inputClosedSeenErrorOnRead = true;
-                pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-            }
-        }
-
-        private void fireEventAndClose(Object evt) {
-            pipeline().fireUserEventTriggered(evt);
-            close(newPromise());
-        }
-
-        final void schedulePollIn() {
-            assert (ioState & POLL_IN_SCHEDULED) == 0;
-            if (!isActive() || shouldBreakIoUringInReady(config())) {
+                close(newPromise());
                 return;
             }
-            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
         }
 
-        private void readComplete(byte op, int res, int flags, short data) {
-            assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
+        if (allDataRead && !inputClosedSeenErrorOnRead) {
+            inputClosedSeenErrorOnRead = true;
+            pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
+        }
+    }
 
-            boolean multishot = numOutstandingReads == -1;
-            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (rearm) {
-                // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
-                // multi-shot and non multi-shot variants.
-                ioState &= ~READ_SCHEDULED;
-            }
-            boolean pending = readPending;
-            if (multishot) {
-                // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
-                // not.
-                readPending = false;
-            } else if (--numOutstandingReads == 0) {
-                // We received all outstanding completions.
-                readPending = false;
-                ioState &= ~READ_SCHEDULED;
-            }
-            inReadComplete = true;
+    final void schedulePollIn() {
+        assert (ioState & POLL_IN_SCHEDULED) == 0;
+        if (!isActive() || shouldBreakIoUringInReady()) {
+            return;
+        }
+        pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
+    }
+
+    private void readComplete(byte op, int res, int flags, short data) {
+        assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
+
+        boolean multishot = numOutstandingReads == -1;
+        boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+        if (rearm) {
+            // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
+            // multi-shot and non multi-shot variants.
+            ioState &= ~READ_SCHEDULED;
+        }
+        boolean pending = readPending;
+        if (multishot) {
+            // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
+            // not.
+            readPending = false;
+        } else if (--numOutstandingReads == 0) {
+            // We received all outstanding completions.
+            readPending = false;
+            ioState &= ~READ_SCHEDULED;
+        }
+        inReadComplete = true;
+        try {
+            socketIsEmpty = socketIsEmpty(flags);
+            socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
+                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
+            readComplete0(op, res, flags, data, numOutstandingReads);
+        } finally {
+            IoUringRecvByteAllocatorHandle recvByteAllocatorHandle =
+                    (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
             try {
-                socketIsEmpty = socketIsEmpty(flags);
-                socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
-                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
-                readComplete0(op, res, flags, data, numOutstandingReads);
-            } finally {
-                try {
-                    // Check if we should consider the read loop to be done.
-                    if (recvBufAllocHandle().isReadComplete()) {
-                        // Reset the handle as we are done with the read-loop.
-                        recvBufAllocHandle().reset(config());
+                // Check if we should consider the read loop to be done.
+                if (recvByteAllocatorHandle.isReadComplete()) {
+                    // Reset the handle as we are done with the read-loop.
+                    recvByteAllocatorHandle.reset(config());
 
-                        // Check if this was a readComplete(...) triggered by a read or multi-shot read.
-                        if (!multishot) {
-                            if (readPending) {
-                                // This was a "normal" read and the user did signal we should continue reading.
-                                // Let's schedule the read now.
-                                doBeginReadNow();
-                            }
-                        } else {
-                            // The readComplete(...) was triggered by a multi-shot read. Because of this the state
-                            // machine is a bit more complicated.
-
-                            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                                // The readComplete(...) was triggered because the previous read was cancelled.
-                                // In this case we we need to check if the user did signal the desire to read again
-                                // in the meantime. If this is the case we need to schedule the read to ensure
-                                // we do not stall.
-                                if (pending) {
-                                    doBeginReadNow();
-                                }
-                            } else if (rearm) {
-                                // We need to rearm the multishot as otherwise we might miss some data.
-                                doBeginReadNow();
-                            } else if (!readPending) {
-                                // Cancel the multi-shot read now as the user did not signal that we want to keep
-                                // reading while we handle the completion event.
-                                cancelOutstandingReads(registration, numOutstandingReads);
-                            }
-                        }
-                    } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                        // The readComplete(...) was triggered because the previous read was cancelled.
-                        // In this case we we need to check if the user did signal the desire to read again
-                        // in the meantime. If this is the case we need to schedule the read to ensure
-                        // we do not stall.
-                        if (pending) {
+                    // Check if this was a readComplete(...) triggered by a read or multi-shot read.
+                    if (!multishot) {
+                        if (readPending) {
+                            // This was a "normal" read and the user did signal we should continue reading.
+                            // Let's schedule the read now.
                             doBeginReadNow();
                         }
-                    } else if (multishot && rearm) {
-                        // We need to rearm the multishot as otherwise we might miss some data.
+                    } else {
+                        // The readComplete(...) was triggered by a multi-shot read. Because of this the state
+                        // machine is a bit more complicated.
+
+                        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                            // The readComplete(...) was triggered because the previous read was cancelled.
+                            // In this case we we need to check if the user did signal the desire to read again
+                            // in the meantime. If this is the case we need to schedule the read to ensure
+                            // we do not stall.
+                            if (pending) {
+                                doBeginReadNow();
+                            }
+                        } else if (rearm) {
+                            // We need to rearm the multishot as otherwise we might miss some data.
+                            doBeginReadNow();
+                        } else if (!readPending) {
+                            // Cancel the multi-shot read now as the user did not signal that we want to keep
+                            // reading while we handle the completion event.
+                            cancelOutstandingReads(registration, numOutstandingReads);
+                        }
+                    }
+                } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    // The readComplete(...) was triggered because the previous read was cancelled.
+                    // In this case we we need to check if the user did signal the desire to read again
+                    // in the meantime. If this is the case we need to schedule the read to ensure
+                    // we do not stall.
+                    if (pending) {
                         doBeginReadNow();
                     }
-                } finally {
-                    inReadComplete = false;
-                    socketIsEmpty = false;
+                } else if (multishot && rearm) {
+                    // We need to rearm the multishot as otherwise we might miss some data.
+                    doBeginReadNow();
                 }
+            } finally {
+                inReadComplete = false;
+                socketIsEmpty = false;
             }
         }
+    }
 
-        /**
-         * Called once a read was completed.
-         */
-        protected abstract void readComplete0(byte op, int res, int flags, short data, int outstandingCompletes);
+    /**
+     * Called once a read was completed.
+     */
+    protected abstract void readComplete0(byte op, int res, int flags, short data, int outstandingCompletes);
 
-        /**
-         * Called once POLLRDHUP event is ready to be processed
-         */
-        private void pollRdHup(int res) {
-            ioState &= ~POLL_RDHUP_SCHEDULED;
-            pollRdhupId = 0;
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return;
-            }
-
-            // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
-            recvBufAllocHandle().rdHupReceived();
-
-            if (isActive()) {
-                scheduleFirstReadIfNeeded();
-            } else {
-                // Just to be safe make sure the input marked as closed.
-                shutdownInput(false);
-            }
+    /**
+     * Called once POLLRDHUP event is ready to be processed
+     */
+    private void pollRdHup(int res) {
+        ioState &= ~POLL_RDHUP_SCHEDULED;
+        pollRdhupId = 0;
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            return;
         }
 
-        /**
-         * Called once POLLIN event is ready to be processed
-         */
-        private void pollIn(int res, int flags, short data) {
-            // Check if we need to rearm. This works for both cases, POLL_ADD and POLL_ADD_MULTI.
-            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (rearm) {
-                ioState &= ~POLL_IN_SCHEDULED;
-                pollInId = 0;
-            }
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return;
-            }
-            if (!readPending) {
-                // We received the POLLIN but the user is not interested yet in reading, just mark socketHasMoreData
-                // as true so we will trigger a read directly once the user calls read()
-                socketHasMoreData = true;
-                return;
-            }
+        // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
+        ((IoUringRecvByteAllocatorHandle) recvBufAllocHandle()).rdHupReceived();
+
+        if (isActive()) {
             scheduleFirstReadIfNeeded();
+        } else {
+            // Just to be safe make sure the input marked as closed.
+            shutdownInput(false);
         }
+    }
 
-        private void scheduleFirstReadIfNeeded() {
-            if ((ioState & READ_SCHEDULED) == 0) {
-                scheduleFirstRead();
-            }
+    /**
+     * Called once POLLIN event is ready to be processed
+     */
+    private void pollIn(int res, int flags, short data) {
+        // Check if we need to rearm. This works for both cases, POLL_ADD and POLL_ADD_MULTI.
+        boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+        if (rearm) {
+            ioState &= ~POLL_IN_SCHEDULED;
+            pollInId = 0;
         }
-
-        private void scheduleFirstRead() {
-            // This is a new "read loop" so we need to reset the allocHandle.
-            final ChannelConfig config = config();
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
-            scheduleRead(true);
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            return;
         }
-
-        protected final void scheduleRead(boolean first) {
-            // Only schedule another read if the fd is still open.
-            if (delayedClose == null && fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
-                numOutstandingReads = (short) scheduleRead0(first, socketIsEmpty);
-                if (numOutstandingReads > 0 || numOutstandingReads == -1) {
-                    ioState |= READ_SCHEDULED;
-                }
-            }
+        if (!readPending) {
+            // We received the POLLIN but the user is not interested yet in reading, just mark socketHasMoreData
+            // as true so we will trigger a read directly once the user calls read()
+            socketHasMoreData = true;
+            return;
         }
+        scheduleFirstReadIfNeeded();
+    }
 
-        /**
-         * Schedule a read and returns the number of {@link #readComplete(byte, int, int, short)}
-         * calls that are expected because of the scheduled read.
-         *
-         * @param first             {@code true} if this is the first read of a read loop.
-         * @param socketIsEmpty     {@code true} if the socket is guaranteed to be empty, {@code false} otherwise.
-         * @return                  the number of {@link #readComplete(byte, int, int, short)} calls expected or
-         *                          {@code -1} if {@link #readComplete(byte, int, int, short)} is called until
-         *                          the read is cancelled (multi-shot).
-         */
-        protected abstract int scheduleRead0(boolean first, boolean socketIsEmpty);
+    private void scheduleFirstReadIfNeeded() {
+        if ((ioState & READ_SCHEDULED) == 0) {
+            scheduleFirstRead();
+        }
+    }
 
-        /**
-         * Called once POLLOUT event is ready to be processed
-         *
-         * @param res   the result.
-         */
-        private void pollOut(int res) {
-            ioState &= ~POLL_OUT_SCHEDULED;
-            pollOutId = 0;
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return;
-            }
-            // pending connect
-            if (connectPromise != null) {
-                // Note this method is invoked by the event loop only if the connection attempt was
-                // neither cancelled nor timed out.
+    private void scheduleFirstRead() {
+        // This is a new "read loop" so we need to reset the allocHandle.
+        final ChannelConfig config = config();
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        allocHandle.reset(config);
+        scheduleRead(true);
+    }
 
-                assert executor().inEventLoop();
-
-                boolean connectStillInProgress = false;
-                try {
-                    boolean wasActive = isActive();
-                    if (!socket.finishConnect()) {
-                        connectStillInProgress = true;
-                        return;
-                    }
-                    fulfillConnectPromise(connectPromise, wasActive);
-                } catch (Throwable t) {
-                    fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-                } finally {
-                    if (!connectStillInProgress) {
-                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0
-                        // is used
-                        // See https://github.com/netty/netty/issues/1770
-                        cancelConnectTimeoutFuture();
-                        connectPromise = null;
-                    } else {
-                        // The connect was not done yet, register for POLLOUT again
-                        schedulePollOut();
-                    }
-                }
-            } else if (!socket.isOutputShutdown()) {
-                // Try writing again
-                super.flush0();
+    protected final void scheduleRead(boolean first) {
+        // Only schedule another read if the fd is still open.
+        if (delayedClose == null && fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
+            numOutstandingReads = (short) scheduleRead0(first, socketIsEmpty);
+            if (numOutstandingReads > 0 || numOutstandingReads == -1) {
+                ioState |= READ_SCHEDULED;
             }
         }
+    }
 
-        /**
-         * Called once a write was completed.
-         *
-         * @param op    the op code.
-         * @param res   the result.
-         * @param flags the flags.
-         * @param data  the data that was passed when submitting the op.
-         */
-        private void writeComplete(byte op, int res, int flags, short data) {
-            if ((ioState & CONNECT_SCHEDULED) != 0) {
-                // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
-                // TCP_FASTOPEN_CONNECT.
-                freeMsgHdrArray();
-                if (res > 0) {
-                    // Connect complete!
-                    outboundBuffer().removeBytes(res);
+    /**
+     * Schedule a read and returns the number of {@link #readComplete(byte, int, int, short)}
+     * calls that are expected because of the scheduled read.
+     *
+     * @param first             {@code true} if this is the first read of a read loop.
+     * @param socketIsEmpty     {@code true} if the socket is guaranteed to be empty, {@code false} otherwise.
+     * @return                  the number of {@link #readComplete(byte, int, int, short)} calls expected or
+     *                          {@code -1} if {@link #readComplete(byte, int, int, short)} is called until
+     *                          the read is cancelled (multi-shot).
+     */
+    protected abstract int scheduleRead0(boolean first, boolean socketIsEmpty);
 
-                    // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    connectComplete(op, 0, flags, data);
-                } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
-                    // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
-                    // In this case, our TCP connection will be established normally, but no data was transmitted at
-                    // this time. We'll just transmit the data with normal writes later.
-                    // Let's submit a normal connect.
-                    submitConnect((InetSocketAddress) requestedRemoteAddress);
-                } else {
-                    // There was an error, handle it as a normal connect error.
-                    connectComplete(op, res, flags, data);
-                }
-                return;
-            }
-
-            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
-                assert numOutstandingWrites > 0;
-                --numOutstandingWrites;
-            }
-
-            boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
-            if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
-
-                // We were not able to write everything, let's register for POLLOUT
-                schedulePollOut();
-            }
-
-            // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
-            // while still removing messages internally in removeBytes(...) which then may corrupt state.
-            if (numOutstandingWrites == 0) {
-                ioState &= ~WRITE_SCHEDULED;
-
-                // If we could write all and we did not schedule a pollout yet let us try to write again
-                if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
-                    scheduleWriteIfNeeded(unsafe().outboundBuffer(), false);
-                }
-            }
+    /**
+     * Called once POLLOUT event is ready to be processed
+     *
+     * @param res   the result.
+     */
+    private void pollOut(int res) {
+        ioState &= ~POLL_OUT_SCHEDULED;
+        pollOutId = 0;
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            return;
         }
+        // pending connect
+        if (connectPromise != null && !connectPromise.isDone()) {
+            // Note this method is invoked by the event loop only if the connection attempt was
+            // neither cancelled nor timed out.
+            assert executor().inEventLoop();
 
-        /**
-         * Called once a write was completed.
-         * @param op            the op code
-         * @param res           the result.
-         * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
-         * @param outstanding   the outstanding write completions.
-         */
-        abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
-
-        /**
-         * Called once a cancel was completed.
-         *
-         * @param op            the op code
-         * @param res           the result.
-         * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
-         */
-        void cancelComplete0(byte op, int res, int flags, short data) {
-            // NOOP
-        }
-
-        /**
-         * Called once a connect was completed.
-         * @param op            the op code.
-         * @param res           the result.
-         * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
-         */
-        void connectComplete(byte op, int res, int flags, short data) {
-            ioState &= ~CONNECT_SCHEDULED;
-            freeRemoteAddressMemory();
-
-            if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
-                // connect not complete yet need to wait for poll_out event
-                schedulePollOut();
-            } else {
-                try {
-                    if (res == 0) {
-                        fulfillConnectPromise(connectPromise, active);
-                        if (readPending) {
-                            doBeginReadNow();
-                        }
-                    } else {
-                        try {
-                            Errors.throwConnectException("io_uring connect", res);
-                        } catch (Throwable cause) {
-                            fulfillConnectPromise(connectPromise, cause);
-                        }
-                    }
-                } finally {
-                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is
-                    // used
-                    // See https://github.com/netty/netty/issues/1770
-                    cancelConnectTimeoutFuture();
-                    connectPromise = null;
-                }
-            }
-        }
-
-        @Override
-        public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
-            // non-blocking io.
-            if (promise.isDone() || !ensureOpen(promise)) {
-                return;
-            }
-
-            if (delayedClose != null) {
-                promise.tryFailure(annotateConnectException(new ClosedChannelException(), remoteAddress));
-                return;
-            }
+            Promise<Void> promise = connectPromise;
+            final boolean connected;
             try {
-                if (connectPromise != null) {
-                    throw new ConnectionPendingException();
-                }
-                if (localAddress instanceof InetSocketAddress) {
-                    checkResolvable((InetSocketAddress) localAddress);
-                }
-
-                if (remoteAddress instanceof InetSocketAddress) {
-                    checkResolvable((InetSocketAddress) remoteAddress);
-                }
-
-                if (remote != null) {
-                    // Check if already connected before trying to connect. This is needed as connect(...) will not#
-                    // return -1 and set errno to EISCONN if a previous connect(...) attempt was setting errno to
-                    // EINPROGRESS and finished later.
-                    throw new AlreadyConnectedException();
-                }
-
-                if (localAddress != null) {
-                    socket.bind(localAddress);
-                }
-
-                if (remoteAddress instanceof InetSocketAddress) {
-                    InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                    ByteBuf initialData = null;
-                    if (IoUring.isTcpFastOpenClientSideAvailable() &&
-                        config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT) == Boolean.TRUE) {
-                        ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
-                        outbound.addFlush();
-                        Object curr;
-                        if ((curr = outbound.current()) instanceof ByteBuf) {
-                            initialData = (ByteBuf) curr;
-                        }
-                    }
-                    if (initialData != null) {
-                        msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
-                        MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                        hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
-                                initialData.readableBytes(), (short) 0);
-
-                        int fd = fd().intValue();
-                        IoRegistration registration = registration();
-                        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
-                                hdr.address(), hdr.idx());
-                        connectId = registration.submit(ops);
-                        if (connectId == 0) {
-                            // Directly release the memory if submitting failed.
-                            freeMsgHdrArray();
-                        }
-                    } else {
-                        submitConnect(inetSocketAddress);
-                    }
-                } else if (remoteAddress instanceof DomainSocketAddress) {
-                    DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
-                    submitConnect(unixDomainSocketAddress);
-                } else {
-                    throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
-                }
-
-                if (connectId != 0) {
-                    ioState |= CONNECT_SCHEDULED;
-                }
-            } catch (Throwable t) {
-                closeIfClosed();
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
+                connected = socket.finishConnect();
+            } catch (Throwable cause) {
+                connectPromise = null;
+                promise.setFailure(cause);
                 return;
             }
-            connectPromise = promise;
-            requestedRemoteAddress = remoteAddress;
-            // Schedule connect timeout.
-            int connectTimeoutMillis = config().getConnectTimeoutMillis();
-            if (connectTimeoutMillis > 0) {
-                connectTimeoutFuture = executor().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone() &&
-                                connectPromise.tryFailure(new ConnectTimeoutException(
-                                        "connection timed out: " + remoteAddress))) {
-                            close(newPromise());
-                        }
-                    }
-                }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+            if (connected) {
+                connectPromise = null;
+                active = true;
+                if (local == null) {
+                    local = socket.localAddress();
+                }
+                computeRemote();
+
+                // Register POLLRDHUP
+                schedulePollRdHup();
+
+                promise.setSuccess(null);
+            } else {
+                // The connect was not done yet, register for POLLOUT again
+                schedulePollOut();
+            }
+        } else if (!socket.isOutputShutdown()) {
+            // Try writing again
+            writeFlushedNow();
+        }
+    }
+
+    /**
+     * Called once a write was completed.
+     *
+     * @param op    the op code.
+     * @param res   the result.
+     * @param flags the flags.
+     * @param data  the data that was passed when submitting the op.
+     */
+    private void writeComplete(byte op, int res, int flags, short data) {
+        if ((ioState & CONNECT_SCHEDULED) != 0) {
+            // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
+            // TCP_FASTOPEN_CONNECT.
+            freeMsgHdrArray();
+            if (res > 0) {
+                // Connect complete!
+                outboundBuffer().removeBytes(res);
+
+                // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
+                connectComplete(op, 0, flags, data);
+            } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
+                // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
+                // In this case, our TCP connection will be established normally, but no data was transmitted at
+                // this time. We'll just transmit the data with normal writes later.
+                // Let's submit a normal connect.
+                submitConnect((InetSocketAddress) requestedRemoteAddress);
+            } else {
+                // There was an error, handle it as a normal connect error.
+                connectComplete(op, res, flags, data);
+            }
+            return;
+        }
+
+        if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+            assert numOutstandingWrites > 0;
+            --numOutstandingWrites;
+        }
+
+        boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        // We might have consumed data from the ChannelOutboundBuffer lets call updateWritabilityIfNeeded() so
+        // we propagate changes related to the writability state if required.
+        updateWritabilityIfNeeded();
+
+        if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+
+            // We were not able to write everything, let's register for POLLOUT
+            schedulePollOut();
+        }
+
+        // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
+        // while still removing messages internally in removeBytes(...) which then may corrupt state.
+        if (numOutstandingWrites == 0) {
+            ioState &= ~WRITE_SCHEDULED;
+
+            // If we could write all and we did not schedule a pollout yet let us try to write again
+            if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+                scheduleWriteIfNeeded(outboundBuffer(), false);
+            }
+        }
+    }
+
+    /**
+     * Called once a write was completed.
+     * @param op            the op code
+     * @param res           the result.
+     * @param flags         the flags.
+     * @param data          the data that was passed when submitting the op.
+     * @param outstanding   the outstanding write completions.
+     */
+    abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
+
+    /**
+     * Called once a cancel was completed.
+     *
+     * @param op            the op code
+     * @param res           the result.
+     * @param flags         the flags.
+     * @param data          the data that was passed when submitting the op.
+     */
+    void cancelComplete0(byte op, int res, int flags, short data) {
+        // NOOP
+    }
+
+    /**
+     * Called once a connect was completed.
+     * @param op            the op code.
+     * @param res           the result.
+     * @param flags         the flags.
+     * @param data          the data that was passed when submitting the op.
+     */
+    void connectComplete(byte op, int res, int flags, short data) {
+        ioState &= ~CONNECT_SCHEDULED;
+        assert connectPromise != null;
+        freeRemoteAddressMemory();
+
+        if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
+            // connect not complete yet need to wait for poll_out event
+            schedulePollOut();
+        } else {
+            Promise<Void> promise = connectPromise;
+            connectPromise = null;
+            if (res == 0) {
+                active = true;
+                if (local == null) {
+                    local = socket.localAddress();
+                }
+                computeRemote();
+
+                // Register POLLRDHUP
+                schedulePollRdHup();
+
+                promise.setSuccess(null);
+                if (readPending) {
+                    doBeginReadNow();
+                }
+            } else if (!promise.isDone()) {
+                try {
+                    Errors.throwConnectException("io_uring connect", res);
+                } catch (Throwable cause) {
+                    connectPromise = null;
+                    promise.setFailure(cause);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void doConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
+        if (delayedClose != null) {
+            promise.tryFailure(new ClosedChannelException());
+            return;
+        }
+        try {
+            if (connectPromise != null) {
+                throw new ConnectionPendingException();
+            }
+            if (localAddress instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) localAddress);
             }
 
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    // If the connect future is cancelled we also cancel the timeout and close the
-                    // underlying socket.
-                    if (future.isCancelled()) {
-                        cancelConnectTimeoutFuture();
-                        connectPromise = null;
-                        close(newPromise());
+            if (remoteAddress instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) remoteAddress);
+            }
+
+            if (remote != null) {
+                // Check if already connected before trying to connect. This is needed as connect(...) will not#
+                // return -1 and set errno to EISCONN if a previous connect(...) attempt was setting errno to
+                // EINPROGRESS and finished later.
+                throw new AlreadyConnectedException();
+            }
+
+            if (localAddress != null) {
+                socket.bind(localAddress);
+            }
+
+            if (remoteAddress instanceof InetSocketAddress) {
+                InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
+                ByteBuf initialData = null;
+                if (IoUring.isTcpFastOpenClientSideAvailable() &&
+                        config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT) == Boolean.TRUE) {
+                    ChannelOutboundBuffer outbound = outboundBuffer();
+                    outbound.addFlush();
+                    Object curr;
+                    if ((curr = outbound.current()) instanceof ByteBuf) {
+                        initialData = (ByteBuf) curr;
                     }
                 }
-            });
+                if (initialData != null) {
+                    msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
+                    MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
+                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
+                            initialData.readableBytes(), (short) 0);
+
+                    int fd = fd().intValue();
+                    IoRegistration registration = registration();
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
+                            hdr.address(), hdr.idx());
+                    connectId = registration.submit(ops);
+                    if (connectId == 0) {
+                        // Directly release the memory if submitting failed.
+                        freeMsgHdrArray();
+                    }
+                } else {
+                    submitConnect(inetSocketAddress);
+                }
+            } else if (remoteAddress instanceof DomainSocketAddress) {
+                DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
+                submitConnect(unixDomainSocketAddress);
+            } else {
+                throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
+            }
+
+            if (connectId != 0) {
+                ioState |= CONNECT_SCHEDULED;
+            }
+        } catch (Throwable t) {
+            promise.tryFailure(t);
+            return;
         }
+        connectPromise = promise;
+        requestedRemoteAddress = remoteAddress;
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
         cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
         remoteAddressMemory = cleanable.buffer();
 
-        SockaddrIn.set(socket.isIpv6(), remoteAddressMemory, inetSocketAddress);
+        SockaddrIn.set(socket.protocolFamily() == SocketProtocolFamily.INET6,
+                remoteAddressMemory, inetSocketAddress);
 
         int fd = fd().intValue();
         IoRegistration registration = registration();
@@ -1203,12 +1092,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         EventLoop eventLoop = executor();
-        eventLoop.register(ioUringUnsafe()).addListener(f -> {
+        eventLoop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -1216,18 +1105,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected final void doDeregister() {
+    protected final void doDeregister(Promise<Void> promise) {
         // Cancel all previous submitted ops.
-        ioUringUnsafe().cancelOps(connectPromise != null);
+        cancelOps(connectPromise != null);
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(final SocketAddress local) throws Exception {
-        if (local instanceof InetSocketAddress) {
-            checkResolvable((InetSocketAddress) local);
+    protected void doBind(final SocketAddress local, Promise<Void> promise) {
+        try {
+            if (local instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) local);
+            }
+            socket.bind(local);
+            this.local = socket.localAddress();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
         }
-        socket.bind(local);
-        this.local = socket.localAddress();
+        promise.setSuccess(null);
     }
 
     protected static void checkResolvable(InetSocketAddress addr) {
@@ -1246,26 +1142,21 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return remote;
     }
 
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-               ((SocketChannelConfig) config).isAllowHalfClosure();
-    }
-
-    private void cancelConnectTimeoutFuture() {
-        if (connectTimeoutFuture != null) {
-            connectTimeoutFuture.cancel(false);
-            connectTimeoutFuture = null;
-        }
+    protected boolean isAllowHalfClosure() {
+        return false;
     }
 
     private void computeRemote() {
         if (requestedRemoteAddress instanceof InetSocketAddress) {
-            remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                    (InetSocketAddress) socket.remoteAddress());
+        } else {
+            remote = socket.remoteAddress();
         }
     }
 
-    private boolean shouldBreakIoUringInReady(ChannelConfig config) {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    private boolean shouldBreakIoUringInReady() {
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
     /**

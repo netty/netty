@@ -18,22 +18,23 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainDatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
@@ -48,6 +49,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
@@ -61,12 +63,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final boolean IP_MULTICAST_ALL =
             SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
-            StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final EpollDatagramChannelConfig config;
@@ -110,38 +108,30 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new LinuxSocket(fd), true);
+        this(eventLoop, new LinuxSocket(fd, LinuxSocket.isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET), true);
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0));
+        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0), true);
 
-        // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
-        try {
-            fd.setIpMulticastAll(IP_MULTICAST_ALL);
-        } catch (IOException e) {
-            logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+        if (fd.protocolFamily() != SocketProtocolFamily.UNIX) {
+            // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
+            try {
+                fd.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException | ChannelException e) {
+                logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+            }
         }
 
         config = new EpollDatagramChannelConfig(this);
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     public boolean isActive() {
         return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
     }
@@ -152,201 +142,188 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
-        try {
-            NetworkInterface iface = config().getNetworkInterface();
-            if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
-            }
-            return joinGroup(multicastAddress, iface, null, promise);
-        } catch (IOException e) {
-            promise.setFailure(e);
+    public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+                try {
+                    NetworkInterface iface = config.getOption(ChannelOption.IP_MULTICAST_IF);
+                    if (iface == null) {
+                        iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+                    }
+                    joinGroup(multicastAddress, iface, null, promise);
+                } catch (SocketException e) {
+                    promise.setFailure(e);
+                }
+                return;
+            default:
+                promise.setFailure(
+                        new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelPromise promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            Promise<Void> promise) {
+        joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final ChannelPromise promise) {
+            final InetAddress source, final Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        if (executor().inEventLoop()) {
-            joinGroup0(multicastAddress, networkInterface, source, promise);
-        } else {
-            executor().execute(new Runnable() {
-                @Override
-                public void run() {
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+                if (executor().inEventLoop()) {
                     joinGroup0(multicastAddress, networkInterface, source, promise);
+                } else {
+                    executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            joinGroup0(multicastAddress, networkInterface, source, promise);
+                        }
+                    });
                 }
-            });
+                return;
+            default:
+                promise.setFailure(
+                        new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
     private void joinGroup0(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final ChannelPromise promise) {
+            final InetAddress source, final Promise<Void> promise) {
         assert executor().inEventLoop();
 
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+            leaveGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelPromise promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            NetworkInterface networkInterface, Promise<Void> promise) {
+        leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        if (executor().inEventLoop()) {
-            leaveGroup0(multicastAddress, networkInterface, source, promise);
-        } else {
-            executor().execute(new Runnable() {
-                @Override
-                public void run() {
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+
+                if (executor().inEventLoop()) {
                     leaveGroup0(multicastAddress, networkInterface, source, promise);
+                } else {
+                    executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            leaveGroup0(multicastAddress, networkInterface, source, promise);
+                        }
+                    });
                 }
-            });
+                return;
+            default:
+                promise.setFailure(
+                        new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
     private void leaveGroup0(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         assert executor().inEventLoop();
 
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
     }
 
     @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public ChannelFuture block(
+    public void block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final ChannelPromise promise) {
+            final InetAddress sourceToBlock, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast block not supported"));
-        return promise;
     }
 
     @Override
-    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
+    public void block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
 
-    @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
-        try {
-            return block(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    sourceToBlock, promise);
-        } catch (Throwable e) {
-            promise.setFailure(e);
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+                try {
+                    block(multicastAddress,
+                            NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
+                            sourceToBlock, promise);
+                } catch (Throwable e) {
+                    promise.setFailure(e);
+                }
+                return;
+            default:
+                promise.setFailure(
+                        new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollDatagramChannelUnsafe();
-    }
-
-    @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == SocketProtocolFamily.INET6) {
+                if (socket.protocolFamily() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(Native.INET6_ANY, socketAddress.getPort());
                 }
             }
         }
-        super.doBind(localAddress);
-        active = true;
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                active = true;
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     @Override
@@ -361,7 +338,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             try {
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
-                if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1 ||
+                if (socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                        Native.IS_SUPPORTING_SENDMMSG && in.size() > 1 ||
                         // We only handle UDP_SEGMENT in sendmmsg.
                         in.current() instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
@@ -419,13 +397,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
-        final InetSocketAddress remoteAddress;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
-            data = envelope.content();
-            remoteAddress = envelope.recipient();
+        final SocketAddress remoteAddress;
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            data = packet.content();
+            remoteAddress = packet.recipient();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -436,12 +412,19 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        try {
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        } catch (NativeIoException e) {
+            if (remoteAddress == null) {
+                throw translateForConnected(e);
+            }
+            throw e;
+        }
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
             throw new UnresolvedAddressException();
         }
     }
@@ -454,7 +437,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
             }
             io.netty.channel.unix.SegmentedDatagramPacket packet = (io.netty.channel.unix.SegmentedDatagramPacket) msg;
-            checkUnresolved(packet);
+            checkUnresolved(packet.recipient());
 
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
@@ -462,8 +445,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkUnresolved(packet);
-
+            checkUnresolved(packet.recipient());
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -473,36 +455,26 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
-
-            if (e.content() instanceof ByteBuf &&
-                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = (ByteBuf) e.content();
-                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                            newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-            }
-        }
-
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     @Override
-    public EpollDatagramChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        socket.disconnect();
-        connected = active = false;
-        resetCachedAddresses();
+    protected void doDisconnect(Promise<Void> promise) {
+        try {
+            socket.disconnect();
+            connected = active = false;
+            resetCachedAddresses();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
@@ -515,33 +487,39 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        connected = false;
+    protected void doClose(Promise<Void> promise) {
+        super.doClose(this.<Void>newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                connected = false;
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
-    final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
+        }
+        final EpollRecvByteAllocatorHandle allocHandle = (EpollRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
 
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            EpollDatagramChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    boolean connected = isConnected();
+                boolean connected = isConnected();
+                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                    epollInReadyUnix(allocHandle, pipeline, allocator);
+                } else {
                     do {
                         final boolean read;
-                        int datagramSize = config().getMaxDatagramPayloadSize();
+                        int datagramSize = config.getMaxDatagramPayloadSize();
 
                         ByteBuf byteBuf = allocHandle.allocate(allocator);
                         // Only try to use recvmmsg if its really supported by the running system.
@@ -572,24 +550,88 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         } else {
                             break;
                         }
-                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                    // as we read anything).
+                        // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                        // as we read anything).
                     } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-                } catch (Throwable t) {
-                    exception = t;
                 }
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
-                }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearEpollIn();
-                }
+            } catch (Throwable t) {
+                exception = t;
             }
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearEpollIn();
+            }
+        }
+    }
+
+    private void epollInReadyUnix(EpollRecvByteAllocatorHandle allocHandle, ChannelPipeline pipeline,
+                                  ByteBufAllocator allocator) throws Throwable {
+        ByteBuf byteBuf = null;
+        try {
+            boolean connected = isConnected();
+            do {
+                byteBuf = allocHandle.allocate(allocator);
+                allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+
+                final DatagramPacket packet;
+                if (connected) {
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    if (allocHandle.lastBytesRead() <= 0) {
+                        // nothing was read, release the buffer.
+                        byteBuf.release();
+                        break;
+                    }
+                    packet = new DatagramPacket(byteBuf, localAddress(), remoteAddress());
+                } else {
+                    final DomainDatagramSocketAddress remoteAddress;
+                    if (byteBuf.hasMemoryAddress()) {
+                        // has a memory address so use optimized call
+                        remoteAddress = socket.recvFromAddressDomainSocket(byteBuf.memoryAddress(),
+                                byteBuf.writerIndex(), byteBuf.capacity());
+                    } else {
+                        ByteBuffer nioData = byteBuf.internalNioBuffer(
+                                byteBuf.writerIndex(), byteBuf.writableBytes());
+                        remoteAddress =
+                                socket.recvFromDomainSocket(nioData, nioData.position(), nioData.limit());
+                    }
+
+                    if (remoteAddress == null) {
+                        allocHandle.lastBytesRead(-1);
+                        byteBuf.release();
+                        break;
+                    }
+                    SocketAddress localAddress = remoteAddress.localAddress();
+                    if (localAddress == null) {
+                        localAddress = localAddress();
+                    }
+                    allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+                    byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+
+                    packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
+                }
+
+                allocHandle.incMessagesRead(1);
+
+                readPending = false;
+                pipeline.fireChannelRead(packet);
+
+                byteBuf = null;
+
+                // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                // as we read anything).
+            } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+        } catch (Throwable t) {
+            if (byteBuf != null) {
+                byteBuf.release();
+            }
+            throw t;
         }
     }
 
@@ -649,8 +691,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             io.netty.channel.unix.SegmentedDatagramPacket segmentedDatagramPacket =
                     (io.netty.channel.unix.SegmentedDatagramPacket) packet;
             ByteBuf content = segmentedDatagramPacket.content();
-            InetSocketAddress recipient = segmentedDatagramPacket.recipient();
-            InetSocketAddress sender = segmentedDatagramPacket.sender();
+            SocketAddress recipient = segmentedDatagramPacket.recipient();
+            SocketAddress sender = segmentedDatagramPacket.sender();
             int segmentSize = segmentedDatagramPacket.segmentSize();
             do {
                 out.add(new DatagramPacket(content.readRetainedSlice(Math.min(content.readableBytes(),
@@ -711,7 +753,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return false;
             }
             byteBuf.writerIndex(bytesReceived);
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
             if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
@@ -754,7 +796,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return false;
             }
 
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
 
             // Set the writerIndex too the maximum number of bytes we might have read.
             int bytesReceived = received * datagramSize;

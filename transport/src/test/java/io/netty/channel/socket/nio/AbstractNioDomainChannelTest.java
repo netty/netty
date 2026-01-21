@@ -58,7 +58,7 @@ public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel>
             assertEquals(value3, value4);
             assertNotEquals(value1, value4);
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close();
             group.shutdownGracefully();
         }
     }
@@ -72,7 +72,7 @@ public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel>
             assertFalse(channel.config().setOption(option, ""));
             assertNull(channel.config().getOption(option));
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close();
             group.shutdownGracefully();
         }
     }
@@ -84,7 +84,7 @@ public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel>
         try {
             channel.config().getOptions();
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close();
             group.shutdownGracefully();
         }
     }

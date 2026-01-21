@@ -16,12 +16,11 @@
 package io.netty.handler.codec.http.cors;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,6 +28,9 @@ import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -48,7 +50,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * This handler can be configured using one or more {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
  */
-public class CorsHandler extends ChannelDuplexHandler {
+public class CorsHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";
@@ -58,6 +60,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private HttpRequest request;
     private final List<CorsConfig> configList;
     private final boolean isShortCircuit;
+    private boolean consumeContent;
 
     /**
      * Creates a new instance with a single {@link CorsConfig}.
@@ -87,13 +90,28 @@ public class CorsHandler extends ChannelDuplexHandler {
             config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
+                // Enable consumeContent so that all following HttpContent
+                // for this request will be released and not propagated downstream.
+                consumeContent = true;
                 return;
             }
             if (isShortCircuit && !(origin == null || config != null)) {
                 forbidden(ctx, request);
+                consumeContent = true;
                 return;
             }
+
+            // This request is forwarded, stop discarding
+            consumeContent = false;
+            ctx.fireChannelRead(msg);
+            return;
         }
+
+        if (consumeContent && (msg instanceof HttpContent)) {
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+
         ctx.fireChannelRead(msg);
     }
 
@@ -233,8 +251,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
-            throws Exception {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
@@ -262,9 +279,11 @@ public class CorsHandler extends ChannelDuplexHandler {
 
         HttpUtil.setKeepAlive(response, keepAlive);
 
-        final ChannelFuture future = ctx.writeAndFlush(response);
+        final Future<Void> future = ctx.writeAndFlush(response);
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> {
+                ctx.close();
+            });
         }
     }
 }

@@ -31,7 +31,7 @@ public class PromiseAggregatorTest {
             @SuppressWarnings("deprecation")
             @Override
             public void execute() {
-                new PromiseAggregator<Void, Future<Void>>(null);
+                new PromiseAggregator<Void>(null);
             }
         });
     }
@@ -41,8 +41,8 @@ public class PromiseAggregatorTest {
         @SuppressWarnings("unchecked")
         Promise<Void> p = mock(Promise.class);
         @SuppressWarnings("deprecation")
-        final PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+        final PromiseAggregator<Void> a =
+                new PromiseAggregator<>(p);
         assertThrows(NullPointerException.class, new Executable() {
             @Override
             public void execute() {
@@ -56,8 +56,8 @@ public class PromiseAggregatorTest {
     public void testSuccessfulNoPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         @SuppressWarnings("deprecation")
-        PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+        PromiseAggregator<Void> a =
+                new PromiseAggregator<>(p);
 
         Future<Void> future = mock(Future.class);
         when(p.setSuccess(null)).thenReturn(p);
@@ -72,8 +72,8 @@ public class PromiseAggregatorTest {
     @Test
     public void testSuccessfulPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+        PromiseAggregator<Void> a =
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
 
@@ -98,8 +98,8 @@ public class PromiseAggregatorTest {
     @Test
     public void testFailedFutureFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+        PromiseAggregator<Void> a =
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);
@@ -125,8 +125,8 @@ public class PromiseAggregatorTest {
     @Test
     public void testFailedFutureNoFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
-        PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p, false);
+        PromiseAggregator<Void> a =
+                new PromiseAggregator<>(p, false);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);

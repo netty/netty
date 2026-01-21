@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -62,7 +63,7 @@ public final class Http3ClientExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new Http3ClientConnectionHandler())
@@ -87,7 +88,7 @@ public final class Http3ClientExample {
                         protected void channelInputClosed(ChannelHandlerContext ctx) {
                             ctx.close();
                         }
-                    }).sync().getNow();
+                    }).get();
 
             // Write the Header frame and send the FIN to mark the end of the request.
             // After this its not possible anymore to write any more data.
@@ -96,7 +97,7 @@ public final class Http3ClientExample {
                     .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExample.PORT)
                     .scheme("https");
             streamChannel.writeAndFlush(frame)
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT).sync();
+                    .addListener(f -> streamChannel.shutdown(ChannelShutdownType.newOutbound())).sync();
 
             // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
             // After this is done we will close the underlying datagram channel.

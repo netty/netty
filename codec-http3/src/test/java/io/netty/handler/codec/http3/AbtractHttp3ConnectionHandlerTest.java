@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http3;
 
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -39,7 +39,7 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
 
     @Test
     public void testOpenLocalControlStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelHandler() { });
         ChannelHandlerContext ctx = quicChannel.pipeline().firstContext();
 
         Http3ConnectionHandler handler = newConnectionHandler();
@@ -61,10 +61,10 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
 
     @Test
     public void testBidirectionalStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelHandler() { });
         final EmbeddedQuicStreamChannel bidirectionalStream =
                 (EmbeddedQuicStreamChannel) quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                        new ChannelDuplexHandler()).get();
+                        new ChannelHandler() { }).get();
         ChannelHandlerContext ctx = quicChannel.pipeline().firstContext();
 
         Http3ConnectionHandler handler = newConnectionHandler();
@@ -87,9 +87,9 @@ public abstract class AbtractHttp3ConnectionHandlerTest {
 
     @Test
     public void testUnidirectionalStream() throws Exception {
-        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelDuplexHandler());
+        EmbeddedQuicChannel quicChannel = new EmbeddedQuicChannel(server, new ChannelHandler() { });
         final QuicStreamChannel unidirectionalStream =
-                quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelDuplexHandler()).get();
+                quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelHandler() { }).get();
         ChannelHandlerContext ctx = quicChannel.pipeline().firstContext();
 
         Http3ConnectionHandler handler = newConnectionHandler();

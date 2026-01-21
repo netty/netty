@@ -18,7 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -46,7 +46,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
 
         try {
             Promise<Throwable> serverWritePromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
@@ -65,13 +65,13 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .sync()
                     .get();
             QuicStreamChannel streamChannel = quicChannel.createStream(
-                    QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter()).get();
+                    QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandler() { }).get();
             // Do the write which should succeed
             streamChannel.writeAndFlush(Unpooled.buffer().writeZero(8)).sync();
 
@@ -101,7 +101,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             public void channelActive(ChannelHandlerContext ctx) {
                 super.channelActive(ctx);
                 QuicChannel channel = (QuicChannel) ctx.channel();
-                channel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                channel.createStream(QuicStreamType.UNIDIRECTIONAL, new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
                         // Do the write which should succeed
@@ -113,12 +113,12 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter());
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandler() { });
 
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                    .streamHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             // Do the write should fail

@@ -17,12 +17,12 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -82,7 +82,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private static final int STATE_RECV_TRAILERS = 1 << 1;
 
     private Http2ConnectionDecoder decoder;
-    private ChannelPromise promise;
+    private Promise promise;
 
     @Mock
     private Http2Connection connection;
@@ -106,7 +106,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Channel channel;
 
     @Mock
-    private ChannelFuture future;
+    private Future future;
 
     @Mock
     private Http2Stream stream;
@@ -133,7 +133,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
 
-        promise = new DefaultChannelPromise(channel);
+        promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         final AtomicInteger headersReceivedState = new AtomicInteger();
         when(channel.isActive()).thenReturn(true);
@@ -214,7 +214,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(remote.reservePushStream(eq(PUSH_STREAM_ID), eq(stream))).thenReturn(pushStream);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
-        when(ctx.newSucceededFuture()).thenReturn(future);
+        when(ctx.newSucceededFuture(eq(null))).thenReturn(future);
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
@@ -238,13 +238,10 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode(decoder).onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
-        when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
-            @Override
-            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
-                fail();
-                return null;
-            }
-        });
+        doAnswer(invocationOnMock -> {
+            fail();
+            return null;
+        }).when(ctx).flush();
     }
 
     @Test
@@ -685,7 +682,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(STREAM_DEPENDENCY_ID),
                 eq(weight), eq(true), eq(0), eq(true));
         verify(remoteFlow).updateDependencyTree(eq(STREAM_ID), eq(STREAM_DEPENDENCY_ID), eq(weight), eq(true));
-        verify(lifecycleManager).closeStreamRemote(eq(stream), any(ChannelFuture.class));
+        verify(lifecycleManager).closeStreamRemote(eq(stream), any(Future.class));
     }
 
     @Test

@@ -15,24 +15,24 @@
 package io.netty.example.http2.helloworld.client;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.TimeUnit;
 
 /**
- * Reads the first {@link Http2Settings} object and notifies a {@link io.netty.channel.ChannelPromise}
+ * Reads the first {@link Http2Settings} object and notifies a {@link Promise}
  */
 public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Settings> {
-    private final ChannelPromise promise;
+    private final Promise<Void> promise;
 
     /**
      * Create new instance
      *
      * @param promise Promise object used to notify when first settings are received
      */
-    public Http2SettingsHandler(ChannelPromise promise) {
+    public Http2SettingsHandler(Promise<Void> promise) {
         this.promise = promise;
     }
 
@@ -55,7 +55,7 @@ public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Setti
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Http2Settings msg) throws Exception {
-        promise.setSuccess();
+        promise.setSuccess(null);
 
         // Only care about the first settings message
         ctx.pipeline().remove(this);

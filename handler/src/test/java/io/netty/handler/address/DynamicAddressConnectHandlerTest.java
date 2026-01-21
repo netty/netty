@@ -16,9 +16,9 @@
 package io.netty.handler.address;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
@@ -36,14 +36,14 @@ public class DynamicAddressConnectHandlerTest {
     @Test
     public void testReplaceAddresses() {
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, Promise<Void> promise) {
                 try {
                     assertSame(REMOTE_NEW, remoteAddress);
                     assertSame(LOCAL_NEW, localAddress);
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 } catch (Throwable cause) {
                     promise.setFailure(cause);
                 }

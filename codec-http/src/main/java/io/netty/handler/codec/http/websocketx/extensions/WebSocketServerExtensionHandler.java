@@ -19,11 +19,9 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -32,6 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -51,7 +50,7 @@ import java.util.Queue;
  * Find a basic implementation for compression extensions at
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler</tt>.
  */
-public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
+public class WebSocketServerExtensionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
@@ -84,10 +83,10 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 // slow path
                 onHttpRequestChannelRead(ctx, (HttpRequest) msg);
             } else {
-                super.channelRead(ctx, msg);
+                ctx.fireChannelRead(msg);
             }
         } else {
-            super.channelRead(ctx, msg);
+            ctx.fireChannelRead(msg);
         }
     }
 
@@ -155,21 +154,21 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             validExtensionsList = Collections.emptyList();
         }
         validExtensions.offer(validExtensionsList);
-        super.channelRead(ctx, request);
+        ctx.fireChannelRead(request);
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
                 onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
             } else if (msg instanceof HttpResponse) {
                 onHttpResponseWrite(ctx, (HttpResponse) msg, promise);
             } else {
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
             }
         } else {
-            super.write(ctx, msg, promise);
+            ctx.write(msg, promise);
         }
     }
 
@@ -177,9 +176,10 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      * This is a method exposed to perform fail-fast checks of user-defined http types.<p>
      * eg:<br>
      * If the user has defined a specific {@link HttpResponse} type i.e.{@code CustomHttpResponse} and
-     * {@link #write} can receive {@link ByteBuf} {@code msg} types too, it can be overridden like this:
+     * {@link ChannelOutboundHandler#write} can receive {@link ByteBuf} {@code msg} types too, it can be overridden
+     * like this:
      * <pre>
-     *     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+     *     public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) throws Exception {
      *         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
      *             if (msg instanceof CustomHttpResponse) {
      *                 onHttpResponseWrite(ctx, (CustomHttpResponse) msg, promise);
@@ -199,18 +199,17 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise)
-            throws Exception {
+    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, Promise<Void> promise) {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
             handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
         }
-        super.write(ctx, response, promise);
+        ctx.write(response, promise);
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        ChannelPromise promise, HttpResponse httpResponse,
+                                        Promise<Void> promise, HttpResponse httpResponse,
                                         final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 
@@ -224,18 +223,15 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        if (future.isSuccess()) {
-                            for (WebSocketServerExtension extension : validExtensionsList) {
-                                WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
-                                WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                                String name = ctx.name();
-                                ctx.pipeline()
-                                    .addAfter(name, decoder.getClass().getName(), decoder)
-                                    .addAfter(name, encoder.getClass().getName(), encoder);
-                            }
+                promise.addListener(future -> {
+                    if (future.isSuccess()) {
+                        for (WebSocketServerExtension extension : validExtensionsList) {
+                            WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
+                            WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
+                            String name = ctx.name();
+                            ctx.pipeline()
+                                .addAfter(name, decoder.getClass().getName(), decoder)
+                                .addAfter(name, encoder.getClass().getName(), encoder);
                         }
                     }
                 });
@@ -245,12 +241,9 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 }
             }
 
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
-                    }
+            promise.addListener(future -> {
+                if (future.isSuccess()) {
+                    ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                 }
             });
         }

@@ -22,14 +22,13 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
@@ -42,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class IoUringFileRegionTest {
 
     @Test
-    public void testSendFile() throws IOException, InterruptedException {
+    public void testSendFile() throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         String sampleString = "hello netty io_uring sendFile!";
         File inFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
@@ -53,7 +52,7 @@ public class IoUringFileRegionTest {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.channel(IoUringServerSocketChannel.class);
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     private CompositeByteBuf compositeByteBuf;
 
                     @Override
@@ -79,13 +78,13 @@ public class IoUringFileRegionTest {
                     }
                 })
                 .bind(NetUtil.LOCALHOST, 0)
-                .syncUninterruptibly().channel();
+                .get();
 
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
-        Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+                .handler(new ChannelInboundHandler() { });
+        Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).get();
         clientChannel.writeAndFlush(new DefaultFileRegion(inFile, 0, Files.size(inFile.toPath()))).sync();
         ByteBuf result = sendFileResult.take();
         ByteBuf expected = Unpooled.copiedBuffer(sampleString, StandardCharsets.US_ASCII);

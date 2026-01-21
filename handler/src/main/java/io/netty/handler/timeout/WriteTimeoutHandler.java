@@ -17,14 +17,13 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.TimeUnit;
@@ -43,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link WriteTimeoutException}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelInboundHandler} {
  *     {@code @Override}
  *     public void exceptionCaught({@link ChannelHandlerContext} ctx, {@link Throwable} cause)
  *             throws {@link Exception} {
@@ -63,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
  */
-public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
+public class WriteTimeoutHandler implements ChannelOutboundHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     private final long timeoutNanos;
@@ -104,7 +103,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (timeoutNanos > 0) {
             scheduleTimeout(ctx, promise);
         }
@@ -126,7 +125,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private void scheduleTimeout(final ChannelHandlerContext ctx, final ChannelPromise promise) {
+    private void scheduleTimeout(final ChannelHandlerContext ctx, final Promise<Void> promise) {
         // Schedule a timeout.
         final WriteTimeoutTask task = new WriteTimeoutTask(ctx, promise);
         task.scheduledFuture = ctx.executor().schedule(task, timeoutNanos, TimeUnit.NANOSECONDS);
@@ -182,10 +181,10 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private final class WriteTimeoutTask implements Runnable, ChannelFutureListener {
+    private final class WriteTimeoutTask implements Runnable, FutureListener<Void> {
 
         private final ChannelHandlerContext ctx;
-        private final ChannelPromise promise;
+        private final Promise<Void> promise;
 
         // WriteTimeoutTask is also a node of a doubly-linked list
         WriteTimeoutTask prev;
@@ -193,7 +192,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
 
         Future<?> scheduledFuture;
 
-        WriteTimeoutTask(ChannelHandlerContext ctx, ChannelPromise promise) {
+        WriteTimeoutTask(ChannelHandlerContext ctx, Promise<Void> promise) {
             this.ctx = ctx;
             this.promise = promise;
         }
@@ -214,7 +213,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(Future<? extends Void> future) {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
 

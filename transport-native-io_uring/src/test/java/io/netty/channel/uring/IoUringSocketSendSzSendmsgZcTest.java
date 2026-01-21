@@ -18,12 +18,12 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -125,7 +125,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
 
     private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple, Close remoteClose)
             throws Throwable {
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelInboundHandler() { });
         // Force to use send_zc / sendmsg_zc if supported.
         cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
         if (remoteClose == Close.LOCAL) {
@@ -138,13 +138,13 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
 
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress(0));
-            ChannelFuture future = cb.connect(serverSocket.getLocalSocketAddress());
+            Future<Channel> future = cb.connect(serverSocket.getLocalSocketAddress());
             final AtomicReference<Throwable> causeRef = new AtomicReference<>();
 
             try (Socket socket = serverSocket.accept()) {
                 // We accept the socket but don't read data, this way we will not receive the second notification
                 // for the send as we never see a TCP ack until we start reading.
-                Channel channel = future.sync().channel();
+                Channel channel = future.get();
                 try {
                     final int numBuffers = multiple ? 2: 1;
                     CountDownLatch latch = new CountDownLatch(numBuffers);
@@ -152,7 +152,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     final ByteBuf buffer = channel.alloc().buffer(bufferSize);
                     future.addListener(f -> {
                         if (f.isSuccess()) {
-                            ChannelFutureListener writeListener = f2 -> {
+                            FutureListener<Void> writeListener = f2 -> {
                                 if (!f2.isSuccess()) {
                                     causeRef.compareAndSet(null, f2.cause());
                                 }

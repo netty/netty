@@ -17,11 +17,8 @@ package io.netty.example.http2.file;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelProgressiveFuture;
-import io.netty.channel.ChannelProgressiveFutureListener;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
@@ -34,6 +31,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import javax.activation.MimetypesFileTypeMap;
@@ -105,7 +103,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
  *
  * </pre>
  */
-public class Http2StaticFileServerHandler extends ChannelDuplexHandler {
+public class Http2StaticFileServerHandler implements ChannelInboundHandler {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
@@ -187,25 +185,12 @@ public class Http2StaticFileServerHandler extends ChannelDuplexHandler {
             ctx.writeAndFlush(new DefaultHttp2HeadersFrame(headers).stream(stream));
 
             // Write the content.
-            ChannelFuture sendFileFuture;
+            Future<Void> sendFileFuture;
             sendFileFuture = ctx.writeAndFlush(new Http2DataChunkedInput(
-                    new ChunkedFile(raf, 0, fileLength, 8192), stream), ctx.newProgressivePromise());
+                    new ChunkedFile(raf, 0, fileLength, 8192), stream));
 
-            sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
-                @Override
-                public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) {
-                    if (total < 0) { // total unknown
-                        System.err.println(future.channel() + " Transfer progress: " + progress);
-                    } else {
-                        System.err.println(future.channel() + " Transfer progress: " + progress + " / " + total);
-                    }
-                }
-
-                @Override
-                public void operationComplete(ChannelProgressiveFuture future) {
-                    System.err.println(future.channel() + " Transfer complete.");
-                }
-            });
+            sendFileFuture.addListener(future ->
+                    System.err.println(ctx.channel() + " Transfer complete."));
         } else {
             // Unsupported message type
             System.out.println("Unsupported message type: " + msg);

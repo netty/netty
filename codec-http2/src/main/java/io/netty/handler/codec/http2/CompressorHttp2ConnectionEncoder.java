@@ -17,12 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.BrotliEncoder;
@@ -39,6 +34,7 @@ import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.handler.codec.compression.SnappyFrameEncoder;
 import io.netty.handler.codec.compression.SnappyOptions;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 
@@ -174,13 +170,14 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     }
 
     @Override
-    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-            final boolean endOfStream, ChannelPromise promise) {
+    public void writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
+                          final boolean endOfStream, Promise<Void> promise) {
         final Http2Stream stream = connection().stream(streamId);
         final EmbeddedChannel channel = stream == null ? null : (EmbeddedChannel) stream.getProperty(propertyKey);
         if (channel == null) {
             // The compressor may be null if no compatible encoding type was found in this stream's headers
-            return super.writeData(ctx, streamId, data, padding, endOfStream, promise);
+            super.writeData(ctx, streamId, data, padding, endOfStream, promise);
+            return;
         }
 
         try {
@@ -192,12 +189,13 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     if (channel.finish()) {
                         buf = nextReadableBuf(channel);
                     }
-                    return super.writeData(ctx, streamId, buf == null ? Unpooled.EMPTY_BUFFER : buf, padding,
+                    super.writeData(ctx, streamId, buf == null ? Unpooled.EMPTY_BUFFER : buf, padding,
                             true, promise);
+                } else {
+                    // END_STREAM is not set and the assumption is data is still forthcoming.
+                    promise.setSuccess(null);
                 }
-                // END_STREAM is not set and the assumption is data is still forthcoming.
-                promise.setSuccess();
-                return promise;
+                return;
             }
 
             PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
@@ -209,7 +207,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     compressedEndOfStream = nextBuf == null;
                 }
 
-                ChannelPromise bufPromise = ctx.newPromise();
+                Promise<Void> bufPromise = ctx.newPromise();
                 combiner.add(bufPromise);
                 super.writeData(ctx, streamId, buf, padding, compressedEndOfStream, bufPromise);
                 if (nextBuf == null) {
@@ -227,49 +225,42 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 cleanup(stream, channel);
             }
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream, ChannelPromise promise) {
+    public void writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                             boolean endStream, Promise<Void> promise) {
         try {
             // Determine if compression is required and sanitize the headers.
             EmbeddedChannel compressor = newCompressor(ctx, headers, endStream);
 
             // Write the headers and create the stream object.
-            ChannelFuture future = super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+            super.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
 
             // After the stream object has been created, then attach the compressor as a property for data compression.
             bindCompressorToStream(compressor, streamId);
-
-            return future;
         } catch (Throwable e) {
             promise.tryFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
-            final int streamDependency, final short weight, final boolean exclusive, final int padding,
-            final boolean endOfStream, final ChannelPromise promise) {
+    public void writeHeaders(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
+                             final int streamDependency, final short weight, final boolean exclusive, final int padding,
+                             final boolean endOfStream, final Promise<Void> promise) {
         try {
             // Determine if compression is required and sanitize the headers.
             EmbeddedChannel compressor = newCompressor(ctx, headers, endOfStream);
 
             // Write the headers and create the stream object.
-            ChannelFuture future = super.writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive,
+            super.writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive,
                                                       padding, endOfStream, promise);
 
             // After the stream object has been created, then attach the compressor as a property for data compression.
             bindCompressorToStream(compressor, streamId);
-
-            return future;
         } catch (Throwable e) {
             promise.tryFailure(e);
         }
-        return promise;
     }
 
     /**
@@ -294,7 +285,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new BrotliEncoder(brotliOptions.parameters()))
                     .build();
@@ -302,7 +292,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new ZstdEncoder(zstdOptions.compressionLevel(),
                             zstdOptions.blockSize(), zstdOptions.maxEncodeSize()))
@@ -311,7 +300,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new SnappyFrameEncoder())
                     .build();
@@ -343,7 +331,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
                 return EmbeddedChannel.builder()
                         .channelId(channel.id())
-                        .hasDisconnect(channel.metadata().hasDisconnect())
                         .config(channel.config())
                         .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
                                 gzipCompressionOptions.compressionLevel(),
@@ -354,7 +341,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
                 return EmbeddedChannel.builder()
                         .channelId(channel.id())
-                        .hasDisconnect(channel.metadata().hasDisconnect())
                         .config(channel.config())
                         .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
                                 deflateOptions.compressionLevel(),
@@ -368,7 +354,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         } else {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits, memLevel))
                     .build();

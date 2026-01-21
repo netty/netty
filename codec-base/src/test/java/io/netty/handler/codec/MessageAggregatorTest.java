@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelOutboundHandler;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,17 +30,16 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.function.Executable;
 
 public class MessageAggregatorTest {
-    private static final class ReadCounter extends ChannelOutboundHandlerAdapter {
+    private static final class ReadCounter implements ChannelOutboundHandler {
         int value;
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             value++;
             ctx.read();
         }

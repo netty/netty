@@ -16,7 +16,6 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
@@ -40,7 +39,6 @@ import java.util.List;
  * <p> Consider using {@link IpSubnetFilter} for better performance while not as
  * general purpose as this filter. </p>
  */
-@Sharable
 public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final boolean acceptIfNotFound;
@@ -77,6 +75,11 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
                 this.rules.add(rule);
             }
         }
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

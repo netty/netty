@@ -18,8 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -98,7 +98,7 @@ public class SslHandlerCoalescingBufferQueueTest {
     @EnumSource(CumulationTestScenario.class)
     public void testCumulation(CumulationTestScenario testScenario) {
         EmbeddedChannel channel = new EmbeddedChannel();
-        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(channel, 16, false) {
+        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(16, false) {
             @Override
             protected int wrapDataSize() {
                 return 128;
@@ -113,7 +113,7 @@ public class SslHandlerCoalescingBufferQueueTest {
         ByteBuf second = Unpooled.copyLong(3);
         queue.add(second);
 
-        ChannelPromise promise = channel.newPromise();
+        Promise<Void> promise = channel.newPromise();
         assertFalse(queue.isEmpty());
         ByteBuf buffer = queue.remove(UnpooledByteBufAllocator.DEFAULT, 128, promise);
         try {

@@ -286,7 +286,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
         return new Result(targetContentEncoding,
                 EmbeddedChannel.builder()
                         .channelId(channel.id())
-                        .hasDisconnect(channel.metadata().hasDisconnect())
                         .config(channel.config())
                         .handlers(encoderFactory.createEncoder())
                         .build());

@@ -24,15 +24,14 @@ import java.util.Set;
 /**
  * @deprecated Use {@link PromiseCombiner#PromiseCombiner(EventExecutor)}.
  *
- * {@link GenericFutureListener} implementation which consolidates multiple {@link Future}s
+ * {@link FutureListener} implementation which consolidates multiple {@link Future}s
  * into one, by listening to individual {@link Future}s and producing an aggregated result
  * (success/failure) when all {@link Future}s have completed.
  *
  * @param <V> the type of value returned by the {@link Future}
- * @param <F> the type of {@link Future}
  */
 @Deprecated
-public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureListener<F> {
+public class PromiseAggregator<V> implements FutureListener<V> {
 
     private final Promise<?> aggregatePromise;
     private final boolean failPending;
@@ -61,7 +60,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
      * Add the given {@link Promise}s to the aggregator.
      */
     @SafeVarargs
-    public final PromiseAggregator<V, F> add(Promise<V>... promises) {
+    public final PromiseAggregator<V> add(Promise<V>... promises) {
         ObjectUtil.checkNotNull(promises, "promises");
         if (promises.length == 0) {
             return this;
@@ -88,7 +87,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
     }
 
     @Override
-    public synchronized void operationComplete(F future) throws Exception {
+    public synchronized void operationComplete(Future<? extends V> future) {
         if (pendingPromises == null) {
             aggregatePromise.setSuccess(null);
         } else {

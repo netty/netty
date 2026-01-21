@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderResult;
@@ -267,7 +267,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         }
     }
 
-    private final class ByteBufForwarder extends ChannelInboundHandlerAdapter {
+    private final class ByteBufForwarder implements ChannelInboundHandler {
 
         private final ChannelHandlerContext targetCtx;
 

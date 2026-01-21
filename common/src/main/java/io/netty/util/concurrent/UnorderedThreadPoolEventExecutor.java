@@ -115,11 +115,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<V>(this);
-    }
-
-    @Override
     public <V> Future<V> newSucceededFuture(V result) {
         return new SucceededFuture<V>(this, result);
     }
@@ -230,6 +225,11 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             super(executor, future);
             this.future = future;
             this.wasCallable = wasCallable;
+        }
+
+        @Override
+        boolean isCancellationSupported() {
+            return true;
         }
 
         @Override

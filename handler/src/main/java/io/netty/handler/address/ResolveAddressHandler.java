@@ -15,25 +15,22 @@
  */
 package io.netty.handler.address;
 
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 
 /**
- * {@link ChannelOutboundHandlerAdapter} which will resolve the {@link SocketAddress} that is passed to
- * {@link #connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)} if it is not already resolved
- * and the {@link AddressResolver} supports the type of {@link SocketAddress}.
+ * {@link ChannelOutboundHandler} which will resolve the {@link SocketAddress} that is passed to
+ * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)} if it is not
+ * already resolved and the {@link AddressResolver} supports the type of {@link SocketAddress}.
  */
-@Sharable
-public class ResolveAddressHandler extends ChannelOutboundHandlerAdapter {
+public class ResolveAddressHandler implements ChannelOutboundHandler {
 
     private final AddressResolverGroup<? extends SocketAddress> resolverGroup;
 
@@ -42,21 +39,23 @@ public class ResolveAddressHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
+    public boolean isSharable() {
+        return true;
+    }
+
+    @Override
     public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        final SocketAddress localAddress, final ChannelPromise promise)  {
+                        final SocketAddress localAddress, final Promise<Void> promise) {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
-            resolver.resolve(remoteAddress).addListener(new FutureListener<SocketAddress>() {
-                @Override
-                public void operationComplete(Future<SocketAddress> future) {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        promise.setFailure(cause);
-                    } else {
-                        ctx.connect(future.getNow(), localAddress, promise);
-                    }
-                    ctx.pipeline().remove(ResolveAddressHandler.this);
+            resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    promise.setFailure(cause);
+                } else {
+                    ctx.connect(future.getNow(), localAddress, promise);
                 }
+                ctx.pipeline().remove(ResolveAddressHandler.this);
             });
         } else {
             ctx.connect(remoteAddress, localAddress, promise);

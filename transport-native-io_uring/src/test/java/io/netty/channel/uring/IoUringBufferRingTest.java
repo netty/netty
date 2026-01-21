@@ -23,11 +23,11 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -84,7 +84,7 @@ public class IoUringBufferRingTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    public void testProviderBufferRead(boolean incremental) throws InterruptedException {
+    public void testProviderBufferRead(boolean incremental) throws Exception {
         if (incremental) {
             assumeTrue(IoUring.isRegisterBufferRingIncSupported());
         }
@@ -122,7 +122,7 @@ public class IoUringBufferRingTest {
         ArrayBlockingQueue<IoUringBufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
 
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         bufferSyncer.offer((ByteBuf) msg);
@@ -137,15 +137,15 @@ public class IoUringBufferRingTest {
                 })
                 .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
                 .bind(NetUtil.LOCALHOST, 0)
-                .syncUninterruptibly().channel();
+                .get();
 
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
-        ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
+                .handler(new ChannelInboundHandler() { });
+        Future<Channel> channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
         assumeTrue(channelFuture.isSuccess());
-        Channel clientChannel = channelFuture.channel();
+        Channel clientChannel = channelFuture.getNow();
 
         //is provider buffer read?
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
@@ -180,7 +180,7 @@ public class IoUringBufferRingTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     @EnabledIf("recvsendBundleEnabled")
-    public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws InterruptedException {
+    public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws Exception {
         // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
         assumeTrue(IoUring.isRecvMultishotEnabled(),
                 "Only yields expected test results when using multishot atm");
@@ -204,7 +204,7 @@ public class IoUringBufferRingTest {
 
         final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         buffers.offer((ByteBuf) msg);
@@ -212,15 +212,15 @@ public class IoUringBufferRingTest {
                 })
                 .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, (short) 1)
                 .bind(new InetSocketAddress(0))
-                .syncUninterruptibly().channel();
+                .get();
 
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
-        ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
+                .handler(new ChannelInboundHandler() { });
+        Future<Channel> channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
         assumeTrue(channelFuture.isSuccess());
-        Channel clientChannel = channelFuture.channel();
+        Channel clientChannel = channelFuture.getNow();
 
         // Create a buffer that will span multiple buffers that are used out of the buffer ring.
         ByteBuf writeBuffer = Unpooled.directBuffer(bufferRingChunkSize * 16);
@@ -269,21 +269,21 @@ public class IoUringBufferRingTest {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.channel(IoUringServerSocketChannel.class);
             Channel serverChannel = serverBootstrap.group(group)
-                    .childHandler(new ChannelInboundHandlerAdapter() {
+                    .childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             acceptedChannels.add(ctx.channel());
                         }
                     })
                     .bind(new InetSocketAddress(0))
-                    .syncUninterruptibly().channel();
+                    .get();
 
             Bootstrap clientBoostrap = new Bootstrap();
             clientBoostrap.group(group)
                     .channel(IoUringSocketChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter());
-            ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress());
-            Channel clientChannel = channelFuture.sync().channel();
+                    .handler(new ChannelInboundHandler() { });
+            Future<Channel> channelFuture = clientBoostrap.connect(serverChannel.localAddress());
+            Channel clientChannel = channelFuture.get();
 
             group.shutdownGracefully().syncUninterruptibly();
             clientChannel.closeFuture().sync();

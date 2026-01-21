@@ -16,7 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -53,12 +53,12 @@ public class MessageToMessageDecoderTest {
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    private static final class ReadCountHandler extends ChannelOutboundHandlerAdapter {
+    private static final class ReadCountHandler implements ChannelOutboundHandler {
         final AtomicInteger readCount = new AtomicInteger();
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             readCount.incrementAndGet();
-            super.read(ctx);
+            ctx.read();
         }
     }
 }

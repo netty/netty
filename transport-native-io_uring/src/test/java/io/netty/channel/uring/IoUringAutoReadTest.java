@@ -17,7 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -49,7 +49,7 @@ public class IoUringAutoReadTest {
             ServerSocketChannel server = (ServerSocketChannel) new ServerBootstrap()
                     .group(group)
                     .channel(IoUringServerSocketChannel.class)
-                    .childHandler(new ChannelInboundHandlerAdapter() {
+                    .childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ctx.channel().config().setAutoRead(false);
@@ -61,7 +61,7 @@ public class IoUringAutoReadTest {
                             ctx.read();
                         }
                     })
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             InetSocketAddress localAddress = (InetSocketAddress) server.localAddress();
             try (Socket sock = new Socket(localAddress.getAddress(), localAddress.getPort())) {

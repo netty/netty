@@ -18,15 +18,15 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.unix.DomainDatagramChannel;
-import io.netty.channel.unix.DomainDatagramPacket;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastTest;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -54,8 +54,8 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
     private void testBind(Bootstrap cb) throws Throwable {
         Channel channel = null;
         try {
-            channel = cb.handler(new ChannelInboundHandlerAdapter())
-                        .bind(newSocketAddress()).sync().channel();
+            channel = cb.handler(new ChannelInboundHandler() { })
+                        .bind(newSocketAddress()).get();
             assertThat(channel.localAddress()).isNotNull()
                     .isInstanceOf(DomainSocketAddress.class);
         } finally {
@@ -70,7 +70,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
 
     @Override
     protected boolean isConnected(Channel channel) {
-        return ((DomainDatagramChannel) channel).isConnected();
+        return ((DatagramChannel) channel).isConnected();
     }
 
     @Override
@@ -86,10 +86,10 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
     @Override
     protected Channel setupClientChannel(Bootstrap cb, final byte[] bytes, final CountDownLatch latch,
                                          final AtomicReference<Throwable> errorRef) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
 
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                 try {
                     ByteBuf buf = msg.content();
                     assertEquals(bytes.length, buf.readableBytes());
@@ -108,17 +108,17 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return cb.bind(newSocketAddress()).sync().channel();
+        return cb.bind(newSocketAddress()).get();
     }
 
     @Override
     protected Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final SocketAddress sender,
                                          final CountDownLatch latch, final AtomicReference<Throwable> errorRef,
                                          final boolean echo) throws Throwable {
-        sb.handler(new SimpleChannelInboundHandler<DomainDatagramPacket>() {
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
 
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, DomainDatagramPacket msg) {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                 try {
                     if (sender == null) {
                         assertNotNull(msg.sender());
@@ -135,7 +135,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
                     assertEquals(ctx.channel().localAddress(), msg.recipient());
 
                     if (echo) {
-                        ctx.writeAndFlush(new DomainDatagramPacket(buf.retainedDuplicate(), msg.sender()));
+                        ctx.writeAndFlush(new DatagramPacket(buf.retainedDuplicate(), msg.sender()));
                     }
                 } finally {
                     latch.countDown();
@@ -147,20 +147,20 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return sb.bind(newSocketAddress()).sync().channel();
+        return sb.bind(newSocketAddress()).get();
     }
 
     @Override
-    protected ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
+    protected Future<Void> write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
         switch (wrapType) {
             case DUP:
-                return cc.write(new DomainDatagramPacket(buf.retainedDuplicate(), (DomainSocketAddress) remote));
+                return cc.write(new DatagramPacket(buf.retainedDuplicate(), remote));
             case SLICE:
-                return cc.write(new DomainDatagramPacket(buf.retainedSlice(), (DomainSocketAddress) remote));
+                return cc.write(new DatagramPacket(buf.retainedSlice(), remote));
             case READ_ONLY:
-                return cc.write(new DomainDatagramPacket(buf.retain().asReadOnly(), (DomainSocketAddress) remote));
+                return cc.write(new DatagramPacket(buf.retain().asReadOnly(), remote));
             case NONE:
-                return cc.write(new DomainDatagramPacket(buf.retain(), (DomainSocketAddress) remote));
+                return cc.write(new DatagramPacket(buf.retain(), remote));
             default:
                 throw new Error("Unexpected wrap type: " + wrapType);
         }

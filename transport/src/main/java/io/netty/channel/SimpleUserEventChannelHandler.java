@@ -19,7 +19,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which allows to conveniently only handle a specific type of user events.
+ * {@link ChannelInboundHandler} which allows to conveniently only handle a specific type of user events.
  *
  * For example, here is an implementation which only handle {@link String} user events.
  *
@@ -39,7 +39,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
  * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
  */
-public abstract class SimpleUserEventChannelHandler<I> extends ChannelInboundHandlerAdapter {
+public abstract class SimpleUserEventChannelHandler<I> implements ChannelInboundHandler {
 
     private final TypeParameterMatcher matcher;
     private final boolean autoRelease;

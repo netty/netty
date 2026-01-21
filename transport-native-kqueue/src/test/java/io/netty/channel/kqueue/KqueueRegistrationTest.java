@@ -16,12 +16,13 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.testsuite.transport.socket.SocketTestPermutation;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,20 +50,24 @@ public class KqueueRegistrationTest {
                     .channel(KQueueSocketChannel.class)
                     .handler(new LoggingHandler());
             bootstrap.connect(new InetSocketAddress(NetUtil.LOCALHOST, SocketTestPermutation.UNASSIGNED_PORT))
-                    .addListener((ChannelFutureListener) f1 -> {
+                    .addListener((FutureListener<Channel>) f1 -> {
                         if (f1.cause() instanceof ConnectException) {
-                            f1.channel().close();
                             bootstrap.connect(new InetSocketAddress(NetUtil.LOCALHOST,
                                             SocketTestPermutation.UNASSIGNED_PORT))
-                                    .addListener((ChannelFutureListener) f2 -> {
-                                        f2.channel().close();
+                                    .addListener((FutureListener<Channel>) f2 -> {
+                                        if (f2.isSuccess()) {
+                                            f2.getNow().close();
+                                        }
                                         promise.setSuccess(f2.cause());
                                     });
                         } else {
+                            if (f1.isSuccess()) {
+                                f1.getNow().close();
+                            }
                             promise.setFailure(new IllegalStateException());
                         }
                     });
-            Throwable cause = promise.sync().getNow();
+            Throwable cause = promise.get();
             assertInstanceOf(ConnectException.class, cause);
         } finally {
             group.shutdownGracefully();

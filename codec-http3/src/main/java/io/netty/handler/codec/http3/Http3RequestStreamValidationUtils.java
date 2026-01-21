@@ -17,11 +17,11 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
 import java.util.function.BooleanSupplier;
@@ -49,7 +49,7 @@ final class Http3RequestStreamValidationUtils {
      * @param encodeState            for the stream.
      * @return {@code true} if the frame is valid.
      */
-    static boolean validateClientWrite(Http3RequestStreamFrame frame, ChannelPromise promise, ChannelHandlerContext ctx,
+    static boolean validateClientWrite(Http3RequestStreamFrame frame, Promise<Void> promise, ChannelHandlerContext ctx,
                                        BooleanSupplier goAwayReceivedSupplier,
                                        Http3RequestStreamCodecState encodeState) {
         if (goAwayReceivedSupplier.getAsBoolean() && !encodeState.started()) {

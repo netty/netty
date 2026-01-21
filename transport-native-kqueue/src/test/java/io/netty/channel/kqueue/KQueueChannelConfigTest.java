@@ -17,7 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
@@ -45,10 +45,10 @@ public class KQueueChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
-        channel.config().getSoLinger();
+        channel.config().getOption(ChannelOption.SO_LINGER);
         channel.fd().close();
         try {
-            channel.config().getSoLinger();
+            channel.config().getOption(ChannelOption.SO_LINGER);
             fail();
         } catch (ChannelException e) {
             // expected
@@ -58,10 +58,11 @@ public class KQueueChannelConfigTest {
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
-        channel.config().setKeepAlive(true);
+        channel.config().setOption(ChannelOption.SO_KEEPALIVE, true);
+
         channel.fd().close();
         try {
-            channel.config().setKeepAlive(true);
+            channel.config().setOption(ChannelOption.SO_KEEPALIVE, true);
             fail();
         } catch (ChannelException e) {
             // expected
@@ -78,8 +79,8 @@ public class KQueueChannelConfigTest {
             KQueueSocketChannel ch = (KQueueSocketChannel) bootstrap.group(group)
                     .channel(KQueueSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .handler(new ChannelInboundHandler() { })
+                    .bind(new InetSocketAddress(0)).get();
             ch.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();

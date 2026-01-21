@@ -19,7 +19,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.MessageLiteOrBuilder;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -58,10 +57,14 @@ import static io.netty.buffer.Unpooled.*;
  * }
  * </pre>
  */
-@Sharable
 public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
     public ProtobufEncoder() {
         super(MessageLiteOrBuilder.class);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

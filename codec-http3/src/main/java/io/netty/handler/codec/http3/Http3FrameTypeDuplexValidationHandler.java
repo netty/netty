@@ -17,7 +17,8 @@ package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -32,7 +33,7 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         T frame = validateFrameWritten(frameType, msg);
         if (frame != null) {
             write(ctx, frame, promise);
@@ -41,11 +42,11 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
         }
     }
 
-    void write(ChannelHandlerContext ctx, T msg, ChannelPromise promise) {
+    void write(ChannelHandlerContext ctx, T msg, Promise<Void> promise) {
         ctx.write(msg, promise);
     }
 
-    void writeFrameDiscarded(Object discardedFrame, ChannelPromise promise) {
+    void writeFrameDiscarded(Object discardedFrame, Promise<Void> promise) {
         frameTypeUnexpected(promise, discardedFrame);
     }
 
@@ -55,38 +56,43 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         ctx.read();
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
+        ctx.shutdown(type, promise);
     }
 }

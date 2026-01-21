@@ -17,7 +17,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -34,7 +34,7 @@ import static java.lang.Math.toIntExact;
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
-public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
+public abstract class Http3ConnectionHandler implements ChannelInboundHandler {
     final Http3FrameCodecFactory codecFactory;
     final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
     final boolean disableQpackDynamicTable;
@@ -71,8 +71,9 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         }
         Long maxFieldSectionSize = localSettings.get(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         if (maxFieldSectionSize == null) {
-            // Just use the maximum value we can represent via a Long.
-            maxFieldSectionSize = Long.MAX_VALUE;
+             // Default value in rfc is unlimited
+             // but Quic can have max 2^62-1 max value as TWO bits reserved for Variable-Length Integer Encoding
+            maxFieldSectionSize = (1L << 62) - 1;
         }
         this.maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
         int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));

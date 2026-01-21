@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.local.LocalIoHandler;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -57,11 +58,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
@@ -81,11 +82,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         channel.close().syncUninterruptibly();
 
@@ -105,11 +106,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             IOException ex = new IOException("testOnUnhandledInboundException");
@@ -132,11 +133,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelRead("testOnUnhandledInboundMessage");
@@ -157,11 +158,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelReadComplete();
@@ -182,11 +183,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireUserEventTriggered("testOnUnhandledInboundUserEventTriggered");
@@ -207,11 +208,11 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelWritabilityChanged();
@@ -222,7 +223,6 @@ public class DefaultChannelPipelineTailTest {
     }
 
     private abstract static class MyChannel extends AbstractChannel {
-        private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
@@ -231,6 +231,11 @@ public class DefaultChannelPipelineTailTest {
 
         protected MyChannel(EventLoop eventLoop) {
             super(eventLoop, null, null);
+        }
+
+        @Override
+        protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+            promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
@@ -254,16 +259,6 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        public ChannelMetadata metadata() {
-            return METADATA;
-        }
-
-        @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new MyUnsafe();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             return null;
         }
@@ -274,16 +269,38 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) {
+        protected void doDeregister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doDisconnect() {
+        protected void doRegister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doClose() {
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            if (!active) {
+                active = true;
+            }
+
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doDisconnect(Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doClose(Promise<Void> promise) {
             closed = true;
+            promise.setSuccess(null);
         }
 
         @Override
@@ -316,25 +333,9 @@ public class DefaultChannelPipelineTailTest {
         protected void onUnhandledInboundWritabilityChanged() {
         }
 
-        private class MyUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
+        private class MyChannelPipeline extends DefaultAbstractChannelPipeline {
 
-                if (!active) {
-                    active = true;
-                    pipeline().fireChannelActive();
-                }
-
-                promise.setSuccess();
-            }
-        }
-
-        private class MyChannelPipeline extends DefaultChannelPipeline {
-
-            MyChannelPipeline(Channel channel) {
+            MyChannelPipeline(AbstractChannel channel) {
                 super(channel);
             }
 

@@ -16,11 +16,10 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
@@ -75,7 +74,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
  * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
-@Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * All queues per channel
@@ -189,6 +187,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
         super(checkInterval);
         createGlobalTrafficCounter(executor);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     /**
@@ -317,9 +320,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         final long relativeTimeAction;
         final Object toSend;
         final long size;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        private ToSend(final long delay, final Object toSend, final long size, final ChannelPromise promise) {
+        private ToSend(final long delay, final Object toSend, final long size, final Promise<Void> promise) {
             relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
@@ -330,7 +333,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     @Override
     void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         Channel channel = ctx.channel();
         Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);

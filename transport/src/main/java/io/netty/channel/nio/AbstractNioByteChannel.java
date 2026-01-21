@@ -19,24 +19,21 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.LeakPresenceDetector;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.util.internal.StringUtil.className;
@@ -45,7 +42,6 @@ import static io.netty.util.internal.StringUtil.className;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
@@ -53,9 +49,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     private final Runnable flushTask = new Runnable() {
         @Override
         public void run() {
-            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-            // meantime.
-            ((AbstractNioUnsafe) unsafe()).flush0();
+            // Calling writeFlushed() directly to ensure we not try to flush messages that were added via write(...)
+            // in the meantime.
+            writeFlushed();
         }
     };
     private boolean inputClosedSeenErrorOnRead;
@@ -68,131 +64,108 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
     protected AbstractNioByteChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch) {
-        super(eventLoop, parent, ch, SelectionKey.OP_READ);
+        super(eventLoop, parent, ch, NioIoOps.READ, false);
     }
 
-    /**
-     * Shutdown the input side of the channel.
-     */
-    protected abstract ChannelFuture shutdownInput();
+    final boolean shouldBreakReadReady() {
+        return isShutdown(ChannelShutdownDirection.Inbound) && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
+    }
 
-    protected boolean isInputShutdown0() {
+    protected boolean isAllowHalfClosure() {
         return false;
     }
 
-    @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioByteUnsafe();
+    private void closeOnRead(ChannelPipeline pipeline) {
+        if (!isShutdown(ChannelShutdownDirection.Inbound)) {
+            if (isAllowHalfClosure()) {
+                Promise<Void> promise = pipeline.newPromise();
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), promise);
+            } else {
+                close(newPromise());
+            }
+        } else if (!inputClosedSeenErrorOnRead) {
+            inputClosedSeenErrorOnRead = true;
+            pipeline.fireChannelShutdown(ChannelShutdownType.newInbound());
+        }
     }
 
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    final boolean shouldBreakReadReady(ChannelConfig config) {
-        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
-    }
-
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-                ((SocketChannelConfig) config).isAllowHalfClosure();
-    }
-
-    protected class NioByteUnsafe extends AbstractNioUnsafe {
-
-        private void closeOnRead(ChannelPipeline pipeline) {
-            if (!isInputShutdown0()) {
-                if (isAllowHalfClosure(config())) {
-                    shutdownInput();
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(newPromise());
-                }
-            } else if (!inputClosedSeenErrorOnRead) {
-                inputClosedSeenErrorOnRead = true;
-                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+            RecvByteBufAllocator.Handle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
             }
         }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                RecvByteBufAllocator.Handle allocHandle) {
-            if (byteBuf != null) {
-                if (byteBuf.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                } else {
+        // If oom will close the read event, release connection.
+        // See https://github.com/netty/netty/issues/10434
+        if (close ||
+                cause instanceof OutOfMemoryError ||
+                cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                cause instanceof IOException) {
+            closeOnRead(pipeline);
+        }
+    }
+
+    @Override
+    protected final void readNow() {
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady()) {
+            clearReadPending();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+        allocHandle.reset(config);
+
+        ByteBuf byteBuf = null;
+        boolean close = false;
+        try {
+            do {
+                byteBuf = allocHandle.allocate(allocator);
+                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read. release the buffer.
                     byteBuf.release();
+                    byteBuf = null;
+                    close = allocHandle.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        readPending = false;
+                    }
+                    break;
                 }
-            }
+
+                allocHandle.incMessagesRead(1);
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+                byteBuf = null;
+            } while (allocHandle.continueReading());
+
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
 
-            // If oom will close the read event, release connection.
-            // See https://github.com/netty/netty/issues/10434
-            if (close ||
-                    cause instanceof OutOfMemoryError ||
-                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
-                    cause instanceof IOException) {
+            if (close) {
                 closeOnRead(pipeline);
             }
-        }
-
-        @Override
-        public final void read() {
-            final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadPending();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
-
-            ByteBuf byteBuf = null;
-            boolean close = false;
-            try {
-                do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
-                        // nothing was read. release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
-                        if (close) {
-                            // There is nothing left to read as we received an EOF.
-                            readPending = false;
-                        }
-                        break;
-                    }
-
-                    allocHandle.incMessagesRead(1);
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-                } while (allocHandle.continueReading());
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (close) {
-                    closeOnRead(pipeline);
-                }
-            } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
-            } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
-                }
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, close, allocHandle);
+        } finally {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && !config.isAutoRead()) {
+                removeReadOp();
             }
         }
     }
@@ -230,7 +203,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             final int localFlushedAmount = doWriteBytes(buf);
             if (localFlushedAmount > 0) {
-                in.progress(localFlushedAmount);
                 if (!buf.isReadable()) {
                     in.remove();
                 }
@@ -245,7 +217,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             long localFlushedAmount = doWriteFileRegion(region);
             if (localFlushedAmount > 0) {
-                in.progress(localFlushedAmount);
                 if (region.transferred() >= region.count()) {
                     in.remove();
                 }

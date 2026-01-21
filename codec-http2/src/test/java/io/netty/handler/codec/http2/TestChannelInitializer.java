@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
@@ -31,7 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Channel initializer useful in tests.
  */
-@Sharable
 public class TestChannelInitializer extends ChannelInitializer<Channel> {
     ChannelHandler handler;
     AtomicInteger maxReads;

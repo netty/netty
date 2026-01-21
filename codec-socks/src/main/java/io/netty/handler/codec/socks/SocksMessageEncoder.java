@@ -16,7 +16,6 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
@@ -26,10 +25,14 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * Use this with {@link SocksInitRequest}, {@link SocksInitResponse}, {@link SocksAuthRequest},
  * {@link SocksAuthResponse}, {@link SocksCmdRequest} and {@link SocksCmdResponse}
  */
-@ChannelHandler.Sharable
 public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {
     public SocksMessageEncoder() {
         super(SocksMessage.class);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

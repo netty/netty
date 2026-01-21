@@ -25,51 +25,23 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class CompleteFuture<V> extends AbstractFuture<V> {
 
-    private final EventExecutor executor;
-
     /**
      * Creates a new instance.
      *
      * @param executor the {@link EventExecutor} associated with this future
      */
     protected CompleteFuture(EventExecutor executor) {
-        this.executor = executor;
-    }
-
-    /**
-     * Return the {@link EventExecutor} which is used by this {@link CompleteFuture}.
-     */
-    protected EventExecutor executor() {
-        return executor;
+        super(executor);
     }
 
     @Override
-    public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public Future<V> addListener(FutureListener<? super V> listener) {
         DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
         return this;
     }
 
     @Override
-    public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        for (GenericFutureListener<? extends Future<? super V>> l:
-                ObjectUtil.checkNotNull(listeners, "listeners")) {
-
-            if (l == null) {
-                break;
-            }
-            DefaultPromise.notifyListener(executor(), this, l);
-        }
-        return this;
-    }
-
-    @Override
-    public Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        // NOOP
-        return this;
-    }
-
-    @Override
-    public Future<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+    public Future<V> removeListener(FutureListener<? super V> listener) {
         // NOOP
         return this;
     }

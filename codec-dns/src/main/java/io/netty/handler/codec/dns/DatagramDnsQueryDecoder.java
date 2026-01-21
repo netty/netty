@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -27,7 +27,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
  */
-@ChannelHandler.Sharable
 public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsRecordDecoder recordDecoder;
@@ -48,12 +47,18 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     }
 
     @Override
+    public boolean isSharable() {
+        return true;
+    }
+
+    @Override
     protected void decode(ChannelHandlerContext ctx, final DatagramPacket packet, List<Object> out) throws Exception {
         DnsQuery query = DnsMessageUtil.decodeDnsQuery(recordDecoder, packet.content(),
                 new DnsMessageUtil.DnsQueryFactory() {
             @Override
             public DnsQuery newQuery(int id, DnsOpCode dnsOpCode) {
-                return new DatagramDnsQuery(packet.sender(), packet.recipient(), id, dnsOpCode);
+                return new DatagramDnsQuery((InetSocketAddress) packet.sender(),
+                        (InetSocketAddress) packet.recipient(), id, dnsOpCode);
             }
         });
         out.add(query);

@@ -2,13 +2,13 @@
     {
       "name": "io.netty.channel.socket.nio.NioServerSocketChannel",
       "methods": [
-        { "name": "<init>", "parameterTypes": [] }
+        { "name": "<init>", "parameterTypes": ["io.netty.channel.EventLoop", "io.netty.Channel.EventLoopGroup"] }
       ]
     },
     {
       "name": "io.netty.channel.socket.nio.NioSocketChannel",
       "methods": [
-        { "name": "<init>", "parameterTypes": [] }
+        { "name": "<init>", "parameterTypes": ["io.netty.channel.EventLoop"] }
       ]
     },
     {
@@ -40,7 +40,7 @@
         "name": "io.netty.channel.socket.nio.NioDatagramChannel",
         "methods": [
           {
-            "name": "<init>", "parameterTypes": []
+            "name": "<init>", "parameterTypes": ["io.netty.channel.EventLoop"]
           }
         ]
     }

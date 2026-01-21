@@ -15,7 +15,6 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
@@ -39,9 +38,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -61,7 +57,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     // Pick a number that no task could have previously used.
-    private long prevDeadlineNanos = nanoTime() - 1;
+    private long prevDeadlineNanos = NONE;
     private FileDescriptor epollFd;
     private FileDescriptor eventFd;
     private FileDescriptor timerFd;
@@ -88,8 +84,6 @@ public class EpollIoHandler implements IoHandler {
     //    other value T    when EL is waiting with wakeup scheduled at time T
     private final AtomicLong nextWakeupNanos = new AtomicLong(AWAKE);
     private boolean pendingWakeup;
-
-    private int numChannels;
 
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
@@ -284,8 +278,6 @@ public class EpollIoHandler implements IoHandler {
                     // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
                     registrations.put(fd, old);
                     return;
-                } else if (old.handle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
-                    numChannels--;
                 }
                 if (handle.fd().isOpen()) {
                     try {
@@ -330,10 +322,6 @@ public class EpollIoHandler implements IoHandler {
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration
         // is already closed.
         assert old == null || !old.isValid();
-
-        if (epollHandle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
-            numChannels++;
-        }
         handle.registered();
         return registration;
     }
@@ -341,25 +329,6 @@ public class EpollIoHandler implements IoHandler {
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return EpollIoHandle.class.isAssignableFrom(handleType);
-    }
-
-    int numRegisteredChannels() {
-        return numChannels;
-    }
-
-    List<Channel> registeredChannelsList() {
-        IntObjectMap<DefaultEpollIoRegistration> ch = registrations;
-        if (ch.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Channel> channels = new ArrayList<>(ch.size());
-        for (DefaultEpollIoRegistration registration : ch.values()) {
-            if (registration.handle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
-                channels.add(((AbstractEpollChannel.AbstractEpollUnsafe) registration.handle).channel());
-            }
-        }
-        return Collections.unmodifiableList(channels);
     }
 
     private long epollWait(IoHandlerContext context, long deadlineNanos) throws IOException {

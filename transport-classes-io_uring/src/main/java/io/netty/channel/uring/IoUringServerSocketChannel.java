@@ -16,20 +16,73 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.Errors;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public final class IoUringServerSocketChannel extends AbstractIoUringServerChannel implements ServerSocketChannel {
+import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
+import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
+
+public final class IoUringServerSocketChannel extends AbstractIoUringChannel implements ServerSocketChannel {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
+            IoUringServerSocketChannel.class);
+
+    private static final class AcceptedAddressMemory {
+        private final CleanableDirectBuffer acceptedAddressMemoryCleanable;
+        private final ByteBuffer acceptedAddressMemory;
+        private final CleanableDirectBuffer acceptedAddressLengthMemoryCleanable;
+        private final ByteBuffer acceptedAddressLengthMemory;
+        private final long acceptedAddressMemoryAddress;
+        private final long acceptedAddressLengthMemoryAddress;
+
+        AcceptedAddressMemory() {
+            acceptedAddressMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+            acceptedAddressMemory = acceptedAddressMemoryCleanable.buffer();
+            acceptedAddressMemoryAddress = Buffer.memoryAddress(acceptedAddressMemory);
+            acceptedAddressLengthMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
+            acceptedAddressLengthMemory = acceptedAddressLengthMemoryCleanable.buffer();
+            // Needs to be initialized to the size of acceptedAddressMemory.
+            // See https://man7.org/linux/man-pages/man2/accept.2.html
+            acceptedAddressLengthMemory.putLong(0, Native.SIZEOF_SOCKADDR_STORAGE);
+            acceptedAddressLengthMemoryAddress = Buffer.memoryAddress(acceptedAddressLengthMemory);
+        }
+
+        void free() {
+            acceptedAddressMemoryCleanable.clean();
+            acceptedAddressLengthMemoryCleanable.clean();
+        }
+    }
+    private final AcceptedAddressMemory acceptedAddressMemory;
+    private final EventLoopGroup childEventLoopGroup;
     private final IoUringServerSocketChannelConfig config;
+    private long acceptId;
 
     public IoUringServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        this(eventLoop, childEventLoopGroup, null);
+    }
+
+    public IoUringServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                      SocketProtocolFamily family) {
         // We don't use a blocking fd for the server channel at the moment as
         // there is no support for IORING_CQE_F_SOCK_NONEMPTY and IORING_ACCEPT_DONTWAIT
         // at the moment. Once these land in the kernel we should check if we can use these and if so make
@@ -38,23 +91,240 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
         //
         //  - https://lore.kernel.org/netdev/20240509180627.204155-1-axboe@kernel.dk/
         //  - https://lore.kernel.org/io-uring/20240508142725.91273-1-axboe@kernel.dk/
-        super(eventLoop, childEventLoopGroup, LinuxSocket.newSocketStream(), false);
+        super(eventLoop, null, LinuxSocket.newSocket(family), false, false);
+        this.childEventLoopGroup =
+                validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", IoUringIoHandle.class);
+
+        // We can only depend on the accepted address if multi-shot is not used.
+        // From the manpage:
+        //       The multishot variants allow an application to issue a single
+        //       accept request, which will repeatedly trigger a CQE when a
+        //       connection request comes in. Like other multishot type requests,
+        //       the application should look at the CQE flags and see if
+        //       IORING_CQE_F_MORE is set on completion as an indication of whether
+        //       or not the accept request will generate further CQEs. Note that
+        //       for the multishot variants, setting addr and addrlen may not make
+        //       a lot of sense, as the same value would be used for every accepted
+        //       connection. This means that the data written to addr may be
+        //       overwritten by a new connection before the application has had
+        //       time to process a past connection. If the application knows that a
+        //       new connection cannot come in before a previous one has been
+        //       processed, it may be used as expected.
+        if (IoUring.isAcceptMultishotEnabled()) {
+            acceptedAddressMemory = null;
+        } else {
+            acceptedAddressMemory = new AcceptedAddressMemory();
+        }
         this.config = new IoUringServerSocketChannelConfig(this);
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
-        return config;
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    Channel newChildChannel(EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) {
-        IoUringIoHandler handler = registration().attachment();
-        LinuxSocket socket = new LinuxSocket(fd);
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
+        if (acceptId != 0) {
+            assert numOutstandingReads == 1 || numOutstandingReads == -1;
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, acceptId, Native.IORING_OP_ACCEPT);
+            registration.submit(ops);
+            acceptId = 0;
+        } else {
+            assert numOutstandingReads == 0 || numOutstandingReads == -1;
+        }
+    }
+
+    @Override
+    protected void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites) {
+        assert numOutstandingWrites == 0;
+    }
+
+    @Override
+    protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected int scheduleWriteSingle(Object msg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
+        assert acceptId == 0;
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        allocHandle.attemptedBytesRead(1);
+
+        int fd = fd().intValue();
+        IoRegistration registration = registration();
+
+        final short ioPrio;
+
+        final long acceptedAddressMemoryAddress;
+        final long acceptedAddressLengthMemoryAddress;
+        if (IoUring.isAcceptMultishotEnabled()) {
+            // Let's use multi-shot accept to reduce overhead.
+            ioPrio = Native.IORING_ACCEPT_MULTISHOT;
+            acceptedAddressMemoryAddress = 0;
+            acceptedAddressLengthMemoryAddress = 0;
+        } else {
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+            // attempt.
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+            //
+            // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
+            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+            // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still
+            // be able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+            // transports.
+            //
+            // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
+            // We need to check if its supported as otherwise providing these would result in an -EINVAL.
+            if (IoUring.isAcceptNoWaitSupported()) {
+                if (first) {
+                    ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+                } else {
+                    ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                }
+            } else {
+                ioPrio = 0;
+            }
+
+            assert acceptedAddressMemory != null;
+            acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
+            acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
+        }
+
+        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
+        IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
+                acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
+        acceptId = registration.submit(ops);
+        if (acceptId == 0) {
+            return 0;
+        }
+        if ((ioPrio & Native.IORING_ACCEPT_MULTISHOT) != 0) {
+            // Let's return -1 to signal that we used multi-shot.
+            return -1;
+        }
+        return 1;
+    }
+
+    @Override
+    protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            acceptId = 0;
+            return;
+        }
+        boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+        if (rearm) {
+            // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
+            acceptId = 0;
+        }
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.lastBytesRead(res);
+
+        if (res >= 0) {
+            allocHandle.incMessagesRead(1);
+            final ByteBuffer acceptedAddressBuffer;
+            final long acceptedAddressLengthMemoryAddress;
+            if (acceptedAddressMemory == null) {
+                acceptedAddressBuffer = null;
+            } else {
+                acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
+            }
+            try {
+                Channel channel = newChildChannel(childEventExecutorGroup().next(), res, acceptedAddressBuffer);
+                pipeline.fireChannelRead(channel);
+
+                if (allocHandle.continueReading() &&
+                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                        // that the next read (which would be using Native.IORING_ACCEPT_DONTWAIT) will complete
+                        // without be able to read any data. This is useless work and we can skip it.
+                        //
+                        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
+                        !socketIsEmpty(flags)) {
+                    if (rearm) {
+                        // We only should schedule another read if we need to rearm.
+                        // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
+                        scheduleRead(false);
+                    }
+                } else {
+                    allocHandle.readComplete();
+                    pipeline.fireChannelReadComplete();
+                }
+            } catch (Throwable cause) {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+                pipeline.fireExceptionCaught(cause);
+            }
+        } else {
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            // Check if we did fail because there was nothing to accept atm.
+            if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
+                // Something bad happened. Convert to an exception.
+                pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
+            }
+        }
+    }
+
+    @Override
+    protected void unregistered() {
+        super.unregistered();
         if (acceptedAddressMemory != null) {
+            acceptedAddressMemory.free();
+        }
+    }
+
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        // IORING_CQE_F_SOCK_NONEMPTY is used for accept since IORING_ACCEPT_DONTWAIT was added.
+        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
+        return IoUring.isAcceptNoWaitSupported() &&
+                IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
+
+    @Override
+    boolean isPollInFirst() {
+        return false;
+    }
+
+    @Override
+    public ChannelConfig config() {
+        return config;
+    }
+
+    private Channel newChildChannel(EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) {
+        IoUringIoHandler handler = registration().attachment();
+        LinuxSocket socket = new LinuxSocket(fd, this.socket.protocolFamily());
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX && acceptedAddressMemory != null) {
             // We didnt use ACCEPT_MULTISHOT And so can depend on the addresses.
             final InetSocketAddress address;
-            if (socket.isIpv6()) {
+            if (socket.protocolFamily() == SocketProtocolFamily.INET6) {
                 byte[] ipv6Array = handler.inet6AddressArray();
                 byte[] ipv4Array = handler.inet4AddressArray();
                 address = SockaddrIn.getIPv6(acceptedAddressMemory, ipv6Array, ipv4Array);
@@ -62,21 +332,50 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
                 byte[] addressArray = handler.inet4AddressArray();
                 address = SockaddrIn.getIPv4(acceptedAddressMemory, addressArray);
             }
-            return new IoUringSocketChannel(eventLoop, this, new LinuxSocket(fd), address);
+            return new IoUringSocketChannel(eventLoop, this, socket, address);
         }
-        return new IoUringSocketChannel(eventLoop, this, new LinuxSocket(fd));
+        return new IoUringSocketChannel(eventLoop, this, socket);
     }
 
     @Override
-    public void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        if (IoUring.isTcpFastOpenServerSideAvailable()) {
-            Integer fastOpen = config().getOption(ChannelOption.TCP_FASTOPEN);
-            if (fastOpen != null && fastOpen > 0) {
-                socket.setTcpFastOpen(fastOpen);
+    public void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                try {
+                    if (IoUring.isTcpFastOpenServerSideAvailable()) {
+                        Integer fastOpen = config().getOption(ChannelOption.TCP_FASTOPEN);
+                        if (fastOpen != null && fastOpen > 0) {
+                            socket.setTcpFastOpen(fastOpen);
+                        }
+                    }
+                    socket.listen(config.getBacklog());
+                    active = true;
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
+                }
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(f.cause());
             }
+        }));
+    }
+    @Override
+    protected void doClose(Promise<Void> promise) {
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            DomainSocketAddress local = (DomainSocketAddress) localAddress();
+            super.doClose(promise.addListener(f -> {
+                if (local != null) {
+                    // Delete the socket file if possible.
+                    File socketFile = new File(local.path());
+                    boolean success = socketFile.delete();
+                    if (!success && logger.isDebugEnabled()) {
+                        logger.debug("Failed to delete a domain socket file: {}", local.path());
+                    }
+                }
+            }));
+        } else {
+            super.doClose(promise);
         }
-        socket.listen(config.getBacklog());
-        active = true;
     }
 }

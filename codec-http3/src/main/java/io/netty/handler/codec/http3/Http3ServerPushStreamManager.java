@@ -18,8 +18,8 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamChannelBootstrap;
@@ -36,6 +36,8 @@ import java.util.function.UnaryOperator;
 import static io.netty.handler.codec.http3.Http3.maxPushIdReceived;
 import static io.netty.handler.codec.http3.Http3CodecUtils.connectionError;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
+import static io.netty.handler.codec.http3.Http3RequestStreamValidationUtils.sendStreamAbandonedIfRequired;
+import static io.netty.handler.codec.http3.Http3RequestStreamValidationUtils.validateOnStreamClosure;
 import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.atomic.AtomicLongFieldUpdater.newUpdater;
@@ -77,7 +79,7 @@ public final class Http3ServerPushStreamManager {
     public Http3ServerPushStreamManager(QuicChannel channel, int initialPushStreamsCountHint) {
         this.channel = requireNonNull(channel, "channel");
         pushStreams = newConcurrentHashMap(initialPushStreamsCountHint);
-        controlStreamListener = new ChannelInboundHandlerAdapter() {
+        controlStreamListener = new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof Http3CancelPushFrame) {
@@ -219,7 +221,7 @@ public final class Http3ServerPushStreamManager {
         return new Http3PushStreamServerInitializer(pushId) {
             @Override
             protected void initPushStream(QuicStreamChannel ch) {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     private boolean stateUpdated;
 
                     @Override
@@ -253,11 +255,11 @@ public final class Http3ServerPushStreamManager {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             pushStreams.remove(pushId);
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireChannelShutdown(type);
                     }
                 });
                 if (initializer != null) {

@@ -16,8 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -164,9 +162,6 @@ public final class Http2StreamChannelBootstrap {
     @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
-        if (!promise.setUncancellable()) {
-            return;
-        }
         final Http2StreamChannel streamChannel;
         try {
             if (ctx.handler() instanceof Http2MultiplexCodec) {
@@ -181,29 +176,24 @@ public final class Http2StreamChannelBootstrap {
         try {
             init(streamChannel);
         } catch (Exception e) {
-            streamChannel.unsafe().closeForcibly();
+            streamChannel.close(streamChannel.newPromise());
             promise.setFailure(e);
             return;
         }
 
-        ChannelFuture future = streamChannel.register();
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    promise.setSuccess(streamChannel);
-                } else if (future.isCancelled()) {
-                    promise.cancel(false);
-                } else {
-                    if (streamChannel.isRegistered()) {
-                        streamChannel.close();
-                    } else {
-                        streamChannel.unsafe().closeForcibly();
-                    }
-
-                    promise.setFailure(future.cause());
+        Future<Void> future = streamChannel.register();
+        future.addListener(f -> {
+            if (f.isSuccess()) {
+                promise.setSuccess(streamChannel);
+                return;
+            }
+            if (f.isCancelled()) {
+                if (promise.cancel(false)) {
+                    return;
                 }
             }
+            streamChannel.close();
+            promise.setFailure(f.cause());
         });
     }
 

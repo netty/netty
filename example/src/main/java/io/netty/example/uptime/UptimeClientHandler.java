@@ -15,7 +15,6 @@
  */
 package io.netty.example.uptime;
 
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
@@ -27,10 +26,14 @@ import java.util.concurrent.TimeUnit;
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt getStatus.
  */
-@Sharable
 public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
 
     long startTime = -1;
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {

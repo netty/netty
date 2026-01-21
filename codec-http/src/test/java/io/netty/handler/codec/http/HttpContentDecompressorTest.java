@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.Zstd;
@@ -44,13 +43,13 @@ public class HttpContentDecompressorTest {
     @Test
     public void testInvokeReadWhenNotProduceMessage() {
         final AtomicInteger readCalled = new AtomicInteger();
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void read(ChannelHandlerContext ctx) {
                 readCalled.incrementAndGet();
                 ctx.read();
             }
-        }, new HttpContentDecompressor(0), new ChannelInboundHandlerAdapter() {
+        }, new HttpContentDecompressor(0), new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ctx.fireChannelRead(msg);
@@ -149,7 +148,7 @@ public class HttpContentDecompressorTest {
         assertEquals((long) chunkSize * numberOfChunks, incomingHandler.total);
     }
 
-    private static final class ZipBombIncomingHandler extends ChannelInboundHandlerAdapter {
+    private static final class ZipBombIncomingHandler implements ChannelInboundHandler {
         final int memoryLimit;
         long total;
 

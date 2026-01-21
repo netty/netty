@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             sb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             acceptorReadLatch.countDown();
@@ -101,8 +101,8 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeZero(1)).syncUninterruptibly();
 
             // The acceptor shouldn't read any data until we call read() below, but give it some time to see if it will.
@@ -182,8 +182,8 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeZero(1)).syncUninterruptibly();
             serverReadLatch.await();
             clientReadLatch.await();

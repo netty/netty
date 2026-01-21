@@ -15,23 +15,21 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
-import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
@@ -42,7 +40,6 @@ import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.NetworkChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
@@ -62,7 +59,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
@@ -78,7 +74,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
     }
 
-    private final ServerSocketChannelConfig config;
+    private final NioServerSocketChannelConfig config;
     private final EventLoopGroup childEventLoopGroup;
 
     /**
@@ -109,7 +105,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                   ServerSocketChannel channel) {
-        super(eventLoop, null, channel, SelectionKey.OP_ACCEPT);
+        super(eventLoop, null, channel, NioIoOps.ACCEPT, false);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioServerSocketChannelConfig(this, channel);
@@ -132,13 +128,13 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
+    public ChannelConfig config() {
+        return config;
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
-        return config;
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -168,18 +164,33 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getBacklog());
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            javaChannel().bind(localAddress, config.getBacklog());
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(Promise<Void> promise) {
         SocketAddress localAddress = localAddress0();
-        javaChannel().close();
-        if (localAddress instanceof UnixDomainSocketAddress) {
-            Path path = ((UnixDomainSocketAddress) localAddress).getPath();
-            if (path != null) {
-                path.toFile().delete();
+        try {
+            try {
+                javaChannel().close();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            promise.setSuccess(null);
+        } finally {
+            if (localAddress instanceof UnixDomainSocketAddress) {
+                Path path = ((UnixDomainSocketAddress) localAddress).getPath();
+                if (path != null) {
+                    path.toFile().delete();
+                }
             }
         }
     }
@@ -224,8 +235,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect(Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -238,8 +249,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
-    private static final class NioServerSocketChannelConfig extends DefaultChannelConfig
-            implements ServerSocketChannelConfig {
+    private static final class NioServerSocketChannelConfig extends DefaultChannelConfig {
 
         final NetworkChannel jdkChannel;
         private volatile int backlog = NetUtil.SOMAXCONN;
@@ -303,104 +313,29 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
             return (ServerSocketChannel) jdkChannel;
         }
 
-        @Override
-        public boolean isReuseAddress() {
+        private boolean isReuseAddress() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR);
         }
 
-        @Override
-        public ServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-            return this;
         }
 
-        @Override
-        public int getReceiveBufferSize() {
+        private int getReceiveBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF);
         }
 
-        @Override
-        public ServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-            return this;
         }
 
-        @Override
-        public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-            return this;
-        }
-
-        @Override
-        public int getBacklog() {
+        private int getBacklog() {
             return backlog;
         }
 
-        @Override
-        public ServerSocketChannelConfig setBacklog(int backlog) {
+        private void setBacklog(int backlog) {
             checkPositiveOrZero(backlog, "backlog");
             this.backlog = backlog;
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public ServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public ServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
-            return this;
         }
     }
 

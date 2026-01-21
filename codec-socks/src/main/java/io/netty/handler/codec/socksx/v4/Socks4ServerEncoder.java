@@ -18,7 +18,6 @@ package io.netty.handler.codec.socksx.v4;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.NetUtil;
@@ -26,7 +25,6 @@ import io.netty.util.NetUtil;
 /**
  * Encodes a {@link Socks4CommandResponse} into a {@link ByteBuf}.
  */
-@Sharable
 public final class Socks4ServerEncoder extends MessageToByteEncoder<Socks4CommandResponse> {
 
     public static final Socks4ServerEncoder INSTANCE = new Socks4ServerEncoder();
@@ -35,6 +33,11 @@ public final class Socks4ServerEncoder extends MessageToByteEncoder<Socks4Comman
 
     private Socks4ServerEncoder() {
         super(Socks4CommandResponse.class);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

@@ -23,8 +23,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -65,7 +66,7 @@ public final class QuicServerZeroRTTExample {
                 // one.
                 .tokenHandler(null)
                 // ChannelHandler that is added into QuicChannel pipeline.
-                .handler(new ChannelInboundHandlerAdapter() {
+                .handler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
                         QuicChannel channel = (QuicChannel) ctx.channel();
@@ -90,7 +91,7 @@ public final class QuicServerZeroRTTExample {
                     protected void initChannel(QuicStreamChannel ch)  {
                         // Add a LineBasedFrameDecoder here as we just want to do some simple HTTP 0.9 handling.
                         ch.pipeline().addLast(new LineBasedFrameDecoder(1024))
-                                .addLast(new ChannelInboundHandlerAdapter() {
+                                .addLast(new ChannelInboundHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 ByteBuf byteBuf = (ByteBuf) msg;
@@ -99,7 +100,8 @@ public final class QuicServerZeroRTTExample {
                                         ByteBuf buffer = ctx.alloc().directBuffer();
                                         buffer.writeCharSequence("Bye\r\n", CharsetUtil.US_ASCII);
                                         // Write the buffer and shutdown the output by writing a FIN.
-                                        ctx.writeAndFlush(buffer).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                        ctx.writeAndFlush(buffer).addListener(
+                                                f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
                                     }
                                 } finally {
                                     byteBuf.release();
@@ -113,7 +115,7 @@ public final class QuicServerZeroRTTExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(9999)).sync().channel();
+                    .bind(new InetSocketAddress(9999)).get();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

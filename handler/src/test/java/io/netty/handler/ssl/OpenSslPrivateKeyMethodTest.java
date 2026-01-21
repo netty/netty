@@ -114,10 +114,10 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws InterruptedException {
         if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
-            GROUP.shutdownGracefully();
-            EXECUTOR.shutdown();
+            GROUP.shutdownGracefully().sync();
+            assertTrue(EXECUTOR.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -246,7 +246,7 @@ public class OpenSslPrivateKeyMethodTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) {
-                                serverPromise.cancel(true);
+                                serverPromise.tryFailure(new IllegalStateException());
                                 ctx.fireChannelInactive();
                             }
 
@@ -282,7 +282,7 @@ public class OpenSslPrivateKeyMethodTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    clientPromise.cancel(true);
+                                    clientPromise.tryFailure(new IllegalStateException());
                                     ctx.fireChannelInactive();
                                 }
 
@@ -395,7 +395,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .group(GROUP)
                 .childHandler(handler);
 
-        return bootstrap.bind(address).sync().channel();
+        return bootstrap.bind(address).get();
     }
 
     private static Channel client(Channel server, ChannelHandler handler) throws Exception {
@@ -406,7 +406,7 @@ public class OpenSslPrivateKeyMethodTest {
                 .group(GROUP)
                 .handler(handler);
 
-        return bootstrap.connect(remoteAddress).sync().channel();
+        return bootstrap.connect(remoteAddress).get();
     }
 
     private static final class DelegateThread extends Thread {

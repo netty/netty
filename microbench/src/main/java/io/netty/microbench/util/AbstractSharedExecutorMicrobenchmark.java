@@ -18,7 +18,6 @@ package io.netty.microbench.util;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -139,11 +138,6 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         @Override
         public <V> Promise<V> newPromise() {
             return executor.newPromise();
-        }
-
-        @Override
-        public <V> ProgressivePromise<V> newProgressivePromise() {
-            return executor.newProgressivePromise();
         }
     }
 

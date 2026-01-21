@@ -21,7 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -54,18 +55,18 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
-        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
-                .bind(newSocketAddress()).syncUninterruptibly().channel();
+        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandler() { })
+                .bind(newSocketAddress()).get();
         try {
             try {
-                ch.shutdownInput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownType.newInbound()).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause);
             }
 
             try {
-                ch.shutdownOutput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause);
@@ -90,12 +91,12 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
             public void run(Bootstrap bootstrap) throws Throwable {
                 EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
                 ServerBootstrap sb = new ServerBootstrap().group(group);
-                Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+                Channel serverChannel = sb.childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                         ctx.writeAndFlush(Unpooled.copyInt(42));
                     }
-                }).channel(NioServerSocketChannel.class).bind(0).sync().channel();
+                }).channel(NioServerSocketChannel.class).bind(0).get();
 
                 final CountDownLatch readLatch = new CountDownLatch(1);
                 bootstrap.handler(new ByteToMessageDecoder() {

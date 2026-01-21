@@ -17,7 +17,7 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertFrameEquals;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
@@ -52,7 +51,8 @@ public class Http3PushStreamTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        serverConnectionHandler = new Http3ServerConnectionHandler(new ChannelDuplexHandler(), null, null, null, true);
+        serverConnectionHandler = new Http3ServerConnectionHandler(new ChannelHandler() { },
+                null, null, null, true);
         serverChannel = new EmbeddedQuicChannel(true, serverConnectionHandler);
         serverLocalControlStream = (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(serverChannel);
         assertNotNull(serverLocalControlStream);
@@ -79,7 +79,11 @@ public class Http3PushStreamTest {
         serverConnectionHandler.localControlStreamHandler.channelRead(serverControlStreamHandlerCtx, maxPushIdFrame);
         assertTrue(serverChannel.isActive());
 
-        clientLocalControlStream.writeAndFlush(maxPushIdFrame).addListener(CLOSE_ON_FAILURE);
+        clientLocalControlStream.writeAndFlush(maxPushIdFrame).addListener(f -> {
+            if (!f.isSuccess()) {
+                clientLocalControlStream.close();
+            }
+        });
         assertTrue(clientChannel.isActive());
         assertTrue(clientLocalControlStream.releaseOutbound());
     }
@@ -200,7 +204,7 @@ public class Http3PushStreamTest {
                             protected void initPushStream(QuicStreamChannel ch) {
                                 // noop
                             }
-                        }, ChannelDuplexHandler::new, ChannelDuplexHandler::new)).get();
+                        }, () -> new ChannelHandler() { }, () -> new ChannelHandler() { })).get();
     }
 
     private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) {

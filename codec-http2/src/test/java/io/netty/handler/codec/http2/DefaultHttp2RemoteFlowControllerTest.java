@@ -18,8 +18,9 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.atLeastOnce;
@@ -80,7 +82,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private ChannelPromise promise;
+    private Promise promise;
 
     @Mock
     private Http2RemoteFlowController.Listener listener;
@@ -91,8 +93,12 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
+        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(0, Integer.MAX_VALUE));
         when(ctx.newPromise()).thenReturn(promise);
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        doAnswer(invocationOnMock -> {
+            fail("forbidden");
+            return null;
+        }).when(ctx).flush();
         setChannelWritability(true);
         when(channel.config()).thenReturn(config);
         when(executor.inEventLoop()).thenReturn(true);

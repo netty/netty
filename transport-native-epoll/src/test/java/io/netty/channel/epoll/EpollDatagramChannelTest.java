@@ -16,9 +16,9 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -48,7 +48,7 @@ public class EpollDatagramChannelTest {
     public void testDefaultMaxMessagePerRead() {
         EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
-        channel.unsafe().closeForcibly();
+        channel.close();
     }
 
     @Test
@@ -65,7 +65,7 @@ public class EpollDatagramChannelTest {
         Socket socket = Socket.newSocketDgram();
         EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next(),
                 socket.intValue());
-        InetSocketAddress localAddress = channel.localAddress();
+        InetSocketAddress localAddress = (InetSocketAddress) channel.localAddress();
         assertTrue(channel.active);
         assertNotNull(localAddress);
         assertEquals(socket.localAddress(), localAddress);
@@ -73,7 +73,7 @@ public class EpollDatagramChannelTest {
     }
 
     @Test
-    public void testLocalAddressBeforeAndAfterBind() {
+    public void testLocalAddressBeforeAndAfterBind() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1,  EpollIoHandler.newFactory());
         try {
             TestHandler handler = new TestHandler();
@@ -85,16 +85,16 @@ public class EpollDatagramChannelTest {
                     .localAddress(localAddressBeforeBind)
                     .handler(handler);
 
-            ChannelFuture future = bootstrap.bind().syncUninterruptibly();
+            Channel ch = bootstrap.bind().get();
 
             assertNull(handler.localAddress);
 
-            SocketAddress localAddressAfterBind = future.channel().localAddress();
+            SocketAddress localAddressAfterBind = ch.localAddress();
             assertNotNull(localAddressAfterBind);
             assertTrue(localAddressAfterBind instanceof InetSocketAddress);
             assertTrue(((InetSocketAddress) localAddressAfterBind).getPort() != 0);
 
-            future.channel().close().syncUninterruptibly();
+            ch.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();
         }
@@ -107,13 +107,13 @@ public class EpollDatagramChannelTest {
         channel.fd().close();
     }
 
-    private static final class TestHandler extends ChannelInboundHandlerAdapter {
+    private static final class TestHandler implements ChannelInboundHandler {
         private volatile SocketAddress localAddress;
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             this.localAddress = ctx.channel().localAddress();
-            super.channelRegistered(ctx);
+            ctx.fireChannelRegistered();
         }
     }
 }

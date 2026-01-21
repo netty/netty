@@ -25,7 +25,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -48,15 +48,14 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
+        Channel clientChannel = cb.connect(addr).get();
+        clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         // What is supposed to happen from this point:
         //
@@ -87,7 +86,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         // the flush() is invoked from a non-I/O thread while the other are from
         // an I/O thread.
 
-        ChannelFuture future = clientChannel.write(createTestBuf(2000));
+        Future<Void> future = clientChannel.write(createTestBuf(2000));
 
         clientChannel.flush();
         future.sync();
@@ -95,20 +94,48 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-                // Case 1:
+                // --- Start case 1 ---
+
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
                 "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
                 "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // Flush is submitted an executed.
+                "FLUSH\n" +
+
+                // Everything is written so writability is true again.
+                "WRITABILITY: writable=true\n",
+
+                // --- Start case 2 ---
+
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
+                "WRITABILITY: writable=false\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
+                "WRITABILITY: writable=true\n" +
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // Flush is submitted an executed.
+                "FLUSH\n");
     }
 
     /**
@@ -120,21 +147,21 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
-        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
+        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY, Event.CLOSE);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
+        Channel clientChannel = cb.connect(addr).get();
+        clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
-        clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelInboundHandler() {
+
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 if (!ctx.channel().isWritable()) {
-                    ctx.channel().flush();
+                    ctx.flush();
                 }
                 ctx.fireChannelWritabilityChanged();
             }
@@ -146,22 +173,61 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-                // Case 1:
+                // --- Start case 1 ---
+
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
                 "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
                 "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
                 "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
+                "FLUSH\n" +
+
+                // Everything is written so writability is true again.
+                "WRITABILITY: writable=true\n" +
+
+                // Channel is closed
+                 "CLOSE\n",
+
+                // --- Start case 2 ---
+
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
+                "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
+                "FLUSH\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
+                "WRITABILITY: writable=true\n" +
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
+                "FLUSH\n" +
+
+                // Channel is closed
+                "CLOSE\n"
+        );
     }
 
     @Test
@@ -170,35 +236,35 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             int writeCount;
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
                 }
-                super.write(ctx, msg,  promise);
+                ctx.write(msg,  promise);
             }
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 if (flushCount < 5) {
                     flushCount++;
                     ctx.channel().write(createTestBuf(2000));
                 }
-                super.flush(ctx);
+                ctx.flush();
             }
         });
 
@@ -227,25 +293,20 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testCloseInFlush");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                promise.addListener(new GenericFutureListener<Future<? super Void>>() {
-                    @Override
-                    public void operationComplete(Future<? super Void> future) throws Exception {
-                        ctx.channel().close();
-                    }
-                });
-                super.write(ctx, msg, promise);
+            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                promise.addListener(future -> ctx.channel().close());
+                ctx.write(msg, promise);
                 ctx.channel().flush();
             }
         });
@@ -262,24 +323,19 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushFailure");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
-
-            @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
-                throw new Exception("intentional failure");
-            }
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                ctx.close();
+            public void flush(ChannelHandlerContext ctx) {
+                throw new IllegalStateException("intentional failure");
             }
         });
 
@@ -312,7 +368,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.config().setAutoRead(false);
                             // first handler splits input by \n and into strings
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     String string = ((ByteBuf) msg).toString(StandardCharsets.UTF_8);
@@ -324,7 +380,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                             });
                             // second handler buffers messages, sends them on in channelReadComplete, and acts as flow
                             // control
-                            ch.pipeline().addLast(new ChannelDuplexHandler() {
+                            class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
                                 final Queue<Object> queue = new ArrayDeque<>();
                                 boolean demand = true;
 
@@ -361,9 +417,10 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 public void handlerAdded(ChannelHandlerContext ctx) {
                                     ctx.read();
                                 }
-                            });
+                            }
+                            ch.pipeline().addLast(new TestHandler());
                             // third handler saves incoming packets so that we can test their order
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     received.add(msg);
@@ -371,7 +428,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 }
                             });
                             // final handler relieves backpressure, triggering reentrant channelReads
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     ctx.read();
@@ -383,12 +440,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 }
                             });
                         }
-                    }).bind(addr).sync().channel();
+                    }).bind(addr).get();
             Channel client = new Bootstrap()
                     .group(group)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .connect(addr).sync().channel();
+                    .handler(new ChannelInboundHandler() { })
+                    .connect(addr).get();
 
             client.writeAndFlush(Unpooled.copiedBuffer("A\nB\nC", StandardCharsets.UTF_8)).sync();
 

@@ -21,11 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.util.TestUtils;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
@@ -150,8 +150,8 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         cb.handler(ch);
         sb.childHandler(sh);
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 8), data.length - i);
@@ -169,7 +169,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             i += length;
         }
 
-        ChannelFuture cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
+        Future<Void> cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
         try {
             assertTrue(cf.await(60000));
             cf.sync();

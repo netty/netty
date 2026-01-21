@@ -44,7 +44,7 @@ public final class HAProxyClient {
              .handler(new HAProxyHandler());
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             HAProxyMessage message = new HAProxyMessage(
                     HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,

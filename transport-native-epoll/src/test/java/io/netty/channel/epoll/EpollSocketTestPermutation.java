@@ -212,7 +212,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     @Override
                     public ServerBootstrap newInstance() {
                         return new ServerBootstrap().group(EPOLL_GROUP)
-                                .channel(EpollServerDomainSocketChannel.class);
+                                .channelFactory((e, c) ->
+                                        new EpollServerSocketChannel(e, c, SocketProtocolFamily.UNIX));
                     }
                 }
         );
@@ -223,7 +224,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_GROUP).channel(EpollDomainSocketChannel.class);
+                        return new Bootstrap().group(EPOLL_GROUP).channelFactory(e ->
+                                new EpollSocketChannel(e, SocketProtocolFamily.UNIX));
                     }
                 }
         );
@@ -250,7 +252,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_GROUP).channel(EpollDomainDatagramChannel.class);
+                        return new Bootstrap().group(EPOLL_GROUP).channelFactory(
+                                e -> new EpollDatagramChannel(e, SocketProtocolFamily.UNIX));
                     }
                 }
         );

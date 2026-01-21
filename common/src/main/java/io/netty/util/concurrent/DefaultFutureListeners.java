@@ -19,41 +19,30 @@ import java.util.Arrays;
 
 final class DefaultFutureListeners {
 
-    private GenericFutureListener<? extends Future<?>>[] listeners;
+    private FutureListener<?>[] listeners;
     private int size;
-    private int progressiveSize; // the number of progressive listeners
 
     @SuppressWarnings("unchecked")
     DefaultFutureListeners(
-            GenericFutureListener<? extends Future<?>> first, GenericFutureListener<? extends Future<?>> second) {
-        listeners = new GenericFutureListener[2];
+            FutureListener<?> first, FutureListener<?> second) {
+        listeners = new FutureListener[2];
         listeners[0] = first;
         listeners[1] = second;
         size = 2;
-        if (first instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
-        if (second instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
     }
 
-    public void add(GenericFutureListener<? extends Future<?>> l) {
-        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    public void add(FutureListener<?> l) {
+        FutureListener<?>[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
         }
         listeners[size] = l;
         this.size = size + 1;
-
-        if (l instanceof GenericProgressiveFutureListener) {
-            progressiveSize ++;
-        }
     }
 
-    public void remove(GenericFutureListener<? extends Future<?>> l) {
-        final GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    public void remove(FutureListener<?> l) {
+        final FutureListener<?>[] listeners = this.listeners;
         int size = this.size;
         for (int i = 0; i < size; i ++) {
             if (listeners[i] == l) {
@@ -63,24 +52,16 @@ final class DefaultFutureListeners {
                 }
                 listeners[-- size] = null;
                 this.size = size;
-
-                if (l instanceof GenericProgressiveFutureListener) {
-                    progressiveSize --;
-                }
                 return;
             }
         }
     }
 
-    public GenericFutureListener<? extends Future<?>>[] listeners() {
+    public FutureListener<?>[] listeners() {
         return listeners;
     }
 
     public int size() {
         return size;
-    }
-
-    public int progressiveSize() {
-        return progressiveSize;
     }
 }

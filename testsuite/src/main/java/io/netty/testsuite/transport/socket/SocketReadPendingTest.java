@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
@@ -66,13 +66,13 @@ public class SocketReadPendingTest extends AbstractSocketTest {
               .childOption(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
               .childHandler(serverInitializer);
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
 
             cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
               .option(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
               .handler(clientInitializer);
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
             clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[4], 0, 4));
@@ -110,7 +110,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         }
     }
 
-    private static final class ReadPendingReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class ReadPendingReadHandler implements ChannelInboundHandler {
         private final AtomicInteger count = new AtomicInteger();
         private final CountDownLatch latch = new CountDownLatch(1);
         private final CountDownLatch latch2 = new CountDownLatch(2);

@@ -18,11 +18,10 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.stomp.StompSubframeDecoder.State;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
 import io.netty.util.internal.StringUtil;
@@ -50,7 +49,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  * consumption. Note, that every message, even with no content decodes with {@link LastStompContentSubframe} at the end
  * to simplify upstream message parsing.
  */
-public class StompSubframeDecoder extends ReplayingDecoder<State> {
+public class StompSubframeDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_CHUNK_SIZE = 8132;
     private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
@@ -58,8 +57,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     /**
      * @deprecated this should never be used by an user!
      */
-    @Deprecated
-    public enum State {
+    private enum State {
         SKIP_CONTROL_CHARACTERS,
         READ_HEADERS,
         READ_CONTENT,
@@ -68,9 +66,11 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         INVALID_CHUNK
     }
 
+    private State state = State.SKIP_CONTROL_CHARACTERS;
     private final Utf8LineParser commandParser;
     private final HeaderParser headerParser;
     private final int maxChunkSize;
+    private StompHeadersSubframe stompHeadersSubframe;
     private int alreadyReadChunkSize;
     private LastStompContentSubframe lastContent;
     private long contentLength = -1;
@@ -88,7 +88,6 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
-        super(State.SKIP_CONTROL_CHARACTERS);
         checkPositive(maxLineLength, "maxLineLength");
         checkPositive(maxChunkSize, "maxChunkSize");
         this.maxChunkSize = maxChunkSize;
@@ -98,26 +97,40 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        switch (state()) {
+        switch (state) {
             case SKIP_CONTROL_CHARACTERS:
-                skipControlCharacters(in);
-                checkpoint(State.READ_HEADERS);
+                if (!skipControlCharacters(in)) {
+                    return;
+                }
+                state = State.READ_HEADERS;
                 // Fall through.
             case READ_HEADERS:
                 StompCommand command = StompCommand.UNKNOWN;
-                StompHeadersSubframe frame = null;
                 try {
-                    command = readCommand(in);
-                    frame = new DefaultStompHeadersSubframe(command);
-                    checkpoint(readHeaders(in, frame));
+                    if (stompHeadersSubframe == null) {
+                        command = readCommand(in);
+                        if (command == null) {
+                            return;
+                        }
+                        stompHeadersSubframe = new DefaultStompHeadersSubframe(command);
+                    }
+                    State nextState = readHeaders(in, stompHeadersSubframe);
+                    if (nextState == null) {
+                        return;
+                    }
+                    state = nextState;
+                    StompHeadersSubframe frame = stompHeadersSubframe;
+                    stompHeadersSubframe = null;
                     out.add(frame);
                 } catch (Exception e) {
-                    if (frame == null) {
-                        frame = new DefaultStompHeadersSubframe(command);
+                    if (stompHeadersSubframe == null) {
+                        stompHeadersSubframe = new DefaultStompHeadersSubframe(command);
                     }
-                    frame.setDecoderResult(DecoderResult.failure(e));
+                    stompHeadersSubframe.setDecoderResult(DecoderResult.failure(e));
+                    StompHeadersSubframe frame = stompHeadersSubframe;
+                    stompHeadersSubframe = null;
                     out.add(frame);
-                    checkpoint(State.BAD_FRAME);
+                    state = State.BAD_FRAME;
                     return;
                 }
                 break;
@@ -126,7 +139,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 return;
         }
         try {
-            switch (state()) {
+            switch (state) {
                 case READ_CONTENT:
                     int toRead = in.readableBytes();
                     if (toRead == 0) {
@@ -143,7 +156,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                         ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
                         if ((alreadyReadChunkSize += toRead) >= contentLength) {
                             lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
-                            checkpoint(State.FINALIZE_FRAME_READ);
+                            state = State.FINALIZE_FRAME_READ;
                         } else {
                             out.add(new DefaultStompContentSubframe(chunkBuffer));
                             return;
@@ -151,7 +164,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     } else {
                         int nulIndex = indexOf(in, in.readerIndex(), in.writerIndex(), StompConstants.NUL);
                         if (nulIndex == in.readerIndex()) {
-                            checkpoint(State.FINALIZE_FRAME_READ);
+                            state = State.FINALIZE_FRAME_READ;
                         } else {
                             if (nulIndex > 0) {
                                 toRead = nulIndex - in.readerIndex();
@@ -162,7 +175,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                             alreadyReadChunkSize += toRead;
                             if (nulIndex > 0) {
                                 lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
-                                checkpoint(State.FINALIZE_FRAME_READ);
+                                state = State.FINALIZE_FRAME_READ;
                             } else {
                                 out.add(new DefaultStompContentSubframe(chunkBuffer));
                                 return;
@@ -171,7 +184,9 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     }
                     // Fall through.
                 case FINALIZE_FRAME_READ:
-                    skipNullCharacter(in);
+                    if (!skipNullCharacter(in)) {
+                        return;
+                    }
                     if (lastContent == null) {
                         lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
                     }
@@ -187,14 +202,14 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
-            checkpoint(State.BAD_FRAME);
+            state = State.BAD_FRAME;
         }
     }
 
     private StompCommand readCommand(ByteBuf in) {
         CharSequence commandSequence = commandParser.parse(in);
         if (commandSequence == null) {
-            throw new DecoderException("Failed to read command from channel");
+            return null;
         }
         String commandStr = commandSequence.toString();
         try {
@@ -206,18 +221,17 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private State readHeaders(ByteBuf buffer, StompHeadersSubframe headersSubframe) {
         StompHeaders headers = headersSubframe.headers();
-        for (;;) {
-            boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
-            if (!headerRead) {
-                if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
-                    contentLength = getContentLength(headers);
-                    if (contentLength == 0) {
-                        return State.FINALIZE_FRAME_READ;
-                    }
+        boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
+        if (headerRead) {
+            if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
+                contentLength = getContentLength(headers);
+                if (contentLength == 0) {
+                    return State.FINALIZE_FRAME_READ;
                 }
-                return State.READ_CONTENT;
             }
+            return State.READ_CONTENT;
         }
+        return null;
     }
 
     private static long getContentLength(StompHeaders headers) {
@@ -228,26 +242,31 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         return contentLength;
     }
 
-    private static void skipNullCharacter(ByteBuf buffer) {
+    private static boolean skipNullCharacter(ByteBuf buffer) {
+        if (buffer.readableBytes() < 1) {
+            return false;
+        }
         byte b = buffer.readByte();
         if (b != StompConstants.NUL) {
             throw new IllegalStateException("unexpected byte in buffer " + b + " while expecting NULL byte");
         }
+        return true;
     }
 
-    private static void skipControlCharacters(ByteBuf buffer) {
-        byte b;
-        for (;;) {
-            b = buffer.readByte();
+    private static boolean skipControlCharacters(ByteBuf buffer) {
+        while (buffer.isReadable()) {
+            byte b = buffer.readByte();
             if (b != StompConstants.CR && b != StompConstants.LF) {
                 buffer.readerIndex(buffer.readerIndex() - 1);
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     private void resetDecoder() {
-        checkpoint(State.SKIP_CONTROL_CHARACTERS);
+        state = State.SKIP_CONTROL_CHARACTERS;
+        stompHeadersSubframe = null;
         contentLength = -1;
         alreadyReadChunkSize = 0;
         lastContent = null;
@@ -351,22 +370,25 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
         boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {
             shouldUnescape = shouldUnescape(headersSubframe.command());
-            AppendableCharSequence value = super.parse(buf);
-            if (value == null || (name == null && value.length() == 0)) {
-                return false;
-            }
-
-            if (valid) {
-                headersSubframe.headers().add(name, value.toString());
-            } else if (validateHeaders) {
-                if (StringUtil.isNullOrEmpty(name)) {
-                    throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
+            for (;;) {
+                AppendableCharSequence value = super.parse(buf);
+                if (value == null) {
+                    return false;
                 }
-                String line = name + ':' + value;
-                throw new IllegalArgumentException("a header value or name contains a prohibited character ':'"
-                                                   + ", " + line);
+                if (name == null && value.length() == 0) {
+                    return true;
+                }
+                if (valid) {
+                    headersSubframe.headers().add(name, value.toString());
+                } else if (validateHeaders) {
+                    if (StringUtil.isNullOrEmpty(name)) {
+                        throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
+                    }
+                    String line = name + ':' + value;
+                    throw new IllegalArgumentException("a header value or name contains a prohibited character ':'"
+                            + ", " + line);
+                }
             }
-            return true;
         }
 
         @Override

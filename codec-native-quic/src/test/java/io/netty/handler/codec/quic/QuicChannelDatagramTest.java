@@ -18,12 +18,11 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -69,13 +68,13 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof ByteBuf) {
-                    final ChannelFuture future;
+                    final Future<Void> future;
                     if (!flushInReadComplete) {
                         future = ctx.writeAndFlush(msg);
                     } else {
                         future = ctx.write(msg);
                     }
-                    future.addListener(ChannelFutureListener.CLOSE);
+                    future.addListener(f -> ctx.close());
                 } else {
                     ctx.fireChannelRead(msg);
                 }
@@ -98,7 +97,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
         };
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .datagram(10, 10),
-                InsecureQuicTokenHandler.INSTANCE, serverHandler , new ChannelInboundHandlerAdapter());
+                InsecureQuicTokenHandler.INSTANCE, serverHandler, new ChannelInboundHandler() { });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         Promise<ByteBuf> receivedBuffer = ImmediateEventExecutor.INSTANCE.newPromise();
@@ -239,7 +238,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
                         .option(ChannelOption.AUTO_READ, false)
                         .option(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
                         .datagram(10, 10),
-                InsecureQuicTokenHandler.INSTANCE, serverHandler, new ChannelInboundHandlerAdapter());
+                InsecureQuicTokenHandler.INSTANCE, serverHandler, new ChannelInboundHandler() { });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)

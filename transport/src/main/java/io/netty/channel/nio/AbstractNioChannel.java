@@ -22,16 +22,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -39,11 +36,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.CancelledKeyException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
@@ -53,6 +47,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
+    private final NioIoHandle ioHandle = new NioIoHandleImpl();
     private final SelectableChannel ch;
     protected final int readInterestOp;
     protected final NioIoOps readOps;
@@ -61,32 +56,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
         public void run() {
-            clearReadPending0();
+            setReadPending0(false);
         }
     };
 
-    /**
-     * The future of the current connection attempt.  If not null, subsequent
-     * connection attempts will fail.
-     */
-    private ChannelPromise connectPromise;
-    private Future<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
+    private Promise<Void> pendingConnectPromise;
 
-    /**
-     * Create a new instance
-     *
-     * @param eventLoop         the {@link EventLoop} to use for the {@link Channel}
-     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param ch                the underlying {@link SelectableChannel} on which it operates
-     * @param readOps           the ops to set to receive data from the {@link SelectableChannel}
-     */
-    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, int readOps) {
-        this(eventLoop, parent, ch, NioIoOps.valueOf(readOps));
-    }
-
-    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps) {
-        super(eventLoop, NioIoHandle.class, parent);
+    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps,
+                                 boolean hasDisconnect) {
+        super(eventLoop, NioIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.ch = ch;
         this.readInterestOp = ObjectUtil.checkNotNull(readOps, "readOps").value;
         this.readOps = readOps;
@@ -129,11 +107,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     public boolean isOpen() {
         return ch.isOpen();
-    }
-
-    @Override
-    public NioUnsafe unsafe() {
-        return (NioUnsafe) super.unsafe();
     }
 
     protected SelectableChannel javaChannel() {
@@ -198,7 +171,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (isRegistered()) {
             EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
-                clearReadPending0();
+                setReadPending0(false);
             } else {
                 eventLoop.execute(clearReadPendingRunnable);
             }
@@ -213,207 +186,42 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private void setReadPending0(boolean readPending) {
         this.readPending = readPending;
         if (!readPending) {
-            ((AbstractNioUnsafe) unsafe()).removeReadOp();
+            removeReadOp();
         }
     }
 
-    private void clearReadPending0() {
-        readPending = false;
-        ((AbstractNioUnsafe) unsafe()).removeReadOp();
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        final boolean connected;
+        try {
+            connected = doConnect(remoteAddress, localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        if (connected) {
+            promise.setSuccess(null);
+        } else {
+            pendingConnectPromise = promise;
+        }
     }
 
-    /**
-     * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
-     */
-    public interface NioUnsafe extends Unsafe {
-        /**
-         * Return underlying {@link SelectableChannel}
-         */
-        SelectableChannel ch();
-
-        /**
-         * Finish connect
-         */
-        void finishConnect();
-
-        /**
-         * Read from underlying {@link SelectableChannel}
-         */
-        void read();
-
-        void forceFlush();
+    @Override
+    protected final boolean isWriteFlushedScheduled() {
+        IoRegistration registration = registration();
+        return registration.isValid() && NioIoOps.WRITE.isIncludedIn((
+                (SelectionKey) registration.attachment()).interestOps());
     }
 
-    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioIoHandle {
+    private final class NioIoHandleImpl implements NioIoHandle {
         @Override
         public void close() {
-            close(newPromise());
+            ioTransport().close(newPromise());
         }
 
         @Override
         public SelectableChannel selectableChannel() {
-            return ch();
-        }
-
-        Channel channel() {
-            return AbstractNioChannel.this;
-        }
-
-        protected final void removeReadOp() {
-            IoRegistration registration = registration();
-            // Check first if the key is still valid as it may be canceled as part of the deregistration
-            // from the EventLoop
-            // See https://github.com/netty/netty/issues/2104
-            if (!registration.isValid()) {
-                return;
-            }
-            removeAndSubmit(readOps);
-        }
-
-        @Override
-        public final SelectableChannel ch() {
             return javaChannel();
-        }
-
-        @Override
-        public final void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
-            // non-blocking io.
-            if (promise.isDone() || !ensureOpen(promise)) {
-                return;
-            }
-
-            try {
-                if (connectPromise != null) {
-                    // Already a connect in process.
-                    throw new ConnectionPendingException();
-                }
-
-                boolean wasActive = isActive();
-                if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
-                } else {
-                    connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
-
-                    // Schedule connect timeout.
-                    final int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                    if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = executor().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                if (connectPromise != null && !connectPromise.isDone()
-                                        && connectPromise.tryFailure(new ConnectTimeoutException(
-                                                "connection timed out after " + connectTimeoutMillis + " ms: " +
-                                                        remoteAddress))) {
-                                    close(newPromise());
-                                }
-                            }
-                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                    }
-
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            // If the connect future is cancelled we also cancel the timeout and close the
-                            // underlying socket.
-                            if (future.isCancelled()) {
-                                if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
-                                }
-                                connectPromise = null;
-                                close(newPromise());
-                            }
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
-                closeIfClosed();
-            }
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
-            // We still need to ensure we call fireChannelActive() in this case.
-            boolean active = isActive();
-
-            // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
-
-            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-            // because what happened is what happened.
-            if (!wasActive && active) {
-                pipeline().fireChannelActive();
-            }
-
-            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
-                close(newPromise());
-            }
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(cause);
-            closeIfClosed();
-        }
-
-        @Override
-        public final void finishConnect() {
-            // Note this method is invoked by the event loop only if the connection attempt was
-            // neither cancelled nor timed out.
-
-            assert executor().inEventLoop();
-
-            try {
-                boolean wasActive = isActive();
-                doFinishConnect();
-                fulfillConnectPromise(connectPromise, wasActive);
-            } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-            } finally {
-                // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-                // See https://github.com/netty/netty/issues/1770
-                if (connectTimeoutFuture != null) {
-                    connectTimeoutFuture.cancel(false);
-                }
-                connectPromise = null;
-            }
-        }
-
-        @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if (!isFlushPending()) {
-                super.flush0();
-            }
-        }
-
-        @Override
-        public final void forceFlush() {
-            // directly call super.flush0() to force a flush now
-            super.flush0();
-        }
-
-        private boolean isFlushPending() {
-            IoRegistration registration = registration();
-            return registration.isValid() && NioIoOps.WRITE.isIncludedIn((
-                    (SelectionKey) registration.attachment()).interestOps());
         }
 
         @Override
@@ -427,36 +235,65 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
                     removeAndSubmit(NioIoOps.CONNECT);
-
-                    unsafe().finishConnect();
+                    finishConnect();
                 }
 
                 // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
                 if (nioReadyOps.contains(NioIoOps.WRITE)) {
-                    // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
-                    // write
-                    forceFlush();
+                    // Call writeFlushedNow which will also take care of clear the OP_WRITE once there is nothing left
+                    // to write
+                    writeFlushedNow();
                 }
 
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
                 if (nioReadyOps.contains(NioIoOps.READ_AND_ACCEPT) || nioReadyOps.equals(NioIoOps.NONE)) {
-                    read();
+                    readNow();
                 }
             } catch (CancelledKeyException ignored) {
-                close(newPromise());
+                ioTransport().close(newPromise());
             }
         }
     }
 
+    protected abstract void readNow();
+
+    protected final void finishConnect() {
+        // Note this method is invoked by the event loop only if the connection attempt was
+        // neither cancelled nor timed out.
+
+        assert executor().inEventLoop();
+        assert pendingConnectPromise != null;
+        Promise<Void> promise = pendingConnectPromise;
+        pendingConnectPromise = null;
+        try {
+            doFinishConnect();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
+    }
+
+    protected final void removeReadOp() {
+        IoRegistration registration = registration();
+        // Check first if the key is still valid as it may be canceled as part of the deregistration
+        // from the EventLoop
+        // See https://github.com/netty/netty/issues/2104
+        if (!registration.isValid()) {
+            return;
+        }
+        removeAndSubmit(readOps);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         assert registration == null;
-        executor().register((AbstractNioUnsafe) unsafe()).addListener(f -> {
+        executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -464,12 +301,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
+        promise.setSuccess(null);
     }
 
     @Override
@@ -562,21 +400,5 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         return buf;
-    }
-
-    @Override
-    protected void doClose() throws Exception {
-        ChannelPromise promise = connectPromise;
-        if (promise != null) {
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(new ClosedChannelException());
-            connectPromise = null;
-        }
-
-        Future<?> future = connectTimeoutFuture;
-        if (future != null) {
-            future.cancel(false);
-            connectTimeoutFuture = null;
-        }
     }
 }

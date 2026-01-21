@@ -15,9 +15,9 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -39,7 +39,7 @@ final class LoggingDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     }
 
     @Override
-    public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
+    public void queryWritten(InetSocketAddress dnsServerAddress, Future<Void> future) {
         this.dnsServerAddress = dnsServerAddress;
     }
 

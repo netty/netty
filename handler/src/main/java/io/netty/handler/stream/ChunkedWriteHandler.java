@@ -20,15 +20,14 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -67,7 +66,7 @@ import java.util.Queue;
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  */
-public class ChunkedWriteHandler extends ChannelDuplexHandler {
+public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
@@ -132,7 +131,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (!queueIsEmpty() || msg instanceof ChunkedInput) {
             allocateQueue();
             queue.add(new PendingWrite(msg, promise));
@@ -142,7 +141,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         doFlush(ctx);
     }
 
@@ -287,7 +286,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     queue.remove();
                 }
                 // Flush each chunk to conserve memory
-                ChannelFuture f = ctx.writeAndFlush(message);
+                Future<Void> f = ctx.writeAndFlush(message);
                 if (endOfInput) {
                     if (f.isDone()) {
                         handleEndOfInputFuture(f, chunks, currentWrite);
@@ -297,24 +296,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         // be closed before it's not written.
                         //
                         // See https://github.com/netty/netty/issues/303
-                        f.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                handleEndOfInputFuture(future, chunks, currentWrite);
-                            }
-                        });
+                        f.addListener(future ->
+                                handleEndOfInputFuture(future, chunks, currentWrite));
                     }
                 } else {
                     final boolean resume = !channel.isWritable();
                     if (f.isDone()) {
-                        handleFuture(f, chunks, currentWrite, resume);
+                        handleFuture(channel, f, chunks, currentWrite, resume);
                     } else {
-                        f.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                handleFuture(future, chunks, currentWrite, resume);
-                            }
-                        });
+                        f.addListener(future ->
+                                handleFuture(channel, future, chunks, currentWrite, resume));
                     }
                 }
                 requiresFlush = false;
@@ -335,7 +326,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static void handleEndOfInputFuture(ChannelFuture future, ChunkedInput<?> input, PendingWrite currentWrite) {
+    private static void handleEndOfInputFuture(Future<? extends Void> future, ChunkedInput<?> input,
+                                               PendingWrite currentWrite) {
         if (!future.isSuccess()) {
             closeInput(input);
             currentWrite.fail(future.cause());
@@ -344,18 +336,17 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             long inputProgress = input.progress();
             long inputLength = input.length();
             closeInput(input);
-            currentWrite.progress(inputProgress, inputLength);
             currentWrite.success(inputLength);
         }
     }
 
-    private void handleFuture(ChannelFuture future, ChunkedInput<?> input, PendingWrite currentWrite, boolean resume) {
+    private void handleFuture(Channel channel, Future<? extends Void> future, ChunkedInput<?> input,
+                              PendingWrite currentWrite, boolean resume) {
         if (!future.isSuccess()) {
             closeInput(input);
             currentWrite.fail(future.cause());
         } else {
-            currentWrite.progress(input.progress(), input.length());
-            if (resume && future.channel().isWritable()) {
+            if (resume && channel.isWritable()) {
                 resumeTransfer();
             }
         }
@@ -371,9 +362,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     private static final class PendingWrite {
         final Object msg;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        PendingWrite(Object msg, ChannelPromise promise) {
+        PendingWrite(Object msg, Promise<Void> promise) {
             this.msg = msg;
             this.promise = promise;
         }
@@ -388,14 +379,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
             }
-            progress(total, total);
-            promise.trySuccess();
-        }
-
-        void progress(long progress, long total) {
-            if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, total);
-            }
+            promise.trySuccess(null);
         }
     }
 }

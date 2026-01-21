@@ -15,50 +15,62 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 
-final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implements SocketChannelConfig {
+final class IoUringSocketChannelConfig extends IoUringChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private static final AtomicReferenceFieldUpdater<IoUringSocketChannelConfig, DomainSocketReadMode> MODE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    IoUringSocketChannelConfig.class, DomainSocketReadMode.class, "mode");
 
     static final int DISABLE_WRITE_ZERO_COPY = -1;
     private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
+    private volatile short bufferGroupId = -1;
 
     IoUringSocketChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (channel.socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
-                super.getOptions(),
+        Map<ChannelOption<?>, Object> options = getOptions(
+                super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
                 IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
                 IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT,
                 ChannelOption.TCP_FASTOPEN_CONNECT, IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD);
+        if (((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return getOptions(options, DOMAIN_SOCKET_READ_MODE);
+        }
+        return options;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            return (T) Short.valueOf(getBufferGroupId());
+        }
         if (option == SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
         }
@@ -113,6 +125,10 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
             return (T) Integer.valueOf(getWriteZeroCopyThreshold());
         }
+        if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return (T) getReadMode();
+        }
         return super.getOption(option);
     }
 
@@ -120,7 +136,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
-        if (option == SO_RCVBUF) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            setBufferGroupId((Short) value);
+        } else if (option == SO_RCVBUF) {
             setReceiveBufferSize((Integer) value);
         } else if (option == SO_SNDBUF) {
             setSendBufferSize((Integer) value);
@@ -156,6 +174,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
             setTcpFastOpenConnect((Boolean) value);
         } else if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
             setWriteZeroCopyThreshold((Integer) value);
+        } else if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            setReadMode((DomainSocketReadMode) value);
         } else {
             return super.setOption(option, value);
         }
@@ -163,8 +184,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         return true;
     }
 
-    @Override
-    public int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -172,8 +192,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public int getSoLinger() {
+    private int getSoLinger() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
@@ -181,8 +200,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    private int getTrafficClass() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -190,8 +208,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isKeepAlive() {
+    private boolean isKeepAlive() {
         try {
             return ((IoUringSocketChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
@@ -199,8 +216,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((IoUringSocketChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -208,8 +224,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isTcpNoDelay() {
+    private boolean isTcpNoDelay() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
@@ -220,7 +235,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public boolean isTcpCork() {
+    private boolean isTcpCork() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpCork();
         } catch (IOException e) {
@@ -231,7 +246,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getSoBusyPoll() {
+    private int getSoBusyPoll() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSoBusyPoll();
         } catch (IOException e) {
@@ -244,7 +259,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      *
      * @return value is a uint32_t
      */
-    public long getTcpNotSentLowAt() {
+    private long getTcpNotSentLowAt() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpNotSentLowAt();
         } catch (IOException e) {
@@ -255,7 +270,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIdle() {
+    private int getTcpKeepIdle() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepIdle();
         } catch (IOException e) {
@@ -266,7 +281,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIntvl() {
+    private int getTcpKeepIntvl() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepIntvl();
         } catch (IOException e) {
@@ -277,7 +292,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepCnt() {
+    private int getTcpKeepCnt() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepCnt();
         } catch (IOException e) {
@@ -288,7 +303,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpUserTimeout() {
+    private int getTcpUserTimeout() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpUserTimeout();
         } catch (IOException e) {
@@ -296,54 +311,39 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    private void setKeepAlive(boolean keepAlive) {
         try {
             ((IoUringSocketChannel) channel).socket.setKeepAlive(keepAlive);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((IoUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((IoUringSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -351,21 +351,17 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setSoLinger(int soLinger) {
+    private void setSoLinger(int soLinger) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoLinger(soLinger);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    private void setTcpNoDelay(boolean tcpNoDelay) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -374,10 +370,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpCork(boolean tcpCork) {
+    private void setTcpCork(boolean tcpCork) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpCork(tcpCork);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -386,10 +381,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
+    private void setSoBusyPoll(int loopMicros) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -400,20 +394,17 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      *
      * @param tcpNotSentLowAt is a uint32_t
      */
-    public IoUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
+    private void setTcpNotSentLowAt(long tcpNotSentLowAt) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
             ((IoUringSocketChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -422,10 +413,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepIdle(int seconds) {
+    private void setTcpKeepIdle(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIdle(seconds);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -434,30 +424,20 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
+    private void setTcpKeepIntvl(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     /**
-     * @deprecated use {@link #setTcpKeepCnt(int)}
-     */
-    @Deprecated
-    public IoUringSocketChannelConfig setTcpKeepCntl(int probes) {
-        return setTcpKeepCnt(probes);
-    }
-
-    /**
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepCnt(int probes) {
+    private void setTcpKeepCnt(int probes) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepCnt(probes);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -466,10 +446,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
+    private void setTcpUserTimeout(int milliseconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -479,7 +458,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((IoUringSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -491,37 +470,21 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringSocketChannelConfig setIpTransparent(boolean transparent) {
+    private void setIpTransparent(boolean transparent) {
         try {
             ((IoUringSocketChannel) channel).socket.setIpTransparent(transparent);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-//    /**
-//     * Set the {@code TCP_MD5SIG} option on the socket. See {@code linux/tcp.h} for more details. Keys can only be set
-//     * on, not read to prevent a potential leak, as they are confidential. Allowing them being read would mean anyone
-//     * with access to the channel could get them.
-//     */
-//    public IOUringSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
-//        try {
-//            ((IOUringSocketChannel) channel).setTcpMd5Sig(keys);
-//            return this;
-//        } catch (IOException e) {
-//            throw new ChannelException(e);
-//        }
-//    }
-
     /**
      * Set the {@code TCP_QUICKACK} option on the socket. See <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
      * for more details.
      */
-    public IoUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
+    private void setTcpQuickAck(boolean quickAck) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpQuickAck(quickAck);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -531,7 +494,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * Returns {@code true} if <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a> is enabled, {@code false}
      * otherwise.
      */
-    public boolean isTcpQuickAck() {
+    private boolean isTcpQuickAck() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpQuickAck();
         } catch (IOException e) {
@@ -542,115 +505,67 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Enables client TCP fast open. See this <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
-    public IoUringSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    private void setTcpFastOpenConnect(boolean fastOpenConnect) {
         this.tcpFastopen = fastOpenConnect;
-        return this;
     }
 
     /**
      * Returns {@code true} if {@code TCP_FASTOPEN_CONNECT} is enabled, {@code false} otherwise.
      */
-    public boolean isTcpFastOpenConnect() {
+    private boolean isTcpFastOpenConnect() {
         return tcpFastopen;
     }
 
-    @Override
-    public boolean isAllowHalfClosure() {
+    boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
-    @Override
-    public IoUringSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    private void setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
     }
 
     private int getWriteZeroCopyThreshold() {
         return writeZeroCopyThreshold;
     }
 
-    IoUringSocketChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
+    private void setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
         if (setWriteZeroCopyThreshold == DISABLE_WRITE_ZERO_COPY) {
             this.writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
         } else {
             this.writeZeroCopyThreshold =
                     ObjectUtil.checkPositiveOrZero(setWriteZeroCopyThreshold, "setWriteZeroCopyThreshold");
         }
-        return this;
     }
 
     boolean shouldWriteZeroCopy(int amount) {
         // This can reduce one read operation on a volatile field.
         int threshold = this.getWriteZeroCopyThreshold();
         return threshold != DISABLE_WRITE_ZERO_COPY && amount >= threshold;
+    }
+
+    private void setReadMode(DomainSocketReadMode mode) {
+        ObjectUtil.checkNotNull(mode, "mode");
+        DomainSocketReadMode expectedMode = mode == DomainSocketReadMode.BYTES ?
+                DomainSocketReadMode.FILE_DESCRIPTORS : DomainSocketReadMode.BYTES;
+        boolean change = MODE_UPDATER.compareAndSet(this, expectedMode, mode);
+        if (change) {
+            if (channel.isRegistered()) {
+                // cancel current Read
+                ((AbstractIoUringChannel) channel).autoReadCleared();
+            }
+        }
+    }
+
+    DomainSocketReadMode getReadMode() {
+        return mode;
+    }
+
+    short getBufferGroupId() {
+        return bufferGroupId;
+    }
+
+    IoUringSocketChannelConfig setBufferGroupId(short bufferGroupId) {
+        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
+        return this;
     }
 }

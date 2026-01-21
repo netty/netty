@@ -19,8 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -37,20 +39,23 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     }
 
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        sb.handler(new ChannelInboundHandlerAdapter() {
+        sb.handler(new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 SocketChannel childChannel = (SocketChannel) msg;
-                childChannel.config().setSoLinger(0);
-                childChannel.unsafe().closeForcibly();
+                childChannel.config().setOption(ChannelOption.SO_LINGER, 0);
+                childChannel.close(childChannel.newPromise());
             }
-        }).childHandler(new ChannelInboundHandlerAdapter());
+        }).childHandler(new ChannelInboundHandler() { });
 
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelInboundHandler() { });
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
 
-        cb.connect(sc.localAddress()).channel().closeFuture().syncUninterruptibly();
+        Future<Channel> cf = cb.connect(sc.localAddress()).awaitUninterruptibly();
+        if (cf.isSuccess()) {
+            cf.getNow().closeFuture().syncUninterruptibly();
+        }
         sc.close().sync();
     }
 }

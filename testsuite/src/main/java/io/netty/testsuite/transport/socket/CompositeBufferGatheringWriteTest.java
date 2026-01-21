@@ -22,9 +22,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
@@ -63,11 +62,11 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
-                                    .addListener(ChannelFutureListener.CLOSE);
+                                    .addListener(f -> ctx.close());
                         }
                     });
                 }
@@ -75,7 +74,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
@@ -120,8 +119,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             ByteBuf expected = newCompositeBuffer(clientChannel.alloc());
             latch.await();
@@ -179,7 +178,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
               .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ctx.channel().config(),
@@ -206,7 +205,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             // Write the remainder of the content
                             ctx.writeAndFlush(expectedContent.retainedSlice(expectedContent.readerIndex() + offset,
                                     expectedContent.readableBytes() - expectedContent.readerIndex() - offset))
-                                    .addListener(ChannelFutureListener.CLOSE);
+                                    .addListener(f -> ctx.close());
                         }
 
                         @Override
@@ -223,7 +222,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
@@ -268,8 +267,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             latch.await();
             Object received = clientReceived.get();

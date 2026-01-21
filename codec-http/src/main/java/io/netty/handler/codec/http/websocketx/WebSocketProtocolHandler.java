@@ -16,14 +16,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 
 import java.net.SocketAddress;
@@ -37,7 +36,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     private final boolean dropPongFrames;
     private final WebSocketCloseStatus closeStatus;
     private final long forceCloseTimeoutMillis;
-    private ChannelPromise closeSent;
+    private Promise<Void> closeSent;
 
     /**
      * Creates a new {@link WebSocketProtocolHandler} that will <i>drop</i> {@link PongWebSocketFrame}s.
@@ -89,7 +88,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
         if (closeStatus == null || !ctx.channel().isActive()) {
             ctx.close(promise);
         } else {
@@ -98,29 +97,24 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             }
             flush(ctx);
             applyCloseSentTimeout(ctx);
-            closeSent.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    ctx.close(promise);
-                }
-            });
+            closeSent.addListener(future -> ctx.close(promise));
         }
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
             closeSent(promise);
-            ctx.write(msg).addListener(new PromiseNotifier<Void, ChannelFuture>(false, closeSent));
+            ctx.write(msg).addListener(new PromiseNotifier<>(false, closeSent));
         } else {
             ctx.write(msg, promise);
         }
     }
 
-    void closeSent(ChannelPromise promise) {
+    void closeSent(Promise<Void> promise) {
         closeSent = promise;
     }
 
@@ -138,12 +132,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        closeSent.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                timeoutTask.cancel(false);
-            }
-        });
+        closeSent.addListener(future -> timeoutTask.cancel(false));
     }
 
     /**
@@ -155,40 +144,39 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                     ChannelPromise promise) throws Exception {
+                     Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, ChannelPromise promise) throws Exception {
+                        SocketAddress localAddress, Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 
@@ -196,5 +184,11 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.fireExceptionCaught(cause);
         ctx.close();
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx,
+                         ChannelShutdownType type, Promise<Void> promise) {
+        ctx.shutdown(type, promise);
     }
 }

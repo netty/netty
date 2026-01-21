@@ -320,13 +320,13 @@ public class OpenSslCertificateCompressionTest {
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new CertCompressionTestChannelInitializer(serverPromise, serverSslContext));
             Channel serverChannel = sb.bind(new LocalAddress("testCertificateCompression"))
-                    .syncUninterruptibly().channel();
+                    .get();
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(LocalChannel.class)
                     .handler(new CertCompressionTestChannelInitializer(clientPromise, clientSslContext));
 
-            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            Channel clientChannel = bootstrap.connect(serverChannel.localAddress()).get();
 
             assertTrue(clientPromise.await(5L, TimeUnit.SECONDS), "client timeout");
             assertTrue(serverPromise.await(5L, TimeUnit.SECONDS), "server timeout");

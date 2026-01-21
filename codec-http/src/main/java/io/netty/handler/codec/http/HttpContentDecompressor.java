@@ -96,7 +96,6 @@ public class HttpContentDecompressor extends HttpContentDecoder {
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation))
                     .build();
@@ -107,7 +106,6 @@ public class HttpContentDecompressor extends HttpContentDecoder {
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation))
                     .build();
@@ -115,7 +113,6 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new BrotliDecoder())
                     .build();
@@ -124,7 +121,6 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new SnappyFrameDecoder())
                     .build();
@@ -133,7 +129,6 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new ZstdDecoder())
                     .build();

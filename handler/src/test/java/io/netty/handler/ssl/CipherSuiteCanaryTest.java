@@ -160,7 +160,7 @@ public class CipherSuiteCanaryTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                serverPromise.cancel(true);
+                                serverPromise.tryFailure(new IllegalStateException());
                                 ctx.fireChannelInactive();
                             }
 
@@ -196,7 +196,7 @@ public class CipherSuiteCanaryTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                    clientPromise.cancel(true);
+                                    clientPromise.tryFailure(new IllegalStateException());
                                     ctx.fireChannelInactive();
                                 }
 
@@ -232,16 +232,17 @@ public class CipherSuiteCanaryTest {
                     }
                 } finally {
                     server.close().sync();
+
+                    if (executorService != null) {
+                        executorService.shutdown();
+                        assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
+                    }
                 }
             } finally {
                 ReferenceCountUtil.release(sslClientContext);
             }
         } finally {
             ReferenceCountUtil.release(sslServerContext);
-
-            if (executorService != null) {
-                executorService.shutdown();
-            }
         }
     }
 
@@ -251,7 +252,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .childHandler(handler);
 
-        return bootstrap.bind(address).sync().channel();
+        return bootstrap.bind(address).get();
     }
 
     private static Channel client(Channel server, ChannelHandler handler) throws Exception {
@@ -262,7 +263,7 @@ public class CipherSuiteCanaryTest {
                 .group(GROUP)
                 .handler(handler);
 
-        return bootstrap.connect(remoteAddress).sync().channel();
+        return bootstrap.connect(remoteAddress).get();
     }
 
     private static List<Object[]> expand(String rfcCipherName) {

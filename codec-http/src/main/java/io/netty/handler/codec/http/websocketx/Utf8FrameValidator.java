@@ -16,14 +16,13 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 
 /**
  *
  */
-public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
+public class Utf8FrameValidator implements ChannelInboundHandler {
 
     private final boolean closeOnProtocolViolation;
 
@@ -95,7 +94,7 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
             }
         }
 
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     private void checkUTF8String(ByteBuf buffer) {
@@ -116,14 +115,9 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
             }
 
             CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(closeStatus.code(), reasonText);
-            ctx.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(closeFrame).addListener(f -> ctx.close());
         }
 
         throw ex;
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
     }
 }

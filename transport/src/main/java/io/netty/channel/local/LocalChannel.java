@@ -19,10 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
@@ -31,6 +30,7 @@ import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
@@ -54,7 +54,6 @@ public class LocalChannel extends AbstractChannel {
     @SuppressWarnings({ "rawtypes" })
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
@@ -72,10 +71,12 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
+    private final LocalIoHandle ioHandle = new LocalIoHandleImpl();
+
+    private final Runnable finishReadTask = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(newPromise());
+            finishPeerRead0(LocalChannel.this);
         }
     };
 
@@ -85,7 +86,7 @@ public class LocalChannel extends AbstractChannel {
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
     private volatile LocalAddress remoteAddress;
-    private volatile ChannelPromise connectPromise;
+    private volatile Promise<Void> connectPromise;
     private volatile boolean readInProgress;
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
@@ -109,8 +110,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -143,11 +144,6 @@ public class LocalChannel extends AbstractChannel {
         return state == State.CONNECTED;
     }
 
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new LocalUnsafe();
-    }
-
     protected SocketAddress localAddress0() {
         return localAddress;
     }
@@ -158,13 +154,13 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         EventLoop loop = executor();
         assert registration == null;
-        loop.register((LocalUnsafe) unsafe()).addListener(f -> {
+        loop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -172,17 +168,27 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
-        EventLoop loop = executor();
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            doBind0(localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
+    }
+
+    private void doBind0(SocketAddress localAddress) throws Exception {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
@@ -190,12 +196,12 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(Promise<Void> promise) {
+        doClose(promise);
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(Promise<Void> promise) {
         final LocalChannel peer = this.peer;
         State oldState = state;
         try {
@@ -217,11 +223,11 @@ public class LocalChannel extends AbstractChannel {
                     finishPeerRead(peer);
                 }
 
-                ChannelPromise promise = connectPromise;
-                if (promise != null) {
+                Promise<Void> connectPromise = this.connectPromise;
+                if (connectPromise != null) {
                     // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    promise.tryFailure(new ClosedChannelException());
-                    connectPromise = null;
+                    connectPromise.tryFailure(new ClosedChannelException());
+                    this.connectPromise = null;
                 }
             }
 
@@ -249,9 +255,11 @@ public class LocalChannel extends AbstractChannel {
                         // rejects the close Runnable but give a best effort.
                         peer.close();
                     }
-                    PlatformDependent.throwException(cause);
+                    promise.setFailure(cause);
+                    return;
                 }
             }
+            promise.setSuccess(null);
         } finally {
             // Release all buffers if the Channel was already registered in the past and if it was not closed before.
             if (oldState != null && oldState != State.CLOSED) {
@@ -266,14 +274,14 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
-            unsafe().close(newPromise());
+            ioTransport().close(newPromise());
         } else {
             releaseInboundBuffers();
         }
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvByteBufAllocator.Handle handle = recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {
@@ -402,21 +410,19 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private void runFinishPeerReadTask(final LocalChannel peer) {
+    private void runFinishTask0() {
         // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
         // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
-        final Runnable finishPeerReadTask = new Runnable() {
-            @Override
-            public void run() {
-                finishPeerRead0(peer);
-            }
-        };
+        if (writeInProgress) {
+            finishReadFuture = executor().submit(finishReadTask);
+        } else {
+            executor().execute(finishReadTask);
+        }
+    }
+
+    private void runFinishPeerReadTask(final LocalChannel peer) {
         try {
-            if (peer.writeInProgress) {
-                peer.finishReadFuture = peer.executor().submit(finishPeerReadTask);
-            } else {
-                peer.executor().execute(finishPeerReadTask);
-            }
+            peer.runFinishTask0();
         } catch (Throwable cause) {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
             close();
@@ -454,11 +460,17 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
+    private final class LocalIoHandleImpl implements LocalIoHandle {
+        private final Runnable shutdownHook = new Runnable() {
+            @Override
+            public void run() {
+                closeNow();
+            }
+        };
 
         @Override
         public void close() {
-            close(newPromise());
+            closeNow();
         }
 
         @Override
@@ -489,12 +501,9 @@ public class LocalChannel extends AbstractChannel {
                 peer.executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ChannelPromise promise = peer.connectPromise;
-
-                        // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                        // connectPromise may be set to null if doClose() was called in the meantime.
-                        if (promise != null && promise.trySuccess()) {
-                            peer.pipeline().fireChannelActive();
+                        Promise<Void> promise = peer.connectPromise;
+                        if (promise != null) {
+                            promise.trySuccess(null);
                         }
                     }
                 });
@@ -510,56 +519,49 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void closeNow() {
-            close(newPromise());
+           ioTransport().close(newPromise());
+        }
+    }
+
+    @Override
+    protected void doConnect(final SocketAddress remoteAddress,
+                        SocketAddress localAddress, final Promise<Void> promise) {
+        if (state == State.CONNECTED) {
+            Exception cause = new AlreadyConnectedException();
+            promise.setFailure(cause);
+            return;
         }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
-                return;
-            }
-
-            if (state == State.CONNECTED) {
-                Exception cause = new AlreadyConnectedException();
-                safeSetFailure(promise, cause);
-                pipeline().fireExceptionCaught(cause);
-                return;
-            }
-
-            if (connectPromise != null) {
-                throw new ConnectionPendingException();
-            }
-
-            connectPromise = promise;
-
-            if (state != State.BOUND) {
-                // Not bound yet and no localAddress specified - get one.
-                if (localAddress == null) {
-                    localAddress = new LocalAddress(LocalChannel.this);
-                }
-            }
-
-            if (localAddress != null) {
-                try {
-                    doBind(localAddress);
-                } catch (Throwable t) {
-                    safeSetFailure(promise, t);
-                    close(newPromise());
-                    return;
-                }
-            }
-
-            Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
-            if (!(boundChannel instanceof LocalServerChannel)) {
-                Exception cause = new ConnectException("connection refused: " + remoteAddress);
-                safeSetFailure(promise, cause);
-                close(newPromise());
-                return;
-            }
-
-            LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-            peer = serverChannel.serve(LocalChannel.this);
+        if (connectPromise != null) {
+            promise.setFailure(new ConnectionPendingException());
+            return;
         }
+
+        if (state != State.BOUND) {
+            // Not bound yet and no localAddress specified - get one.
+            if (localAddress == null) {
+                localAddress = new LocalAddress(LocalChannel.this);
+            }
+        }
+
+        if (localAddress != null) {
+            try {
+                doBind0(localAddress);
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                return;
+            }
+        }
+
+        Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
+        if (!(boundChannel instanceof LocalServerChannel)) {
+            Exception cause = new ConnectException("connection refused: " + remoteAddress);
+            promise.setFailure(cause);
+            return;
+        }
+
+        LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
+        peer = serverChannel.serve(LocalChannel.this);
+        connectPromise = promise;
     }
 }

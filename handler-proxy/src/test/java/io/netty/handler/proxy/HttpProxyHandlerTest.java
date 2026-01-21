@@ -18,11 +18,9 @@ package io.netty.handler.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -43,6 +41,9 @@ import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
 
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -185,7 +186,7 @@ public class HttpProxyHandlerTest {
             group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
             final LocalAddress addr = new LocalAddress("a");
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-            ChannelFuture sf =
+            Future<Channel> sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
                     new ChannelInitializer<Channel>() {
 
@@ -200,13 +201,13 @@ public class HttpProxyHandlerTest {
                             ch.writeAndFlush(response);
                         }
                     }).bind(addr);
-            serverChannel = sf.sync().channel();
-            ChannelFuture cf = new Bootstrap().channel(LocalChannel.class).group(group).handler(
+            serverChannel = sf.get();
+            Future<Channel> cf = new Bootstrap().channel(LocalChannel.class).group(group).handler(
                 new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
                         ch.pipeline().addFirst(new HttpProxyHandler(addr));
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelInboundHandler() {
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx,
                                 Throwable cause) {
@@ -215,7 +216,7 @@ public class HttpProxyHandlerTest {
                         });
                     }
                 }).connect(new InetSocketAddress("localhost", 1234));
-            clientChannel = cf.sync().channel();
+            clientChannel = cf.get();
             clientChannel.close().sync();
 
             assertTrue(exception.get() instanceof HttpProxyConnectException);
@@ -242,11 +243,11 @@ public class HttpProxyHandlerTest {
                                            boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
-        ChannelPromise promise = mock(ChannelPromise.class);
+        Promise<Void> promise = mock(Promise.class);
         verifyNoMoreInteractions(promise);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(promise);
+        ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise));
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),

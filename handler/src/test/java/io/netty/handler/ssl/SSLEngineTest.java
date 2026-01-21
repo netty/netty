@@ -23,10 +23,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -494,9 +492,9 @@ public abstract class SSLEngineTest {
 
     @AfterEach
     public void tearDown() throws InterruptedException {
-        ChannelFuture clientCloseFuture = null;
-        ChannelFuture serverConnectedCloseFuture = null;
-        ChannelFuture serverCloseFuture = null;
+        Future<Void> clientCloseFuture = null;
+        Future<Void> serverConnectedCloseFuture = null;
+        Future<Void> serverCloseFuture = null;
         if (clientChannel != null) {
             clientCloseFuture = clientChannel.close();
             clientChannel = null;
@@ -548,7 +546,7 @@ public abstract class SSLEngineTest {
         if (clientGroupShutdownFuture != null) {
             clientGroupShutdownFuture.sync();
         }
-        delegatingExecutor.shutdown();
+        assertTrue(delegatingExecutor.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         serverException = null;
         clientException = null;
     }
@@ -829,7 +827,7 @@ public abstract class SSLEngineTest {
                                      KeyManagerFactory clientKMF, File clientTrustManager,
                                      ClientAuth clientAuth, final boolean failureExpected,
                                      final boolean serverInitEngine)
-            throws SSLException, InterruptedException {
+            throws Exception {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverKMF)
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -872,7 +870,7 @@ public abstract class SSLEngineTest {
                 }
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -914,7 +912,7 @@ public abstract class SSLEngineTest {
                         clientSslCtx.newHandler(ch.alloc(), delegatingExecutor);
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -943,12 +941,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(0)).get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
     }
 
     protected static void rethrowIfNotNull(Throwable error) {
@@ -996,7 +994,7 @@ public abstract class SSLEngineTest {
                                                          File serverKeyFile,
                                                          File clientTrustCrtFile,
                                                          final boolean failureExpected)
-            throws SSLException, InterruptedException {
+            throws Exception {
         final String expectedHost = "localhost";
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverCrtFile, serverKeyFile, null)
                 .sslProvider(sslServerProvider())
@@ -1036,7 +1034,7 @@ public abstract class SSLEngineTest {
                         serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -1089,14 +1087,14 @@ public abstract class SSLEngineTest {
                 sslHandler.engine().setSSLParameters(parameters);
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) {
                         // Only write if there is a failure expected. We don't actually care about the write going
                         // through we just want to verify the local failure condition. This way we don't have to worry
                         // about verifying the payload and releasing the content on the server side.
                         if (failureExpected) {
-                            ChannelFuture f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
+                            Future<Void> f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
                             PromiseNotifier.cascade(f, clientWritePromise);
                         }
                     }
@@ -1128,17 +1126,17 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(expectedHost, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         return clientWritePromise;
     }
 
     private void mySetupMutualAuth(SSLEngineTestParam param, File keyFile, File crtFile, String keyPassword)
-            throws SSLException, InterruptedException {
+            throws Exception {
         mySetupMutualAuth(param, crtFile, keyFile, crtFile, keyPassword, crtFile, keyFile, crtFile, keyPassword);
     }
 
@@ -1185,7 +1183,7 @@ public abstract class SSLEngineTest {
     private void mySetupMutualAuth(final SSLEngineTestParam param,
             File servertTrustCrtFile, File serverKeyFile, final File serverCrtFile, String serverKeyPassword,
             File clientTrustCrtFile, File clientKeyFile, final File clientCrtFile, String clientKeyPassword)
-            throws InterruptedException, SSLException {
+            throws Exception {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -1225,7 +1223,7 @@ public abstract class SSLEngineTest {
 
                 p.addLast(new SslHandler(engine));
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         if (cause.getCause() instanceof SSLHandshakeException) {
@@ -1268,7 +1266,7 @@ public abstract class SSLEngineTest {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -1294,12 +1292,12 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(0)).get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
     }
 
     protected void runTest(String expectedApplicationProtocol) throws Exception {
@@ -1512,7 +1510,7 @@ public abstract class SSLEngineTest {
                                 serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
 
                         p.addLast(handler);
-                        p.addLast(new ChannelInboundHandlerAdapter() {
+                        p.addLast(new ChannelInboundHandler() {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                                 if (evt instanceof SslHandshakeCompletionEvent &&
@@ -1548,7 +1546,7 @@ public abstract class SSLEngineTest {
                     }
                 });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+        serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                                         // OpenSslEngine doesn't support renegotiation on client side
@@ -1576,7 +1574,7 @@ public abstract class SSLEngineTest {
                         // the unit test can terminate relativley quicly.
                         sslHandler.setHandshakeTimeout(1, TimeUnit.SECONDS);
                         p.addLast(sslHandler);
-                        p.addLast(new ChannelInboundHandlerAdapter() {
+                        p.addLast(new ChannelInboundHandler() {
                             private int handshakeCount;
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -1606,9 +1604,9 @@ public abstract class SSLEngineTest {
                     }
                 });
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+        Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.syncUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
 
         serverLatch.await();
     }
@@ -1862,13 +1860,13 @@ public abstract class SSLEngineTest {
     }
 
     protected void setupHandlers(SSLEngineTestParam param, ApplicationProtocolConfig apn)
-            throws InterruptedException, SSLException, CertificateException {
+            throws Exception {
         setupHandlers(param, apn, apn);
     }
 
     protected void setupHandlers(SSLEngineTestParam param,
                                  ApplicationProtocolConfig serverApn, ApplicationProtocolConfig clientApn)
-            throws InterruptedException, SSLException, CertificateException {
+            throws Exception {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
@@ -1905,7 +1903,7 @@ public abstract class SSLEngineTest {
 
     protected void setupHandlers(final BufferType type, final boolean delegate,
                                  SslContext serverCtx, SslContext clientCtx)
-            throws InterruptedException, SSLException, CertificateException {
+            throws Exception {
         serverSslCtx = serverCtx;
         clientSslCtx = clientCtx;
 
@@ -1913,12 +1911,12 @@ public abstract class SSLEngineTest {
 
         setupClient(type, delegate, null, 0);
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+        Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.syncUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
     }
 
-    private void setupServer(final BufferType type, final boolean delegate) {
+    private void setupServer(final BufferType type, final boolean delegate) throws Exception {
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
         sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
@@ -1936,7 +1934,7 @@ public abstract class SSLEngineTest {
                 serverSslHandshakeFuture = sslHandler.handshakeFuture();
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         if (cause.getCause() instanceof SSLHandshakeException) {
@@ -1951,7 +1949,7 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+        serverChannel = sb.bind(new InetSocketAddress(0)).get();
     }
 
     private void setupClient(final BufferType type, final boolean delegate, final String host, final int port) {
@@ -1978,7 +1976,7 @@ public abstract class SSLEngineTest {
 
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         if (cause.getCause() instanceof SSLHandshakeException) {
@@ -2027,7 +2025,7 @@ public abstract class SSLEngineTest {
                         serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
 
                 ch.pipeline().addFirst(sslHandler);
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt instanceof SslHandshakeCompletionEvent) {
@@ -2079,7 +2077,7 @@ public abstract class SSLEngineTest {
                 });
                 serverConnectedChannel = ch;
             }
-        }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+        }).bind(new InetSocketAddress(0)).get();
 
         // We create a new chain for certificates which contains 2 certificates
         ByteArrayOutputStream chainStream = new ByteArrayOutputStream();
@@ -2106,7 +2104,7 @@ public abstract class SSLEngineTest {
                 ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.alloc()))));
             }
 
-        }).connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+        }).connect(serverChannel.localAddress()).get();
 
         promise.syncUninterruptibly();
 
@@ -3926,7 +3924,7 @@ public abstract class SSLEngineTest {
                         Arrays.toString(engine.getSession().getValueNames()));
                 Object value = engine.getSession().getValue("key");
                 serverSessionValues.put((String) value);
-                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(msg).addListener(f -> ctx.close());
             }
         };
 
@@ -3937,9 +3935,9 @@ public abstract class SSLEngineTest {
             clientReceiver.onNextMessages.offer(checkClient);
             serverReceiver.onNextMessages.offer(checkServer);
 
-            ChannelFuture ccf = cb.connect(addr);
+            Future<Channel> ccf = cb.connect(addr);
             assertTrue(ccf.syncUninterruptibly().isSuccess());
-            clientChannel = ccf.channel();
+            clientChannel = ccf.getNow();
 
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
             assertEquals("client", clientSessionValues.take());
@@ -3979,7 +3977,7 @@ public abstract class SSLEngineTest {
         OnNextMessage checkServer = new OnNextMessage() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(msg).addListener(f -> ctx.close());
             }
         };
 
@@ -3990,9 +3988,9 @@ public abstract class SSLEngineTest {
 
         for (int i = 0; i < 2; i++) {
             serverReceiver.onNextMessages.offer(checkServer);
-            ChannelFuture ccf = cb.connect(addr);
+            Future<Channel> ccf = cb.connect(addr).sync();
             assertTrue(ccf.sync().isSuccess());
-            clientChannel = ccf.channel();
+            clientChannel = ccf.getNow();
 
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).await();
             clientChannel.closeFuture().sync();
@@ -4045,7 +4043,7 @@ public abstract class SSLEngineTest {
         OnNextMessage checkServer = new OnNextMessage() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(msg).addListener(f -> ctx.close());
             }
         };
 
@@ -4056,9 +4054,9 @@ public abstract class SSLEngineTest {
 
         for (int i = 0; i < 2; i++) {
             serverReceiver.onNextMessages.offer(checkServer);
-            ChannelFuture ccf = cb.connect(addr);
+            Future<Channel> ccf = cb.connect(addr);
             assertTrue(ccf.syncUninterruptibly().isSuccess());
-            clientChannel = ccf.channel();
+            clientChannel = ccf.getNow();
 
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).await();
             clientChannel.closeFuture().sync();
@@ -4132,7 +4130,7 @@ public abstract class SSLEngineTest {
                         Arrays.toString(engine.getSession().getValueNames()));
                 Object value = engine.getSession().getValue("key");
                 serverSessionValues.put(value == null ? "NULL" : String.valueOf(value));
-                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(msg).addListener(f -> ctx.close());
             }
         };
 
@@ -4143,9 +4141,9 @@ public abstract class SSLEngineTest {
             clientReceiver.onNextMessages.offer(checkClient);
             serverReceiver.onNextMessages.offer(checkServer);
 
-            ChannelFuture ccf = cb.connect(addr);
+            Future<Channel> ccf = cb.connect(addr);
             assertTrue(ccf.syncUninterruptibly().isSuccess());
-            clientChannel = ccf.channel();
+            clientChannel = ccf.getNow();
 
             clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
             assertEquals("client", clientSessionValues.take());
@@ -4579,7 +4577,7 @@ public abstract class SSLEngineTest {
                     });
                     serverConnectedChannel = ch;
                 }
-            }).bind(new InetSocketAddress(0)).sync().channel();
+            }).bind(new InetSocketAddress(0)).get();
 
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 

@@ -17,10 +17,8 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksAuthRequestDecoder.State;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -28,44 +26,57 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
+public class SocksAuthRequestDecoder extends ByteToMessageDecoder {
 
+    private State state = State.CHECK_PROTOCOL_VERSION;
     private String username;
-
-    public SocksAuthRequestDecoder() {
-        super(State.CHECK_PROTOCOL_VERSION);
-    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
-        switch (state()) {
+        switch (state) {
             case CHECK_PROTOCOL_VERSION: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {
                     out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
                     break;
                 }
-                checkpoint(State.READ_USERNAME);
+                state = State.READ_USERNAME;
             }
             case READ_USERNAME: {
-                int fieldLength = byteBuf.readByte();
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
+                int fieldLength = byteBuf.getByte(byteBuf.readerIndex());
+                if (byteBuf.readableBytes() < 1 + fieldLength) {
+                    return;
+                }
+                byteBuf.skipBytes(1);
                 username = byteBuf.readString(fieldLength, CharsetUtil.US_ASCII);
-                checkpoint(State.READ_PASSWORD);
+                state = State.READ_PASSWORD;
             }
             case READ_PASSWORD: {
-                int fieldLength = byteBuf.readByte();
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
+                int fieldLength = byteBuf.getByte(byteBuf.readerIndex());
+                if (byteBuf.readableBytes() < 1 + fieldLength) {
+                    return;
+                }
+                byteBuf.skipBytes(1);
                 String password = byteBuf.readString(fieldLength, CharsetUtil.US_ASCII);
                 out.add(new SocksAuthRequest(username, password));
                 break;
             }
             default: {
-                throw new Error("Unexpected request decoder state: " + state());
+                throw new Error("Unexpected request decoder state: " + state);
             }
         }
         ctx.pipeline().remove(this);
     }
 
-    @UnstableApi
-    public enum State {
+    private enum State {
         CHECK_PROTOCOL_VERSION,
         READ_USERNAME,
         READ_PASSWORD

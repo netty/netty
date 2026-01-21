@@ -16,7 +16,6 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
@@ -189,17 +188,17 @@ public final class QuicChannelBootstrap {
      * @return {@link Future} which is notified once the operation completes.
      */
     public Future<QuicChannel> connect() {
-        return connect(parent.executor().newPromise());
+        Promise<QuicChannel> promise = parent.executor().newPromise();
+        connect(promise);
+        return promise;
     }
 
     /**
      * Connects a {@link QuicChannel} to the remote peer and notifies the promise once done.
      *
-     * @param promise   the {@link Promise} which is notified once the operations completes.
-     * @return          {@link Future} which is notified once the operation completes.
-
+     * @param promise the {@link Promise} which is notified once the operations completes.
      */
-    public Future<QuicChannel> connect(Promise<QuicChannel> promise) {
+    public void connect(Promise<QuicChannel> promise) {
         if (handler == null && streamHandler == null) {
             throw new IllegalStateException("handler and streamHandler not set");
         }
@@ -225,7 +224,7 @@ public final class QuicChannelBootstrap {
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
-        channel.register().addListener((ChannelFuture future) -> {
+        channel.register().addListener(future -> {
             Throwable cause = future.cause();
             if (cause != null) {
                 promise.setFailure(cause);
@@ -240,6 +239,5 @@ public final class QuicChannelBootstrap {
                 });
             }
         });
-        return promise;
     }
 }

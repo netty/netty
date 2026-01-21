@@ -21,12 +21,11 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.Attribute;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -87,7 +86,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
  * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
-@Sharable
 public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(GlobalChannelTrafficShapingHandler.class);
@@ -263,6 +261,11 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      */
     public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor) {
         createGlobalTrafficCounter(executor);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     /**
@@ -597,10 +600,10 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     private static final class ToSend {
         final long relativeTimeAction;
         final Object toSend;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
         final long size;
 
-        private ToSend(final long delay, final Object toSend, final long size, final ChannelPromise promise) {
+        private ToSend(final long delay, final Object toSend, final long size, final Promise<Void> promise) {
             relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
@@ -648,8 +651,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
-            throws Exception {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
         if (size > 0) {
@@ -693,7 +695,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     @Override
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         Channel channel = ctx.channel();
         Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);

@@ -141,7 +141,12 @@ public class DefaultPromiseTest {
     public void testCancelDoesNotScheduleWhenNoListeners() {
         EventExecutor executor = new RejectingEventExecutor();
 
-        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        Promise<Void> promise = new DefaultPromise<Void>(executor) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertTrue(promise.isCancelled());
     }
@@ -168,7 +173,12 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, new Executable() {
             @Override
@@ -180,7 +190,12 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, new Executable() {
             @Override
@@ -191,10 +206,10 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    public void testCancellationExceptionIsReturnedAsCause() {
+    public void testCancellation() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        assertTrue(promise.cancel(false));
-        assertThat(promise.cause()).isInstanceOf(CancellationException.class);
+        assertFalse(promise.cancel(false));
+        assertNull(promise.cause());
     }
 
     @Test
@@ -245,32 +260,32 @@ public class DefaultPromiseTest {
     public void testListenerNotifyOrder() throws Exception {
         EventExecutor executor = new TestEventExecutor();
         try {
-            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<FutureListener<Void>>();
+            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<>();
             int runs = 100000;
 
             for (int i = 0; i < runs; i++) {
-                final Promise<Void> promise = new DefaultPromise<Void>(executor);
-                final FutureListener<Void> listener1 = new FutureListener<Void>() {
+                final Promise<Void> promise = new DefaultPromise<>(executor);
+                final FutureListener<Void> listener1 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener2 = new FutureListener<Void>() {
+                final FutureListener<Void> listener2 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener4 = new FutureListener<Void>() {
+                final FutureListener<Void> listener4 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener3 = new FutureListener<Void>() {
+                final FutureListener<Void> listener3 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                         future.addListener(listener4);
                     }
@@ -378,22 +393,6 @@ public class DefaultPromiseTest {
         assertTrue(promise.isSuccess());
     }
 
-    @Test
-    public void setUncancellableGetNow() {
-        final Promise<String> promise = new DefaultPromise<String>(ImmediateEventExecutor.INSTANCE);
-        assertNull(promise.getNow());
-        assertTrue(promise.setUncancellable());
-        assertNull(promise.getNow());
-        assertFalse(promise.isDone());
-        assertFalse(promise.isSuccess());
-
-        promise.setSuccess("success");
-
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertEquals("success", promise.getNow());
-    }
-
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,
                                                          boolean runTestInExecutorThread)
             throws InterruptedException {
@@ -422,14 +421,11 @@ public class DefaultPromiseTest {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);
-            p[i].addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    if (finalI + 1 < p.length) {
-                        p[finalI + 1].setSuccess(null);
-                    }
-                    latch.countDown();
+            p[i].addListener((FutureListener<Void>) future -> {
+                if (finalI + 1 < p.length) {
+                    p[finalI + 1].setSuccess(null);
                 }
+                latch.countDown();
             });
         }
 
@@ -464,20 +460,13 @@ public class DefaultPromiseTest {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<Void>(executor);
-            p[i].addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    future.addListener(new FutureListener<Void>() {
-                        @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
-                            if (finalI + 1 < p.length) {
-                                p[finalI + 1].setSuccess(null);
-                            }
-                            latch.countDown();
-                        }
-                    });
+            p[i].addListener((FutureListener<Void>) future -> future.addListener(
+                    (FutureListener<Void>) f -> {
+                if (finalI + 1 < p.length) {
+                    p[finalI + 1].setSuccess(null);
                 }
-            });
+                latch.countDown();
+            }));
         }
 
         p[0].setSuccess(null);
@@ -502,12 +491,7 @@ public class DefaultPromiseTest {
             final Promise<Void> promise = new DefaultPromise<Void>(executor);
 
             // Add a listener before completion so "lateListener" is used next time we add a listener.
-            promise.addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(state.compareAndSet(0, 1));
-                }
-            });
+            promise.addListener((FutureListener<Void>) future -> assertTrue(state.compareAndSet(0, 1)));
 
             // Simulate write operation completing, which will execute listeners in another thread.
             if (cause == null) {
@@ -517,12 +501,9 @@ public class DefaultPromiseTest {
             }
 
             // Add a "late listener"
-            promise.addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(state.compareAndSet(1, 2));
-                    latch1.countDown();
-                }
+            promise.addListener((FutureListener<Void>) future -> {
+                assertTrue(state.compareAndSet(1, 2));
+                latch1.countDown();
             });
 
             // Wait for the listeners and late listeners to be completed.
@@ -534,12 +515,9 @@ public class DefaultPromiseTest {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    promise.addListener(new FutureListener<Void>() {
-                        @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
-                            assertTrue(state.compareAndSet(2, 3));
-                            latch2.countDown();
-                        }
+                    promise.addListener((FutureListener<Void>) future -> {
+                        assertTrue(state.compareAndSet(2, 3));
+                        latch2.countDown();
                     });
                 }
             });
@@ -563,17 +541,8 @@ public class DefaultPromiseTest {
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                promise.addListener(new FutureListener<Void>() {
-                    @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
-                        latch.countDown();
-                    }
-                });
-            }
-        });
+        promise.addListener((FutureListener<Void>) future ->
+                promise.addListener((FutureListener<Void>) f -> latch.countDown()));
         if (cause == null) {
             promise.setSuccess(null);
         } else {
@@ -586,12 +555,7 @@ public class DefaultPromiseTest {
         EventExecutor executor = new TestEventExecutor();
         int expectedCount = numListenersBefore + 2;
         final CountDownLatch latch = new CountDownLatch(expectedCount);
-        final FutureListener<Void> listener = new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                latch.countDown();
-            }
-        };
+        final FutureListener<Void> listener = future -> latch.countDown();
         final Promise<Void> promise = new DefaultPromise<Void>(executor);
         executor.execute(new Runnable() {
             @Override

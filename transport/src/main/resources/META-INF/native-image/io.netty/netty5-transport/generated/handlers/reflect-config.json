@@ -14,13 +14,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.channel.ChannelDuplexHandler",
-    "condition": {
-      "typeReachable": "io.netty.channel.ChannelDuplexHandler"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.channel.ChannelHandler",
     "condition": {
       "typeReachable": "io.netty.channel.ChannelHandler"
@@ -28,23 +21,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.channel.ChannelHandlerAdapter",
-    "condition": {
-      "typeReachable": "io.netty.channel.ChannelHandlerAdapter"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.channel.ChannelInboundHandler",
     "condition": {
       "typeReachable": "io.netty.channel.ChannelInboundHandler"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.channel.ChannelInboundHandlerAdapter",
-    "condition": {
-      "typeReachable": "io.netty.channel.ChannelInboundHandlerAdapter"
     },
     "queryAllPublicMethods": true
   },
@@ -59,13 +38,6 @@
     "name": "io.netty.channel.ChannelOutboundHandler",
     "condition": {
       "typeReachable": "io.netty.channel.ChannelOutboundHandler"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.channel.ChannelOutboundHandlerAdapter",
-    "condition": {
-      "typeReachable": "io.netty.channel.ChannelOutboundHandlerAdapter"
     },
     "queryAllPublicMethods": true
   },
@@ -91,9 +63,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.channel.embedded.EmbeddedChannel$2",
+    "name": "io.netty.channel.embedded.EmbeddedChannel$1",
     "condition": {
-      "typeReachable": "io.netty.channel.embedded.EmbeddedChannel$2"
+      "typeReachable": "io.netty.channel.embedded.EmbeddedChannel$1"
     },
     "queryAllPublicMethods": true
   },

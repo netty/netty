@@ -17,15 +17,10 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandle;
@@ -60,10 +55,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,6 +79,23 @@ public class BootstrapTest {
         groupB.shutdownGracefully();
         groupA.terminationFuture().syncUninterruptibly();
         groupB.terminationFuture().syncUninterruptibly();
+    }
+
+    @Test
+    public void testSetOptionsThrow() {
+        final Future<Channel> cf = new Bootstrap()
+                .group(groupA)
+                .channelFactory(TestChannel::new)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .handler(new ChannelInboundHandler() { })
+                .register();
+
+        assertThrows(UnsupportedOperationException.class, new  Executable() {
+            @Override
+            public void execute() throws Throwable {
+                cf.syncUninterruptibly();
+            }
+        });
     }
 
     @Test
@@ -258,7 +267,7 @@ public class BootstrapTest {
         assertTrue(bootstrapA.config().toString().contains("resolver:"));
         assertInstanceOf(TestAddressResolverGroup.class, bootstrapA.resolver());
 
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         bootstrapA.connect(localAddress).sync();
@@ -276,16 +285,14 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+        Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
         assertTrue(connectFuture.await(10000));
         assertInstanceOf(UnknownHostException.class, connectFuture.cause());
-        connectFuture.channel().closeFuture().await(10000);
-        assertFalse(connectFuture.channel().isOpen());
     }
 
     @Test
@@ -308,17 +315,15 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+        Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the IllegalStateException.
         assertTrue(connectFuture.await(10000));
         assertInstanceOf(IllegalStateException.class, connectFuture.cause());
         assertInstanceOf(TestException.class, connectFuture.cause().getCause());
-        connectFuture.channel().closeFuture().await(10000);
-        assertFalse(connectFuture.channel().isOpen());
     }
 
     @Test
@@ -335,62 +340,11 @@ public class BootstrapTest {
             }
         });
 
-        ChannelFuture connectFuture = bootstrap.connect(LocalAddress.ANY);
+        Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
         assertTrue(connectFuture.await(10000));
         assertSame(exception, connectFuture.cause());
-        assertNotNull(connectFuture.channel());
-    }
-
-    @Test
-    public void testChannelOptionOrderPreserve() throws InterruptedException {
-        final BlockingQueue<ChannelOption<?>> options = new LinkedBlockingQueue<ChannelOption<?>>();
-        class ChannelConfigValidator extends DefaultChannelConfig {
-            ChannelConfigValidator(Channel channel) {
-                super(channel);
-            }
-
-            @Override
-            public <T> boolean setOption(ChannelOption<T> option, T value) {
-                options.add(option);
-                return super.setOption(option, value);
-            }
-        }
-        final CountDownLatch latch = new CountDownLatch(1);
-        final Bootstrap bootstrap = new Bootstrap()
-                .handler(new ChannelInitializer<Channel>() {
-                    @Override
-                    protected void initChannel(Channel ch) {
-                        latch.countDown();
-                    }
-                })
-                .group(groupA)
-                .channelFactory(new ChannelFactory<Channel>() {
-                    @Override
-                    public Channel newChannel(EventLoop eventLoop) {
-                        return new LocalChannel(eventLoop) {
-                            private ChannelConfigValidator config;
-                            @Override
-                            public synchronized ChannelConfig config() {
-                                if (config == null) {
-                                    config = new ChannelConfigValidator(this);
-                                }
-                                return config;
-                            }
-                        };
-                    }
-                })
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
-
-        bootstrap.register().syncUninterruptibly();
-
-        latch.await();
-
-        // Check the order is the same as what we defined before.
-        assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
-        assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
     }
 
     @Test
@@ -402,9 +356,9 @@ public class BootstrapTest {
 
         StubChannelInitializerExtension.clearThreadLocals();
 
-        ChannelFuture future = cb.register();
+        Future<Channel> future = cb.register();
         future.sync();
-        final Channel expectedChannel = future.channel();
+        final Channel expectedChannel = future.getNow();
 
         assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
@@ -484,8 +438,12 @@ public class BootstrapTest {
         }
     }
 
-    @Sharable
-    private static final class DummyHandler extends ChannelInboundHandlerAdapter { }
+    private static final class DummyHandler implements ChannelInboundHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 
     private static final class TestAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 
@@ -537,4 +495,5 @@ public class BootstrapTest {
             };
         }
     }
+
 }

@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -112,7 +112,7 @@ final class SniClientJava8TestUtil {
                     handler.engine().setSSLParameters(parameters);
 
                     ch.pipeline().addFirst(handler);
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                             if (evt instanceof SslHandshakeCompletionEvent) {
@@ -140,7 +140,7 @@ final class SniClientJava8TestUtil {
                         }
                     });
                 }
-            }).bind(address).syncUninterruptibly().channel();
+            }).bind(address).get();
 
             sslClientContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(sslClientProvider).build();
@@ -149,7 +149,7 @@ final class SniClientJava8TestUtil {
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler)
-                    .connect(address).syncUninterruptibly().channel();
+                    .connect(address).get();
 
             promise.syncUninterruptibly();
             sslHandler.handshakeFuture().syncUninterruptibly();

@@ -16,23 +16,23 @@
 package io.netty.handler.flush;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Future;
 
 /**
- * {@link ChannelDuplexHandler} which consolidates {@link Channel#flush()} / {@link ChannelHandlerContext#flush()}
- * operations (which also includes
- * {@link Channel#writeAndFlush(Object)} / {@link Channel#writeAndFlush(Object, ChannelPromise)} and
+ * {@link ChannelInboundHandler} / {@link ChannelOutboundHandler}  which consolidates
+ * {@link Channel#flush()} / {@link ChannelHandlerContext#flush()} operations (which also includes
+ * {@link Channel#writeAndFlush(Object)} / {@link ChannelOutboundInvoker#writeAndFlush(Object, Promise)} and
  * {@link ChannelOutboundInvoker#writeAndFlush(Object)} /
- * {@link ChannelOutboundInvoker#writeAndFlush(Object, ChannelPromise)}).
+ * {@link ChannelOutboundInvoker#writeAndFlush(Object, Promise)}).
  * <p>
  * Flush operations are generally speaking expensive as these may trigger a syscall on the transport level. Thus it is
  * in most cases (where write latency can be traded with throughput) a good idea to try to minimize flush operations
@@ -56,7 +56,7 @@ import java.util.concurrent.Future;
  * The {@link FlushConsolidationHandler} should be put as first {@link ChannelHandler} in the
  * {@link ChannelPipeline} to have the best effect.
  */
-public class FlushConsolidationHandler extends ChannelDuplexHandler {
+public class FlushConsolidationHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private final int explicitFlushAfterFlushes;
     private final boolean consolidateWhenNoReadInProgress;
     private final Runnable flushTask;
@@ -119,7 +119,7 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         if (readInProgress) {
             // If there is still a read in progress we are sure we will see a channelReadComplete(...) call. Thus
             // we only need to flush if we reach the explicitFlushAfterFlushes limit.
@@ -160,14 +160,14 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         // Try to flush one last time if flushes are pending before close the channel.
         resetReadAndFlushIfNeeded(ctx);
         ctx.close(promise);

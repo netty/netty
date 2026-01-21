@@ -17,16 +17,15 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Promise;
 
 import java.util.List;
 
@@ -238,11 +237,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
                 frame.retain();
-                ChannelPromise promise = ctx.newPromise();
+                Promise<Void> promise = ctx.newPromise();
                 closeSent(promise);
                 handshaker.close(ctx, (CloseWebSocketFrame) frame, promise);
             } else {
-                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(f -> ctx.close());
             }
             return;
         }
@@ -259,7 +258,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cause instanceof WebSocketHandshakeException) {
             FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
-            ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.channel().writeAndFlush(response).addListener(f -> ctx.close());
         } else {
             ctx.fireExceptionCaught(cause);
             ctx.close();

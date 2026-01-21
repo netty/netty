@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -37,6 +36,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -141,7 +141,7 @@ public abstract class WebSocketServerHandshakerTest {
                .set(HttpHeaderNames.WEBSOCKET_PROTOCOL, "chat, superchat")
                .set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, webSocketVersion().toAsciiString());
 
-        ChannelFuture future = serverHandshaker.handshake(channel, request);
+        Future<Void> future = serverHandshaker.handshake(channel, request);
         assertFalse(future.isDone());
         assertNotNull(channel.pipeline().get("handshaker"));
 

@@ -21,8 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -47,6 +46,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -453,9 +453,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
                             ctx.write(Unpooled.EMPTY_BUFFER, promise);
@@ -935,12 +935,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
-            new ChannelOutboundHandlerAdapter() {
+            new ChannelOutboundHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } else {
                         ctx.write(msg, promise);
                     }
@@ -948,12 +948,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             }, sharedHandler);
 
         EmbeddedChannel plaintextCh = new EmbeddedChannel(
-            new ChannelOutboundHandlerAdapter() {
+            new ChannelOutboundHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } else {
                         ctx.write(msg, promise);
                     }

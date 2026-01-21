@@ -16,11 +16,12 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Nullable;
@@ -39,7 +40,7 @@ import static io.netty.handler.codec.quic.Quiche.allocateNativeOrder;
 /**
  * Abstract base class for QUIC codecs.
  */
-abstract class QuicheQuicCodec extends ChannelDuplexHandler {
+abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
     private final ConnectionIdChannelMap connectionIdToChannel = new ConnectionIdChannelMap();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();
@@ -183,12 +184,13 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 ByteBuf direct = ctx.alloc().directBuffer(buffer.readableBytes());
                 try {
                     direct.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    handleQuicPacket(packet.sender(), packet.recipient(), direct);
+                    handleQuicPacket((InetSocketAddress) packet.sender(),
+                            (InetSocketAddress) packet.recipient(), direct);
                 } finally {
                     direct.release();
                 }
             } else {
-                handleQuicPacket(packet.sender(), packet.recipient(), buffer);
+                handleQuicPacket((InetSocketAddress) packet.sender(), (InetSocketAddress) packet.recipient(), buffer);
             }
         } finally {
             packet.release();
@@ -276,7 +278,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)  {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         pendingPackets ++;
         int size = estimatorHandle.size(msg);
         if (size > 0) {
@@ -302,7 +304,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        Promise<Void> promise) {
         if (remoteAddress instanceof QuicheQuicChannelAddress) {
             QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
             QuicheQuicChannel channel = addr.channel;
@@ -326,12 +328,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
      *                                  the ids.
      * @param localConnIdLength         the length of the local connection ids.
      * @param config                    the {@link QuicheConfig} that is used.
-     * @param promise                   the {@link ChannelPromise} to notify once the connect is done.
+     * @param promise                   the {@link Promise} to notify once the connect is done.
      */
     protected abstract void connectQuicChannel(QuicheQuicChannel channel, SocketAddress remoteAddress,
                                                SocketAddress localAddress, ByteBuf senderSockaddrMemory,
                                                ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
-                                               int localConnIdLength, QuicheConfig config, ChannelPromise promise);
+                                               int localConnIdLength, QuicheConfig config, Promise<Void> promise);
 
     private void flushIfNeeded(ChannelHandlerContext ctx) {
         // Check if we should force a flush() and so ensure the packets are delivered in a timely

@@ -18,8 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.unix.DomainDatagramPacket;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
 import io.netty.util.CharsetUtil;
@@ -40,8 +40,8 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) {
                 try {
-                    bootstrap.handler(new ChannelInboundHandlerAdapter())
-                             .connect(KQueueSocketTestPermutation.newSocketAddress()).sync().channel();
+                    bootstrap.handler(new ChannelInboundHandler() { })
+                             .connect(KQueueSocketTestPermutation.newSocketAddress()).get();
                     fail("Expected FileNotFoundException");
                 } catch (Exception e) {
                     assertTrue(e instanceof FileNotFoundException);
@@ -56,9 +56,9 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) {
                 try {
-                    Channel ch = bootstrap.handler(new ChannelInboundHandlerAdapter())
-                                          .bind(KQueueSocketTestPermutation.newSocketAddress()).sync().channel();
-                    ch.writeAndFlush(new DomainDatagramPacket(
+                    Channel ch = bootstrap.handler(new ChannelInboundHandler() { })
+                                          .bind(KQueueSocketTestPermutation.newSocketAddress()).get();
+                    ch.writeAndFlush(new DatagramPacket(
                             Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
                             KQueueSocketTestPermutation.newSocketAddress())).sync();
                     fail("Expected FileNotFoundException");

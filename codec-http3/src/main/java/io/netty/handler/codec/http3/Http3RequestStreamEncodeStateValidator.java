@@ -16,15 +16,15 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
 
-final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandlerAdapter
-        implements Http3RequestStreamCodecState {
+final class Http3RequestStreamEncodeStateValidator
+        implements ChannelOutboundHandler, Http3RequestStreamCodecState {
     enum State {
         None,
         Headers,
@@ -34,9 +34,9 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
     private State state = State.None;
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (!(msg instanceof Http3RequestStreamFrame)) {
-            super.write(ctx, msg, promise);
+            ctx.write(msg, promise);
             return;
         }
         final Http3RequestStreamFrame frame = (Http3RequestStreamFrame) msg;
@@ -46,7 +46,7 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
             return;
         }
         state = nextState;
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     @Override

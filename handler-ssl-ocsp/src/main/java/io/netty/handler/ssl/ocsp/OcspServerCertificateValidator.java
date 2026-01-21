@@ -16,14 +16,12 @@
 package io.netty.handler.ssl.ocsp;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPException;
@@ -41,7 +39,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * using OCSP. Once TLS handshake is completed, {@link SslHandshakeCompletionEvent#SUCCESS} is fired, validator
  * will perform certificate validation using OCSP over HTTP/1.1 with the server's certificate issuer OCSP responder.
  */
-public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter {
+public class OcspServerCertificateValidator implements ChannelInboundHandler {
     /**
      * An attribute used to mark all channels created by the {@link OcspServerCertificateValidator}.
      */
@@ -147,44 +145,41 @@ public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter
                 Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
                         (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);
 
-                ocspRespPromise.addListener(new GenericFutureListener<Future<BasicOCSPResp>>() {
-                    @Override
-                    public void operationComplete(Future<BasicOCSPResp> future) throws Exception {
-                        // If Future is success then we have successfully received OCSP response
-                        // from OCSP responder. We will validate it now and process.
-                        if (future.isSuccess()) {
-                            SingleResp response = future.get().getResponses()[0];
+                ocspRespPromise.addListener(future -> {
+                    // If Future is success then we have successfully received OCSP response
+                    // from OCSP responder. We will validate it now and process.
+                    if (future.isSuccess()) {
+                        SingleResp response = future.getNow().getResponses()[0];
 
-                            Date current = new Date();
-                            if (!(current.after(response.getThisUpdate()) &&
-                                    current.before(response.getNextUpdate()))) {
-                                ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
-                            }
-
-                            OcspResponse.Status status;
-                            if (response.getCertStatus() == null) {
-                                // 'null' means certificate is valid
-                                status = OcspResponse.Status.VALID;
-                            } else if (response.getCertStatus() instanceof RevokedStatus) {
-                                status = OcspResponse.Status.REVOKED;
-                            } else {
-                                status = OcspResponse.Status.UNKNOWN;
-                            }
-
-                            ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                    new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
-
-                            // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
-                            // to 'true' then close the channel and throw an exception.
-                            if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
-                                ctx.channel().close();
-                                // Certificate is not valid. Throw
-                                ctx.fireExceptionCaught(new OCSPException(
-                                        "Certificate not valid. Status: " + status));
-                            }
-                        } else {
-                            ctx.fireExceptionCaught(future.cause());
+                        Date current = new Date();
+                        if (!(current.after(response.getThisUpdate()) &&
+                                current.before(response.getNextUpdate()))) {
+                            ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
                         }
+
+                        OcspResponse.Status status;
+                        if (response.getCertStatus() == null) {
+                            // 'null' means certificate is valid
+                            status = OcspResponse.Status.VALID;
+                        } else if (response.getCertStatus() instanceof RevokedStatus) {
+                            status = OcspResponse.Status.REVOKED;
+                        } else {
+                            status = OcspResponse.Status.UNKNOWN;
+                        }
+
+                        ctx.fireUserEventTriggered(new OcspValidationEvent(
+                                new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
+
+                        // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
+                        // to 'true' then close the channel and throw an exception.
+                        if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
+                            ctx.channel().close();
+                            // Certificate is not valid. Throw
+                            ctx.fireExceptionCaught(new OCSPException(
+                                    "Certificate not valid. Status: " + status));
+                        }
+                    } else {
+                        ctx.fireExceptionCaught(future.cause());
                     }
                 });
             }

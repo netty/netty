@@ -25,7 +25,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -62,7 +61,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
                 } else {
                     // Tell the client we're going to close the connection.
                     response.headers().set(CONNECTION, CLOSE);
-                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+                    ctx.writeAndFlush(response).addListener(f -> ctx.close());
                 }
             }
         }, latency, TimeUnit.MILLISECONDS);

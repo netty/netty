@@ -15,14 +15,9 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.DatagramChannelConfig;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -41,7 +36,7 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
-public final class KQueueDatagramChannelConfig extends KQueueChannelConfig implements DatagramChannelConfig {
+public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
     private boolean activeOnOpen;
 
     KQueueDatagramChannelConfig(KQueueDatagramChannel channel) {
@@ -145,7 +140,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    private boolean isReusePort() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -160,92 +155,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
      * Be aware this method needs be called before {@link KQueueDatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public KQueueDatagramChannelConfig setReusePort(boolean reusePort) {
+    private void setReusePort(boolean reusePort) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReusePort(reusePort);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueDatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueDatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueDatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -253,18 +171,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
             ((KQueueDatagramChannel) channel).socket.setSendBufferSize(sendBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -272,18 +187,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    private int getTrafficClass() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -291,18 +203,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
             ((KQueueDatagramChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -310,18 +219,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isBroadcast() {
+    private boolean isBroadcast() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
@@ -329,59 +235,43 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
         }
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setBroadcast(boolean broadcast) {
+    private void setBroadcast(boolean broadcast) {
         try {
             ((KQueueDatagramChannel) channel).socket.setBroadcast(broadcast);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isLoopbackModeDisabled() {
+    private boolean isLoopbackModeDisabled() {
         return false;
     }
 
-    @Override
-    public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
-    @Override
-    public int getTimeToLive() {
+    int getTimeToLive() {
         return -1;
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setTimeToLive(int ttl) {
+    private void setTimeToLive(int ttl) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
-    @Override
-    public InetAddress getInterface() {
+    private InetAddress getInterface() {
         return null;
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+    private void setInterface(InetAddress interfaceAddress) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
-    @Override
-    public NetworkInterface getNetworkInterface() {
+    private NetworkInterface getNetworkInterface() {
         return null;
     }
 
-    @Override
-    public KQueueDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+    private void setNetworkInterface(NetworkInterface networkInterface) {
         throw new UnsupportedOperationException("Multicast not supported");
-    }
-
-    @Override
-    public KQueueDatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-        return this;
     }
 }

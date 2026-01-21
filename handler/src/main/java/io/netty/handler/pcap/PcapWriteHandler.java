@@ -18,16 +18,17 @@ package io.netty.handler.pcap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -51,13 +52,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Things to keep in mind when using {@link PcapWriteHandler} with TCP:
  *
  *    <ul>
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#channelActive(ChannelHandlerContext)} is called,
+ *        <li> Whenever {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)} is called,
  *        a fake TCP 3-way handshake (SYN, SYN+ACK, ACK) is simulated as new connection in Pcap. </li>
  *
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#handlerRemoved(ChannelHandlerContext)} is called,
+ *        <li> Whenever {@link ChannelInboundHandler#handlerRemoved(ChannelHandlerContext)} is called,
  *        a fake TCP 3-way handshake (FIN+ACK, FIN+ACK, ACK) is simulated as connection shutdown in Pcap.  </li>
  *
- *        <li> Whenever {@link ChannelInboundHandlerAdapter#exceptionCaught(ChannelHandlerContext, Throwable)}
+ *        <li> Whenever {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}
  *        is called, a fake TCP RST is sent to simulate connection Reset in Pcap. </li>
  *
  *        <li> ACK is sent each time data is send / received. </li>
@@ -67,7 +68,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *    </ul>
  * </p>
  */
-public final class PcapWriteHandler extends ChannelDuplexHandler implements Closeable {
+public final class PcapWriteHandler implements ChannelInboundHandler, ChannelOutboundHandler, Closeable {
 
     /**
      * Logger for logging events
@@ -270,14 +271,19 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         initializeIfNecessary(ctx);
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Initialize if needed
         if (state.get() == State.INIT) {
-            initializeIfNecessary(ctx);
+            try {
+                initializeIfNecessary(ctx);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(msg);
+                throw ex;
+            }
         }
 
         // Only write if State is STARTED
@@ -290,14 +296,20 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 logDiscard();
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // Initialize if needed
         if (state.get() == State.INIT) {
-            initializeIfNecessary(ctx);
+            try {
+                initializeIfNecessary(ctx);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(msg);
+                promise.setFailure(ex);
+                return;
+            }
         }
 
         // Only write if State is STARTED
@@ -310,7 +322,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 logDiscard();
             }
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     /**
@@ -485,8 +497,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 }
 
                 DatagramPacket datagramPacket = ((DatagramPacket) msg).duplicate();
-                InetSocketAddress srcAddr = datagramPacket.sender();
-                InetSocketAddress dstAddr = datagramPacket.recipient();
+                InetSocketAddress srcAddr = (InetSocketAddress) datagramPacket.sender();
+                InetSocketAddress dstAddr = (InetSocketAddress) datagramPacket.recipient();
 
                 // If `datagramPacket.sender()` is `null` then DatagramPacket is initialized
                 // `sender` (local) address. In this case, we'll get source address from Channel.
@@ -642,7 +654,6 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         }
 
         close();
-        super.handlerRemoved(ctx);
     }
 
     @Override

@@ -17,12 +17,13 @@ package io.netty.testsuite.autobahn;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
 
 /**
  * A Web Socket echo server for running the
@@ -45,9 +46,9 @@ public class AutobahnServer {
              .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
              .childHandler(new AutobahnServerInitializer());
 
-            ChannelFuture f = b.bind(port).sync();
+            Future<Channel> f = b.bind(port).sync();
             System.out.println("Web Socket Server started at port " + port);
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

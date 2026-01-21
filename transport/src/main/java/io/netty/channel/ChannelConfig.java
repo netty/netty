@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.socket.SocketChannelConfig;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -24,15 +23,6 @@ import java.util.Map;
 
 /**
  * A set of configuration properties of a {@link Channel}.
- * <p>
- * Please down-cast to more specific configuration type such as
- * {@link SocketChannelConfig} or use {@link #setOptions(Map)} to set the
- * transport-specific properties:
- * <pre>
- * {@link Channel} ch = ...;
- * {@link SocketChannelConfig} cfg = <strong>({@link SocketChannelConfig}) ch.getConfig();</strong>
- * cfg.setTcpNoDelay(false);
- * </pre>
  *
  * <h3>Option map</h3>
  *
@@ -58,9 +48,7 @@ import java.util.Map;
  * </tr>
  * </table>
  * <p>
- * More options are available in the sub-types of {@link ChannelConfig}.  For
- * example, you can configure the parameters which are specific to a TCP/IP
- * socket as explained in {@link SocketChannelConfig}.
+ * More options are available in the sub-types of {@link ChannelConfig}.
  */
 public interface ChannelConfig {
 
@@ -207,40 +195,6 @@ public interface ChannelConfig {
      * The default is {@code true}.
      */
     ChannelConfig setAutoClose(boolean autoClose);
-
-    /**
-     * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    int getWriteBufferHighWaterMark();
-
-    /**
-     * <p>
-     * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    /**
-     * Returns the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
-     */
-    int getWriteBufferLowWaterMark();
-
-    /**
-     * <p>
-     * Sets the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
-     */
-    ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     /**
      * Returns {@link MessageSizeEstimator} which is used for the channel

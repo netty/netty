@@ -21,21 +21,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
-import io.netty.channel.socket.DuplexChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.PlatformDependent;
@@ -44,7 +39,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -79,7 +73,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     private void allDataReadEventTriggeredAfterHalfClosure(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1;
         final CountDownLatch clientReadAllDataLatch = new CountDownLatch(1);
-        final CountDownLatch clientHalfClosedLatch = new CountDownLatch(1);
         final CountDownLatch clientHalfClosedAllBytesRead = new CountDownLatch(1);
         final AtomicInteger clientReadCompletes = new AtomicInteger();
         final AtomicInteger clientZeroDataReadCompletes = new AtomicInteger();
@@ -99,7 +92,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     serverChildChannel.set(ch);
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
@@ -119,7 +112,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
 
@@ -132,10 +125,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            if (evt == ChannelInputShutdownEvent.INSTANCE) {
-                                clientHalfClosedLatch.countDown();
-                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                            if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 clientHalfClosedAllBytesRead.countDown();
                                 ctx.close();
                             }
@@ -173,16 +164,15 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             clientReadAllDataLatch.await();
 
             // Now we need to trigger server half-close
-            ((DuplexChannel) serverChildChannel.get()).shutdownOutput();
+            serverChildChannel.get().shutdown(ChannelShutdownType.newOutbound());
 
-            clientHalfClosedLatch.await();
             clientHalfClosedAllBytesRead.await();
         } finally {
             if (clientChannel != null) {
@@ -216,12 +206,12 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      ch.pipeline().addLast(new ChannelInboundHandler() {
 
                             @Override
                             public void channelActive(final ChannelHandlerContext ctx) {
-                                SocketChannel channel = (SocketChannel) ctx.channel();
-                                channel.shutdownOutput();
+                                Channel channel = ctx.channel();
+                                channel.shutdown(ChannelShutdownType.newOutbound());
                             }
 
                             @Override
@@ -237,24 +227,20 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-
-                            @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                                if (ChannelInputShutdownEvent.INSTANCE == evt) {
-                                    ctx.writeAndFlush(ctx.alloc().buffer().writeZero(16));
-                                }
-
-                                if (ChannelInputShutdownReadComplete.INSTANCE == evt) {
-                                    ctx.close();
-                                }
-                            }
-                        });
+                      ch.pipeline().addLast(new ChannelInboundHandler() {
+                          @Override
+                          public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                              if (type.direction() == ChannelShutdownDirection.Inbound) {
+                                  ctx.writeAndFlush(ctx.alloc().buffer().writeZero(16))
+                                          .addListener(f -> ctx.close());
+                              }
+                          }
+                      });
                   }
               });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             waitHalfClosureDone.await();
         } finally {
             if (clientChannel != null) {
@@ -285,10 +271,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
-                            ((DuplexChannel) ctx).shutdownOutput();
+                            ctx.shutdown(ChannelShutdownType.newOutbound());
                         }
 
                         @Override
@@ -299,20 +285,17 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            final AtomicInteger shutdownEventReceivedCounter = new AtomicInteger();
-            final AtomicInteger shutdownReadCompleteEventReceivedCounter = new AtomicInteger();
+            final AtomicInteger shutdownReceivedCounter = new AtomicInteger();
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
 
                         @Override
-                        public void userEventTriggered(final ChannelHandlerContext ctx, Object evt) {
-                            if (evt == ChannelInputShutdownEvent.INSTANCE) {
-                                shutdownEventReceivedCounter.incrementAndGet();
-                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-                                shutdownReadCompleteEventReceivedCounter.incrementAndGet();
+                        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                            if (type.direction() == ChannelShutdownDirection.Inbound) {
+                                shutdownReceivedCounter.incrementAndGet();
                                 ctx.executor().schedule(new Runnable() {
                                     @Override
                                     public void run() {
@@ -330,11 +313,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.closeFuture().await();
-            assertEquals(1, shutdownEventReceivedCounter.get());
-            assertEquals(1, shutdownReadCompleteEventReceivedCounter.get());
+            assertEquals(1, shutdownReceivedCounter.get());
         } finally {
             if (serverChannel != null) {
                 serverChannel.close().sync();
@@ -376,17 +358,13 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    ((DuplexChannel) future.channel()).shutdownOutput();
-                                }
-                            });
+                            ctx.writeAndFlush(buf).addListener(future ->
+                                    ctx.shutdown(ChannelShutdownType.newOutbound()));
                             serverInitializedLatch.countDown();
                         }
 
@@ -401,7 +379,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
 
@@ -414,10 +392,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            if (evt == ChannelInputShutdownEvent.INSTANCE) {
+                        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                            if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 clientHalfClosedLatch.countDown();
-                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
                                 ctx.close();
                             }
                         }
@@ -446,8 +423,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();
@@ -493,7 +470,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     private static void testAutoCloseFalseDoesShutdownOutput(boolean allowHalfClosed,
                                                              final boolean clientIsLeader,
                                                              ServerBootstrap sb,
-                                                             Bootstrap cb) throws InterruptedException {
+                                                             Bootstrap cb) throws Exception {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(2);
@@ -526,8 +503,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             doneLatch.await();
             assertNull(causeRef.get());
@@ -575,27 +552,20 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 // We write a reply and immediately close our end of the socket.
                 ByteBuf buf = ctx.alloc().buffer(expectedBytes);
                 buf.writerIndex(buf.writerIndex() + expectedBytes);
-                ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        future.channel().close().addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(final ChannelFuture future) throws Exception {
-                                // This is a bit racy but there is no better way how to handle this in Java11.
-                                // The problem is that on close() the underlying FD will not actually be closed directly
-                                // but the close will be done after the Selector did process all events. Because of
-                                // this we will need to give it a bit time to ensure the FD is actual closed before we
-                                // count down the latch and try to write.
-                                future.channel().executor().schedule(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        followerCloseLatch.countDown();
-                                    }
-                                }, 200, TimeUnit.MILLISECONDS);
-                            }
-                        });
-                    }
-                });
+                ctx.writeAndFlush(buf).addListener(future ->
+                        ctx.close().addListener(f -> {
+                            // This is a bit racy but there is no better way how to handle this in Java11.
+                            // The problem is that on close() the underlying FD will not actually be closed directly
+                            // but the close will be done after the Selector did process all events. Because of
+                            // this we will need to give it a bit time to ensure the FD is actual closed before we
+                            // count down the latch and try to write.
+                            ctx.executor().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    followerCloseLatch.countDown();
+                                }
+                            }, 200, MILLISECONDS);
+                        }));
             }
         }
 
@@ -634,13 +604,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             followerCloseLatch.await();
 
             // This write should fail, but we should still be allowed to read the peer's data
-            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.cause() == null) {
-                        causeRef.set(new IllegalStateException("second write should have failed!"));
-                        doneLatch.countDown();
-                    }
+            ctx.writeAndFlush(buf).addListener(future -> {
+                if (future.cause() == null) {
+                    causeRef.set(new IllegalStateException("second write should have failed!"));
+                    doneLatch.countDown();
                 }
             });
         }
@@ -654,8 +621,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            if (evt instanceof ChannelOutputShutdownEvent) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Outbound) {
                 seenOutputShutdown = true;
                 doneLatch.countDown();
             }
@@ -715,12 +682,12 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+                            ctx.writeAndFlush(buf).addListener(f -> ctx.close());
                             serverInitializedLatch.countDown();
                         }
 
@@ -735,7 +702,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
 
                         @Override
@@ -746,10 +713,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            if (evt == ChannelInputShutdownEvent.INSTANCE && allowHalfClosed) {
+                        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                            if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 clientHalfClosedLatch.countDown();
-                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
                                 ctx.close();
                             }
                         }
@@ -780,8 +746,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();

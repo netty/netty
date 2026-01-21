@@ -17,13 +17,14 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +41,7 @@ import java.util.List;
  * Find a basic implementation for compression extensions at
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler</tt>.
  */
-public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
+public class WebSocketClientExtensionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private final List<WebSocketClientExtensionHandshaker> extensionHandshakers;
 
@@ -56,7 +57,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (msg instanceof HttpRequest && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpRequest) msg).headers())) {
             HttpRequest request = (HttpRequest) msg;
             String headerValue = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
@@ -70,8 +71,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
 
             request.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
         }
-
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     @Override
@@ -121,8 +121,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
                 ctx.pipeline().remove(ctx.name());
             }
         }
-
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 }
 

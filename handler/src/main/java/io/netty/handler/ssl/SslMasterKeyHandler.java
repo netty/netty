@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -35,7 +35,7 @@ import java.lang.reflect.Field;
  * This can be very useful, for instance the {@link WiresharkSslMasterKeyHandler} implementation will
  * log the secret & identifier in a format that is consumable by Wireshark -- allowing easy decryption of pcap/tcpdumps.
  */
-public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
+public abstract class SslMasterKeyHandler implements ChannelInboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslMasterKeyHandler.class);
 

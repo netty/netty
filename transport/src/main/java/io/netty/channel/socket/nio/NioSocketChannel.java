@@ -16,34 +16,27 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
@@ -67,10 +60,9 @@ import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRI
  * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
  */
 public class NioSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.SocketChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private final SocketChannelConfig config;
+    private final NioSocketChannelConfig config;
 
     private static SocketChannel newChannel(SelectorProvider provider, SocketProtocolFamily family) {
         try {
@@ -135,13 +127,17 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         config = new NioSocketChannelConfig(this, channel);
     }
 
+    protected boolean isAllowHalfClosure() {
+        return config.isAllowHalfClosure();
+    }
+
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -157,136 +153,33 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    public boolean isOutputShutdown() {
-        return javaChannel().socket().isOutputShutdown() || !isActive();
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return javaChannel().socket().isInputShutdown() || !isActive();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        Socket socket = javaChannel().socket();
-        return socket.isInputShutdown() && socket.isOutputShutdown() || !isActive();
-    }
-
-    @Override
-    protected final void doShutdownOutput() throws Exception {
-        javaChannel().shutdownOutput();
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        final EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-        } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        if (type.data() != null) {
+            promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
+            return;
+        }
+        switch(type.direction()) {
+            case Outbound:
+                try {
+                    javaChannel().shutdownOutput();
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
                 }
-            });
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    protected boolean isInputShutdown0() {
-        return isInputShutdown();
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(final ChannelPromise promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            shutdownInput0(promise);
-        } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
+                promise.setSuccess(null);
+                return;
+            case Inbound:
+                try {
+                    javaChannel().shutdownInput();
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
                 }
-            });
+                promise.setSuccess(null);
+                return;
+            default:
+                promise.setFailure(new UnsupportedOperationException());
         }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture shutdown() {
-        return shutdown(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdown(final ChannelPromise promise) {
-        ChannelFuture shutdownOutputFuture = shutdownOutput();
-        if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(shutdownOutputFuture, promise);
-        } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
-        }
-        return promise;
-    }
-
-    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
-        ChannelFuture shutdownInputFuture = shutdownInput();
-        if (shutdownInputFuture.isDone()) {
-            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-        } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
-        }
-    }
-
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.debug("Exception suppressed because a previous exception occurred.",
-                        shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess();
-        }
-    }
-    private void shutdownInput0(final ChannelPromise promise) {
-        try {
-            shutdownInput0();
-            promise.setSuccess();
-        } catch (Throwable t) {
-            promise.setFailure(t);
-        }
-    }
-
-    private void shutdownInput0() throws Exception {
-        javaChannel().shutdownInput();
     }
 
     @Override
@@ -300,8 +193,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            doBind0(localAddress);
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
@@ -324,7 +223,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }
@@ -337,19 +236,24 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(Promise<Void> promise) {
+        doClose(promise);
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        javaChannel().close();
+    protected void doClose(Promise<Void> promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess(null);
     }
 
     @Override
     protected int doReadBytes(ByteBuf byteBuf) throws Exception {
-        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
         allocHandle.attemptedBytesRead(byteBuf.writableBytes());
         return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
     }
@@ -372,10 +276,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted << 1);
+                config.setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted >>> 1);
+            config.setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
@@ -392,7 +296,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
 
             // Ensure the pending writes are made of ByteBufs only.
-            int maxBytesPerGatheringWrite = ((NioSocketChannelConfig) config).getMaxBytesPerGatheringWrite();
+            int maxBytesPerGatheringWrite = config.getMaxBytesPerGatheringWrite();
             ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
             int nioBufferCnt = in.nioBufferCount();
 
@@ -443,33 +347,25 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioSocketChannelUnsafe();
-    }
-
-    private final class NioSocketChannelUnsafe extends NioByteUnsafe {
-        @Override
-        protected Executor prepareToClose() {
-            try {
-                if (javaChannel().isOpen() && config().getSoLinger() > 0) {
-                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                    // because we try to read or write until the actual close happens which may be later due
-                    // SO_LINGER handling.
-                    // See https://github.com/netty/netty/issues/4449
-                    doDeregister();
-                    return GlobalEventExecutor.INSTANCE;
-                }
-            } catch (Throwable ignore) {
-                // Ignore the error as the underlying channel may be closed in the meantime and so
-                // getSoLinger() may produce an exception. In this case we just return null.
+    protected Executor prepareToClose() {
+        try {
+            if (javaChannel().isOpen() && config.getSoLinger() > 0) {
+                // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                // because we try to read or write until the actual close happens which may be later due
+                // SO_LINGER handling.
                 // See https://github.com/netty/netty/issues/4449
+                doDeregister(newPromise());
+                return GlobalEventExecutor.INSTANCE;
             }
-            return null;
+        } catch (Throwable ignore) {
+            // Ignore the error as the underlying channel may be closed in the meantime and so
+            // getSoLinger() may produce an exception. In this case we just return null.
+            // See https://github.com/netty/netty/issues/4449
         }
+        return null;
     }
 
-    private static final class NioSocketChannelConfig extends DefaultChannelConfig
-            implements SocketChannelConfig {
+    private static final class NioSocketChannelConfig extends DefaultChannelConfig {
 
         final NetworkChannel jdkChannel;
         private volatile boolean allowHalfClosure;
@@ -566,166 +462,69 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return true;
         }
 
-        @Override
-        public int getReceiveBufferSize() {
+        private int getReceiveBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF);
         }
 
-        @Override
-        public int getSendBufferSize() {
+        private int getSendBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF);
         }
 
-        @Override
-        public int getSoLinger() {
+        private int getSoLinger() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_LINGER);
         }
 
-        @Override
-        public int getTrafficClass() {
+        private int getTrafficClass() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.IP_TOS);
         }
 
-        @Override
-        public boolean isKeepAlive() {
+        private boolean isKeepAlive() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE);
         }
 
-        @Override
-        public boolean isReuseAddress() {
+        private boolean isReuseAddress() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR);
         }
 
-        @Override
-        public boolean isTcpNoDelay() {
+        private boolean isTcpNoDelay() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY);
         }
 
-        @Override
-        public SocketChannelConfig setKeepAlive(boolean keepAlive) {
+        private void setKeepAlive(boolean keepAlive) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE, keepAlive);
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setPerformancePreferences(
-                int connectionTime, int latency, int bandwidth) {
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        private void setSendBufferSize(int sendBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setSoLinger(int soLinger) {
+        private void setSoLinger(int soLinger) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_LINGER, soLinger);
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+        private void setTcpNoDelay(boolean tcpNoDelay) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
-            return this;
         }
 
-        @Override
-        public SocketChannelConfig setTrafficClass(int trafficClass) {
+        private void setTrafficClass(int trafficClass) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.IP_TOS, trafficClass);
-            return this;
         }
 
-        @Override
-        public boolean isAllowHalfClosure() {
+        private boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
 
-        @Override
-        public SocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        private void setAllowHalfClosure(boolean allowHalfClosure) {
             this.allowHalfClosure = allowHalfClosure;
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public SocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAutoClose(boolean autoClose) {
-            super.setAutoClose(autoClose);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
-            return this;
         }
 
         void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {

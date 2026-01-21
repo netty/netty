@@ -18,9 +18,8 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -64,7 +63,7 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandler() {
 
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
@@ -86,11 +85,11 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
 
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect().get();
-            assertNotNull(quicChannel.collectStats().sync().getNow());
-            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+            assertNotNull(quicChannel.collectStats().get());
+            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandler() {
                 private final int bufferSize = 8;
                 private int received;
 
@@ -105,9 +104,9 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
                     received += buffer.readableBytes();
                     buffer.release();
                     if (received == bufferSize) {
-                        ctx.close().addListener((ChannelFuture future) -> {
+                        ctx.close().addListener(f -> {
                             // Close the underlying QuicChannel as well.
-                            future.channel().parent().close();
+                            ctx.channel().parent().close();
                         });
                     }
                 }
@@ -115,9 +114,9 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
 
             // Wait until closure
             quicChannel.closeFuture().sync();
-            assertStats(quicChannel.collectStats().sync().getNow());
-            assertNotNull(serverActiveStats.sync().getNow());
-            assertStats(serverInactiveStats.sync().getNow());
+            assertStats(quicChannel.collectStats().get());
+            assertNotNull(serverActiveStats.get());
+            assertStats(serverInactiveStats.get());
             assertEquals(1, counter.get());
 
             serverHandler.assertState();

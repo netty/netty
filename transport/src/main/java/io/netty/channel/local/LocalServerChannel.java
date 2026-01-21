@@ -19,7 +19,6 @@ import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -29,6 +28,7 @@ import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
@@ -43,12 +43,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(newPromise());
-        }
-    };
+    private final LocalIoHandle ioHandle = new LocalServerIoHandle();
 
     private IoRegistration registration;
 
@@ -98,13 +93,13 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         EventLoop loop = executor();
         assert registration == null;
-        loop.register((LocalServerUnsafe) unsafe()).addListener(f -> {
+        loop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -112,13 +107,19 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        try {
+            this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
         state = 1;
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(Promise<Void> promise) {
         if (state <= 1) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
@@ -127,15 +128,17 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
+        promise.setSuccess(null);
     }
 
     @Override
@@ -169,7 +172,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvByteBufAllocator.Handle handle = recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {
@@ -200,25 +203,22 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
     }
 
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new LocalServerUnsafe();
-    }
+    private final class LocalServerIoHandle  implements LocalIoHandle {
+        private final Runnable shutdownHook = new Runnable() {
+            @Override
+            public void run() {
+                closeNow();
+            }
+        };
 
-    private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
         @Override
         public void close() {
-            close(newPromise());
+            closeNow();
         }
 
         @Override
         public void handle(IoRegistration registration, IoEvent event) {
             // NOOP
-        }
-
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
         }
 
         @Override
@@ -233,7 +233,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void closeNow() {
-            close(newPromise());
+            ioTransport().close(newPromise());
         }
     }
 }

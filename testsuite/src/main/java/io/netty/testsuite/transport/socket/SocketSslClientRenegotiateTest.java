@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -179,7 +178,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 }
             });
 
-            Channel sc = sb.bind().sync().channel();
+            Channel sc = sb.bind().get();
             cb.connect(sc.localAddress()).sync();
 
             Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
@@ -206,6 +205,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         } finally {
             if (executorService != null) {
                 executorService.shutdown();
+                assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
             }
         }
     }
@@ -222,7 +222,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         serverSslHandler = null;
     }
 
-    @Sharable
     private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         protected final AtomicReference<Throwable> exception;
@@ -230,6 +229,11 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
         TestHandler(AtomicReference<Throwable> exception) {
             this.exception = exception;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

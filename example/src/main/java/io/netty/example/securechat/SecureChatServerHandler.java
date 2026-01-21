@@ -18,40 +18,33 @@ package io.netty.example.securechat;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.GlobalEventExecutor;
 
-import java.net.InetAddress;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handles a server-side channel.
  */
 public class SecureChatServerHandler extends SimpleChannelInboundHandler<String> {
 
-    static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    static final Set<Channel> channels = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         // Once session is secured, send a greeting and register the channel to the global channel
         // list so the channel received the messages from others.
-        ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
-                new GenericFutureListener<Future<Channel>>() {
-                    @Override
-                    public void operationComplete(Future<Channel> future) throws Exception {
-                        ctx.writeAndFlush(
-                                "Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
-                        ctx.writeAndFlush(
-                                "Your session is protected by " +
-                                        ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
-                                        " cipher suite.\n");
+        ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(future -> {
+                    ctx.writeAndFlush(
+                            "Welcome to secure chat service!\n");
+                    ctx.writeAndFlush(
+                            "Your session is protected by " +
+                                    ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
+                                    " cipher suite.\n");
 
-                        channels.add(ctx.channel());
-                    }
-        });
+                    channels.add(ctx.channel());
+                });
     }
 
     @Override

@@ -16,14 +16,14 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.validateFrameWritten;
 
-class Http3FrameTypeOutboundValidationHandler<T extends Http3Frame> extends ChannelOutboundHandlerAdapter {
+class Http3FrameTypeOutboundValidationHandler<T extends Http3Frame> implements ChannelOutboundHandler {
 
     private final Class<T> frameType;
 
@@ -32,7 +32,7 @@ class Http3FrameTypeOutboundValidationHandler<T extends Http3Frame> extends Chan
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         T frame = validateFrameWritten(frameType, msg);
         if (frame != null) {
             write(ctx, frame, promise);
@@ -41,11 +41,11 @@ class Http3FrameTypeOutboundValidationHandler<T extends Http3Frame> extends Chan
         }
     }
 
-    void write(ChannelHandlerContext ctx, T msg, ChannelPromise promise) {
+    void write(ChannelHandlerContext ctx, T msg, Promise<Void> promise) {
         ctx.write(msg, promise);
     }
 
-    void writeFrameDiscarded(Object discardedFrame, ChannelPromise promise) {
+    void writeFrameDiscarded(Object discardedFrame, Promise<Void> promise) {
         frameTypeUnexpected(promise, discardedFrame);
     }
 }

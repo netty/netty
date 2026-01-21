@@ -22,7 +22,9 @@ import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executors;
 
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -37,21 +39,51 @@ import static org.mockito.Mockito.*;
 
 public class AbstractChannelTest {
 
+    private static final class TestHandler implements ChannelInboundHandler {
+
+        int added;
+        int registered;
+        int active;
+        int unregistered;
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            added++;
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            registered++;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            active++;
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            unregistered++;
+        }
+    }
+
     @Test
     public void ensureInitialRegistrationFiresActive() throws Throwable {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-
+        when(eventLoop.isShuttingDown()).thenReturn(true);
+        when(eventLoop.newPromise()).thenReturn(new DefaultPromise(eventLoop));
         TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+
+        TestHandler handler = new TestHandler();
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
 
-        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
-        verify(handler).channelRegistered(any(ChannelHandlerContext.class));
-        verify(handler).channelActive(any(ChannelHandlerContext.class));
+        assertEquals(1, handler.added);
+        assertEquals(1, handler.registered);
+        assertEquals(1, handler.active);
     }
 
     @Test
@@ -59,7 +91,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-
+        when(eventLoop.newPromise()).thenReturn(new DefaultPromise(eventLoop));
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) {
@@ -69,21 +101,21 @@ public class AbstractChannelTest {
         }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+        TestHandler handler = new TestHandler();
 
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
-        channel.unsafe().deregister(new DefaultChannelPromise(channel));
+        channel.deregister(new DefaultPromise<>(channel.executor()));
 
         registerChannel(channel);
 
-        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
+        assertEquals(1, handler.added);
 
         // Should register twice
-        verify(handler,  times(2)) .channelRegistered(any(ChannelHandlerContext.class));
-        verify(handler).channelActive(any(ChannelHandlerContext.class));
-        verify(handler).channelUnregistered(any(ChannelHandlerContext.class));
+        assertEquals(2, handler.registered);
+        assertEquals(1, handler.active);
+        assertEquals(1, handler.unregistered);
     }
 
     @Test
@@ -174,21 +206,16 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected AbstractUnsafe newUnsafe() {
-                return new AbstractUnsafe() {
-                    @Override
-                    public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                        active = true;
-                        promise.setSuccess();
-                    }
-                };
+            protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+                active = true;
+                promise.setSuccess(null);
             }
 
             @Override
-            protected void doClose()  {
+            protected void doClose(Promise<Void> promise)  {
                 active = false;
                 open = false;
+                promise.setSuccess(null);
             }
 
             @Override
@@ -221,7 +248,7 @@ public class AbstractChannelTest {
         }
     }
 
-    private static void assertClosedChannelException(ChannelFuture future, IOException expected)
+    private static void assertClosedChannelException(Future<Void> future, IOException expected)
             throws InterruptedException {
         Throwable cause = future.await().cause();
         assertTrue(cause instanceof ClosedChannelException);
@@ -229,13 +256,12 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
-        DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.unsafe().register(future);
+        DefaultPromise<Void> future = new DefaultPromise<>(channel.executor());
+        channel.register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
     private static class TestChannel extends AbstractChannel {
-        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
@@ -259,21 +285,6 @@ public class AbstractChannelTest {
         }
 
         @Override
-        public ChannelMetadata metadata() {
-            return TEST_METADATA;
-        }
-
-        @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new AbstractUnsafe() {
-                @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    promise.setFailure(new UnsupportedOperationException());
-                }
-            };
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             return null;
         }
@@ -284,13 +295,39 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) { }
+        protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
 
         @Override
-        protected void doDisconnect() { }
+        protected void doDeregister(Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
 
         @Override
-        protected void doClose() { }
+        protected void doRegister(Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
+        protected void doDisconnect(Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
+
+        @Override
+        protected void doClose(Promise<Void> promise) {
+            promise.setSuccess(null);
+        }
 
         @Override
         protected void doBeginRead() { }

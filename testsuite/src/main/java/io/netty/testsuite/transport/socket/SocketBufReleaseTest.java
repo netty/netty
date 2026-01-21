@@ -19,12 +19,9 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -58,8 +55,8 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         sb.childHandler(serverHandler);
         cb.handler(clientHandler);
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         // Ensure the server socket accepted the client connection *and* initialized pipeline successfully.
         serverHandler.channelFuture.sync();
@@ -80,7 +77,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
         private ByteBuf buf;
-        private final Promise<Channel> channelFuture = new DefaultPromise<Channel>(executor);
+        private final Promise<Channel> channelFuture = executor.newPromise();
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -96,12 +93,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // call retain on it so it can't be put back on the pool
             buf.writeBytes(data).retain();
 
-            ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    latch.countDown();
-                }
-            });
+            ctx.channel().writeAndFlush(buf).addListener(future -> latch.countDown());
         }
 
         @Override

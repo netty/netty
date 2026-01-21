@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ public class SocketRstTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);
@@ -84,8 +84,8 @@ public class SocketRstTest extends AbstractSocketTest {
                 });
             }
         });
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         // Wait for the server to get setup.
         latch.await();
@@ -130,7 +130,7 @@ public class SocketRstTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         throwableRef.compareAndSet(null, cause);
@@ -143,7 +143,7 @@ public class SocketRstTest extends AbstractSocketTest {
                 });
             }
         });
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
         cb.connect(sc.localAddress()).syncUninterruptibly();
 
         // Wait for the server to get setup.

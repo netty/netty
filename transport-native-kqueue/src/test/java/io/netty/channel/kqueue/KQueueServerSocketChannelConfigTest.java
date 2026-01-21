@@ -16,7 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -37,13 +37,13 @@ public class KQueueServerSocketChannelConfigTest {
     private static KQueueServerSocketChannel ch;
 
     @BeforeAll
-    public static void before() {
+    public static void before() throws Exception {
         group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (KQueueServerSocketChannel) bootstrap.group(group)
                 .channel(KQueueServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .childHandler(new ChannelInboundHandler() { })
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterAll
@@ -57,21 +57,21 @@ public class KQueueServerSocketChannelConfigTest {
 
     @Test
     public void testReusePort() {
-        ch.config().setReusePort(false);
-        assertFalse(ch.config().isReusePort());
-        ch.config().setReusePort(true);
-        assertTrue(ch.config().isReusePort());
+        ch.config().setOption(KQueueChannelOption.SO_REUSEPORT, false);
+        assertFalse(ch.config().getOption(KQueueChannelOption.SO_REUSEPORT));
+        ch.config().setOption(KQueueChannelOption.SO_REUSEPORT, true);
+        assertTrue(ch.config().getOption(KQueueChannelOption.SO_REUSEPORT));
     }
 
     @Test
     public void testAcceptFilter() {
-        AcceptFilter currentFilter = ch.config().getAcceptFilter();
+        AcceptFilter currentFilter = ch.config().getOption(KQueueChannelOption.SO_ACCEPTFILTER);
         // Not all platforms support this option (e.g. MacOS doesn't) so test if we support the option first.
         assumeTrue(currentFilter != AcceptFilter.PLATFORM_UNSUPPORTED);
 
         AcceptFilter af = new AcceptFilter("test", "foo");
-        ch.config().setAcceptFilter(af);
-        assertEquals(af, ch.config().getAcceptFilter());
+        ch.config().setOption(KQueueChannelOption.SO_ACCEPTFILTER, af);
+        assertEquals(af, ch.config().getOption(KQueueChannelOption.SO_ACCEPTFILTER));
     }
 
     @Test

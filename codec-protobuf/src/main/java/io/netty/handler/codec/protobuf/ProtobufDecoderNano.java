@@ -21,7 +21,6 @@ import java.util.List;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -59,7 +58,6 @@ import io.netty.util.internal.ObjectUtil;
  * }
  * </pre>
  */
-@Sharable
 public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
     private final Class<? extends MessageNano> clazz;
     /**
@@ -68,6 +66,11 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
     public ProtobufDecoderNano(Class<? extends MessageNano> clazz) {
         super(ByteBuf.class);
         this.clazz = ObjectUtil.checkNotNull(clazz, "You must provide a Class");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

@@ -18,14 +18,14 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.channels.ClosedChannelException;
@@ -139,7 +139,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         final QuicChannel quicChannel = (QuicChannel) ctx.channel().parent();
         final QpackAttributes qpackAttributes = Http3.getQpackAttributes(quicChannel);
         assert qpackAttributes != null;
-        final GenericFutureListener<Future<? super QuicStreamChannel>> closeOnFailure = future -> {
+        final FutureListener<? super QuicStreamChannel> closeOnFailure = future -> {
             if (!future.isSuccess()) {
                 criticalStreamClosed(ctx);
             }
@@ -215,15 +215,15 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt instanceof ChannelInputShutdownEvent) {
-            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
+            // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.2
             criticalStreamClosed(ctx);
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireChannelShutdown(type);
     }
 
-    private abstract static class AbstractQPackStreamInitializer extends ChannelInboundHandlerAdapter {
+    private abstract static class AbstractQPackStreamInitializer implements ChannelInboundHandler {
         private final int streamType;
         protected final QpackAttributes attributes;
 
@@ -239,19 +239,19 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
             // Just allocate 8 bytes which would be the max needed.
             ByteBuf buffer = ctx.alloc().buffer(8);
             Http3CodecUtils.writeVariableLengthInteger(buffer, streamType);
-            closeOnFailure(ctx.writeAndFlush(buffer));
+            closeOnFailure(ctx.writeAndFlush(buffer), ctx);
             streamAvailable(ctx);
             ctx.fireChannelActive();
         }
 
         @Override
-        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
             streamClosed(ctx);
-            if (evt instanceof ChannelInputShutdownEvent) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.2
                 criticalStreamClosed(ctx);
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireChannelShutdown(type);
         }
 
         @Override

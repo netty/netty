@@ -19,16 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
@@ -38,6 +35,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
@@ -104,7 +102,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         CLOSE
     }
 
-    private static final class CloseData implements ChannelFutureListener {
+    private static final class CloseData implements FutureListener<Void> {
         final boolean applicationClose;
         final int err;
         final ByteBuf reason;
@@ -116,12 +114,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) {
+        public void operationComplete(Future<? extends Void> future) {
             reason.release();
         }
     }
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private long[] readableStreams = new long[4];
     private long[] writableStreams = new long[4];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
@@ -142,8 +139,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
     private ByteBuf outErrorCodeBuffer;
-    private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
+    private Promise<Void> connectPromise;
     private QuicConnectionAddress connectAddress;
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
@@ -166,7 +162,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile InetSocketAddress local;
     private volatile InetSocketAddress remote;
 
-    private final ChannelFutureListener continueSendingListener = f -> {
+    private final FutureListener<Void> continueSendingListener = f -> {
         if (connectionSend(connection) != SendResult.NONE) {
             flushParent();
         }
@@ -242,6 +238,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return new long[Math.min(MAX_ARRAY_LEN, array.length + 4)];
         }
         return array;
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -394,7 +395,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private boolean tryFailConnectPromise(Exception e) {
-        ChannelPromise promise = connectPromise;
+        Promise<Void> promise = connectPromise;
         if (promise != null) {
             connectPromise = null;
             promise.tryFailure(e);
@@ -416,7 +417,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private void failPendingConnectPromise() {
-        ChannelPromise promise = QuicheQuicChannel.this.connectPromise;
+        Promise<Void> promise = QuicheQuicChannel.this.connectPromise;
         if (promise != null) {
             QuicheQuicChannel.this.connectPromise = null;
             promise.tryFailure(new QuicClosedChannelException(this.connectionCloseEvent));
@@ -424,12 +425,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void forceClose() {
-        unsafe().close(newPromise());
+        ioTransport().close(newPromise());
     }
 
     @Override
     protected DefaultChannelPipeline newChannelPipeline() {
-        return new DefaultChannelPipeline(this) {
+        return new DefaultAbstractChannelPipeline(this) {
             @Override
             protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof QuicStreamChannel) {
@@ -444,39 +445,25 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public QuicChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
-    public QuicChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
-                                                  Promise<QuicStreamChannel> promise) {
+    public void createStream(QuicStreamType type, @Nullable ChannelHandler handler,
+                             Promise<QuicStreamChannel> promise) {
         if (executor().inEventLoop()) {
-            ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
+            connectStream(type, handler, promise);
         } else {
-            executor().execute(() -> ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise));
+            executor().execute(() -> connectStream(type, handler, promise));
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+    public void close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         if (executor().inEventLoop()) {
             close0(applicationClose, error, reason, promise);
         } else {
             executor().execute(() -> close0(applicationClose, error, reason, promise));
         }
-        return promise;
     }
 
-    private void close0(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+    private void close0(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         if (closeData == null) {
             if (!reason.hasMemoryAddress()) {
                 // Copy to direct buffer as that's what we need.
@@ -501,11 +488,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         } else {
             return '(' + traceId + ')' + super.toString();
         }
-    }
-
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new QuicChannelUnsafe();
     }
 
     @Override
@@ -549,18 +531,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress socketAddress) {
-        throw new UnsupportedOperationException();
+    protected void doRegister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDeregister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doBind(SocketAddress socketAddress, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doDisconnect(Promise<Void> promise) {
+        doClose(promise);
+    }
+
+    @Override
+    protected void doClose(Promise<Void> promise) {
         if (state == ChannelState.CLOSED) {
+            promise.setSuccess(null);
             return;
         }
         state = ChannelState.CLOSED;
@@ -572,6 +565,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 closeData = null;
             }
             failPendingConnectPromise();
+            promise.setSuccess(null);
             return;
         }
 
@@ -597,7 +591,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             int res = Quiche.quiche_conn_close(conn.address(), app, err,
                     Quiche.readerMemoryAddress(reason), reason.readableBytes());
             if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-                throw Quiche.convertToException(res);
+                promise.setFailure(Quiche.convertToException(res));
+                return;
             }
             // As we called quiche_conn_close(...) we need to ensure we will call quiche_conn_send(...) either
             // now or we will do so once we see the channelReadComplete event.
@@ -607,7 +602,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 sendResult = SendResult.SOME;
             }
         } finally {
-
             // making sure that connection statistics is available
             // even after channel is closed
             statsAtClose = collectStats0(conn, executor().newPromise());
@@ -638,6 +632,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 local = null;
                 remote = null;
+                promise.setSuccess(null);
             }
         }
     }
@@ -647,7 +642,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         recvDatagramPending = true;
         recvStreamPending = true;
         if (datagramReadable || streamReadable) {
-            ((QuicChannelUnsafe) unsafe()).recv();
+            recv();
         }
     }
 
@@ -740,7 +735,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public QuicChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -752,11 +747,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     public boolean isActive() {
         return state == ChannelState.ACTIVE;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**
@@ -789,7 +779,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return true;
         }
         if (conn.isClosed()) {
-            unsafe().close(newPromise());
+            ioTransport().close(newPromise());
             return true;
         }
         return false;
@@ -809,7 +799,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // Make a copy to ensure we not run into a situation when we change the underlying iterator from
         // another method and so run in an assert error.
         for (QuicheQuicStreamChannel stream: streams.values().toArray(new QuicheQuicStreamChannel[0])) {
-            stream.unsafe().close(closedChannelException, newPromise());
+            stream.ioTransport().close(closedChannelException, newPromise());
         }
         streams.clear();
     }
@@ -834,7 +824,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return (streamId & 0x2) == 0 ? QuicStreamType.BIDIRECTIONAL : QuicStreamType.UNIDIRECTIONAL;
     }
 
-    void streamShutdown(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
+    void streamShutdown(long streamId, boolean read, boolean write, int err, Promise<Void> promise) {
         QuicheQuicConnection conn = this.connection;
         final long connectionAddress;
         try {
@@ -862,7 +852,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
             promise.setFailure(Quiche.convertToException(res));
         } else {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -961,7 +951,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
      * Receive some data on a QUIC connection.
      */
     void recv(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer) {
-        ((QuicChannelUnsafe) unsafe()).connectionRecv(sender, recipient, buffer);
+        connectionRecv(sender, recipient, buffer);
     }
 
     /**
@@ -1387,7 +1377,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private boolean writePacket(DatagramPacket packet, int maxDatagramSize, int len) {
-        ChannelFuture future = parent().write(packet);
+        Future<Void> future = parent().write(packet);
         if (isSendWindowUsed(maxDatagramSize, len)) {
             // Nothing left in the window, continue later
             future.addListener(continueSendingListener);
@@ -1477,490 +1467,457 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
-
-        void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
-                           Promise<QuicStreamChannel> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-            long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
-
-            try {
-                int res = streamSend0(connection, streamId, Unpooled.EMPTY_BUFFER, false);
-                if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-                    throw Quiche.convertToException(res);
-                }
-            } catch (Exception e) {
-                promise.setFailure(e);
-                return;
-            }
-            if (type == QuicStreamType.UNIDIRECTIONAL) {
-                UNI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
-            } else {
-                BIDI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
-            }
-            QuicheQuicStreamChannel streamChannel = addNewStreamChannel(streamId);
-            if (handler != null) {
-                streamChannel.pipeline().addLast(handler);
-            }
-            streamChannel.register().addListener((ChannelFuture f) -> {
-                if (f.isSuccess()) {
-                    promise.setSuccess(streamChannel);
-                } else {
-                    promise.setFailure(f.cause());
-                    streams.remove(streamId);
-                }
-            });
+    @Override
+    protected void doConnect(SocketAddress remote, SocketAddress local, Promise<Void> channelPromise) {
+        assert executor().inEventLoop();
+        if (server) {
+            channelPromise.setFailure(new UnsupportedOperationException());
+            return;
         }
 
-        @Override
-        public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
-            assert executor().inEventLoop();
-            if (!channelPromise.setUncancellable()) {
-                return;
-            }
-            if (server) {
-                channelPromise.setFailure(new UnsupportedOperationException());
+        if (connectPromise != null) {
+            channelPromise.setFailure(new ConnectionPendingException());
+            return;
+        }
+
+        if (remote instanceof QuicConnectionAddress) {
+            if (!sourceConnectionIds.isEmpty()) {
+                // If a key is assigned we know this channel was already connected.
+                channelPromise.setFailure(new AlreadyConnectedException());
                 return;
             }
 
-            if (connectPromise != null) {
-                channelPromise.setFailure(new ConnectionPendingException());
-                return;
+            connectAddress = (QuicConnectionAddress) remote;
+            connectPromise = channelPromise;
+
+            parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
+                    .addListener(f -> {
+                        Promise<Void> connectPromise = QuicheQuicChannel.this.connectPromise;
+                        if (connectPromise != null && !f.isSuccess()) {
+                            connectPromise.tryFailure(f.cause());
+                            // close everything after notify about failure.
+                            ioTransport().close(newPromise());
+                        }
+                    });
+            return;
+        }
+
+        channelPromise.setFailure(new UnsupportedOperationException());
+    }
+
+    void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
+                       Promise<QuicStreamChannel> promise) {
+        long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
+
+        try {
+            int res = streamSend0(connection, streamId, Unpooled.EMPTY_BUFFER, false);
+            if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+                throw Quiche.convertToException(res);
+            }
+        } catch (Exception e) {
+            promise.setFailure(e);
+            return;
+        }
+        if (type == QuicStreamType.UNIDIRECTIONAL) {
+            UNI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
+        } else {
+            BIDI_STREAMS_LEFT_UPDATER.decrementAndGet(QuicheQuicChannel.this);
+        }
+        QuicheQuicStreamChannel streamChannel = addNewStreamChannel(streamId);
+        if (handler != null) {
+            streamChannel.pipeline().addLast(handler);
+        }
+        streamChannel.register().addListener(f -> {
+            if (f.isSuccess()) {
+                promise.setSuccess(streamChannel);
+            } else {
+                promise.setFailure(f.cause());
+                streams.remove(streamId);
+            }
+        });
+    }
+
+    private void fireConnectCloseEventIfNeeded(QuicheQuicConnection conn) {
+        if (connectionCloseEvent == null && !conn.isFreed()) {
+            connectionCloseEvent = Quiche.quiche_conn_peer_error(conn.address());
+            if (connectionCloseEvent != null) {
+                pipeline().fireUserEventTriggered(connectionCloseEvent);
+            }
+        }
+    }
+
+    void connectionRecv(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer) {
+        QuicheQuicConnection conn = QuicheQuicChannel.this.connection;
+        if (conn.isFreed()) {
+            return;
+        }
+        int bufferReadable = buffer.readableBytes();
+        if (bufferReadable == 0) {
+            // Nothing to do here. Just return...
+            // See also https://github.com/cloudflare/quiche/issues/817
+            return;
+        }
+
+        reantranceGuard |= IN_RECV;
+        boolean close = false;
+        try {
+            ByteBuf tmpBuffer = null;
+            // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
+            // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
+            if (buffer.isReadOnly()) {
+                tmpBuffer = alloc().directBuffer(buffer.readableBytes());
+                tmpBuffer.writeBytes(buffer);
+                buffer = tmpBuffer;
+            }
+            long memoryAddress = Quiche.readerMemoryAddress(buffer);
+
+            ByteBuffer recvInfo = conn.nextRecvInfo();
+            QuicheRecvInfo.setRecvInfo(recvInfo, sender, recipient);
+
+            remote = sender;
+            local = recipient;
+
+            try {
+                do  {
+                    // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
+                    int res = Quiche.quiche_conn_recv(conn.address(), memoryAddress, bufferReadable,
+                            Quiche.memoryAddressWithPosition(recvInfo));
+                    final boolean done;
+                    if (res < 0) {
+                        done = true;
+                        if (res != Quiche.QUICHE_ERR_DONE) {
+                            close = Quiche.shouldClose(res);
+                            Exception e = Quiche.convertToException(res);
+                            if (tryFailConnectPromise(e)) {
+                                break;
+                            }
+                            fireExceptionEvents(conn, e);
+                        }
+                    } else {
+                        done = false;
+                    }
+                    // Process / schedule all tasks that were created.
+                    Runnable task = conn.sslTask();
+                    if (task != null) {
+                        if (runTasksDirectly()) {
+                            // Consume all tasks
+                            do {
+                                task.run();
+                            } while ((task = conn.sslTask()) != null);
+                            processReceived(conn);
+                        } else {
+                            runAllTaskRecv(conn, task);
+                        }
+                    } else {
+                        processReceived(conn);
+                    }
+
+                    if (done) {
+                        break;
+                    }
+                    memoryAddress += res;
+                    bufferReadable -= res;
+                } while (bufferReadable > 0 && !conn.isFreed());
+            } finally {
+                buffer.skipBytes((int) (memoryAddress - Quiche.readerMemoryAddress(buffer)));
+                if (tmpBuffer != null) {
+                    tmpBuffer.release();
+                }
+            }
+            if (close) {
+                // Let's close now as there is no way to recover
+                ioTransport().close(newPromise());
+            }
+        } finally {
+            reantranceGuard &= ~IN_RECV;
+        }
+    }
+
+    private void processReceived(QuicheQuicConnection conn) {
+        // Handle pending channelActive if needed.
+        if (handlePendingChannelActive(conn)) {
+            // Connection was closed right away.
+            return;
+        }
+
+        notifyAboutHandshakeCompletionIfNeeded(conn, null);
+        fireConnectCloseEventIfNeeded(conn);
+
+        if (conn.isFreed()) {
+            return;
+        }
+
+        long connAddr = conn.address();
+        if (Quiche.quiche_conn_is_established(connAddr) ||
+                Quiche.quiche_conn_is_in_early_data(connAddr)) {
+            long uniLeftOld = uniStreamsLeft;
+            long bidiLeftOld = bidiStreamsLeft;
+            // Only fetch new stream info when we used all our credits
+            if (uniLeftOld == 0 || bidiLeftOld == 0) {
+                long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
+                long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
+                uniStreamsLeft = uniLeft;
+                bidiStreamsLeft = bidiLeft;
+                if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
+                    pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
+                }
             }
 
-            if (remote instanceof QuicConnectionAddress) {
-                if (!sourceConnectionIds.isEmpty()) {
-                    // If a key is assigned we know this channel was already connected.
-                    channelPromise.setFailure(new AlreadyConnectedException());
+            handlePathEvents(conn);
+
+            if (handleWritableStreams(conn)) {
+                // Some data was produced, let's flush.
+                flushParent();
+            }
+
+            datagramReadable = true;
+            streamReadable = true;
+
+            recvDatagram(conn);
+            recvStream(conn);
+        }
+    }
+
+    private void handlePathEvents(QuicheQuicConnection conn) {
+        long event;
+        while (!conn.isFreed() && (event = Quiche.quiche_conn_path_event_next(conn.address())) > 0) {
+            try {
+                int type = Quiche.quiche_path_event_type(event);
+
+                if (type == Quiche.QUICHE_PATH_EVENT_NEW) {
+                    Object[] ret = Quiche.quiche_path_event_new(event);
+                    InetSocketAddress local = (InetSocketAddress) ret[0];
+                    InetSocketAddress peer = (InetSocketAddress) ret[1];
+                    pipeline().fireUserEventTriggered(new QuicPathEvent.New(local, peer));
+                } else if (type == Quiche.QUICHE_PATH_EVENT_VALIDATED) {
+                    Object[] ret = Quiche.quiche_path_event_validated(event);
+                    InetSocketAddress local = (InetSocketAddress) ret[0];
+                    InetSocketAddress peer = (InetSocketAddress) ret[1];
+                    pipeline().fireUserEventTriggered(new QuicPathEvent.Validated(local, peer));
+                } else if (type == Quiche.QUICHE_PATH_EVENT_FAILED_VALIDATION) {
+                    Object[] ret = Quiche.quiche_path_event_failed_validation(event);
+                    InetSocketAddress local = (InetSocketAddress) ret[0];
+                    InetSocketAddress peer = (InetSocketAddress) ret[1];
+                    pipeline().fireUserEventTriggered(new QuicPathEvent.FailedValidation(local, peer));
+                } else if (type == Quiche.QUICHE_PATH_EVENT_CLOSED) {
+                    Object[] ret = Quiche.quiche_path_event_closed(event);
+                    InetSocketAddress local = (InetSocketAddress) ret[0];
+                    InetSocketAddress peer = (InetSocketAddress) ret[1];
+                    pipeline().fireUserEventTriggered(new QuicPathEvent.Closed(local, peer));
+                } else if (type == Quiche.QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID) {
+                    Object[] ret = Quiche.quiche_path_event_reused_source_connection_id(event);
+                    Long seq = (Long) ret[0];
+                    InetSocketAddress localOld = (InetSocketAddress) ret[1];
+                    InetSocketAddress peerOld = (InetSocketAddress) ret[2];
+                    InetSocketAddress local = (InetSocketAddress) ret[3];
+                    InetSocketAddress peer = (InetSocketAddress) ret[4];
+                    pipeline().fireUserEventTriggered(
+                            new QuicPathEvent.ReusedSourceConnectionId(seq, localOld, peerOld, local, peer));
+                } else if (type == Quiche.QUICHE_PATH_EVENT_PEER_MIGRATED) {
+                    Object[] ret = Quiche.quiche_path_event_peer_migrated(event);
+                    InetSocketAddress local = (InetSocketAddress) ret[0];
+                    InetSocketAddress peer = (InetSocketAddress) ret[1];
+                    pipeline().fireUserEventTriggered(new QuicPathEvent.PeerMigrated(local, peer));
+                }
+            } finally {
+                Quiche.quiche_path_event_free(event);
+            }
+        }
+    }
+
+    private void runAllTaskRecv(QuicheQuicConnection conn, Runnable task) {
+        sslTaskExecutor.execute(decorateTaskRecv(conn, task));
+    }
+
+    private Runnable decorateTaskRecv(QuicheQuicConnection conn, Runnable task) {
+        return () -> {
+            try {
+                runAll(conn, task);
+            } finally {
+                // Move back to the EventLoop.
+                executor().execute(() -> {
+                    if (!conn.isFreed()) {
+                        processReceived(conn);
+
+                        // Call connection send to continue handshake if needed.
+                        if (connectionSend(conn) != SendResult.NONE) {
+                            forceFlushParent();
+                        }
+
+                        freeIfClosed();
+                    }
+                });
+            }
+        };
+    }
+    void recv() {
+        QuicheQuicConnection conn = connection;
+        if ((reantranceGuard & IN_RECV) != 0 || conn.isFreed()) {
+            return;
+        }
+
+        long connAddr = conn.address();
+        // Check if we can read anything yet.
+        if (!Quiche.quiche_conn_is_established(connAddr) &&
+                !Quiche.quiche_conn_is_in_early_data(connAddr)) {
+            return;
+        }
+
+        reantranceGuard |= IN_RECV;
+        try {
+            recvDatagram(conn);
+            recvStream(conn);
+        } finally {
+            fireChannelReadCompleteIfNeeded();
+            reantranceGuard &= ~IN_RECV;
+        }
+    }
+
+    private void recvStream(QuicheQuicConnection conn) {
+        if (conn.isFreed()) {
+            return;
+        }
+        long connAddr = conn.address();
+        long readableIterator = Quiche.quiche_conn_readable(connAddr);
+        int totalReadable = 0;
+        if (readableIterator != -1) {
+            try {
+                // For streams we always process all streams when at least on read was requested.
+                if (recvStreamPending && streamReadable) {
+                    for (;;) {
+                        int readable = Quiche.quiche_stream_iter_next(
+                                readableIterator, readableStreams);
+                        for (int i = 0; i < readable; i++) {
+                            long streamId = readableStreams[i];
+                            QuicheQuicStreamChannel streamChannel = streams.get(streamId);
+                            if (streamChannel == null) {
+                                recvStreamPending = false;
+                                fireChannelReadCompletePending = true;
+                                streamChannel = addNewStreamChannel(streamId);
+                                streamChannel.readable();
+                                pipeline().fireChannelRead(streamChannel);
+                            } else {
+                                streamChannel.readable();
+                            }
+                        }
+                        if (readable < readableStreams.length) {
+                            // We did consume all readable streams.
+                            streamReadable = false;
+                            break;
+                        }
+                        if (readable > 0) {
+                            totalReadable += readable;
+                        }
+                    }
+                }
+            } finally {
+                Quiche.quiche_stream_iter_free(readableIterator);
+            }
+            readableStreams = growIfNeeded(readableStreams, totalReadable);
+        }
+    }
+
+    private void recvDatagram(QuicheQuicConnection conn) {
+        if (!supportsDatagram) {
+            return;
+        }
+        while (recvDatagramPending && datagramReadable && !conn.isFreed()) {
+            @SuppressWarnings("deprecation")
+            RecvByteBufAllocator.Handle recvHandle = recvBufAllocHandle();
+            recvHandle.reset(config());
+
+            int numMessagesRead = 0;
+            do {
+                long connAddr = conn.address();
+                int len = Quiche.quiche_conn_dgram_recv_front_len(connAddr);
+                if (len == Quiche.QUICHE_ERR_DONE) {
+                    datagramReadable = false;
                     return;
                 }
 
-                connectAddress = (QuicConnectionAddress) remote;
-                connectPromise = channelPromise;
+                ByteBuf datagramBuffer = alloc().directBuffer(len);
+                recvHandle.attemptedBytesRead(datagramBuffer.writableBytes());
+                int writerIndex = datagramBuffer.writerIndex();
+                long memoryAddress = Quiche.writerMemoryAddress(datagramBuffer);
 
-                // Schedule connect timeout.
-                int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = executor().schedule(() -> {
-                        ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone()
-                                && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remote))) {
-                            close(newPromise());
-                        }
-                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                }
-
-                connectPromise.addListener((ChannelFuture future) -> {
-                    if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel(false);
-                        }
-                        connectPromise = null;
-                        close(newPromise());
-                    }
-                });
-
-                parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
-                        .addListener(f -> {
-                            ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
-                            if (connectPromise != null && !f.isSuccess()) {
-                                connectPromise.tryFailure(f.cause());
-                                // close everything after notify about failure.
-                                unsafe().closeForcibly();
-                            }
-                        });
-                return;
-            }
-
-            channelPromise.setFailure(new UnsupportedOperationException());
-        }
-
-        private void fireConnectCloseEventIfNeeded(QuicheQuicConnection conn) {
-            if (connectionCloseEvent == null && !conn.isFreed()) {
-                connectionCloseEvent = Quiche.quiche_conn_peer_error(conn.address());
-                if (connectionCloseEvent != null) {
-                    pipeline().fireUserEventTriggered(connectionCloseEvent);
-                }
-            }
-        }
-
-        void connectionRecv(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer) {
-            QuicheQuicConnection conn = QuicheQuicChannel.this.connection;
-            if (conn.isFreed()) {
-                return;
-            }
-            int bufferReadable = buffer.readableBytes();
-            if (bufferReadable == 0) {
-                // Nothing to do here. Just return...
-                // See also https://github.com/cloudflare/quiche/issues/817
-                return;
-            }
-
-            reantranceGuard |= IN_RECV;
-            boolean close = false;
-            try {
-                ByteBuf tmpBuffer = null;
-                // We need to make a copy if the buffer is read only as recv(...) may modify the input buffer as well.
-                // See https://docs.rs/quiche/0.6.0/quiche/struct.Connection.html#method.recv
-                if (buffer.isReadOnly()) {
-                    tmpBuffer = alloc().directBuffer(buffer.readableBytes());
-                    tmpBuffer.writeBytes(buffer);
-                    buffer = tmpBuffer;
-                }
-                long memoryAddress = Quiche.readerMemoryAddress(buffer);
-
-                ByteBuffer recvInfo = conn.nextRecvInfo();
-                QuicheRecvInfo.setRecvInfo(recvInfo, sender, recipient);
-
-                remote = sender;
-                local = recipient;
-
-                try {
-                    do  {
-                        // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
-                        int res = Quiche.quiche_conn_recv(conn.address(), memoryAddress, bufferReadable,
-                                Quiche.memoryAddressWithPosition(recvInfo));
-                        final boolean done;
-                        if (res < 0) {
-                            done = true;
-                            if (res != Quiche.QUICHE_ERR_DONE) {
-                                close = Quiche.shouldClose(res);
-                                Exception e = Quiche.convertToException(res);
-                                if (tryFailConnectPromise(e)) {
-                                    break;
-                                }
-                                fireExceptionEvents(conn, e);
-                            }
-                        } else {
-                            done = false;
-                        }
-                        // Process / schedule all tasks that were created.
-                        Runnable task = conn.sslTask();
-                        if (task != null) {
-                            if (runTasksDirectly()) {
-                                // Consume all tasks
-                                do {
-                                    task.run();
-                                } while ((task = conn.sslTask()) != null);
-                                processReceived(conn);
-                            } else {
-                                runAllTaskRecv(conn, task);
-                            }
-                        } else {
-                            processReceived(conn);
-                        }
-
-                        if (done) {
-                            break;
-                        }
-                        memoryAddress += res;
-                        bufferReadable -= res;
-                    } while (bufferReadable > 0 && !conn.isFreed());
-                } finally {
-                    buffer.skipBytes((int) (memoryAddress - Quiche.readerMemoryAddress(buffer)));
-                    if (tmpBuffer != null) {
-                        tmpBuffer.release();
-                    }
-                }
-                if (close) {
-                    // Let's close now as there is no way to recover
-                    unsafe().close(newPromise());
-                }
-            } finally {
-                reantranceGuard &= ~IN_RECV;
-            }
-        }
-
-        private void processReceived(QuicheQuicConnection conn) {
-            // Handle pending channelActive if needed.
-            if (handlePendingChannelActive(conn)) {
-                // Connection was closed right away.
-                return;
-            }
-
-            notifyAboutHandshakeCompletionIfNeeded(conn, null);
-            fireConnectCloseEventIfNeeded(conn);
-
-            if (conn.isFreed()) {
-                return;
-            }
-
-            long connAddr = conn.address();
-            if (Quiche.quiche_conn_is_established(connAddr) ||
-                    Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                long uniLeftOld = uniStreamsLeft;
-                long bidiLeftOld = bidiStreamsLeft;
-                // Only fetch new stream info when we used all our credits
-                if (uniLeftOld == 0 || bidiLeftOld == 0) {
-                    long uniLeft = Quiche.quiche_conn_peer_streams_left_uni(connAddr);
-                    long bidiLeft = Quiche.quiche_conn_peer_streams_left_bidi(connAddr);
-                    uniStreamsLeft = uniLeft;
-                    bidiStreamsLeft = bidiLeft;
-                    if (uniLeftOld != uniLeft || bidiLeftOld != bidiLeft) {
-                        pipeline().fireUserEventTriggered(QuicStreamLimitChangedEvent.INSTANCE);
-                    }
-                }
-
-                handlePathEvents(conn);
-
-                if (handleWritableStreams(conn)) {
-                    // Some data was produced, let's flush.
-                    flushParent();
-                }
-
-                datagramReadable = true;
-                streamReadable = true;
-
-                recvDatagram(conn);
-                recvStream(conn);
-            }
-        }
-
-        private void handlePathEvents(QuicheQuicConnection conn) {
-            long event;
-            while (!conn.isFreed() && (event = Quiche.quiche_conn_path_event_next(conn.address())) > 0) {
-                try {
-                    int type = Quiche.quiche_path_event_type(event);
-
-                    if (type == Quiche.QUICHE_PATH_EVENT_NEW) {
-                        Object[] ret = Quiche.quiche_path_event_new(event);
-                        InetSocketAddress local = (InetSocketAddress) ret[0];
-                        InetSocketAddress peer = (InetSocketAddress) ret[1];
-                        pipeline().fireUserEventTriggered(new QuicPathEvent.New(local, peer));
-                    } else if (type == Quiche.QUICHE_PATH_EVENT_VALIDATED) {
-                        Object[] ret = Quiche.quiche_path_event_validated(event);
-                        InetSocketAddress local = (InetSocketAddress) ret[0];
-                        InetSocketAddress peer = (InetSocketAddress) ret[1];
-                        pipeline().fireUserEventTriggered(new QuicPathEvent.Validated(local, peer));
-                    } else if (type == Quiche.QUICHE_PATH_EVENT_FAILED_VALIDATION) {
-                        Object[] ret = Quiche.quiche_path_event_failed_validation(event);
-                        InetSocketAddress local = (InetSocketAddress) ret[0];
-                        InetSocketAddress peer = (InetSocketAddress) ret[1];
-                        pipeline().fireUserEventTriggered(new QuicPathEvent.FailedValidation(local, peer));
-                    } else if (type == Quiche.QUICHE_PATH_EVENT_CLOSED) {
-                        Object[] ret = Quiche.quiche_path_event_closed(event);
-                        InetSocketAddress local = (InetSocketAddress) ret[0];
-                        InetSocketAddress peer = (InetSocketAddress) ret[1];
-                        pipeline().fireUserEventTriggered(new QuicPathEvent.Closed(local, peer));
-                    } else if (type == Quiche.QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID) {
-                        Object[] ret = Quiche.quiche_path_event_reused_source_connection_id(event);
-                        Long seq = (Long) ret[0];
-                        InetSocketAddress localOld = (InetSocketAddress) ret[1];
-                        InetSocketAddress peerOld = (InetSocketAddress) ret[2];
-                        InetSocketAddress local = (InetSocketAddress) ret[3];
-                        InetSocketAddress peer = (InetSocketAddress) ret[4];
-                        pipeline().fireUserEventTriggered(
-                                new QuicPathEvent.ReusedSourceConnectionId(seq, localOld, peerOld, local, peer));
-                    } else if (type == Quiche.QUICHE_PATH_EVENT_PEER_MIGRATED) {
-                        Object[] ret = Quiche.quiche_path_event_peer_migrated(event);
-                        InetSocketAddress local = (InetSocketAddress) ret[0];
-                        InetSocketAddress peer = (InetSocketAddress) ret[1];
-                        pipeline().fireUserEventTriggered(new QuicPathEvent.PeerMigrated(local, peer));
-                    }
-                } finally {
-                    Quiche.quiche_path_event_free(event);
-                }
-            }
-        }
-
-        private void runAllTaskRecv(QuicheQuicConnection conn, Runnable task) {
-            sslTaskExecutor.execute(decorateTaskRecv(conn, task));
-        }
-
-        private Runnable decorateTaskRecv(QuicheQuicConnection conn, Runnable task) {
-            return () -> {
-                try {
-                    runAll(conn, task);
-                } finally {
-                    // Move back to the EventLoop.
-                    executor().execute(() -> {
-                        if (!conn.isFreed()) {
-                            processReceived(conn);
-
-                            // Call connection send to continue handshake if needed.
-                            if (connectionSend(conn) != SendResult.NONE) {
-                                forceFlushParent();
-                            }
-
-                            freeIfClosed();
-                        }
-                    });
-                }
-            };
-        }
-        void recv() {
-            QuicheQuicConnection conn = connection;
-            if ((reantranceGuard & IN_RECV) != 0 || conn.isFreed()) {
-                return;
-            }
-
-            long connAddr = conn.address();
-            // Check if we can read anything yet.
-            if (!Quiche.quiche_conn_is_established(connAddr) &&
-                    !Quiche.quiche_conn_is_in_early_data(connAddr)) {
-                return;
-            }
-
-            reantranceGuard |= IN_RECV;
-            try {
-                recvDatagram(conn);
-                recvStream(conn);
-            } finally {
-                fireChannelReadCompleteIfNeeded();
-                reantranceGuard &= ~IN_RECV;
-            }
-        }
-
-        private void recvStream(QuicheQuicConnection conn) {
-            if (conn.isFreed()) {
-                return;
-            }
-            long connAddr = conn.address();
-            long readableIterator = Quiche.quiche_conn_readable(connAddr);
-            int totalReadable = 0;
-            if (readableIterator != -1) {
-                try {
-                    // For streams we always process all streams when at least on read was requested.
-                    if (recvStreamPending && streamReadable) {
-                        for (;;) {
-                            int readable = Quiche.quiche_stream_iter_next(
-                                    readableIterator, readableStreams);
-                            for (int i = 0; i < readable; i++) {
-                                long streamId = readableStreams[i];
-                                QuicheQuicStreamChannel streamChannel = streams.get(streamId);
-                                if (streamChannel == null) {
-                                    recvStreamPending = false;
-                                    fireChannelReadCompletePending = true;
-                                    streamChannel = addNewStreamChannel(streamId);
-                                    streamChannel.readable();
-                                    pipeline().fireChannelRead(streamChannel);
-                                } else {
-                                    streamChannel.readable();
-                                }
-                            }
-                            if (readable < readableStreams.length) {
-                                // We did consume all readable streams.
-                                streamReadable = false;
-                                break;
-                            }
-                            if (readable > 0) {
-                                totalReadable += readable;
-                            }
-                        }
-                    }
-                } finally {
-                    Quiche.quiche_stream_iter_free(readableIterator);
-                }
-                readableStreams = growIfNeeded(readableStreams, totalReadable);
-            }
-        }
-
-        private void recvDatagram(QuicheQuicConnection conn) {
-            if (!supportsDatagram) {
-                return;
-            }
-            while (recvDatagramPending && datagramReadable && !conn.isFreed()) {
-                @SuppressWarnings("deprecation")
-                RecvByteBufAllocator.Handle recvHandle = recvBufAllocHandle();
-                recvHandle.reset(config());
-
-                int numMessagesRead = 0;
-                do {
-                    long connAddr = conn.address();
-                    int len = Quiche.quiche_conn_dgram_recv_front_len(connAddr);
-                    if (len == Quiche.QUICHE_ERR_DONE) {
+                int written = Quiche.quiche_conn_dgram_recv(connAddr,
+                        memoryAddress, datagramBuffer.writableBytes());
+                if (written < 0) {
+                    datagramBuffer.release();
+                    if (written == Quiche.QUICHE_ERR_DONE) {
+                        // We did consume all datagram packets.
                         datagramReadable = false;
-                        return;
+                        break;
                     }
-
-                    ByteBuf datagramBuffer = alloc().directBuffer(len);
-                    recvHandle.attemptedBytesRead(datagramBuffer.writableBytes());
-                    int writerIndex = datagramBuffer.writerIndex();
-                    long memoryAddress = Quiche.writerMemoryAddress(datagramBuffer);
-
-                    int written = Quiche.quiche_conn_dgram_recv(connAddr,
-                            memoryAddress, datagramBuffer.writableBytes());
-                    if (written < 0) {
-                        datagramBuffer.release();
-                        if (written == Quiche.QUICHE_ERR_DONE) {
-                            // We did consume all datagram packets.
-                            datagramReadable = false;
-                            break;
-                        }
-                        pipeline().fireExceptionCaught(Quiche.convertToException(written));
-                    }
-                    recvHandle.lastBytesRead(written);
-                    recvHandle.incMessagesRead(1);
-                    numMessagesRead++;
-                    datagramBuffer.writerIndex(writerIndex + written);
-                    recvDatagramPending = false;
-                    fireChannelReadCompletePending = true;
-
-                    pipeline().fireChannelRead(datagramBuffer);
-                } while (recvHandle.continueReading() && !conn.isFreed());
-                recvHandle.readComplete();
-
-                // Check if we produced any messages.
-                if (numMessagesRead > 0) {
-                    fireChannelReadCompleteIfNeeded();
+                    pipeline().fireExceptionCaught(Quiche.convertToException(written));
                 }
+                recvHandle.lastBytesRead(written);
+                recvHandle.incMessagesRead(1);
+                numMessagesRead++;
+                datagramBuffer.writerIndex(writerIndex + written);
+                recvDatagramPending = false;
+                fireChannelReadCompletePending = true;
+
+                pipeline().fireChannelRead(datagramBuffer);
+            } while (recvHandle.continueReading() && !conn.isFreed());
+            recvHandle.readComplete();
+
+            // Check if we produced any messages.
+            if (numMessagesRead > 0) {
+                fireChannelReadCompleteIfNeeded();
             }
         }
+    }
 
-        private boolean handlePendingChannelActive(QuicheQuicConnection conn) {
-            if (conn.isFreed() || state == ChannelState.CLOSED) {
-                return true;
-            }
-            if (server) {
-                if (state == ChannelState.OPEN && Quiche.quiche_conn_is_established(conn.address())) {
-                    // We didn't notify before about channelActive... Update state and fire the event.
-                    state = ChannelState.ACTIVE;
-
-                    pipeline().fireChannelActive();
-                    notifyAboutHandshakeCompletionIfNeeded(conn, null);
-                    fireDatagramExtensionEvent(conn);
-                }
-            } else if (connectPromise != null && Quiche.quiche_conn_is_established(conn.address())) {
-                ChannelPromise promise = connectPromise;
-                connectPromise = null;
+    private boolean handlePendingChannelActive(QuicheQuicConnection conn) {
+        if (conn.isFreed() || state == ChannelState.CLOSED) {
+            return true;
+        }
+        if (server) {
+            if (state == ChannelState.OPEN && Quiche.quiche_conn_is_established(conn.address())) {
+                // We didn't notify before about channelActive... Update state and fire the event.
                 state = ChannelState.ACTIVE;
 
-                boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
                 notifyAboutHandshakeCompletionIfNeeded(conn, null);
                 fireDatagramExtensionEvent(conn);
-                if (!promiseSet) {
-                    fireConnectCloseEventIfNeeded(conn);
-                    this.close(newPromise());
-                    return true;
-                }
             }
-            return false;
-        }
+        } else if (connectPromise != null && Quiche.quiche_conn_is_established(conn.address())) {
+            Promise<Void> promise = connectPromise;
+            connectPromise = null;
+            state = ChannelState.ACTIVE;
 
-        private void fireDatagramExtensionEvent(QuicheQuicConnection conn) {
-            if (conn.isClosed()) {
-                return;
-            }
-            long connAddr = conn.address();
-            int len = Quiche.quiche_conn_dgram_max_writable_len(connAddr);
-            // QUICHE_ERR_DONE means the remote peer does not support the extension.
-            if (len != Quiche.QUICHE_ERR_DONE) {
-                pipeline().fireUserEventTriggered(new QuicDatagramExtensionEvent(len));
+            boolean promiseSet = promise.trySuccess(null);
+            notifyAboutHandshakeCompletionIfNeeded(conn, null);
+            fireDatagramExtensionEvent(conn);
+            if (!promiseSet) {
+                fireConnectCloseEventIfNeeded(conn);
+                this.close(newPromise());
+                return true;
             }
         }
+        return false;
+    }
 
-        private QuicheQuicStreamChannel addNewStreamChannel(long streamId) {
-            QuicheQuicStreamChannel streamChannel = new QuicheQuicStreamChannel(
-                    QuicheQuicChannel.this, streamId);
-            QuicheQuicStreamChannel old = streams.put(streamId, streamChannel);
-            assert old == null;
-            streamChannel.writable(streamCapacity(streamId));
-            return streamChannel;
+    private void fireDatagramExtensionEvent(QuicheQuicConnection conn) {
+        if (conn.isClosed()) {
+            return;
         }
+        long connAddr = conn.address();
+        int len = Quiche.quiche_conn_dgram_max_writable_len(connAddr);
+        // QUICHE_ERR_DONE means the remote peer does not support the extension.
+        if (len != Quiche.QUICHE_ERR_DONE) {
+            pipeline().fireUserEventTriggered(new QuicDatagramExtensionEvent(len));
+        }
+    }
+
+    private QuicheQuicStreamChannel addNewStreamChannel(long streamId) {
+        QuicheQuicStreamChannel streamChannel = new QuicheQuicStreamChannel(
+                QuicheQuicChannel.this, streamId);
+        QuicheQuicStreamChannel old = streams.put(streamId, streamChannel);
+        assert old == null;
+        streamChannel.writable(streamCapacity(streamId));
+        return streamChannel;
     }
 
     /**
@@ -2021,7 +1978,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             if (conn.isClosed()) {
                 cancel();
-                unsafe().close(newPromise());
+                ioTransport().close(newPromise());
                 return;
             }
             long nanos = Quiche.quiche_conn_timeout_as_nanos(conn.address());
@@ -2058,13 +2015,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
+    public void collectStats(Promise<QuicConnectionStats> promise) {
         if (executor().inEventLoop()) {
             collectStats0(promise);
         } else {
             executor().execute(() -> collectStats0(promise));
         }
-        return promise;
     }
 
     private void collectStats0(Promise<QuicConnectionStats> promise) {
@@ -2092,13 +2048,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise) {
+    public void collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise) {
         if (executor().inEventLoop()) {
             collectPathStats0(pathIdx, promise);
         } else {
             executor().execute(() -> collectPathStats0(pathIdx, promise));
         }
-        return promise;
     }
 
     private void collectPathStats0(int pathIdx, Promise<QuicConnectionPathStats> promise) {

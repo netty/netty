@@ -17,8 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -27,6 +26,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -90,25 +90,26 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         DatagramChannel sc = null;
 
         int attempts = 5;
-        ChannelFuture clientFuture;
+        Future<Channel> clientFuture;
         do {
             if (sc != null) {
                 sc.close().sync();
             }
-            sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).sync().channel();
+            sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).get();
 
-            assertEquals(iface, sc.config().getNetworkInterface());
-            assertInterfaceAddress(iface, sc.config().getInterface());
+            assertEquals(iface, sc.config().getOption(ChannelOption.IP_MULTICAST_IF));
+            assertInterfaceAddress(iface, sc.config().getOption(ChannelOption.IP_MULTICAST_ADDR));
 
-            InetSocketAddress addr = sc.localAddress();
+            InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
             cb.localAddress(addr.getPort());
             clientFuture = cb.bind().await();
         } while (!clientFuture.isSuccess() && --attempts > 0);
-        DatagramChannel cc = (DatagramChannel) clientFuture.sync().channel();
-        assertEquals(iface, cc.config().getNetworkInterface());
-        assertInterfaceAddress(iface, cc.config().getInterface());
+        DatagramChannel cc = (DatagramChannel) clientFuture.get();
+        assertEquals(iface, cc.config().getOption(ChannelOption.IP_MULTICAST_IF));
+        assertInterfaceAddress(iface, cc.config().getOption(ChannelOption.IP_MULTICAST_ADDR));
 
-        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), sc.localAddress().getPort());
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(),
+                ((InetSocketAddress) sc.localAddress()).getPort());
 
         cc.joinGroup(groupAddress, iface).sync();
 
@@ -125,17 +126,17 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
-        cc.config().setLoopbackModeDisabled(false);
-        sc.config().setLoopbackModeDisabled(false);
+        cc.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false);
+        sc.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false);
 
-        assertFalse(cc.config().isLoopbackModeDisabled());
-        assertFalse(sc.config().isLoopbackModeDisabled());
+        assertFalse(cc.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        assertFalse(sc.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
 
-        cc.config().setLoopbackModeDisabled(true);
-        sc.config().setLoopbackModeDisabled(true);
+        cc.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true);
+        sc.config().setOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED, true);
 
-        assertTrue(cc.config().isLoopbackModeDisabled());
-        assertTrue(sc.config().isLoopbackModeDisabled());
+        assertTrue(cc.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
+        assertTrue(sc.config().getOption(ChannelOption.IP_MULTICAST_LOOP_DISABLED));
 
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
@@ -151,12 +152,16 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         fail();
     }
 
-    @ChannelHandler.Sharable
     private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {

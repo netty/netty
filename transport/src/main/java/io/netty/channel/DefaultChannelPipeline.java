@@ -15,11 +15,12 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -41,6 +43,11 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
 public class DefaultChannelPipeline implements ChannelPipeline {
+
+    private static final AtomicLongFieldUpdater<DefaultChannelPipeline> TOTAL_PENDING_OUTBOUND_BYTES_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(DefaultChannelPipeline.class, "pendingOutboundBytes");
+
+    private volatile long pendingOutboundBytes;
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
@@ -60,9 +67,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
     final HeadContext head;
     final TailContext tail;
+    final boolean hasDisconnect;
 
     private final Channel channel;
-    private final ChannelFuture succeededFuture;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private volatile MessageSizeEstimator.Handle estimatorHandle;
@@ -84,15 +91,28 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      */
     private boolean registered;
 
-    protected DefaultChannelPipeline(Channel channel) {
+    protected DefaultChannelPipeline(Channel channel, boolean hasDisconnect, IoTransport transport) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
-        succeededFuture = new SucceededChannelFuture(channel, null);
+        this.hasDisconnect = hasDisconnect;
 
         tail = new TailContext(this);
-        head = new HeadContext(this);
+        head = new HeadContext(this, ObjectUtil.checkNotNull(transport, "transport"));
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    /*
+     * Called once the {@link #pendingOutboundBytes()} were changed.
+     *
+     * @param pendingOutboundBytes          the new {@link #pendingOutboundBytes()}.
+     */
+    protected void pendingOutboundBytesUpdated(long pendingOutboundBytes) {
+        // NOOP.
+    }
+
+    public final long pendingOutboundBytes() {
+        return TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.get(this);
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
@@ -488,15 +508,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private static void checkMultiplicity(ChannelHandler handler) {
-        if (handler instanceof ChannelHandlerAdapter) {
-            ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
-            if (!h.isSharable() && h.added) {
-                throw new ChannelPipelineException(
-                        h.getClass().getName() +
-                        " is not a @Sharable handler, so can't be added or removed multiple times.");
-            }
-            h.added = true;
-        }
+        // TODO: Do we want to add some kind of support for this again ?
     }
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
@@ -506,7 +518,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             boolean removed = false;
             try {
                 atomicRemoveFromHandlerList(ctx);
-                ctx.callHandlerRemoved();
+                ctx.callHandlerRemoved(t);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -529,7 +541,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
-            ctx.callHandlerRemoved();
+            ctx.callHandlerRemoved(null);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
@@ -706,7 +718,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireChannelRegistered() {
+    public final void fireChannelRegistered() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRegistered(head);
@@ -716,11 +728,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelRegistered);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelUnregistered() {
+    public final void fireChannelUnregistered() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelUnregistered(head);
@@ -730,7 +741,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelUnregistered);
         }
-        return this;
+    }
+
+    @Override
+    public final void fireChannelShutdown(ChannelShutdownType type) {
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelShutdown(head, type);
+            } else {
+                head.fireChannelShutdown(type);
+            }
+        } else {
+            head.executor().execute(() -> head.fireChannelShutdown(type));
+        }
     }
 
     /**
@@ -802,7 +825,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireChannelActive() {
+    public final void fireChannelActive() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelActive(head);
@@ -812,11 +835,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelActive);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelInactive() {
+    public final void fireChannelInactive() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelInactive(head);
@@ -826,11 +848,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelInactive);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireExceptionCaught(Throwable cause) {
+    public final void fireExceptionCaught(Throwable cause) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.exceptionCaught(head, cause);
@@ -840,11 +861,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireExceptionCaught(cause));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireUserEventTriggered(Object event) {
+    public final void fireUserEventTriggered(Object event) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.userEventTriggered(head, event);
@@ -854,11 +874,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireUserEventTriggered(event));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelRead(Object msg) {
+    public final void fireChannelRead(Object msg) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRead(head, msg);
@@ -868,11 +887,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireChannelRead(msg));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelReadComplete() {
+    public final void fireChannelReadComplete() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelReadComplete(head);
@@ -882,11 +900,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelReadComplete);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelWritabilityChanged() {
+    public final void fireChannelWritabilityChanged() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelWritabilityChanged(head);
@@ -896,130 +913,112 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelWritabilityChanged);
         }
-        return this;
     }
 
     @Override
-    public final ChannelFuture register() {
+    public final Future<Void> register() {
         return tail.register();
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress) {
+    public final Future<Void> bind(SocketAddress localAddress) {
         return tail.bind(localAddress);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress) {
+    public final Future<Void> connect(SocketAddress remoteAddress) {
         return tail.connect(remoteAddress);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public final Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return tail.connect(remoteAddress, localAddress);
     }
 
     @Override
-    public final ChannelFuture disconnect() {
+    public final Future<Void> disconnect() {
         return tail.disconnect();
     }
 
     @Override
-    public final ChannelFuture close() {
+    public final Future<Void> close() {
         return tail.close();
     }
 
     @Override
-    public final ChannelFuture deregister() {
+    public final Future<Void> deregister() {
         return tail.deregister();
     }
 
     @Override
-    public final ChannelPipeline flush() {
+    public final void flush() {
         tail.flush();
-        return this;
     }
 
     @Override
-    public final ChannelFuture register(ChannelPromise promise) {
-        return tail.register(promise);
+    public final void register(Promise<Void> promise) {
+        tail.register(promise);
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return tail.bind(localAddress, promise);
+    public final void bind(SocketAddress localAddress, Promise<Void> promise) {
+        tail.bind(localAddress, promise);
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return tail.connect(remoteAddress, promise);
+    public final void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        tail.connect(remoteAddress, promise);
     }
 
     @Override
-    public final ChannelFuture connect(
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return tail.connect(remoteAddress, localAddress, promise);
+    public final void connect(
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        tail.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        return tail.disconnect(promise);
+    public final void disconnect(Promise<Void> promise) {
+        tail.disconnect(promise);
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
-        return tail.close(promise);
+    public final void close(Promise<Void> promise) {
+        tail.close(promise);
     }
 
     @Override
-    public final ChannelFuture deregister(final ChannelPromise promise) {
-        return tail.deregister(promise);
+    public final void deregister(final Promise<Void> promise) {
+        tail.deregister(promise);
     }
 
     @Override
-    public final ChannelPipeline read() {
+    public final void read() {
         tail.read();
-        return this;
     }
 
     @Override
-    public final ChannelFuture write(Object msg) {
+    public final Future<Void> write(Object msg) {
         return tail.write(msg);
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
-        return tail.write(msg, promise);
+    public final void write(Object msg, Promise<Void> promise) {
+        tail.write(msg, promise);
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return tail.writeAndFlush(msg, promise);
+    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+        tail.writeAndFlush(msg, promise);
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg) {
+    public final Future<Void> writeAndFlush(Object msg) {
         return tail.writeAndFlush(msg);
     }
 
     @Override
-    public final ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel);
-    }
-
-    @Override
-    public final ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel);
-    }
-
-    @Override
-    public final ChannelFuture newSucceededFuture() {
-        return succeededFuture;
-    }
-
-    @Override
-    public final ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel, null, cause);
+    public final void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        tail.shutdown(type, promise);
     }
 
     private void checkDuplicateName(String name) {
@@ -1117,7 +1116,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+     * in {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
      */
     protected void onUnhandledInboundException(Throwable cause) {
         try {
@@ -1191,23 +1190,43 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
+     * Called once a shutdown event hit the end of the {@link ChannelPipeline} without been handled by the user
+     * in {@link ChannelInboundHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownType)}.
+     */
+    protected void onUnhandledInboundChannelShutdown(ChannelShutdownType type) {
+    }
+
+    /**
      * Called once the {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledChannelWritabilityChanged() {
     }
 
-    protected void incrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.incrementPendingOutboundBytes(size);
+    private void updatePendingOutboundBytes(long delta) {
+        long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, delta);
+        if (pending < 0) {
+            closeTransport();
+            throw new IllegalStateException("pendingOutboundBytes overflowed, force closed transport.");
         }
+        pendingOutboundBytesUpdated(pending);
     }
 
-    protected void decrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.decrementPendingOutboundBytes(size);
+    final void incrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        updatePendingOutboundBytes(delta);
+    }
+
+    final void decrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        updatePendingOutboundBytes(-delta);
+    }
+
+    final void closeTransport() {
+        if (executor().inEventLoop()) {
+            head.close(head, newPromise());
+        }  else {
+            executor().execute(() ->  head.close(head, newPromise()));
         }
     }
 
@@ -1270,16 +1289,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void channelReadComplete(ChannelHandlerContext ctx) {
             onUnhandledInboundChannelReadComplete();
         }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            onUnhandledInboundChannelShutdown(type);
+        }
     }
 
     final class HeadContext extends AbstractChannelHandlerContext
             implements ChannelOutboundHandler, ChannelInboundHandler {
 
-        private final Unsafe unsafe;
+        private final IoTransport transport;
 
-        HeadContext(DefaultChannelPipeline pipeline) {
+        HeadContext(DefaultChannelPipeline pipeline, IoTransport transport) {
             super(pipeline, HEAD_NAME, HeadContext.class);
-            unsafe = pipeline.channel().unsafe();
+            this.transport = transport;
             setAddComplete();
         }
 
@@ -1299,71 +1323,69 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            ChannelPromise registerPromise = newPromise();
+        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+            Promise<Void> registerPromise = newPromise();
             registerPromise.addListener(f -> {
                 if (f.isSuccess()) {
-                    // Clear any cached executors from prior event loop registrations.
-                    AbstractChannelHandlerContext context = tail;
-                    do {
-                        context.contextExecutor = null;
-                        context = context.prev;
-                    } while (context != null);
-
                     // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                    // user may already fire events through the pipeline in the ChannelFutureListener that the user
+                    // user may already fire events through the pipeline in the FutureListener that the user
                     // attached the the original promise.
                     invokeHandlerAddedIfNeeded();
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 } else {
                     promise.setFailure(f.cause());
                 }
             });
-            unsafe.register(registerPromise);
+            transport.register(registerPromise);
         }
 
         @Override
         public void bind(
-                ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-            unsafe.bind(localAddress, promise);
+                ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+            transport.bind(localAddress, promise);
         }
 
         @Override
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                ChannelPromise promise) {
-            unsafe.connect(remoteAddress, localAddress, promise);
+                Promise<Void> promise) {
+            transport.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.disconnect(promise);
+        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+            transport.disconnect(promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.close(promise);
+        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+            transport.close(promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.deregister(promise);
+        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+            transport.deregister(promise);
         }
 
         @Override
         public void read(ChannelHandlerContext ctx) {
-            unsafe.beginRead();
+            transport.read();
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-            unsafe.write(msg, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            transport.write(msg, promise);
         }
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
-            unsafe.flush();
+            transport.flush();
+        }
+
+        @Override
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
+            transport.shutdown(type, promise);
         }
 
         @Override
@@ -1425,6 +1447,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) {
             ctx.fireChannelWritabilityChanged();
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            ctx.fireChannelShutdown(type);
         }
     }
 

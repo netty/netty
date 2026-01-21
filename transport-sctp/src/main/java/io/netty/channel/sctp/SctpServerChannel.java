@@ -15,9 +15,9 @@
  */
 package io.netty.channel.sctp;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ServerChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
@@ -29,14 +29,28 @@ import java.util.Set;
  * <p>
  * Multi-homing address binding/unbinding can done through bindAddress/unbindAddress methods.
  * </p>
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link ServerChannel},
+ * {@link SctpServerChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_BACKLOG}</td>
+ * </tr><tr>
+ * <td>{@link SctpChannelOption#SCTP_NODELAY}</td>
+ * </tr>
+ * </table>
  */
 public interface SctpServerChannel extends ServerChannel {
-
-    /**
-     * Returns the {@link SctpServerChannelConfig} configuration of the channel.
-     */
-    @Override
-    SctpServerChannelConfig config();
 
     /**
      * Return the (primary) local address of the SCTP server channel.
@@ -61,27 +75,35 @@ public interface SctpServerChannel extends ServerChannel {
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel must be bound and yet to be connected.
      */
-    ChannelFuture bindAddress(InetAddress localAddress);
+    default Future<Void> bindAddress(InetAddress localAddress) {
+        Promise<Void> promise = newPromise();
+        bindAddress(localAddress, promise);
+        return promise;
+    }
 
     /**
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel must be bound and yet to be connected.
-     *
-     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
+     * <p>
+     * Will notify the given {@link Promise} and return a {@link Future}
      */
-    ChannelFuture bindAddress(InetAddress localAddress, ChannelPromise promise);
+    void bindAddress(InetAddress localAddress, Promise<Void> promise);
 
     /**
-     *  Unbind the address from channel's multi-homing address list.
-     *  The address should be added already in multi-homing address list.
+     * Unbind the address from channel's multi-homing address list.
+     * The address should be added already in multi-homing address list.
      */
-    ChannelFuture unbindAddress(InetAddress localAddress);
+    default Future<Void> unbindAddress(InetAddress localAddress) {
+        Promise<Void> promise = newPromise();
+        unbindAddress(localAddress, promise);
+        return promise;
+    }
 
     /**
-     *  Unbind the address from channel's multi-homing address list.
-     *  The address should be added already in multi-homing address list.
-     *
-     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
+     * Unbind the address from channel's multi-homing address list.
+     * The address should be added already in multi-homing address list.
+     * <p>
+     * Will notify the given {@link Promise} and return a {@link Future}
      */
-    ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise promise);
+    void unbindAddress(InetAddress localAddress, Promise<Void> promise);
 }

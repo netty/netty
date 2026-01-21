@@ -424,8 +424,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
-    <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.82</bouncycastle.version>
+    <bouncycastle.version>1.83</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -492,7 +491,6 @@
     <module>codec-base</module>
     <module>codec-compression</module>
     <module>codec-protobuf</module>
-    <module>codec-marshalling</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-haproxy</module>
@@ -569,14 +567,6 @@
         <version>1.2.0</version>
       </dependency>
 
-      <!-- JBoss Marshalling - completely optional -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
       <dependency>
@@ -652,9 +642,9 @@
         <version>1.2.0</version>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.8.0</version>
+        <version>1.10.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -855,20 +845,6 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Test dependencies for jboss marshalling encoder/decoder -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-serial</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-river</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-
       <!-- Test dependencies for microbench -->
       <dependency>
         <groupId>com.google.caliper</groupId>
@@ -928,7 +904,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.15.RELEASE</version>
+        <version>1.0.16.RELEASE</version>
       </dependency>
 
       <dependency>
@@ -1059,15 +1035,25 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.class.externalClassExposedInAPI</code>
-                  <new>interface org.jboss.marshalling.ClassNameTransformer</new>
-                  <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
+                  <code>java.class.modifierChanged</code>
+                  <old>final class io.netty.channel.ManualIoEventLoop</old>
+                  <new>class io.netty.channel.ManualIoEventLoop</new>
+                  <justification>ManualIoEventLoop was made non-final to allow subclassing.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.class.externalClassExposedInAPI</code>
-                  <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
-                  <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
+                  <code>java.method.nowFinal</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Several methods were intentionally made final; these API changes are acceptable for
+                   this class.
+                  </justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Final methods added to an inheritable class are intentional and safe in this context.
+                  </justification>
                 </item>
               </differences>
             </revapi.differences>

@@ -22,7 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -39,6 +39,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
@@ -300,50 +301,60 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.register(ctx, promise);
         }
 
         @Override
         public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                         ChannelPromise promise) throws Exception {
+                         Promise<Void> promise) {
             codec.bind(ctx, localAddress, promise);
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                            ChannelPromise promise) throws Exception {
+                            Promise<Void> promise) {
             codec.connect(ctx, remoteAddress, localAddress, promise);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.disconnect(ctx, promise);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.close(ctx, promise);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
             codec.deregister(ctx, promise);
         }
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             codec.read(ctx);
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             codec.write(ctx, msg, promise);
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx) throws Exception {
+        public void flush(ChannelHandlerContext ctx) {
             codec.flush(ctx);
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            ctx.fireChannelShutdown(type);
+        }
+
+        @Override
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
+            codec.shutdown(ctx, type, promise);
         }
     }
 }

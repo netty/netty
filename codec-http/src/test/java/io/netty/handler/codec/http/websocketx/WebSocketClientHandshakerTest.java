@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -41,6 +40,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -212,7 +212,7 @@ public abstract class WebSocketClientHandshakerTest {
         URI uri = URI.create("/ws");
         EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
         final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
-        final ChannelFuture handshakeFuture = handshaker.handshake(channel);
+        final Future<Void> handshakeFuture = handshaker.handshake(channel);
 
         assertFalse(handshakeFuture.isSuccess());
         assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
@@ -228,7 +228,7 @@ public abstract class WebSocketClientHandshakerTest {
         HttpHeaders headers = new DefaultHttpHeaders();
         headers.set(HttpHeaderNames.HOST, "localhost:80");
         final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, headers, false, true);
-        final ChannelFuture handshakeFuture = handshaker.handshake(channel);
+        final Future<Void> handshakeFuture = handshaker.handshake(channel);
 
         assertFalse(handshakeFuture.isSuccess());
         assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
@@ -497,7 +497,7 @@ public abstract class WebSocketClientHandshakerTest {
                 .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                 .set(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
-        ChannelFuture handshakeFuture = clientHandshaker.processHandshake(channel, response);
+        Future<Void> handshakeFuture = clientHandshaker.processHandshake(channel, response);
         assertFalse(handshakeFuture.isDone());
         assertNotNull(channel.pipeline().get("handshaker"));
 

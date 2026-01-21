@@ -21,9 +21,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -39,6 +38,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -84,7 +84,7 @@ public class NativeTransportTest {
     private void mySetupClientHostnameValidation(IoHandlerFactory ioHandlerFactory,
                                                  Class<? extends ServerSocketChannel> serverSocketChannelFactory,
                                                  Class<? extends SocketChannel> socketChannelFactory
-    ) throws InterruptedException {
+    ) throws Exception {
 
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
@@ -96,13 +96,13 @@ public class NativeTransportTest {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
 
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (msg instanceof ByteBuf) {
                             ctx.write(msg);
                         } else {
-                            super.channelRead(ctx, msg);
+                            ctx.fireChannelRead(msg);
                         }
                     }
                     @Override
@@ -121,7 +121,7 @@ public class NativeTransportTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (msg instanceof ByteBuf) {
@@ -137,12 +137,12 @@ public class NativeTransportTest {
             }
         });
 
-        Channel serverChannel = sb.bind(new InetSocketAddress("localhost", 0)).sync().channel();
+        Channel serverChannel = sb.bind(new InetSocketAddress("localhost", 0)).get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress("localhost", port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress("localhost", port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        Channel clientChannel = ccf.channel();
+        Channel clientChannel = ccf.getNow();
         clientChannel.writeAndFlush(Unpooled.copiedBuffer("hello", StandardCharsets.UTF_8)).sync();
 
         while (received.isEmpty()) {

@@ -37,7 +37,7 @@ import io.netty.util.internal.ObjectUtil;
  *             response.stream(http2HeadersFrame.stream());
  *             ctx.write(response);
  *
- *             ChannelFuture sendFileFuture = ctx.writeAndFlush(new Http2DataChunkedInput(
+ *             Future<Void> sendFileFuture = ctx.writeAndFlush(new Http2DataChunkedInput(
  *                     new ChunkedFile(new File(("/home/meow/cats.mp4"))), http2HeadersFrame.stream()));
  *         }
  *     }

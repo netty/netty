@@ -16,14 +16,14 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -61,7 +61,7 @@ public class HttpClientUpgradeHandlerTest {
         }
     }
 
-    private static final class UserEventCatcher extends ChannelInboundHandlerAdapter {
+    private static final class UserEventCatcher implements ChannelInboundHandler {
         private Object evt;
 
         public Object getUserEvent() {
@@ -83,14 +83,14 @@ public class HttpClientUpgradeHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         final HttpRequest afterUpgradeMessage =
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
-        final ChannelPromise promise = channel.newPromise();
-        channel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+        final Promise<Void> promise = channel.newPromise();
+        channel.pipeline().addFirst(new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
                     ctx.writeAndFlush(afterUpgradeMessage, promise);
                 }
-                super.userEventTriggered(ctx, evt);
+                ctx.fireUserEventTriggered(evt);
             }
         });
 

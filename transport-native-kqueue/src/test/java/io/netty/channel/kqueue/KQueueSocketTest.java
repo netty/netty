@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.tests.SocketTest;
@@ -71,7 +72,7 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
             byte [] addr = new byte[64];
             int clientFd = s1.accept(addr);
             assertNotEquals(-1, clientFd);
-            PeerCredentials pc = new BsdSocket(clientFd).getPeerCredentials();
+            PeerCredentials pc = new BsdSocket(clientFd, SocketProtocolFamily.UNIX).getPeerCredentials();
             assertNotEquals(0, pc.pid());
             assertNotEquals(0, s2.getPeerCredentials().pid());
             // Server socket FDs should not have pid field set:

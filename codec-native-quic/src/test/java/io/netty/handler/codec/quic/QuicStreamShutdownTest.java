@@ -18,12 +18,13 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutputShutdownException;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -47,17 +48,15 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
         Channel channel = null;
         CountDownLatch latch = new CountDownLatch(2);
         try {
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
-                    new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandler() {
+                },
+                    new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            ChannelFutureListener futureListener = new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture channelFuture) {
-                                    Throwable cause = channelFuture.cause();
-                                    if (cause instanceof ChannelOutputShutdownException) {
-                                        latch.countDown();
-                                    }
+                            FutureListener<Void> futureListener = f -> {
+                                Throwable cause = f.cause();
+                                if (cause instanceof ChannelOutputShutdownException) {
+                                    latch.countDown();
                                 }
                             };
                             ByteBuf buffer = (ByteBuf) msg;
@@ -67,16 +66,16 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                     });
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandler() { })
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter()).sync().getNow();
-            streamChannel.shutdownInput().sync();
-            assertTrue(streamChannel.isInputShutdown());
+                    new ChannelInboundHandler() { }).get();
+            streamChannel.shutdown(ChannelShutdownType.newInbound()).sync();
+            assertTrue(streamChannel.isShutdown(ChannelShutdownDirection.Inbound));
             streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
 
             latch.await();
@@ -96,39 +95,34 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
         CountDownLatch latch = new CountDownLatch(2);
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
         try {
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
-                    new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandler() { },
+                    new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
-                            streamChannel.shutdownInput().addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) throws Exception {
-                                    ByteBuf buffer = (ByteBuf) msg;
-                                    if (!f.isSuccess()) {
-                                        errorRef.compareAndSet(null, f.cause());
-                                        latch.countDown();
-                                        buffer.release();
-                                    } else {
-                                        ctx.writeAndFlush(buffer).addListener(new ChannelFutureListener() {
-                                            @Override
-                                            public void operationComplete(ChannelFuture channelFuture) {
+                            streamChannel.shutdown(ChannelShutdownType.newInbound())
+                                    .addListener(f -> {
+                                        ByteBuf buffer = (ByteBuf) msg;
+                                        if (!f.isSuccess()) {
+                                            errorRef.compareAndSet(null, f.cause());
+                                            latch.countDown();
+                                            buffer.release();
+                                        } else {
+                                            ctx.writeAndFlush(buffer).addListener(channelFuture -> {
                                                 if (!channelFuture.isSuccess()) {
                                                     errorRef.compareAndSet(null, channelFuture.cause());
                                                 }
                                                 latch.countDown();
-                                            }
-                                        });
-                                    }
-                                }
-                            });
+                                            });
+                                        }
+                                    });
                         }
                     });
 
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandler() { })
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -142,7 +136,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                                 ctx.close();
                             }
                         }
-                    }).sync().getNow();
+                    }).get();
 
             streamChannel.writeAndFlush(Unpooled.buffer().writeInt(4)).sync();
 
@@ -170,35 +164,33 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
         AtomicLong applicationErrorCode = new AtomicLong(-1);
         try {
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
-                    new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandler() { },
+                    new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             ByteBuf buffer = (ByteBuf) msg;
                             buffer.release();
-                            streamChannel.shutdownOutput(100).addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) {
-                                    if (!f.isSuccess()) {
-                                        errorRef.compareAndSet(null, f.cause());
-                                    }
-                                    latch.countDown();
-                                }
-                            });
+                            streamChannel.shutdown(ChannelShutdownType.newOutbound(100))
+                                    .addListener(f -> {
+                                        if (!f.isSuccess()) {
+                                            errorRef.compareAndSet(null, f.cause());
+                                        }
+                                        latch.countDown();
+                                    });
                         }
                     });
 
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandler() { })
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter() {
+                    new ChannelInboundHandler() {
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             if (cause instanceof QuicStreamResetException) {
@@ -209,7 +201,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             }
                             latch.countDown();
                         }
-                    }).sync().getNow();
+                    }).get();
 
             streamChannel.writeAndFlush(Unpooled.buffer().writeInt(4)).sync();
 

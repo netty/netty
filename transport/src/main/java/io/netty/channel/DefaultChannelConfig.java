@@ -22,7 +22,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.ChannelOption.ALLOCATOR;
 import static io.netty.channel.ChannelOption.AUTO_CLOSE;
@@ -32,8 +31,6 @@ import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RECVBUF_ALLOCATOR;
-import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
-import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -50,10 +47,6 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     private static final AtomicIntegerFieldUpdater<DefaultChannelConfig> AUTOREAD_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(DefaultChannelConfig.class, "autoRead");
-    private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultChannelConfig.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
-
     protected final Channel channel;
 
     private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
@@ -68,14 +61,22 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
-    private volatile boolean pinEventExecutor = true;
 
     public DefaultChannelConfig(Channel channel) {
-        this(channel, new AdaptiveRecvByteBufAllocator());
+        this(channel, new AdaptiveRecvByteBufAllocator(), 16);
+    }
+
+    public DefaultChannelConfig(Channel channel, int defaultMaxMessagesPerRead) {
+        this(channel, new AdaptiveRecvByteBufAllocator(), defaultMaxMessagesPerRead);
     }
 
     protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
-        setRecvByteBufAllocator(allocator, channel.metadata());
+        setRecvByteBufAllocator(allocator, 16);
+        this.channel = channel;
+    }
+
+    protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator, int defaultMaxMessagesPerRead) {
+        setRecvByteBufAllocator(allocator, defaultMaxMessagesPerRead);
         this.channel = channel;
     }
 
@@ -85,8 +86,8 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RECVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
+                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RECVBUF_ALLOCATOR,
+                WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
                 MAX_MESSAGES_PER_WRITE);
     }
 
@@ -142,12 +143,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == AUTO_CLOSE) {
             return (T) Boolean.valueOf(isAutoClose());
         }
-        if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
-            return (T) Integer.valueOf(getWriteBufferHighWaterMark());
-        }
-        if (option == WRITE_BUFFER_LOW_WATER_MARK) {
-            return (T) Integer.valueOf(getWriteBufferLowWaterMark());
-        }
         if (option == WRITE_BUFFER_WATER_MARK) {
             return (T) getWriteBufferWaterMark();
         }
@@ -179,10 +174,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setAutoRead((Boolean) value);
         } else if (option == AUTO_CLOSE) {
             setAutoClose((Boolean) value);
-        } else if (option == WRITE_BUFFER_HIGH_WATER_MARK) {
-            setWriteBufferHighWaterMark((Integer) value);
-        } else if (option == WRITE_BUFFER_LOW_WATER_MARK) {
-            setWriteBufferLowWaterMark((Integer) value);
         } else if (option == WRITE_BUFFER_WATER_MARK) {
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
@@ -311,14 +302,13 @@ public class DefaultChannelConfig implements ChannelConfig {
     /**
      * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
      * @param allocator the allocator to set.
-     * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
-     * is of type {@link MaxMessagesRecvByteBufAllocator}.
+     * @param maxMessagesPerRead Used to set the default number of messages to read if
+     * {@code allocator} is of type {@link MaxMessagesRecvByteBufAllocator}.
      */
-    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, int maxMessagesPerRead) {
         checkNotNull(allocator, "allocator");
-        checkNotNull(metadata, "metadata");
         if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
-            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(maxMessagesPerRead);
         }
         setRecvByteBufAllocator(allocator);
     }
@@ -354,52 +344,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     public ChannelConfig setAutoClose(boolean autoClose) {
         this.autoClose = autoClose;
         return this;
-    }
-
-    @Override
-    public int getWriteBufferHighWaterMark() {
-        return writeBufferWaterMark.high();
-    }
-
-    @Override
-    public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
-        for (;;) {
-            WriteBufferWaterMark waterMark = writeBufferWaterMark;
-            if (writeBufferHighWaterMark < waterMark.low()) {
-                throw new IllegalArgumentException(
-                        "writeBufferHighWaterMark cannot be less than " +
-                                "writeBufferLowWaterMark (" + waterMark.low() + "): " +
-                                writeBufferHighWaterMark);
-            }
-            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
-                    new WriteBufferWaterMark(waterMark.low(), writeBufferHighWaterMark, false))) {
-                return this;
-            }
-        }
-    }
-
-    @Override
-    public int getWriteBufferLowWaterMark() {
-        return writeBufferWaterMark.low();
-    }
-
-    @Override
-    public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
-        for (;;) {
-            WriteBufferWaterMark waterMark = writeBufferWaterMark;
-            if (writeBufferLowWaterMark > waterMark.high()) {
-                throw new IllegalArgumentException(
-                        "writeBufferLowWaterMark cannot be greater than " +
-                                "writeBufferHighWaterMark (" + waterMark.high() + "): " +
-                                writeBufferLowWaterMark);
-            }
-            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
-                    new WriteBufferWaterMark(writeBufferLowWaterMark, waterMark.high(), false))) {
-                return this;
-            }
-        }
     }
 
     @Override

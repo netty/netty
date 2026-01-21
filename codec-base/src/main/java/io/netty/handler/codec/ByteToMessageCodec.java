@@ -16,9 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -31,7 +32,7 @@ import java.util.List;
  * Be aware that sub-classes of {@link ByteToMessageCodec} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  */
-public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
+public abstract class ByteToMessageCodec<I> implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder;
@@ -70,7 +71,6 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(boolean preferDirect) {
-        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.find(this, ByteToMessageCodec.class, "I");
         encoder = new Encoder(preferDirect);
     }
@@ -84,9 +84,13 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
-        ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
         encoder = new Encoder(preferDirect, outboundMessageType);
+    }
+
+    @Override
+    public final boolean isSharable() {
+        return false;
     }
 
     /**
@@ -104,7 +108,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         encoder.write(ctx, msg, promise);
     }
 

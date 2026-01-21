@@ -16,11 +16,9 @@
 package io.netty.handler.flush;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -172,12 +170,7 @@ public class FlushConsolidationHandlerTest {
     public void testResend() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         final EmbeddedChannel channel = newChannel(flushCount, true);
-        channel.writeAndFlush(1L).addListener(new GenericFutureListener<Future<? super Void>>() {
-            @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
-                channel.writeAndFlush(1L);
-            }
-        });
+        channel.writeAndFlush(1L).addListener(future -> channel.writeAndFlush(1L));
         channel.flushOutbound();
         assertEquals(1L, (Long) channel.readOutbound());
         assertEquals(1L, (Long) channel.readOutbound());
@@ -187,15 +180,15 @@ public class FlushConsolidationHandlerTest {
 
     private static EmbeddedChannel newChannel(final AtomicInteger flushCount, boolean consolidateWhenNoReadInProgress) {
         return new EmbeddedChannel(
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelOutboundHandler() {
                     @Override
-                    public void flush(ChannelHandlerContext ctx) throws Exception {
+                    public void flush(ChannelHandlerContext ctx) {
                         flushCount.incrementAndGet();
                         ctx.flush();
                     }
                 },
                 new FlushConsolidationHandler(EXPLICIT_FLUSH_AFTER_FLUSHES, consolidateWhenNoReadInProgress),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         ctx.writeAndFlush(msg);

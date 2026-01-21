@@ -16,7 +16,7 @@
 package io.netty.example.mqtt.heartBeat;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -27,6 +27,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.Future;
 
 import java.util.concurrent.TimeUnit;
 
@@ -53,10 +54,10 @@ public final class MqttHeartBeatBroker {
                 }
             });
 
-            ChannelFuture f = b.bind(1883).sync();
+            Future<Channel> f = b.bind(1883).sync();
             System.out.println("Broker initiated...");
 
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

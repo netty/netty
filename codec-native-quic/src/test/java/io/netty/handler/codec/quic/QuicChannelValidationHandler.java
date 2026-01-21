@@ -16,11 +16,11 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class QuicChannelValidationHandler extends ChannelInboundHandlerAdapter {
+class QuicChannelValidationHandler implements ChannelInboundHandler {
     private volatile boolean wasActive;
 
     private volatile QuicConnectionAddress localAddress;

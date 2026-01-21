@@ -84,11 +84,6 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return id;
     }
 
-    @Override
-    protected EventExecutor executor() {
-        return super.executor();
-    }
-
     public long deadlineNanos() {
         return deadlineNanos;
     }
@@ -156,7 +151,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                 return;
             }
             if (periodNanos == 0) {
-                if (setUncancellableInternal()) {
+                if (setUncancellable()) {
                     V result = runTask();
                     setSuccessInternal(result);
                 }
@@ -223,5 +218,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     @Override
     public void priorityQueueIndex(DefaultPriorityQueue<?> queue, int i) {
         queueIndex = i;
+    }
+
+    @Override
+    boolean isCancellationSupported() {
+        return true;
     }
 }

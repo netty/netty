@@ -81,12 +81,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
             if (earlyPromise.isDone()) {
                 transferResult(earlyPromise, promise);
             } else {
-                earlyPromise.addListener(new FutureListener<U>() {
-                    @Override
-                    public void operationComplete(Future<U> f) throws Exception {
-                        transferResult(f, promise);
-                    }
-                });
+                earlyPromise.addListener(f -> transferResult(f, promise));
             }
         } else {
             try {
@@ -103,12 +98,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 if (promise.isDone()) {
                     resolveMap.remove(inetHost);
                 } else {
-                    promise.addListener(new FutureListener<U>() {
-                        @Override
-                        public void operationComplete(Future<U> f) throws Exception {
-                            resolveMap.remove(inetHost);
-                        }
-                    });
+                    promise.addListener((FutureListener<U>) f -> resolveMap.remove(inetHost));
                 }
             }
         }
@@ -116,7 +106,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
         return promise;
     }
 
-    private static <T> void transferResult(Future<T> src, Promise<T> dst) {
+    private static <T> void transferResult(Future<? extends T> src, Promise<T> dst) {
         if (src.isSuccess()) {
             dst.trySuccess(src.getNow());
         } else {

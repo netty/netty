@@ -22,6 +22,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -45,7 +47,7 @@ import java.net.SocketAddress;
  * All I/O operations in Netty are asynchronous.  It means any I/O calls will
  * return immediately with no guarantee that the requested I/O operation has
  * been completed at the end of the call.  Instead, you will be returned with
- * a {@link ChannelFuture} instance which will notify you when the requested I/O
+ * a {@link Future} instance which will notify you when the requested I/O
  * operation has succeeded, failed, or canceled.
  *
  * <h3>Channels are hierarchical</h3>
@@ -70,7 +72,7 @@ import java.net.SocketAddress;
  *
  * <h3>Release resources</h3>
  * <p>
- * It is important to call {@link #close()} or {@link #close(ChannelPromise)} to release all
+ * It is important to call {@link #close()} or {@link ChannelOutboundInvoker#close(Promise)} to release all
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
@@ -116,9 +118,12 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     boolean isActive();
 
     /**
-     * Return the {@link ChannelMetadata} of the {@link Channel} which describe the nature of the {@link Channel}.
+     * Returns {@code true} if the given {@link ChannelShutdownDirection} is shutdown, {@code false} otherwise.
+     *
+     * @param direction     the {@link ChannelShutdownDirection}
+     * @return              {@code true} if shutdown.
      */
-    ChannelMetadata metadata();
+    boolean isShutdown(ChannelShutdownDirection direction);
 
     /**
      * Returns the local address where this channel is bound to.  The returned
@@ -148,10 +153,18 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     SocketAddress remoteAddress();
 
     /**
-     * Returns the {@link ChannelFuture} which will be notified when this
+     * Returns the {@link Future} which will be notified when this
      * channel is closed.  This method always returns the same future instance.
      */
-    ChannelFuture closeFuture();
+    Future<Void> closeFuture();
+
+    /**
+     * Returns {@code true} if this {@link Channel} has any pending bytes stored that were not written
+     * to the underlying transport yet, {@code false} otherwise.
+     *
+     * @return  if there are any pending bytes.
+     */
+    boolean hasPendingBytes();
 
     /**
      * Returns {@code true} if and only if the I/O thread will perform the
@@ -162,10 +175,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * {@link WriteBufferWaterMark} can be used to configure on which condition
      * the write buffer would cause this channel to change writability.
      */
-    default boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        return buf != null && buf.isWritable();
-    }
+    boolean isWritable();
 
     /**
      * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
@@ -173,12 +183,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *
      * {@link WriteBufferWaterMark} can be used to define writability settings.
      */
-    default long bytesBeforeUnwritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeUnwritable() : 0;
-    }
+    long bytesBeforeUnwritable();
 
     /**
      * Get how many bytes must be drained from underlying buffers until {@link #isWritable()} returns {@code true}.
@@ -186,17 +191,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *
      * {@link WriteBufferWaterMark} can be used to define writability settings.
      */
-    default long bytesBeforeWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
-    }
-
-    /**
-     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
-     */
-    Unsafe unsafe();
+    long bytesBeforeWritable();
 
     /**
      * Return the assigned {@link ChannelPipeline}.
@@ -242,223 +237,127 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Channel read() {
+    default void read() {
         pipeline().read();
-        return this;
     }
 
     @Override
-    default Channel flush() {
+    default void flush() {
         pipeline().flush();
-        return this;
     }
 
     @Override
-    default ChannelFuture writeAndFlush(Object msg) {
+    default Future<Void> writeAndFlush(Object msg) {
         return pipeline().writeAndFlush(msg);
     }
 
     @Override
-    default ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return pipeline().writeAndFlush(msg, promise);
+    default void writeAndFlush(Object msg, Promise<Void> promise) {
+        pipeline().writeAndFlush(msg, promise);
     }
 
     @Override
-    default ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline().write(msg, promise);
+    default void write(Object msg, Promise<Void> promise) {
+        pipeline().write(msg, promise);
     }
 
     @Override
-    default ChannelFuture write(Object msg) {
+    default Future<Void> write(Object msg) {
         return pipeline().write(msg);
     }
 
     @Override
-    default ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline().deregister(promise);
+    default void deregister(Promise<Void> promise) {
+        pipeline().deregister(promise);
     }
 
     @Override
-    default ChannelFuture close(ChannelPromise promise) {
-        return pipeline().close(promise);
+    default void close(Promise<Void> promise) {
+        pipeline().close(promise);
     }
 
     @Override
-    default ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline().disconnect(promise);
+    default void disconnect(Promise<Void> promise) {
+        pipeline().disconnect(promise);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
+    default void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return pipeline().connect(remoteAddress, promise);
+    default void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, promise);
     }
 
     @Override
-    default ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline().bind(localAddress, promise);
+    default void bind(SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().bind(localAddress, promise);
     }
 
     @Override
-    default ChannelFuture deregister() {
+    default Future<Void> deregister() {
         return pipeline().deregister();
     }
 
     @Override
-    default ChannelFuture close() {
+    default Future<Void> close() {
         return pipeline().close();
     }
 
     @Override
-    default ChannelFuture disconnect() {
+    default Future<Void> disconnect() {
         return pipeline().disconnect();
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return pipeline().connect(remoteAddress, localAddress);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress) {
+    default Future<Void> connect(SocketAddress remoteAddress) {
         return pipeline().connect(remoteAddress);
     }
 
     @Override
-    default ChannelFuture bind(SocketAddress localAddress) {
+    default Future<Void> bind(SocketAddress localAddress) {
         return pipeline().bind(localAddress);
     }
 
     @Override
-    default ChannelPromise newPromise() {
+    default <T> Promise<T> newPromise() {
         return pipeline().newPromise();
     }
 
     @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
+    default <T> Future<T> newSucceededFuture(T result) {
+        return pipeline().newSucceededFuture(result);
     }
 
     @Override
-    default ChannelFuture newSucceededFuture() {
-        return pipeline().newSucceededFuture();
-    }
-
-    @Override
-    default ChannelFuture newFailedFuture(Throwable cause) {
+    default <T> Future<T> newFailedFuture(Throwable cause) {
         return pipeline().newFailedFuture(cause);
     }
 
     @Override
-    default ChannelFuture register() {
+    default Future<Void> register() {
         return pipeline().register();
     }
 
     @Override
-    default ChannelFuture register(ChannelPromise promise) {
-        return pipeline().register(promise);
+    default void register(Promise<Void> promise) {
+        pipeline().register(promise);
     }
 
-    /**
-     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
-     * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
-     * following methods:
-     * <ul>
-     *   <li>{@link #localAddress()}</li>
-     *   <li>{@link #remoteAddress()}</li>
-     *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(ChannelPromise)}</li>
-     *   <li>{@link #deregister(ChannelPromise)}</li>
-     * </ul>
-     */
-    interface Unsafe {
+    @Override
+    default void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        pipeline().shutdown(type, promise);
+    }
 
-        /**
-         * Return the assigned {@link RecvByteBufAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
-         * receiving data.
-         */
-        RecvByteBufAllocator.Handle recvBufAllocHandle();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound local or
-         * {@code null} if none.
-         */
-        SocketAddress localAddress();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound remote or
-         * {@code null} if none is bound yet.
-         */
-        SocketAddress remoteAddress();
-
-        /**
-         * Register the {@link Channel} of the {@link ChannelPromise} and notify
-         * the {@link ChannelPromise} once the registration was complete.
-         */
-        void register(ChannelPromise promise);
-
-        /**
-         * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
-         * it once its done.
-         */
-        void bind(SocketAddress localAddress, ChannelPromise promise);
-
-        /**
-         * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
-         * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
-         * pass {@code null} to it.
-         *
-         * The {@link ChannelPromise} will get notified once the connect operation was complete.
-         */
-        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
-
-        /**
-         * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelPromise} once the
-         * operation was complete.
-         */
-        void disconnect(ChannelPromise promise);
-
-        /**
-         * Close the {@link Channel} of the {@link ChannelPromise} and notify the {@link ChannelPromise} once the
-         * operation was complete.
-         */
-        void close(ChannelPromise promise);
-
-        /**
-         * Closes the {@link Channel} immediately without firing any events.  Probably only useful
-         * when registration attempt failed.
-         */
-        void closeForcibly();
-
-        /**
-         * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-         * {@link ChannelPromise} once the operation was complete.
-         */
-        void deregister(ChannelPromise promise);
-
-        /**
-         * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
-         * {@link ChannelPipeline}.  If there's already a pending read operation, this method does nothing.
-         */
-        void beginRead();
-
-        /**
-         * Schedules a write operation.
-         */
-        void write(Object msg, ChannelPromise promise);
-
-        /**
-         * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
-         */
-        void flush();
-
-        /**
-         * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
-         */
-        ChannelOutboundBuffer outboundBuffer();
+    @Override
+    default Future<Void> shutdown(ChannelShutdownType type) {
+        return pipeline().shutdown(type);
     }
 }

@@ -19,13 +19,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
@@ -47,6 +44,7 @@ import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -648,12 +646,12 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     private void boostrapEnv(int clientLatchCount, int serverLatchCount, int settingsLatchCount)
-                throws InterruptedException {
+                throws Exception {
         boostrapEnv(clientLatchCount, clientLatchCount, serverLatchCount, serverLatchCount, settingsLatchCount);
     }
 
     private void boostrapEnv(int clientLatchCount, int clientLatchCount2, int serverLatchCount, int serverLatchCount2,
-            int settingsLatchCount) throws InterruptedException {
+            int settingsLatchCount) throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         clientDelegator = null;
         serverDelegator = null;
@@ -717,7 +715,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch, clientLatch2);
                 p.addLast(clientDelegator);
-                p.addLast(new ChannelHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         Http2Exception e = getEmbeddedHttp2Exception(cause);
@@ -725,11 +723,11 @@ public class InboundHttp2ToHttpAdapterTest {
                             clientException = e;
                             clientLatch.countDown();
                         } else {
-                            super.exceptionCaught(ctx, cause);
+                            ctx.fireExceptionCaught(cause);
                         }
                     }
                 });
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
@@ -738,7 +736,7 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                         clientHandlersAddedLatch.countDown();
@@ -747,11 +745,11 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress(getClass())).sync().channel();
+        serverChannel = sb.bind(new LocalAddress(getClass())).get();
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+        Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
         assertTrue(clientHandlersAddedLatch.await(5, SECONDS));
@@ -795,7 +793,7 @@ public class InboundHttp2ToHttpAdapterTest {
         return clientChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseClient() {
+    private Promise<Void> newPromiseClient() {
         return ctxClient().newPromise();
     }
 
@@ -803,7 +801,7 @@ public class InboundHttp2ToHttpAdapterTest {
         return serverConnectedChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseServer() {
+    private Promise<Void> newPromiseServer() {
         return ctxServer().newPromise();
     }
 

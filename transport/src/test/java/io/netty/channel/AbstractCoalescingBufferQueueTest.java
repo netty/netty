@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -47,14 +48,14 @@ public class AbstractCoalescingBufferQueueTest {
     }
 
     private static void testDecrementAll(boolean write) {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 ReferenceCountUtil.release(msg);
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
-        }, new ChannelHandlerAdapter() { });
-        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+        }, new ChannelHandler() { });
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {
             @Override
             protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
                 return composeIntoComposite(alloc, cumulation, next);
@@ -67,12 +68,9 @@ public class AbstractCoalescingBufferQueueTest {
         };
 
         final byte[] bytes = new byte[128];
-        queue.add(Unpooled.wrappedBuffer(bytes), new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                queue.add(Unpooled.wrappedBuffer(bytes));
-                assertEquals(bytes.length, queue.readableBytes());
-            }
+        queue.add(Unpooled.wrappedBuffer(bytes), future -> {
+            queue.add(Unpooled.wrappedBuffer(bytes));
+            assertEquals(bytes.length, queue.readableBytes());
         });
 
         assertEquals(bytes.length, queue.readableBytes());
@@ -97,7 +95,7 @@ public class AbstractCoalescingBufferQueueTest {
     public void testKeepStateConsistentOnError() {
         final IllegalReferenceCountException exception = new IllegalReferenceCountException();
         final EmbeddedChannel channel = new EmbeddedChannel();
-        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {
             @Override
             protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
                 // Simulate throwing an IllegalReferenceCountException.
@@ -116,11 +114,11 @@ public class AbstractCoalescingBufferQueueTest {
             }
         };
 
-        ChannelPromise promise = channel.newPromise();
+        Promise<Void> promise = channel.newPromise();
         ByteBuf buffer = Unpooled.buffer().writeLong(0);
         queue.add(buffer, promise);
 
-        ChannelPromise promise2 = channel.newPromise();
+        Promise<Void> promise2 = channel.newPromise();
         ByteBuf buffer2 = Unpooled.buffer().writeLong(0);
         queue.add(buffer2, promise2);
 

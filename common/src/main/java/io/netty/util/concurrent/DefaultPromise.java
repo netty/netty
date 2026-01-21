@@ -61,15 +61,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
-    private final EventExecutor executor;
 
     /**
-     * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
+     * One or more listeners. Can be a {@link FutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
      * <p>
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
-    private GenericFutureListener<? extends Future<?>> listener;
+    private FutureListener<?> listener;
     private DefaultFutureListeners listeners;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
@@ -95,7 +94,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      */
     public DefaultPromise(EventExecutor executor) {
-        this.executor = checkNotNull(executor, "executor");
+       super(checkNotNull(executor, "executor"));
     }
 
     /**
@@ -103,7 +102,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     protected DefaultPromise() {
         // only for subclasses
-        executor = null;
+        super(null);
     }
 
     @Override
@@ -132,8 +131,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return setFailure0(cause);
     }
 
-    @Override
-    public boolean setUncancellable() {
+    boolean isCancellationSupported() {
+        return false;
+    }
+
+    final boolean setUncancellable() {
         if (RESULT_UPDATER.compareAndSet(this, null, UNCANCELLABLE)) {
             return true;
         }
@@ -149,7 +151,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean isCancellable() {
-        return result == null;
+        return isCancellationSupported() && result == null;
     }
 
     private static final class LeanCancellationException extends CancellationException {
@@ -188,7 +190,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+    public Promise<V> addListener(FutureListener<? super V> listener) {
         checkNotNull(listener, "listener");
 
         synchronized (this) {
@@ -203,47 +205,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
-
-        synchronized (this) {
-            for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
-                if (listener == null) {
-                    break;
-                }
-                addListener0(listener);
-            }
-        }
-
-        if (isDone()) {
-            notifyListeners();
-        }
-
-        return this;
-    }
-
-    @Override
-    public Promise<V> removeListener(final GenericFutureListener<? extends Future<? super V>> listener) {
+    public Promise<V> removeListener(FutureListener<? super V> listener) {
         checkNotNull(listener, "listener");
 
         synchronized (this) {
             removeListener0(listener);
-        }
-
-        return this;
-    }
-
-    @Override
-    public Promise<V> removeListeners(final GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
-
-        synchronized (this) {
-            for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
-                if (listener == null) {
-                    break;
-                }
-                removeListener0(listener);
-            }
         }
 
         return this;
@@ -395,7 +361,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
+        if (isCancellationSupported() &&
+                RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
             }
@@ -459,18 +426,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return buf;
     }
 
-    /**
-     * Get the executor used to notify listeners when this promise is complete.
-     * <p>
-     * It is assumed this executor will protect against {@link StackOverflowError} exceptions.
-     * The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
-     * depth exceeds a threshold.
-     * @return The executor used to notify listeners when this promise is complete.
-     */
-    protected EventExecutor executor() {
-        return executor;
-    }
-
     protected void checkDeadLock() {
         EventExecutor e = executor();
         if (e != null && e.inEventLoop()) {
@@ -488,7 +443,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @param listener the listener to notify.
      */
     protected static void notifyListener(
-            EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> listener) {
+            EventExecutor eventExecutor, final Future<?> future, final FutureListener<?> listener) {
         notifyListenerWithStackOverFlowProtection(
                 checkNotNull(eventExecutor, "eventExecutor"),
                 checkNotNull(future, "future"),
@@ -526,7 +481,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     private static void notifyListenerWithStackOverFlowProtection(final EventExecutor executor,
                                                                   final Future<?> future,
-                                                                  final GenericFutureListener<?> listener) {
+                                                                  final FutureListener<?> listener) {
         if (executor.inEventLoop()) {
             final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
             final int stackDepth = threadLocals.futureListenerStackDepth();
@@ -550,7 +505,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListenersNow() {
-        GenericFutureListener listener;
+        FutureListener<?> listener;
         DefaultFutureListeners listeners;
         synchronized (this) {
             listener = this.listener;
@@ -591,7 +546,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListeners0(DefaultFutureListeners listeners) {
-        GenericFutureListener<?>[] a = listeners.listeners();
+        FutureListener<?>[] a = listeners.listeners();
         int size = listeners.size();
         for (int i = 0; i < size; i ++) {
             notifyListener0(this, a[i]);
@@ -599,7 +554,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListener0(Future future, GenericFutureListener l) {
+    private static void notifyListener0(Future future, FutureListener l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
@@ -609,7 +564,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    private void addListener0(GenericFutureListener<? extends Future<? super V>> listener) {
+    private void addListener0(FutureListener<? super V> listener) {
         if (this.listener == null) {
             if (listeners == null) {
                 this.listener = listener;
@@ -623,7 +578,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    private void removeListener0(GenericFutureListener<? extends Future<? super V>> toRemove) {
+    private void removeListener0(FutureListener<? super V> toRemove) {
         if (listener == toRemove) {
             listener = null;
         } else if (listeners != null) {
@@ -736,125 +691,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 if (interrupted) {
                     Thread.currentThread().interrupt();
                 }
-            }
-        }
-    }
-
-    /**
-     * Notify all progressive listeners.
-     * <p>
-     * No attempt is made to ensure notification order if multiple calls are made to this method before
-     * the original invocation completes.
-     * <p>
-     * This will do an iteration over all listeners to get all of type {@link GenericProgressiveFutureListener}s.
-     * @param progress the new progress.
-     * @param total the total progress.
-     */
-    @SuppressWarnings("unchecked")
-    void notifyProgressiveListeners(final long progress, final long total) {
-        final Object listeners = progressiveListeners();
-        if (listeners == null) {
-            return;
-        }
-
-        final ProgressiveFuture<V> self = (ProgressiveFuture<V>) this;
-
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            if (listeners instanceof GenericProgressiveFutureListener[]) {
-                notifyProgressiveListeners0(
-                        self, (GenericProgressiveFutureListener<?>[]) listeners, progress, total);
-            } else {
-                notifyProgressiveListener0(
-                        self, (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners, progress, total);
-            }
-        } else {
-            if (listeners instanceof GenericProgressiveFutureListener[]) {
-                final GenericProgressiveFutureListener<?>[] array =
-                        (GenericProgressiveFutureListener<?>[]) listeners;
-                safeExecute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyProgressiveListeners0(self, array, progress, total);
-                    }
-                });
-            } else {
-                final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
-                        (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                safeExecute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyProgressiveListener0(self, l, progress, total);
-                    }
-                });
-            }
-        }
-    }
-
-    /**
-     * Returns a {@link GenericProgressiveFutureListener}, an array of {@link GenericProgressiveFutureListener}, or
-     * {@code null}.
-     */
-    private synchronized Object progressiveListeners() {
-        final GenericFutureListener listener = this.listener;
-        final DefaultFutureListeners listeners = this.listeners;
-        if (listener == null && listeners == null) {
-            // No listeners added
-            return null;
-        }
-
-        if (listeners != null) {
-            // Copy DefaultFutureListeners into an array of listeners.
-            DefaultFutureListeners dfl = listeners;
-            int progressiveSize = dfl.progressiveSize();
-            switch (progressiveSize) {
-                case 0:
-                    return null;
-                case 1:
-                    for (GenericFutureListener<?> l: dfl.listeners()) {
-                        if (l instanceof GenericProgressiveFutureListener) {
-                            return l;
-                        }
-                    }
-                    return null;
-            }
-
-            GenericFutureListener<?>[] array = dfl.listeners();
-            GenericProgressiveFutureListener<?>[] copy = new GenericProgressiveFutureListener[progressiveSize];
-            for (int i = 0, j = 0; j < progressiveSize; i ++) {
-                GenericFutureListener<?> l = array[i];
-                if (l instanceof GenericProgressiveFutureListener) {
-                    copy[j ++] = (GenericProgressiveFutureListener<?>) l;
-                }
-            }
-
-            return copy;
-        } else if (listener instanceof GenericProgressiveFutureListener) {
-            return listener;
-        } else {
-            // Only one listener was added and it's not a progressive listener.
-            return null;
-        }
-    }
-
-    private static void notifyProgressiveListeners0(
-            ProgressiveFuture<?> future, GenericProgressiveFutureListener<?>[] listeners, long progress, long total) {
-        for (GenericProgressiveFutureListener<?> l: listeners) {
-            if (l == null) {
-                break;
-            }
-            notifyProgressiveListener0(future, l, progress, total);
-        }
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyProgressiveListener0(
-            ProgressiveFuture future, GenericProgressiveFutureListener l, long progress, long total) {
-        try {
-            l.operationProgressed(future, progress, total);
-        } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("An exception was thrown by " + l.getClass().getName() + ".operationProgressed()", t);
             }
         }
     }

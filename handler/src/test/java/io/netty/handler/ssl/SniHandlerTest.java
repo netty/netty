@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
@@ -41,9 +42,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -157,7 +156,7 @@ public class SniHandlerTest {
             final AtomicReference<SslHandshakeCompletionEvent> evtRef =
                     new AtomicReference<SslHandshakeCompletionEvent>();
             SniHandler handler = new SniHandler(new DomainNameMappingBuilder<SslContext>(nettyContext).build());
-            final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SslHandshakeCompletionEvent) {
@@ -206,7 +205,7 @@ public class SniHandlerTest {
 
             final AtomicReference<SniCompletionEvent> evtRef = new AtomicReference<SniCompletionEvent>();
             SniHandler handler = new SniHandler(mapping);
-            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SniCompletionEvent) {
@@ -456,11 +455,11 @@ public class SniHandlerTest {
                     }
                 });
 
-                serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+                serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
-                ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+                Future<Channel> ccf = cb.connect(serverChannel.localAddress());
                 assertTrue(ccf.awaitUninterruptibly().isSuccess());
-                clientChannel = ccf.channel();
+                clientChannel = ccf.getNow();
 
                 assertTrue(serverAlpnDoneLatch.await(5, TimeUnit.SECONDS));
                 assertTrue(clientAlpnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -550,7 +549,7 @@ public class SniHandlerTest {
                             } finally {
                                 if (!success) {
                                     ReferenceCountUtil.safeRelease(sslContext);
-                                    releasePromise.cancel(true);
+                                    releasePromise.tryFailure(new IllegalStateException());
                                 }
                             }
                         }
@@ -563,7 +562,7 @@ public class SniHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addFirst(handler);
                         }
-                    }).bind(address).syncUninterruptibly().channel();
+                    }).bind(address).get();
 
                     sslContext = SslContextBuilder.forClient().sslProvider(provider)
                             .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -571,7 +570,7 @@ public class SniHandlerTest {
                     Bootstrap cb = new Bootstrap();
                     cc = cb.group(group).channel(LocalChannel.class).handler(new SslHandler(
                             sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1)))
-                            .connect(address).syncUninterruptibly().channel();
+                            .connect(address).get();
 
                     cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
                             .syncUninterruptibly();
@@ -722,7 +721,7 @@ public class SniHandlerTest {
 
         final AtomicReference<SniCompletionEvent> completionEventRef =
                 new AtomicReference<SniCompletionEvent>();
-        final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof SniCompletionEvent) {
@@ -772,7 +771,7 @@ public class SniHandlerTest {
 
         final AtomicReference<SniCompletionEvent> completionEventRef =
             new AtomicReference<SniCompletionEvent>();
-        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof SniCompletionEvent) {
@@ -810,7 +809,7 @@ public class SniHandlerTest {
             new AtomicReference<SniCompletionEvent>();
         final AtomicReference<SslHandshakeCompletionEvent> handshakeCompletionEventRef =
             new AtomicReference<SslHandshakeCompletionEvent>();
-        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof SniCompletionEvent) {

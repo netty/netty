@@ -21,16 +21,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -62,6 +61,8 @@ import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -99,7 +100,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("200"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -112,7 +113,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("100"));
-        assertFalse(ch.isOutputShutdown());
+        assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
@@ -142,7 +143,7 @@ public class Http3FrameToHttpObjectCodecTest {
             dataFrame.release();
         }
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -159,7 +160,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame trailersFrame = ch.readOutbound();
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -185,7 +186,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame trailersFrame = ch.readOutbound();
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -198,7 +199,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame headersFrame = ch.readOutbound();
         assertThat(headersFrame.headers().status().toString(), is("200"));
-        assertFalse(ch.isOutputShutdown());
+        assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
@@ -214,7 +215,7 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3DataFrame dataFrame = ch.readOutbound();
         try {
             assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
-            assertFalse(ch.isOutputShutdown());
+            assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
         } finally {
             dataFrame.release();
         }
@@ -228,7 +229,7 @@ public class Http3FrameToHttpObjectCodecTest {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         Http3DataFrame dataFrame = ch.readOutbound();
         try {
             assertThat(dataFrame.content().readableBytes(), is(0));
@@ -253,7 +254,7 @@ public class Http3FrameToHttpObjectCodecTest {
             dataFrame.release();
         }
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -275,7 +276,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         Http3HeadersFrame headerFrame = ch.readOutbound();
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -397,7 +398,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -423,7 +424,7 @@ public class Http3FrameToHttpObjectCodecTest {
             dataFrame.release();
         }
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -447,7 +448,7 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3HeadersFrame trailersFrame = ch.readOutbound();
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -479,7 +480,7 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3HeadersFrame trailersFrame = ch.readOutbound();
         assertThat(trailersFrame.headers().get("key").toString(), is("value"));
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -495,7 +496,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertFalse(ch.isOutputShutdown());
+        assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
@@ -514,7 +515,7 @@ public class Http3FrameToHttpObjectCodecTest {
         } finally {
             dataFrame.release();
         }
-        assertFalse(ch.isOutputShutdown());
+        assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertThat(ch.readOutbound(), is(nullValue()));
         assertFalse(ch.finish());
     }
@@ -524,7 +525,7 @@ public class Http3FrameToHttpObjectCodecTest {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         Http3DataFrame dataFrame = ch.readOutbound();
         try {
             assertThat(dataFrame.content().readableBytes(), is(0));
@@ -549,7 +550,7 @@ public class Http3FrameToHttpObjectCodecTest {
             dataFrame.release();
         }
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -564,7 +565,7 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3HeadersFrame headerFrame = ch.readOutbound();
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
@@ -587,14 +588,14 @@ public class Http3FrameToHttpObjectCodecTest {
         Http3HeadersFrame headerFrame = ch.readOutbound();
         assertThat(headerFrame.headers().get("key").toString(), is("value"));
 
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(ch.finish());
     }
 
     @Test
     public void testEncodeFullPromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
+        Future<Void> writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
         ch.flushOutbound();
         assertTrue(writeFuture.isSuccess());
@@ -605,7 +606,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -613,9 +614,9 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeEmptyLastPromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
-        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent());
+        Future<Void> f2 = ch.writeOneOutbound(new DefaultLastHttpContent());
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
@@ -626,7 +627,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         Http3DataFrame dataFrame = ch.readOutbound();
         try {
@@ -641,9 +642,9 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeMultiplePromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
-        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent(
+        Future<Void> f2 = ch.writeOneOutbound(new DefaultLastHttpContent(
                 Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8))));
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
@@ -655,7 +656,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         Http3DataFrame dataFrame = ch.readOutbound();
         assertEquals("foo", dataFrame.content().toString(StandardCharsets.UTF_8));
@@ -666,12 +667,12 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeTrailersCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
         LastHttpContent last = new DefaultLastHttpContent(
                 Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8)));
         last.trailingHeaders().add("foo", "bar");
-        ChannelFuture f2 = ch.writeOneOutbound(last);
+        Future<Void> f2 = ch.writeOneOutbound(last);
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
@@ -682,7 +683,7 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("GET"));
         assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         Http3DataFrame dataFrame = ch.readOutbound();
         assertEquals("foo", dataFrame.content().toString(StandardCharsets.UTF_8));
@@ -752,11 +753,11 @@ public class Http3FrameToHttpObjectCodecTest {
             }
         }
 
-        List<ChannelPromise> framePromises = new ArrayList<>();
+        List<Promise<Void>> framePromises = new ArrayList<>();
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         framePromises.add(promise);
                         ctx.write(msg, ctx.newPromise());
                     }
@@ -764,7 +765,7 @@ public class Http3FrameToHttpObjectCodecTest {
                 new Http3FrameToHttpObjectCodec(false)
         );
 
-        ChannelFuture fullPromise = ch.writeOneOutbound(msg, ch.newPromise());
+        Future<Void> fullPromise = ch.writeOneOutbound(msg);
         ch.flushOutbound();
 
         if (headers) {
@@ -789,14 +790,14 @@ public class Http3FrameToHttpObjectCodecTest {
 
         assertFalse(fullPromise.isDone());
 
-        assertFalse(ch.isOutputShutdown());
-        for (ChannelPromise framePromise : framePromises) {
-            framePromise.trySuccess();
+        assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
+        for (Promise<Void> framePromise : framePromises) {
+            framePromise.trySuccess(null);
         }
         if (last) {
-            assertTrue(ch.isOutputShutdown());
+            assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
         } else {
-            assertFalse(ch.isOutputShutdown());
+            assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
         }
         assertTrue(fullPromise.isDone());
         assertFalse(ch.finish());
@@ -937,7 +938,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.authority().toString(), is("example.com"));
-        assertTrue(ch.isOutputShutdown());
+        assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
         assertFalse(ch.finish());
     }
@@ -958,7 +959,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
             SelfSignedCertificate cert = new SelfSignedCertificate();
 
-            Channel server = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            Channel server = bootstrap.bind("127.0.0.1", 0).get();
             server.pipeline().addLast(Http3.newQuicServerCodecBuilder()
                     .initialMaxData(10000000)
                     .initialMaxStreamDataBidirectionalLocal(1000000)
@@ -970,7 +971,7 @@ public class Http3FrameToHttpObjectCodecTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(new Http3ServerConnectionHandler(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new Http3ServerConnectionHandler(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     if (msg instanceof Http3HeadersFrame) {
@@ -981,9 +982,9 @@ public class Http3FrameToHttpObjectCodecTest {
                                                 ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
                                                 ctx.newPromise());
                                         // send a fin, this also flushes
-                                        ((DuplexChannel) ctx.channel()).shutdownOutput();
+                                        ctx.channel().shutdown(ChannelShutdownType.newOutbound());
                                     } else {
-                                        super.channelRead(ctx, msg);
+                                        ctx.fireChannelRead(msg);
                                     }
                                 }
                             }));
@@ -991,7 +992,7 @@ public class Http3FrameToHttpObjectCodecTest {
                     })
                     .build());
 
-            Channel client = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            Channel client = bootstrap.bind("127.0.0.1", 0).get();
             client.config().setAutoRead(true);
             client.pipeline().addLast(Http3.newQuicClientCodecBuilder()
                     .initialMaxData(10000000)
@@ -1019,7 +1020,7 @@ public class Http3FrameToHttpObjectCodecTest {
                 protected void initRequestStream(QuicStreamChannel ch) {
                     ch.pipeline()
                             .addLast(new Http3FrameToHttpObjectCodec(false))
-                            .addLast(new ChannelInboundHandlerAdapter() {
+                            .addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     received.put(msg);

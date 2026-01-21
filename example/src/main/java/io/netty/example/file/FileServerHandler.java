@@ -16,7 +16,6 @@
 
 package io.netty.example.file;
 
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -66,7 +65,7 @@ public class FileServerHandler extends SimpleChannelInboundHandler<String> {
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush("ERR: " +
                     cause.getClass().getSimpleName() + ": " +
-                    cause.getMessage() + '\n').addListener(ChannelFutureListener.CLOSE);
+                    cause.getMessage() + '\n').addListener(f -> ctx.close());
         }
     }
 }

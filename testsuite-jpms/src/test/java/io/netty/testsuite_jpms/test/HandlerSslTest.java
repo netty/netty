@@ -21,10 +21,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -132,7 +131,7 @@ public class HandlerSslTest {
 
                 SslHandler handler = serverSslCtx.newHandler(ch.alloc());
                 p.addLast(handler);
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -177,14 +176,14 @@ public class HandlerSslTest {
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 sslHandler.engine().setSSLParameters(parameters);
                 p.addLast(sslHandler);
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) {
                         // Only write if there is a failure expected. We don't actually care about the write going
                         // through we just want to verify the local failure condition. This way we don't have to worry
                         // about verifying the payload and releasing the content on the server side.
                         if (failureExpected) {
-                            ChannelFuture f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
+                            Future<Void> f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
                             PromiseNotifier.cascade(f, clientWritePromise);
                         }
                     }
@@ -216,12 +215,12 @@ public class HandlerSslTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(expectedHost, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         return clientWritePromise;
     }
 

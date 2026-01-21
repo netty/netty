@@ -18,9 +18,8 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -39,6 +38,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -88,7 +88,7 @@ public class WebSocketServerProtocolHandlerTest {
     public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
-        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        ch.pipeline().addLast(new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
@@ -489,12 +489,12 @@ public class WebSocketServerProtocolHandlerTest {
         return response.content().toString(CharsetUtil.UTF_8);
     }
 
-    private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
+    private class MockOutboundHandler implements ChannelOutboundHandler {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             responses.add((FullHttpResponse) msg);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override
@@ -502,7 +502,7 @@ public class WebSocketServerProtocolHandlerTest {
         }
     }
 
-    private static class CustomTextFrameHandler extends ChannelInboundHandlerAdapter {
+    private static class CustomTextFrameHandler implements ChannelInboundHandler {
         private String content;
 
         @Override

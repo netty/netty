@@ -17,7 +17,6 @@ package io.netty.handler.codec.string;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -49,7 +48,6 @@ import java.util.List;
  * }
  * </pre>
  */
-@Sharable
 public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
     private final Charset charset;
@@ -67,6 +65,11 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
     public StringEncoder(Charset charset) {
         super(CharSequence.class);
         this.charset = ObjectUtil.checkNotNull(charset, "charset");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

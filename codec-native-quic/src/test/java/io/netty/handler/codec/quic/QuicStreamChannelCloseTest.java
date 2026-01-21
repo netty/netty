@@ -17,14 +17,14 @@ package io.netty.handler.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutputShutdownException;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
 
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,7 +70,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             QuicChannelValidationHandler serverHandler = new StreamCreationHandler(type, halfClose, streamPromise);
             server = QuicTestUtils.newServer(executor, serverHandler,
-                    new ChannelInboundHandlerAdapter());
+                    new ChannelInboundHandler() { });
             channel = QuicTestUtils.newClient(executor);
 
             QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
@@ -139,7 +139,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             StreamCreationHandler creationHandler = new StreamCreationHandler(type, halfClose, streamPromise);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(creationHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -194,14 +194,14 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         Channel channel = null;
         try {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(), new StreamHandler());
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandler() { }, new StreamHandler());
             channel = QuicTestUtils.newClient(executor);
 
             StreamCreationAndTearDownHandler creationHandler =
                     new StreamCreationAndTearDownHandler(type, halfClose, streamPromise);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(creationHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -240,12 +240,12 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         public void channelActive(ChannelHandlerContext ctx) {
             super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
-            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+            channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
-                    final ChannelFuture future;
+                    final Future<Void> future;
                     if (halfClose) {
-                        future = ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+                        future = ctx.channel().shutdown(ChannelShutdownType.newOutbound(0));
                     } else {
                         future = ctx.channel().close();
                     }
@@ -274,25 +274,29 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         public void channelActive(ChannelHandlerContext ctx) {
             super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
-            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+            channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
                     streamPromise.trySuccess(ctx.channel());
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(halfClose
-                                    ? QuicStreamChannel.SHUTDOWN_OUTPUT
-                                    : ChannelFutureListener.CLOSE);
+                            .addListener(f -> {
+                                if (halfClose) {
+                                    ctx.shutdown(ChannelShutdownType.newOutbound());
+                                } else {
+                                    ctx.close();
+                                }
+                            });
                 }
             });
         }
     }
 
-    private static final class StreamHandler extends ChannelInboundHandlerAdapter {
+    private static final class StreamHandler implements ChannelInboundHandler {
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 // Received a FIN
                 ctx.close();
             }

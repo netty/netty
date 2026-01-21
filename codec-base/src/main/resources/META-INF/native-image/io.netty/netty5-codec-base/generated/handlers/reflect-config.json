@@ -161,34 +161,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.ReplayingDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.ReplayingDecoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.serialization.CompatibleObjectEncoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.serialization.CompatibleObjectEncoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.serialization.ObjectDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.serialization.ObjectDecoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.serialization.ObjectEncoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.serialization.ObjectEncoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.codec.string.LineEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.string.LineEncoder"

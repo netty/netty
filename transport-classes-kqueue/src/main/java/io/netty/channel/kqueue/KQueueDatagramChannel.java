@@ -17,24 +17,27 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DatagramSocketAddress;
+import io.netty.channel.unix.DomainDatagramSocketAddress;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.CharsetUtil;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -45,45 +48,123 @@ import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
+import static io.netty.channel.unix.Socket.isIPv6Preferred;
 
-public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel implements DatagramChannel {
+public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-                    StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
-                    StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    private volatile boolean connected;
     private final KQueueDatagramChannelConfig config;
 
+    private volatile boolean connected;
+
     public KQueueDatagramChannel(EventLoop eventLoop) {
-        super(eventLoop, null, newSocketDgram(), false);
+        super(eventLoop, null, newSocketDgram(), false, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, SocketProtocolFamily protocol) {
-        super(eventLoop, null, newSocketDgram(protocol), false);
+        super(eventLoop, null, newSocketDgram(protocol), false, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new BsdSocket(fd), true);
+        this(eventLoop, new BsdSocket(fd, isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET), true);
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(eventLoop, null, socket, active);
+        super(eventLoop, null, socket, active, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
+    public boolean isConnected() {
+        return connected;
+    }
+
+    @Override
+    protected void doDisconnect(Promise<Void> promise) {
+        try {
+            socket.disconnect();
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
+        connected = active = false;
+        resetCachedAddresses();
+        promise.setSuccess(null);
+    }
+
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        if (super.doConnect(remoteAddress, localAddress)) {
+            connected = true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected void doClose(Promise<Void> promise) {
+        super.doClose(promise);
+        connected = false;
+    }
+
+    @Override
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                active = true;
+                promise.setSuccess(null);
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
+            Object msg = in.current();
+            if (msg == null) {
+                break;
+            }
+
+            try {
+                boolean done = false;
+                for (int i = config().getWriteSpinCount(); i > 0; --i) {
+                    if (doWriteMessage(msg)) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    in.remove();
+                    maxMessagesPerWrite--;
+                } else {
+                    break;
+                }
+            } catch (IOException e) {
+                maxMessagesPerWrite--;
+
+                // Continue on write error as a DatagramChannel can write to multiple remote peers
+                //
+                // See https://github.com/netty/netty/issues/2665
+                in.remove(e);
+            }
+        }
+
+        // Whether all messages were written or not.
+        writeFilter(!in.isEmpty());
     }
 
     @Override
@@ -93,165 +174,114 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    public boolean isConnected() {
-        return connected;
-    }
-
-    @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
-        try {
-            NetworkInterface iface = config().getNetworkInterface();
-            if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
-            }
-            return joinGroup(multicastAddress, iface, null, promise);
-        } catch (SocketException e) {
-            promise.setFailure(e);
+    public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+                try {
+                    NetworkInterface iface = config().getOption(KQueueChannelOption.IP_MULTICAST_IF);
+                    if (iface == null) {
+                        iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
+                    }
+                    joinGroup(multicastAddress, iface, null, promise);
+                } catch (SocketException e) {
+                    promise.setFailure(e);
+                }
+                return;
+            default:
+                promise.setFailure(
+                        new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelPromise promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            Promise<Void> promise) {
+        joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture joinGroup(
+    public void joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final ChannelPromise promise) {
+            final InetAddress source, final Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise;
+        promise.setFailure(
+                new UnsupportedOperationException("Not supported for SocketProtocolFamily: " +
+                        socket.protocolFamily()));
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+            leaveGroup(
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
-
     @Override
-    public ChannelFuture leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelPromise promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+            NetworkInterface networkInterface, Promise<Void> promise) {
+        leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public ChannelFuture leaveGroup(
+    public void leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-
-        return promise;
+        promise.setFailure(new UnsupportedOperationException("Not supported for SocketProtocolFamily: " +
+                socket.protocolFamily()));
     }
 
     @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public ChannelFuture block(
+    public void block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final ChannelPromise promise) {
+            final InetAddress sourceToBlock, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-        return promise;
+        promise.setFailure(new UnsupportedOperationException("Not supported for SocketProtocolFamily: " +
+                socket.protocolFamily()));
     }
 
     @Override
-    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
-        try {
-            return block(
-                    multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
-                    sourceToBlock, promise);
-        } catch (Throwable e) {
-            promise.setFailure(e);
+    public void block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
+        SocketProtocolFamily family = socket.protocolFamily();
+        switch (family) {
+            case INET6:
+            case INET:
+                try {
+                    block(multicastAddress,
+                            NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
+                            sourceToBlock, promise);
+                } catch (SocketException e) {
+                    promise.setFailure(e);
+                }
+                return;
+            default:
+                promise.setFailure(
+                    new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
-        return promise;
     }
 
-    @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueDatagramChannelUnsafe();
-    }
-
-    @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        active = true;
-    }
-
-    @Override
-    protected boolean doWriteMessage(Object msg) throws Exception {
+    private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
-        InetSocketAddress remoteAddress;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
-            data = envelope.content();
-            remoteAddress = envelope.recipient();
+        SocketAddress remoteAddress;
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            data = packet.content();
+            remoteAddress = packet.recipient();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -266,10 +296,21 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
             if (remoteAddress == null) {
-                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+                try {
+                    writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+                } catch (Errors.NativeIoException e) {
+                    throw translateForConnected(e);
+                }
             } else {
-                writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                    DomainSocketAddress address = (DomainSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendToAddressDomainSocket(memoryAddress, data.readerIndex(),
+                            data.writerIndex(), address.path().getBytes(CharsetUtil.UTF_8));
+                } else {
+                    InetSocketAddress address = (InetSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
+                            address.getAddress(), address.getPort());
+                }
             }
         } else if (data.nioBufferCount() > 1) {
             IovArray array = ((NativeArrays) registration().attachment()).cleanIovArray();
@@ -280,25 +321,49 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             if (remoteAddress == null) {
                 writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
             } else {
-                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                    DomainSocketAddress address = (DomainSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
+                            address.path().getBytes(CharsetUtil.UTF_8));
+                } else {
+                    InetSocketAddress address = (InetSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
+                            address.getAddress(), address.getPort());
+                }
             }
         } else {
             ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
             if (remoteAddress == null) {
                 writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
             } else {
-                writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
+                if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                    DomainSocketAddress address = (DomainSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendToDomainSocket(nioData, nioData.position(), nioData.limit(),
+                            address.path().getBytes(CharsetUtil.UTF_8));
+                } else {
+                    InetSocketAddress address = (InetSocketAddress) remoteAddress;
+                    writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
+                            address.getAddress(), address.getPort());
+                }
             }
         }
 
         return writtenBytes > 0;
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+    private static IOException translateForConnected(Errors.NativeIoException e) {
+        // We need to correctly translate connect errors to match NIO behaviour.
+        if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            PortUnreachableException error = new PortUnreachableException(e.getMessage());
+            error.initCause(e);
+            return error;
+        }
+        return e;
+    }
+
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
             throw new UnresolvedAddressException();
         }
     }
@@ -307,7 +372,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkUnresolved(packet);
+            checkUnresolved(packet.recipient());
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -317,22 +382,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
         }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
-
-            if (e.content() instanceof ByteBuf &&
-                    (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = (ByteBuf) e.content();
-                return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                                newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-            }
-        }
-
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
@@ -343,126 +392,128 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        socket.disconnect();
-        connected = active = false;
-        resetCachedAddresses();
-    }
-
-    @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        if (super.doConnect(remoteAddress, localAddress)) {
-            connected = true;
-            return true;
+    void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady()) {
+            clearReadFilter0();
+            return;
         }
-        return false;
-    }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
 
-    @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        connected = false;
-    }
-
-    final class KQueueDatagramChannelUnsafe extends AbstractKQueueUnsafe {
-
-        @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert executor().inEventLoop();
-            final DatagramChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadFilter0();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
+            ByteBuf byteBuf = null;
             try {
-                ByteBuf byteBuf = null;
-                try {
-                    boolean connected = isConnected();
-                    do {
-                        byteBuf = allocHandle.allocate(allocator);
-                        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+                boolean connected = isConnected();
+                do {
+                    byteBuf = allocHandle.allocate(allocator);
+                    allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
-                        final DatagramPacket packet;
-                        if (connected) {
-                            try {
-                                allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                            } catch (Errors.NativeIoException e) {
-                                // We need to correctly translate connect errors to match NIO behaviour.
-                                if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
-                                    PortUnreachableException error = new PortUnreachableException(e.getMessage());
-                                    error.initCause(e);
-                                    throw error;
-                                }
-                                throw e;
+                    final DatagramPacket packet;
+                    if (connected) {
+                        try {
+                            allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                        } catch (Errors.NativeIoException e) {
+                            // We need to correctly translate connect errors to match NIO behaviour.
+                            if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+                                PortUnreachableException error = new PortUnreachableException(e.getMessage());
+                                error.initCause(e);
+                                throw error;
                             }
-                            if (allocHandle.lastBytesRead() <= 0) {
-                                // nothing was read, release the buffer.
-                                byteBuf.release();
-                                byteBuf = null;
-                                break;
-                            }
-                            packet = new DatagramPacket(byteBuf,
-                                    (InetSocketAddress) localAddress(), (InetSocketAddress) remoteAddress());
-                        } else {
-                            final DatagramSocketAddress remoteAddress;
+                            throw e;
+                        }
+                        if (allocHandle.lastBytesRead() <= 0) {
+                            // nothing was read, release the buffer.
+                            byteBuf.release();
+                            byteBuf = null;
+                            break;
+                        }
+                        packet = new DatagramPacket(byteBuf, localAddress(), remoteAddress());
+                    } else {
+                        SocketAddress localAddress;
+                        SocketAddress remoteAddress;
+                        int receivedAmount;
+                        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                            final DomainDatagramSocketAddress received;
                             if (byteBuf.hasMemoryAddress()) {
                                 // has a memory address so use optimized call
-                                remoteAddress = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
-                                        byteBuf.capacity());
+                                received = socket.recvFromAddressDomainSocket(byteBuf.memoryAddress(),
+                                        byteBuf.writerIndex(), byteBuf.capacity());
                             } else {
                                 ByteBuffer nioData = byteBuf.internalNioBuffer(
                                         byteBuf.writerIndex(), byteBuf.writableBytes());
-                                remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
+                                received =
+                                        socket.recvFromDomainSocket(nioData, nioData.position(), nioData.limit());
                             }
-
-                            if (remoteAddress == null) {
+                            if (received == null) {
                                 allocHandle.lastBytesRead(-1);
                                 byteBuf.release();
                                 byteBuf = null;
                                 break;
                             }
-                            InetSocketAddress localAddress = remoteAddress.localAddress();
-                            if (localAddress == null) {
-                                localAddress = (InetSocketAddress) localAddress();
+                            localAddress = received.localAddress();
+                            receivedAmount = received.receivedAmount();
+                            remoteAddress = received;
+                        } else {
+                            final DatagramSocketAddress received;
+                            if (byteBuf.hasMemoryAddress()) {
+                                // has a memory address so use optimized call
+                                received = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
+                                        byteBuf.capacity());
+                            } else {
+                                ByteBuffer nioData = byteBuf.internalNioBuffer(
+                                        byteBuf.writerIndex(), byteBuf.writableBytes());
+                                received = socket.recvFrom(nioData, nioData.position(), nioData.limit());
                             }
-                            allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
-
-                            packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
+                            if (received == null) {
+                                allocHandle.lastBytesRead(-1);
+                                byteBuf.release();
+                                byteBuf = null;
+                                break;
+                            }
+                            localAddress = received.localAddress();
+                            receivedAmount = received.receivedAmount();
+                            remoteAddress = received;
                         }
 
-                        allocHandle.incMessagesRead(1);
+                        if (localAddress == null) {
+                            localAddress = localAddress();
+                        }
+                        allocHandle.lastBytesRead(receivedAmount);
+                        byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
 
-                        readPending = false;
-                        pipeline.fireChannelRead(packet);
-
-                        byteBuf = null;
-
-                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                    // as we read anything).
-                    } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-                } catch (Throwable t) {
-                    if (byteBuf != null) {
-                        byteBuf.release();
+                        packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
                     }
-                    exception = t;
-                }
 
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                    allocHandle.incMessagesRead(1);
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
+                    readPending = false;
+                    pipeline.fireChannelRead(packet);
+
+                    byteBuf = null;
+
+                // We use the TRUE_SUPPLIER as it is also ok to read less than what we did try to read (as long
+                // as we read anything).
+                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } catch (Throwable t) {
+                if (byteBuf != null) {
+                    byteBuf.release();
                 }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearReadFilter0();
-                }
+                exception = t;
+            }
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearReadFilter0();
             }
         }
     }

@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -87,7 +88,7 @@ public class CodecHttp3Test {
         Channel channel = bs.group(group)
                 .channel(NioDatagramChannel.class)
                 .handler(codec)
-                .bind(0).sync().channel();
+                .bind(0).get();
 
         QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                 .handler(new Http3ClientConnectionHandler())
@@ -115,7 +116,7 @@ public class CodecHttp3Test {
                     protected void channelInputClosed(ChannelHandlerContext ctx) {
                         ctx.close();
                     }
-                }).sync().getNow();
+                }).get();
 
         // Write the Header frame and send the FIN to mark the end of the request.
         // After this its not possible anymore to write any more data.
@@ -124,7 +125,7 @@ public class CodecHttp3Test {
                 .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + port)
                 .scheme("https");
         streamChannel.writeAndFlush(frame)
-                .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT).sync();
+                .addListener(f -> streamChannel.shutdown(ChannelShutdownType.newOutbound())).sync();
 
         // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
         // After this is done we will close the underlying datagram channel.
@@ -137,7 +138,7 @@ public class CodecHttp3Test {
         channel.close().sync();
     }
 
-    private Channel startServer(EventLoopGroup group, int port) throws InterruptedException, CertificateException {
+    private Channel startServer(EventLoopGroup group, int port) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         QuicSslContext sslContext = QuicSslContextBuilder.forServer(cert.key(), null, cert.cert())
                 .applicationProtocols(Http3.supportedApplicationProtocols()).build();
@@ -180,8 +181,9 @@ public class CodecHttp3Test {
                                                 headersFrame.headers().addInt("content-length", CONTENT.length);
                                                 ctx.write(headersFrame);
                                                 ctx.writeAndFlush(new DefaultHttp3DataFrame(
-                                                                Unpooled.wrappedBuffer(CONTENT)))
-                                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                                                Unpooled.wrappedBuffer(CONTENT))).addListener(
+                                                                        f -> ctx.shutdown(
+                                                                                ChannelShutdownType.newOutbound()));
                                             }
                                         });
                                     }
@@ -193,6 +195,6 @@ public class CodecHttp3Test {
         return bs.group(group)
                 .channel(NioDatagramChannel.class)
                 .handler(codec)
-                .bind(new InetSocketAddress(port)).sync().channel();
+                .bind(new InetSocketAddress(port)).get();
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 
 import io.netty.util.internal.logging.InternalLogger;
@@ -45,23 +46,26 @@ final class ChannelHandlerMask {
     static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6;
     static final int MASK_USER_EVENT_TRIGGERED = 1 << 7;
     static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8;
-    static final int MASK_BIND = 1 << 9;
-    static final int MASK_CONNECT = 1 << 10;
-    static final int MASK_DISCONNECT = 1 << 11;
-    static final int MASK_CLOSE = 1 << 12;
-    static final int MASK_DEREGISTER = 1 << 13;
-    static final int MASK_READ = 1 << 14;
-    static final int MASK_WRITE = 1 << 15;
-    static final int MASK_FLUSH = 1 << 16;
-    static final int MASK_REGISTER = 1 << 17;
+    static final int MASK_CHANNEL_SHUTDOWN = 1 << 9;
+    static final int MASK_BIND = 1 << 10;
+    static final int MASK_CONNECT = 1 << 11;
+    static final int MASK_DISCONNECT = 1 << 12;
+    static final int MASK_CLOSE = 1 << 13;
+    static final int MASK_DEREGISTER = 1 << 14;
+    static final int MASK_READ = 1 << 15;
+    static final int MASK_WRITE = 1 << 16;
+    static final int MASK_FLUSH = 1 << 17;
+    static final int MASK_REGISTER = 1 << 18;
+    static final int MASK_SHUTDOWN = 1 << 19;
+    static final int MASK_PENDING_OUTBOUND_BYTES = 1 << 20;
 
-    static final int MASK_ONLY_INBOUND =  MASK_CHANNEL_REGISTERED |
+    static final int MASK_ALL_INBOUND =  MASK_CHANNEL_REGISTERED | MASK_EXCEPTION_CAUGHT |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
-            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
-    private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_INBOUND;
-    static final int MASK_ONLY_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
-            MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH | MASK_REGISTER;
-    private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_OUTBOUND;
+            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED |
+            MASK_CHANNEL_SHUTDOWN;
+    static final int MASK_ALL_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
+            MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH | MASK_REGISTER |
+            MASK_SHUTDOWN | MASK_PENDING_OUTBOUND_BYTES;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
@@ -90,7 +94,7 @@ final class ChannelHandlerMask {
      * Calculate the {@code executionMask}.
      */
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
-        int mask = MASK_EXCEPTION_CAUGHT;
+        int mask = 0;
         try {
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
                 mask |= MASK_ALL_INBOUND;
@@ -116,8 +120,15 @@ final class ChannelHandlerMask {
                 if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
                 }
+                if (isSkippable(handlerType, "channelShutdown", ChannelHandlerContext.class,
+                        ChannelShutdownType.class)) {
+                    mask &= ~MASK_CHANNEL_SHUTDOWN;
+                }
                 if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
                     mask &= ~MASK_USER_EVENT_TRIGGERED;
+                }
+                if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
+                    mask &= ~MASK_EXCEPTION_CAUGHT;
                 }
             }
 
@@ -125,39 +136,42 @@ final class ChannelHandlerMask {
                 mask |= MASK_ALL_OUTBOUND;
 
                 if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
-                        SocketAddress.class, ChannelPromise.class)) {
+                        SocketAddress.class, Promise.class)) {
                     mask &= ~MASK_BIND;
                 }
                 if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
-                        SocketAddress.class, ChannelPromise.class)) {
+                        SocketAddress.class, Promise.class)) {
                     mask &= ~MASK_CONNECT;
                 }
-                if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
+                if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, Promise.class)) {
                     mask &= ~MASK_DISCONNECT;
                 }
-                if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
+                if (isSkippable(handlerType, "close", ChannelHandlerContext.class, Promise.class)) {
                     mask &= ~MASK_CLOSE;
                 }
-                if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
+                if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, Promise.class)) {
                     mask &= ~MASK_DEREGISTER;
                 }
                 if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
                     mask &= ~MASK_READ;
                 }
                 if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
-                        Object.class, ChannelPromise.class)) {
+                        Object.class, Promise.class)) {
                     mask &= ~MASK_WRITE;
                 }
                 if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
                     mask &= ~MASK_FLUSH;
                 }
-                if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
+                if (isSkippable(handlerType, "register", ChannelHandlerContext.class, Promise.class)) {
                     mask &= ~MASK_REGISTER;
                 }
-            }
-
-            if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
-                mask &= ~MASK_EXCEPTION_CAUGHT;
+                if (isSkippable(handlerType, "shutdown", ChannelHandlerContext.class,
+                        ChannelShutdownType.class, Promise.class)) {
+                    mask &= ~MASK_SHUTDOWN;
+                }
+                if (isSkippable(handlerType, "pendingOutboundBytes", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_PENDING_OUTBOUND_BYTES;
+                }
             }
         } catch (Exception e) {
             // Should never reach here.

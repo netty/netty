@@ -16,7 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -62,11 +62,11 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
         Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
         assertTrue(channel.isActive());
         final RuntimeException testExc = new RuntimeException(new SSLException("foo"));
-        channel.parent().pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        channel.parent().pipeline().addLast(new ChannelInboundHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 if (cause != testExc) {
-                    super.exceptionCaught(ctx, cause);
+                    ctx.fireExceptionCaught(cause);
                 }
             }
         });
@@ -88,11 +88,11 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
         Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
         assertTrue(channel.isActive());
         final RuntimeException testExc = new RuntimeException("xyz");
-        channel.parent().pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        channel.parent().pipeline().addLast(new ChannelInboundHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 if (cause != testExc) {
-                    super.exceptionCaught(ctx, cause);
+                    ctx.fireExceptionCaught(cause);
                 } else {
                     ctx.pipeline().fireExceptionCaught(new Http2MultiplexActiveStreamsException(cause));
                 }

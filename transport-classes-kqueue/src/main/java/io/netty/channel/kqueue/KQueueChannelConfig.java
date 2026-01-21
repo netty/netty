@@ -15,26 +15,21 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
-import static io.netty.channel.kqueue.KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 import static java.lang.Math.min;
 
-public class KQueueChannelConfig extends DefaultChannelConfig {
-    private volatile boolean transportProvidesGuess;
+class KQueueChannelConfig extends DefaultChannelConfig {
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     KQueueChannelConfig(AbstractKQueueChannel channel) {
@@ -45,18 +40,9 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         super(channel, recvByteBufAllocator);
     }
 
-    @Override
-    @SuppressWarnings("deprecation")
-    public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), RCV_ALLOC_TRANSPORT_PROVIDES_GUESS);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
-            return (T) Boolean.valueOf(getRcvAllocTransportProvidesGuess());
-        }
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
@@ -79,115 +65,29 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
-        if (option == RCV_ALLOC_TRANSPORT_PROVIDES_GUESS) {
-            setRcvAllocTransportProvidesGuess((Boolean) value);
-        } else {
-            try {
-                if (option instanceof IntegerUnixChannelOption) {
-                    IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                    ((AbstractKQueueChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
-                    return true;
-                } else if (option instanceof RawUnixChannelOption) {
-                    RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                    ((AbstractKQueueChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
-                    return true;
-                }
-            } catch (IOException e) {
-                throw new ChannelException(e);
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                ((AbstractKQueueChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                return true;
+            } else if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ((AbstractKQueueChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                return true;
             }
-            return super.setOption(option, value);
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
-
-        return true;
-    }
-
-    /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
-     * to read as many bytes as kqueue says are available.
-     *
-     * @deprecated will be removed and is ignored.
-     */
-    @Deprecated
-    public KQueueChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        this.transportProvidesGuess = transportProvidesGuess;
-        return this;
-    }
-
-    /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
-     * to read as many bytes as kqueue says are available.
-     *
-     * @deprecated will be removed and is ignored.
-     */
-    @Deprecated
-    public boolean getRcvAllocTransportProvidesGuess() {
-        return transportProvidesGuess;
+        return super.setOption(option, value);
     }
 
     @Override
-    public KQueueChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         if (!(allocator.newHandle() instanceof RecvByteBufAllocator.ExtendedHandle)) {
             throw new IllegalArgumentException("allocator.newHandle() must return an object of type: " +
                     RecvByteBufAllocator.ExtendedHandle.class);
         }
         super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 

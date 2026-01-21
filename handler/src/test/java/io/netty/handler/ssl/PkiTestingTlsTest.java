@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -242,7 +242,7 @@ public class PkiTestingTlsTest {
     }
 
     private void testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups)
-            throws InterruptedException {
+            throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress serverAddress = new LocalAddress(getClass());
 
@@ -264,7 +264,7 @@ public class PkiTestingTlsTest {
                         }
                     })
                     .group(group)
-                    .bind(serverAddress).sync().channel();
+                    .bind(serverAddress).get();
 
             Promise<SslHandshakeCompletionEvent> promise = group.next().newPromise();
 
@@ -282,7 +282,7 @@ public class PkiTestingTlsTest {
                             }
                             ch.pipeline()
                                     .addLast(handler)
-                                    .addLast(new ChannelInboundHandlerAdapter() {
+                                    .addLast(new ChannelInboundHandler() {
                                         @Override
                                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
                                                 throws Exception {
@@ -295,7 +295,7 @@ public class PkiTestingTlsTest {
                                                 }
                                                 return;
                                             }
-                                            super.userEventTriggered(ctx, evt);
+                                            ctx.fireUserEventTriggered(evt);
                                         }
 
                                         @Override
@@ -310,7 +310,7 @@ public class PkiTestingTlsTest {
                     })
                     .connect(serverAddress)
                     .sync()
-                    .channel();
+                    .getNow();
 
             promise.sync();
         } finally {

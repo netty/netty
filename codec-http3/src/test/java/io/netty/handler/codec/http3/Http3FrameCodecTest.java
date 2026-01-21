@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
@@ -105,14 +105,18 @@ public class Http3FrameCodecTest {
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new ChannelOutboundHandlerAdapter()).get();
+                new ChannelOutboundHandler() { }).get();
         encoder = new QpackEncoder();
         qpackDecoderHandler = new QpackDecoderHandler(encoder);
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new ChannelOutboundHandlerAdapter()).get();
+                new ChannelOutboundHandler() { }).get();
         qpackAttributes.whenEncoderStreamAvailable(future -> {
             if (future.isSuccess()) {
-                encoder.configureDynamicTable(qpackAttributes, maxTableCapacity, maxBlockedStreams);
+                try {
+                    encoder.configureDynamicTable(qpackAttributes, maxTableCapacity, maxBlockedStreams);
+                } catch (QpackException e) {
+                    parent.close();
+                }
             }
         });
         if (!delayQpackStreams) {
@@ -272,7 +276,9 @@ public class Http3FrameCodecTest {
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL, 0L);
+        settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L);
         // Ensure we can encode and decode all sizes correctly.
+        // unknown settings id/key will be ignored
         settingsFrame.put(63, 63L);
         settingsFrame.put(16383, 16383L);
         settingsFrame.put(1073741823, 1073741823L);

@@ -175,22 +175,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-marshalling</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling-serial</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
@@ -204,10 +188,12 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
+      <version>1.82</version> <!-- TODO reverted version to avoid jlink breakage introduced in 1.83 -->
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.82</version> <!-- TODO reverted version to avoid jlink breakage introduced in 1.83 -->
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>

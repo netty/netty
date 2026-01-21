@@ -16,11 +16,10 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -177,23 +176,22 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close() {
-        return close(ctx().newPromise());
+    public Future<Void> close() {
+        Promise<Void> promise = ctx().channel().newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public void close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx, promise);
         } else {
-            final ChannelPromise p = ctx.newPromise();
             executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), p);
-                PromiseNotifier.cascade(f, promise);
+                finishEncode(ctx(), promise);
             });
-            return p;
         }
     }
 
@@ -300,15 +298,16 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+        Promise<Void> p = ctx().newPromise();
+        finishEncode(ctx, p);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            promise.setSuccess(null);
+            return;
         }
 
         finished = true;
@@ -336,7 +335,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             footer.writeIntLE(uncBytes);
         }
         deflater.end();
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
     }
 
     private void deflate(ByteBuf out) {

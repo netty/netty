@@ -19,13 +19,10 @@ import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 
@@ -223,26 +220,25 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close() {
-        return close(ctx().channel().newPromise());
+    public Future<Void> close() {
+        Promise<Void> promise = ctx().channel().newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public void close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx, promise);
         } else {
-            final ChannelPromise p = ctx.newPromise();
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
-                    PromiseNotifier.cascade(f, promise);
+                    finishEncode(ctx(), promise);
                 }
             });
-            return p;
         }
     }
 
@@ -323,10 +319,11 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+            final Promise<Void> promise) {
+        Promise<Void> p = ctx.newPromise();
+        finishEncode(ctx, p);
 
-        if (!f.isDone()) {
+        if (!p.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
             final Future<?> future = ctx.executor().schedule(new Runnable() {
                 @Override
@@ -337,14 +334,11 @@ public class JZlibEncoder extends ZlibEncoder {
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
 
-            f.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture f) {
-                    // Cancel the scheduled timeout.
-                    future.cancel(true);
-                    if (!promise.isDone()) {
-                        ctx.close(promise);
-                    }
+            p.addListener(f1 -> {
+                // Cancel the scheduled timeout.
+                future.cancel(true);
+                if (!promise.isDone()) {
+                    ctx.close(promise);
                 }
             });
         } else {
@@ -352,10 +346,10 @@ public class JZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private void finishEncode(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            promise.setSuccess(null);
+            return;
         }
         finished = true;
 
@@ -376,7 +370,7 @@ public class JZlibEncoder extends ZlibEncoder {
             int resultCode = z.deflate(JZlib.Z_FINISH);
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                 promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
-                return promise;
+                return;
             } else if (z.next_out_index != 0) {
                 // Suppressed a warning above to be on the safe side
                 // even if z.next_out_index seems to be always 0 here
@@ -394,7 +388,7 @@ public class JZlibEncoder extends ZlibEncoder {
             z.next_in = null;
             z.next_out = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
     }
 
     @Override

@@ -19,7 +19,7 @@ import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.SuppressForbidden;
@@ -54,19 +54,19 @@ public abstract class SctpLimitStreamsTest {
                     .option(SctpChannelOption.SCTP_INIT_MAXSTREAMS,
                             SctpStandardSocketOptions.InitMaxStreams.create(1, 1))
                     .localAddress(new InetSocketAddress(0))
-                    .childHandler(new ChannelInboundHandlerAdapter());
+                    .childHandler(new ChannelInboundHandler() { });
 
             Bootstrap clientBootstrap = new Bootstrap()
                     .group(loop)
                     .channel(clientClass())
                     .option(SctpChannelOption.SCTP_INIT_MAXSTREAMS,
                             SctpStandardSocketOptions.InitMaxStreams.create(112, 112))
-                    .handler(new ChannelInboundHandlerAdapter());
+                    .handler(new ChannelInboundHandler() { });
 
             Channel serverChannel = serverBootstrap.bind()
-                    .syncUninterruptibly().channel();
+                    .get();
             SctpChannel clientChannel = (SctpChannel) clientBootstrap.connect(serverChannel.localAddress())
-                    .syncUninterruptibly().channel();
+                    .get();
             assertEquals(1, clientChannel.association().maxOutboundStreams());
             assertEquals(1, clientChannel.association().maxInboundStreams());
             serverChannel.close().syncUninterruptibly();

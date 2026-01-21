@@ -16,7 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
@@ -40,13 +40,13 @@ public class EpollServerSocketChannelConfigTest {
     private static EpollServerSocketChannel ch;
 
     @BeforeAll
-    public static void before() {
+    public static void before() throws Exception {
         group = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .childHandler(new ChannelInboundHandler() { })
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterAll
@@ -60,28 +60,28 @@ public class EpollServerSocketChannelConfigTest {
 
     @Test
     public void testTcpDeferAccept() {
-        ch.config().setTcpDeferAccept(0);
-        assertEquals(0, ch.config().getTcpDeferAccept());
-        ch.config().setTcpDeferAccept(10);
+        ch.config().setOption(EpollChannelOption.TCP_DEFER_ACCEPT, 0);
+        assertEquals(0, ch.config().getOption(EpollChannelOption.TCP_DEFER_ACCEPT));
+        ch.config().setOption(EpollChannelOption.TCP_DEFER_ACCEPT, 10);
         // The returned value may be bigger then what we set.
         // See https://www.spinics.net/lists/netdev/msg117330.html
-        assertTrue(10 <= ch.config().getTcpDeferAccept());
+        assertTrue(10 <= ch.config().getOption(EpollChannelOption.TCP_DEFER_ACCEPT));
     }
 
     @Test
     public void testReusePort() {
-        ch.config().setReusePort(false);
-        assertFalse(ch.config().isReusePort());
-        ch.config().setReusePort(true);
-        assertTrue(ch.config().isReusePort());
+        ch.config().setOption(EpollChannelOption.SO_REUSEPORT, false);
+        assertFalse(ch.config().getOption(EpollChannelOption.SO_REUSEPORT));
+        ch.config().setOption(EpollChannelOption.SO_REUSEPORT, true);
+        assertTrue(ch.config().getOption(EpollChannelOption.SO_REUSEPORT));
     }
 
     @Test
     public void testFreeBind() {
-        ch.config().setFreeBind(false);
-        assertFalse(ch.config().isFreeBind());
-        ch.config().setFreeBind(true);
-        assertTrue(ch.config().isFreeBind());
+        ch.config().setOption(EpollChannelOption.IP_FREEBIND, false);
+        assertFalse(ch.config().getOption(EpollChannelOption.IP_FREEBIND));
+        ch.config().setOption(EpollChannelOption.IP_FREEBIND, true);
+        assertTrue(ch.config().getOption(EpollChannelOption.IP_FREEBIND));
     }
 
     @Test
@@ -95,10 +95,10 @@ public class EpollServerSocketChannelConfigTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
-                ch.config().setTcpFastopen(-1);
+                ch.config().setOption(ChannelOption.TCP_FASTOPEN, -1);
             }
         });
-        ch.config().setTcpFastopen(10);
-        assertEquals(10, ch.config().getTcpFastopen());
+        ch.config().setOption(ChannelOption.TCP_FASTOPEN, 10);
+        assertEquals(10, ch.config().getOption(ChannelOption.TCP_FASTOPEN));
     }
 }

@@ -18,12 +18,12 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
@@ -50,32 +50,32 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
     public void testConnectNotExists(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
-            public void run(Bootstrap bootstrap) {
+            public void run(Bootstrap bootstrap) throws Exception {
                 testConnectNotExists(bootstrap);
             }
         });
     }
 
-    public void testConnectNotExists(Bootstrap cb) {
+    public void testConnectNotExists(Bootstrap cb) throws Exception {
         // Currently not works on windows
         // See https://github.com/netty/netty/issues/11285
         assumeFalse(PlatformDependent.isWindows());
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        cb.handler(new ChannelInboundHandlerAdapter() {
+        cb.handler(new ChannelInboundHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 promise.trySuccess(cause);
             }
         });
-        ChannelFuture future = cb.connect(NetUtil.LOCALHOST, SocketTestPermutation.BAD_PORT);
+        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, SocketTestPermutation.BAD_PORT);
+        Channel datagramChannel = future.get();
         try {
-            Channel datagramChannel = future.syncUninterruptibly().channel();
             assertTrue(datagramChannel.isActive());
             datagramChannel.writeAndFlush(
                     Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
+            assertTrue(promise.get() instanceof PortUnreachableException);
         } finally {
-            future.channel().close();
+            datagramChannel.close();
         }
     }
 }

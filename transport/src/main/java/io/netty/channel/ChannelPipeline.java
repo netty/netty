@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -141,14 +142,14 @@ import java.util.NoSuchElementException;
  * </li>
  * <li>Outbound event propagation methods:
  *     <ul>
- *     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#connect(SocketAddress, SocketAddress, ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#write(Object, ChannelPromise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#bind(SocketAddress, io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#connect(SocketAddress, SocketAddress, io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.Promise)}</li>
  *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
- *     <li>{@link ChannelHandlerContext#disconnect(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#close(ChannelPromise)}</li>
- *     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#close(io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#deregister(io.netty.util.concurrent.Promise)}</li>
  *     </ul>
  * </li>
  * </ul>
@@ -156,7 +157,7 @@ import java.util.NoSuchElementException;
  * and the following example shows how the event propagation is usually done:
  *
  * <pre>
- * public class MyInboundHandler extends {@link ChannelInboundHandlerAdapter} {
+ * public class MyInboundHandler implements {@link ChannelInboundHandler} {
  *     {@code @Override}
  *     public void channelActive({@link ChannelHandlerContext} ctx) {
  *         System.out.println("Connected!");
@@ -164,9 +165,9 @@ import java.util.NoSuchElementException;
  *     }
  * }
  *
- * public class MyOutboundHandler extends {@link ChannelOutboundHandlerAdapter} {
+ * public class MyOutboundHandler implements {@link ChannelOutboundHandler} {
  *     {@code @Override}
- *     public void close({@link ChannelHandlerContext} ctx, {@link ChannelPromise} promise) {
+ *     public void close({@link ChannelHandlerContext} ctx, {@link Promise} promise) {
  *         System.out.println("Closing ..");
  *         ctx.close(promise);
  *     }
@@ -496,49 +497,4 @@ public interface ChannelPipeline
      * handler names and whose values are handlers.
      */
     Map<String, ChannelHandler> toMap();
-
-    @Override
-    ChannelPipeline fireChannelRegistered();
-
-    @Override
-    ChannelPipeline fireChannelUnregistered();
-
-    @Override
-    ChannelPipeline fireChannelActive();
-
-    @Override
-    ChannelPipeline fireChannelInactive();
-
-    @Override
-    ChannelPipeline fireExceptionCaught(Throwable cause);
-
-    @Override
-    ChannelPipeline fireUserEventTriggered(Object event);
-
-    @Override
-    ChannelPipeline fireChannelRead(Object msg);
-
-    @Override
-    ChannelPipeline fireChannelReadComplete();
-
-    @Override
-    ChannelPipeline fireChannelWritabilityChanged();
-
-    @Override
-    ChannelPipeline flush();
-
-    @Override
-    default ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel());
-    }
-
-    @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel());
-    }
-
-    @Override
-    default ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel(), null, cause);
-    }
 }

@@ -17,7 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -44,7 +44,8 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         TestHandler h = new TestHandler();
         SocketChannel ch = null;
         try {
-            ch = (SocketChannel) cb.handler(h).connect(newSocketAddress()).channel();
+            ch = (SocketChannel) cb.handler(h).register().get();
+            ch.connect(newSocketAddress());
             ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[] { 1 }, 0, 1));
         } finally {
             if (ch != null) {
@@ -53,7 +54,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         }
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler implements ChannelInboundHandler {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             cause.printStackTrace();

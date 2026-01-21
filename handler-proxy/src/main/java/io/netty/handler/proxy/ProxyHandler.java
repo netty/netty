@@ -17,16 +17,15 @@
 package io.netty.handler.proxy;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -38,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A common abstraction for protocols that establish blind forwarding proxy tunnels.
  */
-public abstract class ProxyHandler extends ChannelDuplexHandler {
+public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandler.class);
 
@@ -61,14 +60,11 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private boolean finished;
     private boolean suppressChannelReadComplete;
     private boolean flushedPrematurely;
-    private final LazyChannelPromise connectPromise = new LazyChannelPromise();
+    private final Promise<Channel> connectPromise = ImmediateEventExecutor.INSTANCE.newPromise();
     private Future<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                setConnectFailure(future.cause());
-            }
+    private final FutureListener<Void> writeListener = future -> {
+        if (!future.isSuccess()) {
+            setConnectFailure(future.cause());
         }
     };
 
@@ -170,7 +166,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+            Promise<Void> promise) {
 
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
@@ -296,7 +292,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             removedCodec &= safeRemoveDecoder();
 
             if (removedCodec) {
-                writePendingWrites();
+                writePendingWrites(ctx);
 
                 if (flushedPrematurely) {
                     ctx.flush();
@@ -400,9 +396,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (finished) {
-            writePendingWrites();
+            writePendingWrites(ctx);
             ctx.write(msg, promise);
         } else {
             addPendingWrite(ctx, msg, promise);
@@ -410,13 +406,21 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void flush(ChannelHandlerContext ctx) throws Exception {
+    public final void flush(ChannelHandlerContext ctx) {
         if (finished) {
-            writePendingWrites();
+            writePendingWrites(ctx);
             ctx.flush();
         } else {
             flushedPrematurely = true;
         }
+    }
+
+    @Override
+    public final long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        if (pendingWrites != null) {
+            return pendingWrites.bytes();
+        }
+        return 0;
     }
 
     private static void readIfNeeded(ChannelHandlerContext ctx) {
@@ -425,9 +429,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void writePendingWrites() {
+    private void writePendingWrites(ChannelHandlerContext ctx) {
         if (pendingWrites != null) {
-            pendingWrites.removeAndWriteAll();
+            pendingWrites.removeAndTransferAll(ctx::write);
             pendingWrites = null;
         }
     }
@@ -439,21 +443,11 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         PendingWriteQueue pendingWrites = this.pendingWrites;
         if (pendingWrites == null) {
             this.pendingWrites = pendingWrites = new PendingWriteQueue(ctx);
         }
         pendingWrites.add(msg, promise);
-    }
-
-    private final class LazyChannelPromise extends DefaultPromise<Channel> {
-        @Override
-        protected EventExecutor executor() {
-            if (ctx == null) {
-                throw new IllegalStateException();
-            }
-            return ctx.executor();
-        }
     }
 }

@@ -256,7 +256,8 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                     @Override
                     public ServerBootstrap newInstance() {
                         return new ServerBootstrap().group(IO_URING_GROUP)
-                                .channel(IoUringServerDomainSocketChannel.class);
+                                .channelFactory((e, c) ->
+                                        new IoUringServerSocketChannel(e, c, SocketProtocolFamily.UNIX));
                     }
                 }
         );
@@ -268,7 +269,19 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(IO_URING_GROUP)
-                                .channel(IoUringDomainSocketChannel.class);
+                                .channelFactory(e -> new IoUringSocketChannel(e, SocketProtocolFamily.UNIX));
+                    }
+                }
+        );
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_GROUP).channel(IoUringDatagramChannel.class);
                     }
                 }
         );

@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
@@ -36,7 +36,9 @@ import org.junit.jupiter.api.function.Executable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.concurrent.ExecutionException;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EpollSocketTcpMd5Test {
@@ -56,12 +58,12 @@ public class EpollSocketTcpMd5Test {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
+                .childHandler(new ChannelInboundHandler() { })
+                .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).get();
     }
 
     @AfterEach
@@ -94,8 +96,8 @@ public class EpollSocketTcpMd5Test {
         ServerBootstrap bootstrap = new ServerBootstrap();
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter())
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .childHandler(new ChannelInboundHandler() { })
+                .bind(new InetSocketAddress(0)).get();
 
         try {
             ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
@@ -117,19 +119,20 @@ public class EpollSocketTcpMd5Test {
             handleException(ce);
         }
 
-        assertThrows(ConnectTimeoutException.class, new Executable() {
+        Throwable cause = assertThrows(ExecutionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                         .channel(EpollSocketChannel.class)
-                        .handler(new ChannelInboundHandlerAdapter())
+                        .handler(new ChannelInboundHandler() { })
                         .option(EpollChannelOption.TCP_MD5SIG,
                                 Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                        .connect(server.localAddress()).syncUninterruptibly().channel();
+                        .connect(server.localAddress()).get();
                 client.close().syncUninterruptibly();
             }
         });
+        assertInstanceOf(ConnectTimeoutException.class, cause.getCause());
     }
 
     @Test
@@ -143,10 +146,10 @@ public class EpollSocketTcpMd5Test {
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
-                .connect(server.localAddress()).syncUninterruptibly().channel();
+                .connect(server.localAddress()).get();
         client.close().syncUninterruptibly();
     }
 }

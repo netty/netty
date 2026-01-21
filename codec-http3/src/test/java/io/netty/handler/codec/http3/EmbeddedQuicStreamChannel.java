@@ -17,30 +17,26 @@ package io.netty.handler.codec.http3;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.EventLoop;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamAddress;
 import io.netty.handler.codec.quic.QuicStreamChannel;
-import io.netty.handler.codec.quic.QuicStreamChannelConfig;
 import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
-import java.net.SocketAddress;
 import java.util.Map;
 
 import static io.netty.handler.codec.http3.EmbeddedQuicChannel.prependChannelConsumer;
@@ -50,7 +46,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     private static final AttributeKey<Long> streamIdKey = valueOf("embedded_channel_stream_id");
     private static final AttributeKey<QuicStreamType> streamTypeKey = valueOf("embedded_channel_stream_type");
     private static final AttributeKey<Boolean> localCreatedKey = valueOf("embedded_channel_stream_local_created");
-    private QuicStreamChannelConfig config;
+    private ChannelConfig config;
     private Integer inputShutdown;
     private Integer outputShutdown;
 
@@ -66,35 +62,32 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                     channel.attr(streamTypeKey).set(type);
                     channel.attr(localCreatedKey).set(localCreated);
                 }, handlers));
+        pipeline().addFirst(new ChannelOutboundHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
+                    // Mimic the API.
+                    promise.addListener(f -> outputShutdown = 0);
+                }
+                ctx.write(msg, promise);
+            }
+        });
     }
 
     boolean writeInboundWithFin(Object... msgs) {
-        shutdownInput();
+        shutdown(ChannelShutdownType.newInbound(0));
         boolean written = writeInbound(msgs);
         fireInputShutdownEvents();
         return written;
     }
 
     void writeInboundFin() {
-        shutdownInput();
+        shutdown(ChannelShutdownType.newInbound(0));
         fireInputShutdownEvents();
     }
 
     private void fireInputShutdownEvents() {
-        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-        pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-    }
-
-    @Override
-    public QuicStreamChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
-    public QuicStreamChannel read() {
-        super.read();
-        return this;
+        pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
     }
 
     @Override
@@ -104,8 +97,8 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise) {
-        return promise.setFailure(new UnsupportedOperationException());
+    public void updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -126,7 +119,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public QuicStreamChannelConfig config() {
+    public ChannelConfig config() {
         if (config == null) {
             config = new EmbeddedQuicStreamChannelConfig(super.config());
         }
@@ -149,55 +142,23 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public boolean isInputShutdown() {
-        return inputShutdown != null;
-    }
-
-    @Override
-    public boolean isOutputShutdown() {
-        return outputShutdown != null;
-    }
-
-    @Override
-    public ChannelFuture shutdown(int i, ChannelPromise channelPromise) {
-        if (inputShutdown == null) {
-            inputShutdown = i;
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        if (type.data() != null && !(type.data() instanceof Integer)) {
+            promise.setFailure(new IllegalArgumentException(
+                    "ChannelShutdownType with data if non integer type is allowed: " + type));
+            return;
         }
-        if (outputShutdown == null) {
-            outputShutdown = i;
+        switch(type.direction()) {
+            case Outbound:
+                outputShutdown = (Integer) type.data();
+                break;
+            case Inbound:
+                inputShutdown = (Integer) type.data();
+                break;
+            default:
+                break;
         }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(int i, ChannelPromise channelPromise) {
-        if (inputShutdown == null) {
-            inputShutdown = i;
-        }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(int i, ChannelPromise channelPromise) {
-        if (outputShutdown == null) {
-            outputShutdown = i;
-        }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return isInputShutdown() && isOutputShutdown();
-    }
-
-    @Override
-    public ChannelFuture shutdown(ChannelPromise promise) {
-        return shutdown(0, promise);
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(ChannelPromise promise) {
-        return shutdownOutput(0, promise);
+        promise.setSuccess(null);
     }
 
     Integer outputShutdownError() {
@@ -208,183 +169,84 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         return inputShutdown;
     }
 
-    private Unsafe unsafe;
-
-    @Override
-    public Unsafe unsafe() {
-        if (unsafe == null) {
-            Unsafe superUnsafe = super.unsafe();
-            unsafe = new Unsafe() {
-                @Override
-                public RecvByteBufAllocator.Handle recvBufAllocHandle() {
-                    return superUnsafe.recvBufAllocHandle();
-                }
-
-                @Override
-                public SocketAddress localAddress() {
-                    return superUnsafe.localAddress();
-                }
-
-                @Override
-                public SocketAddress remoteAddress() {
-                    return superUnsafe.remoteAddress();
-                }
-
-                @Override
-                public void register(ChannelPromise promise) {
-                    superUnsafe.register(promise);
-                }
-
-                @Override
-                public void bind(SocketAddress localAddress, ChannelPromise promise) {
-                    superUnsafe.bind(localAddress, promise);
-                }
-
-                @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    superUnsafe.connect(remoteAddress, localAddress, promise);
-                }
-
-                @Override
-                public void disconnect(ChannelPromise promise) {
-                    superUnsafe.disconnect(promise);
-                }
-
-                @Override
-                public void close(ChannelPromise promise) {
-                    superUnsafe.close(promise);
-                }
-
-                @Override
-                public void closeForcibly() {
-                    superUnsafe.closeForcibly();
-                }
-
-                @Override
-                public void deregister(ChannelPromise promise) {
-                    superUnsafe.deregister(promise);
-                }
-
-                @Override
-                public void beginRead() {
-                    superUnsafe.beginRead();
-                }
-
-                @Override
-                public void write(Object msg, ChannelPromise promise) {
-                    if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
-                        // Mimic the API.
-                        promise.addListener(f -> outputShutdown = 0);
-                    }
-                    superUnsafe.write(msg, promise);
-                }
-
-                @Override
-                public void flush() {
-                    superUnsafe.flush();
-                }
-
-                @Override
-                public ChannelOutboundBuffer outboundBuffer() {
-                    return superUnsafe.outboundBuffer();
-                }
-            };
-        }
-        return unsafe;
-    }
-
-    private static final class EmbeddedQuicStreamChannelConfig implements QuicStreamChannelConfig {
+    private static final class EmbeddedQuicStreamChannelConfig implements ChannelConfig {
         private final ChannelConfig config;
         private boolean allowHalfClosure;
+        private boolean readFrames;
 
         EmbeddedQuicStreamChannelConfig(ChannelConfig config) {
             this.config = config;
         }
 
-        @Override
-        public QuicStreamChannelConfig setReadFrames(boolean readFrames) {
+        EmbeddedQuicStreamChannelConfig setReadFrames(boolean readFrames) {
+            this.readFrames = readFrames;
             return this;
         }
 
-        @Override
-        public boolean isReadFrames() {
-            return false;
+        boolean isReadFrames() {
+            return readFrames;
         }
 
-        @Override
-        public QuicStreamChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        EmbeddedQuicStreamChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
             this.allowHalfClosure = allowHalfClosure;
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        public EmbeddedQuicStreamChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
             config.setMaxMessagesPerRead(maxMessagesPerRead);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteSpinCount(int writeSpinCount) {
+        public EmbeddedQuicStreamChannelConfig setWriteSpinCount(int writeSpinCount) {
             config.setWriteSpinCount(writeSpinCount);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAllocator(ByteBufAllocator allocator) {
+        public EmbeddedQuicStreamChannelConfig setAllocator(ByteBufAllocator allocator) {
             config.setAllocator(allocator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        public EmbeddedQuicStreamChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
             config.setRecvByteBufAllocator(allocator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAutoRead(boolean autoRead) {
+        public EmbeddedQuicStreamChannelConfig setAutoRead(boolean autoRead) {
             config.setAutoRead(autoRead);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAutoClose(boolean autoClose) {
+        public EmbeddedQuicStreamChannelConfig setAutoClose(boolean autoClose) {
             config.setAutoClose(autoClose);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        public EmbeddedQuicStreamChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
             config.setMessageSizeEstimator(estimator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        public EmbeddedQuicStreamChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
             config.setWriteBufferWaterMark(writeBufferWaterMark);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        public EmbeddedQuicStreamChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
             config.setConnectTimeoutMillis(connectTimeoutMillis);
             return this;
         }
 
-        @Override
-        public QuicStreamChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            config.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public QuicStreamChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            config.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public boolean isAllowHalfClosure() {
+        boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
 
@@ -441,16 +303,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         @Override
         public boolean isAutoClose() {
             return config.isAutoClose();
-        }
-
-        @Override
-        public int getWriteBufferHighWaterMark() {
-            return config.getWriteBufferHighWaterMark();
-        }
-
-        @Override
-        public int getWriteBufferLowWaterMark() {
-            return config.getWriteBufferLowWaterMark();
         }
 
         @Override

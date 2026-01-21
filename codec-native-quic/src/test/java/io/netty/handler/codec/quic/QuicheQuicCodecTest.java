@@ -16,11 +16,11 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -69,11 +69,11 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
             return false;
         });
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 flushCount.incrementAndGet();
-                super.flush(ctx);
+                ctx.flush();
             }
         }, builder.build());
         assertEquals(0, numPacketsTracker.get());
@@ -97,7 +97,7 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
             packet.release();
         }
 
-        ChannelFuture future = channel.write(new DatagramPacket(Unpooled.buffer().writeZero(bytes),
+        Future<Void> future = channel.write(new DatagramPacket(Unpooled.buffer().writeZero(bytes),
                 new InetSocketAddress(0)));
         assertEquals(1, numPacketsTracker.get());
         assertEquals(8, numBytesTracker.get());

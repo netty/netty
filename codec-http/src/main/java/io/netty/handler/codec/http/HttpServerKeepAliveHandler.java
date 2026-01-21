@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 
@@ -44,7 +44,7 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
+public class HttpServerKeepAliveHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final String MULTIPART_PREFIX = "multipart";
 
     private boolean persistentConnection = true;
@@ -61,11 +61,11 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
                 persistentConnection = isKeepAlive(request);
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // modify message on way out to add headers if needed
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
@@ -82,9 +82,11 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise.addListener(ChannelFutureListener.CLOSE);
+            promise.addListener(f -> {
+                ctx.close();
+            });
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     private void trackResponse(HttpResponse response) {

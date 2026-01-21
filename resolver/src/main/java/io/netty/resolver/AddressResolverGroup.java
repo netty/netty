@@ -17,9 +17,7 @@
 package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -43,8 +41,8 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     private final Map<EventExecutor, AddressResolver<T>> resolvers =
             new IdentityHashMap<EventExecutor, AddressResolver<T>>();
 
-    private final Map<EventExecutor, GenericFutureListener<Future<Object>>> executorTerminationListeners =
-            new IdentityHashMap<EventExecutor, GenericFutureListener<Future<Object>>>();
+    private final Map<EventExecutor, FutureListener<Object>> executorTerminationListeners =
+            new IdentityHashMap<>();
 
     protected AddressResolverGroup() { }
 
@@ -74,15 +72,12 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
 
                 resolvers.put(executor, newResolver);
 
-                final FutureListener<Object> terminationListener = new FutureListener<Object>() {
-                    @Override
-                    public void operationComplete(Future<Object> future) {
-                        synchronized (resolvers) {
-                            resolvers.remove(executor);
-                            executorTerminationListeners.remove(executor);
-                        }
-                        newResolver.close();
+                final FutureListener<Object> terminationListener = future -> {
+                    synchronized (resolvers) {
+                        resolvers.remove(executor);
+                        executorTerminationListeners.remove(executor);
                     }
+                    newResolver.close();
                 };
 
                 executorTerminationListeners.put(executor, terminationListener);
@@ -107,7 +102,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     @SuppressWarnings({ "unchecked", "SuspiciousToArrayCall" })
     public void close() {
         final AddressResolver<T>[] rArray;
-        final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>>[] listeners;
+        final Map.Entry<EventExecutor, FutureListener<Object>>[] listeners;
 
         synchronized (resolvers) {
             rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[0]);
@@ -116,7 +111,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             executorTerminationListeners.clear();
         }
 
-        for (final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry : listeners) {
+        for (final Map.Entry<EventExecutor, FutureListener<Object>> entry : listeners) {
             entry.getKey().terminationFuture().removeListener(entry.getValue());
         }
 

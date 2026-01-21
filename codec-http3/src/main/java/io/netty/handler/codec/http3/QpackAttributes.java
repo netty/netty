@@ -18,8 +18,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 import static java.util.Objects.requireNonNull;
@@ -52,13 +51,13 @@ final class QpackAttributes {
         return !dynamicTableDisabled && encoderStream != null;
     }
 
-    void whenEncoderStreamAvailable(GenericFutureListener<Future<? super QuicStreamChannel>> listener) {
+    void whenEncoderStreamAvailable(FutureListener<? super QuicStreamChannel> listener) {
         assert !dynamicTableDisabled;
         assert encoderStreamPromise != null;
         encoderStreamPromise.addListener(listener);
     }
 
-    void whenDecoderStreamAvailable(GenericFutureListener<Future<? super QuicStreamChannel>> listener) {
+    void whenDecoderStreamAvailable(FutureListener<? super QuicStreamChannel> listener) {
         assert !dynamicTableDisabled;
         assert decoderStreamPromise != null;
         decoderStreamPromise.addListener(listener);

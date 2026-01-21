@@ -16,7 +16,7 @@
 package io.netty.example.discard;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -28,6 +28,7 @@ import io.netty.example.util.ServerUtil;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.concurrent.Future;
 
 /**
  * Discards any incoming data.
@@ -58,12 +59,12 @@ public final class DiscardServer {
              });
 
             // Bind and start to accept incoming connections.
-            ChannelFuture f = b.bind(PORT).sync();
+            Future<Channel> f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully
             // shut down your server.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

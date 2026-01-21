@@ -33,8 +33,8 @@ abstract class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQ
 
     private final boolean wantsDirectBuffer;
 
-    SslHandlerCoalescingBufferQueue(Channel channel, int initSize, boolean wantsDirectBuffer) {
-        super(channel, initSize);
+    SslHandlerCoalescingBufferQueue(int initSize, boolean wantsDirectBuffer) {
+        super(initSize);
         this.wantsDirectBuffer = wantsDirectBuffer;
     }
 

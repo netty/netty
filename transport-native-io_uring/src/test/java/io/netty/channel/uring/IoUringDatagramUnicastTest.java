@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -67,11 +67,11 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
                     // NOOP.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
 
             CountDownLatch readLatch = new CountDownLatch(1);
             CountDownLatch readCompleteLatch = new CountDownLatch(1);
-            sc = sb.handler(new ChannelInboundHandlerAdapter() {
+            sc = sb.handler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     readLatch.countDown();
@@ -83,7 +83,7 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
                     readCompleteLatch.countDown();
                 }
             }).option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(2048))
-                    .bind(newSocketAddress()).sync().channel();
+                    .bind(newSocketAddress()).get();
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
             cc.writeAndFlush(new DatagramPacket(cc.alloc().buffer().writeZero(512),  addr)).sync();
 

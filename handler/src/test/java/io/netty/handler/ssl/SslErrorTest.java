@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -156,7 +156,7 @@ public class SslErrorTest {
                                 ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
                                         exception, promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -164,7 +164,7 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).bind(0).sync().channel();
+                    }).bind(0).get();
 
             clientChannel = new Bootstrap().group(group)
                     .channel(NioSocketChannel.class)
@@ -176,7 +176,7 @@ public class SslErrorTest {
                                 ch.pipeline().addLast(new AlertValidationHandler(clientProvider, serverProduceError,
                                         exception, promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -184,7 +184,7 @@ public class SslErrorTest {
                                 }
                             });
                         }
-                    }).connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+                    }).connect(serverChannel.localAddress()).get();
             // Block until we received the correct exception
             promise.syncUninterruptibly();
         } finally {
@@ -237,7 +237,7 @@ public class SslErrorTest {
         }
     }
 
-    private static final class AlertValidationHandler extends ChannelInboundHandlerAdapter {
+    private static final class AlertValidationHandler implements ChannelInboundHandler {
         private final SslProvider clientProvider;
         private final boolean serverProduceError;
         private final CertificateException exception;

@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
@@ -35,10 +36,10 @@ public class EpollChannelConfigTest {
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
         EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
-        channel.config().getSoLinger();
+        channel.config().getOption(ChannelOption.SO_LINGER);
         channel.fd().close();
         try {
-            channel.config().getSoLinger();
+            channel.config().getOption(ChannelOption.SO_LINGER);
             fail();
         } catch (ChannelException e) {
             // expected
@@ -49,10 +50,10 @@ public class EpollChannelConfigTest {
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
         EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
-        channel.config().setKeepAlive(true);
+        channel.config().getOption(ChannelOption.SO_KEEPALIVE);
         channel.fd().close();
         try {
-            channel.config().setKeepAlive(true);
+            channel.config().getOption(ChannelOption.SO_KEEPALIVE);
             fail();
         } catch (ChannelException e) {
             // expected

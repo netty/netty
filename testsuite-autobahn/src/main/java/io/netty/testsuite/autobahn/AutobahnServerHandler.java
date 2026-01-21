@@ -17,10 +17,8 @@ package io.netty.testsuite.autobahn;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -35,6 +33,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
@@ -48,7 +47,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 /**
  * Handles handshakes and messages
  */
-public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
+public class AutobahnServerHandler implements ChannelInboundHandler {
     private static final Logger logger = Logger.getLogger(AutobahnServerHandler.class.getName());
 
     private WebSocketServerHandshaker handshaker;
@@ -128,9 +127,9 @@ public class AutobahnServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.channel().writeAndFlush(res);
+        Future<Void> f = ctx.writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ChannelFutureListener.CLOSE);
+            f.addListener(future -> ctx.close());
         }
     }
 

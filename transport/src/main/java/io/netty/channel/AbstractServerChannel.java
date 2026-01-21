@@ -15,21 +15,23 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Promise;
+
 import java.net.SocketAddress;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
- * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link #write(Object, ChannelPromise)}</li>
+ * <li>{@link ChannelOutboundInvoker#connect(SocketAddress, io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#shutdown(ChannelShutdownType, io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.Promise)}</li>
  * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
 
@@ -48,11 +50,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
     public SocketAddress remoteAddress() {
         return null;
     }
@@ -63,29 +60,27 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new DefaultServerUnsafe();
+    protected void doDisconnect(Promise<Void> promise)  {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in)  {
         throw new UnsupportedOperationException();
     }
 
     @Override
     protected final Object filterOutboundMessage(Object msg) {
         throw new UnsupportedOperationException();
-    }
-
-    private final class DefaultServerUnsafe extends AbstractUnsafe {
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
-        }
     }
 }

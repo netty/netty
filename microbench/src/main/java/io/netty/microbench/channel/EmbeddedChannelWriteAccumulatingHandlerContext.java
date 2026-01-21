@@ -16,11 +16,11 @@ package io.netty.microbench.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
@@ -51,12 +51,14 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
     }
 
     @Override
-    public final ChannelFuture write(Object msg) {
-        return write(msg, newPromise());
+    public final Future<Void> write(Object msg) {
+        Promise<Void> promise = newPromise();
+        write(msg, promise);
+        return promise;
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
+    public final void write(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ByteBuf) {
                 if (cumulation == null) {
@@ -64,7 +66,7 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, (ByteBuf) msg);
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 channel().write(msg, promise);
             }
@@ -72,11 +74,10 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public final void writeAndFlush(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
@@ -85,7 +86,7 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, buf);
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
@@ -93,11 +94,12 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+    public final Future<Void> writeAndFlush(Object msg) {
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, promise);
+        return promise;
     }
 }

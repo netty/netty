@@ -18,7 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.Brotli;
@@ -170,7 +170,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation))
                     .build();
@@ -180,7 +179,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation))
                     .build();
@@ -188,7 +186,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new BrotliDecoder())
                     .build();
@@ -196,7 +193,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new SnappyFrameDecoder())
                     .build();
@@ -204,7 +200,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new ZstdDecoder())
                     .build();
@@ -374,7 +369,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
         Http2Decompressor(EmbeddedChannel decompressor,  Http2Connection connection, Http2FrameListener listener) {
             this.decompressor = decompressor;
-            this.decompressor.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            this.decompressor.pipeline().addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     ByteBuf buf = (ByteBuf) msg;

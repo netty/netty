@@ -22,14 +22,14 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -37,21 +37,20 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -108,7 +107,7 @@ public class PcapWriteHandlerTest {
                         }
                     });
 
-            ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
+            Future<Channel> channelFutureServer = server.bind(serverAddr).sync();
             assertTrue(channelFutureServer.isSuccess());
 
             CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
@@ -122,20 +121,20 @@ public class PcapWriteHandlerTest {
                             .writePcapGlobalHeader(writeGlobalHeaders)
                             .build(outputStream));
 
-            ChannelFuture channelFutureClient =
+            Future<Channel> channelFutureClient =
                     client.bind(clientAddr).sync();
             assertTrue(channelFutureClient.isSuccess());
 
-            Channel clientChannel = channelFutureClient.channel();
+            Channel clientChannel = channelFutureClient.getNow();
             DatagramPacket datagram = new DatagramPacket(payload.copy(),
-                    (InetSocketAddress) channelFutureServer.channel().localAddress());
+                    (InetSocketAddress) channelFutureServer.getNow().localAddress());
             assertTrue(clientChannel.writeAndFlush(datagram).sync().isSuccess());
             assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
             // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
             verifyUdpCapture(!sharedOutputStream && writeGlobalHeaders,
                     byteBuf, payload,
-                    (InetSocketAddress) channelFutureServer.channel().localAddress(),
+                    (InetSocketAddress) channelFutureServer.getNow().localAddress(),
                     (InetSocketAddress) clientChannel.localAddress()
             );
 
@@ -491,7 +490,7 @@ public class PcapWriteHandlerTest {
                             p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
                                     .writePcapGlobalHeader(writeGlobalHeaders)
                                     .build(new ByteBufOutputStream(byteBuf)));
-                            p.addLast(new ChannelInboundHandlerAdapter() {
+                            p.addLast(new ChannelInboundHandler() {
                                 private int read;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -512,7 +511,7 @@ public class PcapWriteHandlerTest {
                     });
 
             // Start the server.
-            ChannelFuture serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
+            Future<Channel> serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
             assertTrue(serverChannelFuture.isSuccess());
 
             // configure the client
@@ -525,7 +524,7 @@ public class PcapWriteHandlerTest {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
-                            p.addLast(new ChannelInboundHandlerAdapter() {
+                            p.addLast(new ChannelInboundHandler() {
                                 private int read;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -550,18 +549,18 @@ public class PcapWriteHandlerTest {
                         }
                     });
 
-            InetSocketAddress serverAddress = (InetSocketAddress) serverChannelFuture.channel().localAddress();
+            InetSocketAddress serverAddress = (InetSocketAddress) serverChannelFuture.getNow().localAddress();
             // Start the client.
-            ChannelFuture clientChannelFuture = cb.connect(serverAddress).sync();
+            Future<Channel> clientChannelFuture = cb.connect(serverAddress).sync();
             assertTrue(clientChannelFuture.isSuccess());
 
-            InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.channel().localAddress();
+            InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.getNow().localAddress();
 
             assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
             assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
 
-            clientChannelFuture.channel().close().sync();
-            serverChannelFuture.channel().close().sync();
+            clientChannelFuture.getNow().close().sync();
+            serverChannelFuture.getNow().close().sync();
 
             // Shut down all event loops to terminate all threads.
             assertTrue(group.shutdownGracefully().sync().isSuccess());
@@ -834,10 +833,10 @@ public class PcapWriteHandlerTest {
 
         CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(pcapBuffer);
         final EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                        super.channelActive(ctx);
+                        ctx.fireChannelActive();
 
                         ctx.fireExceptionCaught(exception);
                     }
@@ -1341,7 +1340,7 @@ public class PcapWriteHandlerTest {
     private static class EmbeddedDatagramChannel extends EmbeddedChannel implements DatagramChannel {
         private final InetSocketAddress local;
         private final InetSocketAddress remote;
-        private DatagramChannelConfig config;
+        private ChannelConfig config;
 
         EmbeddedDatagramChannel(InetSocketAddress local, InetSocketAddress remote) {
             super(DefaultChannelId.newInstance(), false);
@@ -1355,26 +1354,12 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public DatagramChannelConfig config() {
+        public ChannelConfig config() {
             if (config == null) {
                 // ick! config() is called by the super constructor, so we need to do this.
-                try {
-                    config = new DefaultDatagramChannelConfig(this, new DatagramSocket());
-                } catch (SocketException e) {
-                    throw new RuntimeException(e);
-                }
+                config = new DatagramChannelConfigImpl(this);
             }
             return config;
-        }
-
-        @Override
-        public InetSocketAddress localAddress() {
-            return (InetSocketAddress) super.localAddress();
-        }
-
-        @Override
-        public InetSocketAddress remoteAddress() {
-            return (InetSocketAddress) super.remoteAddress();
         }
 
         @Override
@@ -1388,30 +1373,30 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture joinGroup(InetAddress multicastAddress) {
+        public Future<Void> joinGroup(InetAddress multicastAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future) {
+        public void joinGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        public Future<Void> joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public void joinGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public Future<Void> joinGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source) {
@@ -1419,39 +1404,39 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public void joinGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+        public Future<Void> leaveGroup(InetAddress multicastAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future) {
+        public void leaveGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        public Future<Void> leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public void leaveGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public Future<Void> leaveGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source) {
@@ -1459,16 +1444,16 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public void leaveGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(
+        public Future<Void> block(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress sourceToBlock) {
@@ -1476,26 +1461,26 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture block(
+        public void block(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress sourceToBlock,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future) {
+        public void block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
     }
 
-    static final class DiscardingReadsHandler extends ChannelInboundHandlerAdapter {
+    static final class DiscardingReadsHandler implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             //Discard
@@ -1503,17 +1488,23 @@ public class PcapWriteHandlerTest {
         }
     }
 
-    static class DiscardingWritesAndFlushesHandler extends ChannelOutboundHandlerAdapter {
+    static class DiscardingWritesAndFlushesHandler implements ChannelOutboundHandler {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             //Discard
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             //Discard
             ReferenceCountUtil.release(msg);
-            promise.setSuccess();
+            promise.setSuccess(null);
+        }
+    }
+
+    private static final class DatagramChannelConfigImpl extends DefaultChannelConfig {
+        DatagramChannelConfigImpl(Channel channel) {
+            super(channel);
         }
     }
 }

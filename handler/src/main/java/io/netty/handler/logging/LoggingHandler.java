@@ -17,12 +17,11 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -37,9 +36,8 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
  * A {@link ChannelHandler} that logs all events using a logging framework.
  * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
-@Sharable
 @SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
-public class LoggingHandler extends ChannelDuplexHandler {
+public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
@@ -160,6 +158,11 @@ public class LoggingHandler extends ChannelDuplexHandler {
         internalLevel = level.toInternalLevel();
     }
 
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
+
     /**
      * Returns the {@link LogLevel} that this handler uses to log
      */
@@ -223,7 +226,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND", localAddress));
         }
@@ -233,7 +236,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     @Override
     public void connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT", remoteAddress, localAddress));
         }
@@ -241,7 +244,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT"));
         }
@@ -249,7 +252,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE"));
         }
@@ -257,7 +260,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER"));
         }
@@ -281,7 +284,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "WRITE", msg));
         }
@@ -297,7 +300,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "FLUSH"));
         }
@@ -336,7 +339,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
 
     /**
      * Formats an event and returns the formatted message.  This method is currently only used for formatting
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}.
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}.
      *
      * @param eventName the name of the event
      * @param firstArg  the first argument of the event

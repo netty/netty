@@ -18,12 +18,12 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 import java.util.List;
 
@@ -60,7 +60,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     private int maxCumulationBufferComponents = DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS;
     private ChannelHandlerContext ctx;
-    private ChannelFutureListener continueResponseWriteListener;
+    private FutureListener<Void> continueResponseWriteListener;
 
     private boolean aggregating;
     private boolean handleIncompleteAggregateDuringClose = true;
@@ -221,14 +221,11 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             Object continueResponse = newContinueResponse(m, maxContentLength, ctx.pipeline());
             if (continueResponse != null) {
                 // Cache the write listener for reuse.
-                ChannelFutureListener listener = continueResponseWriteListener;
+                FutureListener<Void> listener = continueResponseWriteListener;
                 if (listener == null) {
-                    continueResponseWriteListener = listener = new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                ctx.fireExceptionCaught(future.cause());
-                            }
+                    continueResponseWriteListener = listener = future -> {
+                        if (!future.isSuccess()) {
+                            ctx.fireExceptionCaught(future.cause());
                         }
                     };
                 }
@@ -237,11 +234,13 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 boolean closeAfterWrite = closeAfterContinueResponse(continueResponse);
                 handlingOversizedMessage = ignoreContentAfterContinueResponse(continueResponse);
 
-                final ChannelFuture future = ctx.writeAndFlush(continueResponse).addListener(listener);
+                final Future<Void> future = ctx.writeAndFlush(continueResponse).addListener(listener);
 
                 if (closeAfterWrite) {
                     handleIncompleteAggregateDuringClose = false;
-                    future.addListener(ChannelFutureListener.CLOSE);
+                    future.addListener(f -> {
+                        ctx.close();
+                    });
                     return;
                 }
                 if (handlingOversizedMessage) {

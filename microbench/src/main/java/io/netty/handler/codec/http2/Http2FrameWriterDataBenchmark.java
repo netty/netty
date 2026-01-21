@@ -15,15 +15,15 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -76,11 +76,11 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     public void setup() {
         writer = new DefaultHttp2FrameWriter();
         oldWriter = new OldDefaultHttp2FrameWriter();
-        payload = pooled ? PooledByteBufAllocator.DEFAULT.buffer(payloadSize) : Unpooled.buffer(payloadSize);
+        payload = pooled ? ByteBufAllocator.DEFAULT.buffer(payloadSize) : Unpooled.buffer(payloadSize);
         payload.writeZero(payloadSize);
         ctx = new EmbeddedChannelWriteReleaseHandlerContext(
                 pooled ? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT,
-                new ChannelInboundHandlerAdapter()) {
+                new ChannelInboundHandler() { }) {
             @Override
             protected void handleException(Throwable t) {
                 handleUnexpectedException(t);
@@ -117,8 +117,8 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                 unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly();
         private final int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
         @Override
-        public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                       int padding, boolean endStream, ChannelPromise promise) {
+        public void writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+                              int padding, boolean endStream, Promise<Void> promise) {
             final Http2CodecUtil.SimpleChannelPromiseAggregator promiseAggregator =
                     new Http2CodecUtil.SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
             final DataFrameHeader header = new DataFrameHeader(ctx, streamId);
@@ -171,9 +171,9 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                     promiseAggregator.setFailure(t);
                     promiseAggregator.doneAllocatingPromises();
                 }
-                return promiseAggregator;
+                return;
             }
-            return promiseAggregator.doneAllocatingPromises();
+            promiseAggregator.doneAllocatingPromises();
         }
 
         private static int paddingBytes(int padding) {

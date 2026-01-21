@@ -20,11 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -36,6 +35,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -125,7 +125,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testServerCloseSocketInputProvidesData() throws InterruptedException {
+    public void testServerCloseSocketInputProvidesData() throws Exception {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
@@ -153,22 +153,16 @@ public class HttpClientCodecTest {
                             sChannel.writeAndFlush(Unpooled.wrappedBuffer(("HTTP/1.0 200 OK\r\n" +
                             "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
                             "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1)))
-                                    .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    assertTrue(future.isSuccess());
-                                    sChannel.writeAndFlush(Unpooled.wrappedBuffer(
-                                            "<html><body>hello half closed!</body></html>\r\n"
-                                            .getBytes(CharsetUtil.ISO_8859_1)))
-                                            .addListener(new ChannelFutureListener() {
-                                        @Override
-                                        public void operationComplete(ChannelFuture future) throws Exception {
-                                            assertTrue(future.isSuccess());
-                                            sChannel.shutdownOutput();
-                                        }
+                                    .addListener(future -> {
+                                        assertTrue(future.isSuccess());
+                                        sChannel.writeAndFlush(Unpooled.wrappedBuffer(
+                                                "<html><body>hello half closed!</body></html>\r\n"
+                                                .getBytes(CharsetUtil.ISO_8859_1)))
+                                                .addListener(f -> {
+                                                    assertTrue(f.isSuccess());
+                                                    sChannel.shutdown(ChannelShutdownType.newOutbound());
+                                                });
                                     });
-                                }
-                            });
                         }
                     });
                     serverChannelLatch.countDown();
@@ -192,12 +186,12 @@ public class HttpClientCodecTest {
                 }
             });
 
-            Channel serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+            Channel serverChannel = sb.bind(new InetSocketAddress(0)).get();
             int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-            ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+            Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
             assertTrue(ccf.awaitUninterruptibly().isSuccess());
-            Channel clientChannel = ccf.channel();
+            Channel clientChannel = ccf.getNow();
             assertTrue(serverChannelLatch.await(5, SECONDS));
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
             assertTrue(responseReceivedLatch.await(5, SECONDS));

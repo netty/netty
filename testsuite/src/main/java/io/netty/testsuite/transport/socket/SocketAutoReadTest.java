@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
@@ -70,7 +70,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .childOption(ChannelOption.RECVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
                     .childHandler(serverInitializer);
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
 
             cb.option(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
@@ -78,7 +78,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .option(ChannelOption.RECVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
                     .handler(clientInitializer);
 
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             // 3 bytes means 3 independent reads for TestRecvByteBufAllocator
             clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[3], 0, 3));
@@ -123,7 +123,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
     }
 
-    private static final class AutoReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class AutoReadHandler implements ChannelInboundHandler {
         private final AtomicInteger count = new AtomicInteger();
         private final CountDownLatch latch = new CountDownLatch(1);
         private final CountDownLatch latch2;

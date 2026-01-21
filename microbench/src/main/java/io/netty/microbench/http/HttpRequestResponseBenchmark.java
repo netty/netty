@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -187,7 +187,7 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
                 HttpRequestDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH, HttpRequestDecoder.DEFAULT_MAX_HEADER_SIZE,
                 HttpRequestDecoder.DEFAULT_MAX_CHUNK_SIZE, false);
         HttpResponseEncoder httpResponseEncoder = new HttpResponseEncoder();
-        ChannelInboundHandlerAdapter inboundHandlerAdapter = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler inboundHandlerAdapter = new ChannelInboundHandler() {
 
             private final byte[] STATIC_PLAINTEXT = "Hello, World!".getBytes(CharsetUtil.UTF_8);
             private final int STATIC_PLAINTEXT_LEN = STATIC_PLAINTEXT.length;

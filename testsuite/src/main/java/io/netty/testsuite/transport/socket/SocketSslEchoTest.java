@@ -20,10 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -39,7 +37,6 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -304,7 +301,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("clientHandler", clientHandler);
-                sch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                sch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {
@@ -316,7 +313,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         });
 
-        final Channel sc = sb.bind().sync().channel();
+        final Channel sc = sb.bind().get();
         cb.connect(sc.localAddress()).sync();
 
         final Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
@@ -338,7 +335,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
 
-            ChannelFuture future = clientChannel.writeAndFlush(buf);
+            Future<Void> future = clientChannel.writeAndFlush(buf);
             clientSendCounter.set(clientSendCounterVal += length);
             future.sync();
 
@@ -386,6 +383,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         clientChannel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
         delegatedTaskExecutor.shutdown();
+        assertTrue(delegatedTaskExecutor.awaitTermination(5, TimeUnit.SECONDS));
 
         if (serverException.get() != null && !(serverException.get() instanceof IOException)) {
             throw serverException.get();
@@ -452,7 +450,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 serverSslHandler.engine().getSession().getCipherSuite());
     }
 
-    @Sharable
     private abstract class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         protected final AtomicInteger recvCounter;
@@ -466,6 +463,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             this.recvCounter = recvCounter;
             this.negoCounter = negoCounter;
             this.exception = exception;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override
@@ -515,13 +517,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public void handlerAdded(final ChannelHandlerContext ctx) {
             if (!autoRead) {
-                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
-                        new GenericFutureListener<Future<? super Channel>>() {
-                            @Override
-                            public void operationComplete(Future<? super Channel> future) {
-                                ctx.read();
-                            }
-                        });
+                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(future -> ctx.read());
             }
         }
 

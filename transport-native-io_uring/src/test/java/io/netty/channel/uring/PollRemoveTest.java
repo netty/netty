@@ -53,7 +53,7 @@ public class PollRemoveTest {
                         public void initChannel(SocketChannel ch) { }
                     });
 
-            Channel sc = b.bind(new InetSocketAddress(0)).sync().channel();
+            Channel sc = b.bind(new InetSocketAddress(0)).get();
 
             // close ServerChannel
             sc.close().sync();

@@ -19,15 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
 
 
 /**
- * {@link ChannelOutboundHandlerAdapter} which encodes message in a stream-like fashion from one message to an
+ * {@link io.netty.channel.ChannelOutboundHandler} which encodes message in a stream-like fashion from one message to an
  * {@link ByteBuf}.
  *
  *
@@ -43,7 +42,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *     }
  * </pre>
  */
-public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
+public abstract class MessageToByteEncoder<I> implements ChannelOutboundHandler {
 
     private final TypeParameterMatcher matcher;
     private final boolean preferDirect;
@@ -96,7 +95,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {

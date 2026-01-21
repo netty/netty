@@ -15,13 +15,11 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -37,14 +35,17 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 import static io.netty.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
+final class KQueueSocketChannelConfig extends KQueueChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 
-    KQueueSocketChannelConfig(KQueueSocketChannel channel) {
+    KQueueSocketChannelConfig(AbstractKQueueChannel channel) {
         super(channel);
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (channel.socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
         calculateMaxBytesPerGatheringWrite();
@@ -52,10 +53,22 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
+        Map<ChannelOption<?>, Object> options = getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, SO_SNDLOWAT, TCP_NOPUSH);
+        if (((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return getOptions(options, DOMAIN_SOCKET_READ_MODE);
+        }
+        return options;
+    }
+
+    private void setReadMode(DomainSocketReadMode mode) {
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
+    }
+
+    DomainSocketReadMode getReadMode() {
+        return mode;
     }
 
     @SuppressWarnings("unchecked")
@@ -94,6 +107,10 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
+        if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return (T) getReadMode();
+        }
         return super.getOption(option);
     }
 
@@ -123,6 +140,9 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
             setTcpNoPush((Boolean) value);
         } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
+        } else if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            setReadMode((DomainSocketReadMode) value);
         } else {
             return super.setOption(option, value);
         }
@@ -130,277 +150,171 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         return true;
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getReceiveBufferSize();
+            return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSendBufferSize();
+            return ((AbstractKQueueChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getSoLinger() {
+    int getSoLinger() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSoLinger();
+            return ((AbstractKQueueChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    private int getTrafficClass() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getTrafficClass();
+            return ((AbstractKQueueChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isKeepAlive() {
+    private boolean isKeepAlive() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isKeepAlive();
+            return ((AbstractKQueueChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isReuseAddress();
+            return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isTcpNoDelay() {
+    private boolean isTcpNoDelay() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isTcpNoDelay();
+            return ((AbstractKQueueChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public int getSndLowAt() {
+    private int getSndLowAt() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSndLowAt();
+            return ((AbstractKQueueChannel) channel).socket.getSndLowAt();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public void setSndLowAt(int sndLowAt)  {
+    private void setSndLowAt(int sndLowAt)  {
         try {
-            ((KQueueSocketChannel) channel).socket.setSndLowAt(sndLowAt);
+            ((AbstractKQueueChannel) channel).socket.setSndLowAt(sndLowAt);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public boolean isTcpNoPush() {
+    private boolean isTcpNoPush() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isTcpNoPush();
+            return ((AbstractKQueueChannel) channel).socket.isTcpNoPush();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public void setTcpNoPush(boolean tcpNoPush)  {
+    private void setTcpNoPush(boolean tcpNoPush)  {
         try {
-            ((KQueueSocketChannel) channel).socket.setTcpNoPush(tcpNoPush);
+            ((AbstractKQueueChannel) channel).socket.setTcpNoPush(tcpNoPush);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    private void setKeepAlive(boolean keepAlive) {
         try {
-            ((KQueueSocketChannel) channel).socket.setKeepAlive(keepAlive);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setKeepAlive(keepAlive);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            ((KQueueSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
-            ((KQueueSocketChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
-            ((KQueueSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            ((AbstractKQueueChannel) channel).socket.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setSoLinger(int soLinger) {
+    private void setSoLinger(int soLinger) {
         try {
-            ((KQueueSocketChannel) channel).socket.setSoLinger(soLinger);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setSoLinger(soLinger);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    private void setTcpNoDelay(boolean tcpNoDelay) {
         try {
-            ((KQueueSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public KQueueSocketChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
-            ((KQueueSocketChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
+            ((AbstractKQueueChannel) channel).socket.setTrafficClass(trafficClass);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    @Override
-    public boolean isAllowHalfClosure() {
+    boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
     /**
      * Enables client TCP fast open, if available.
      */
-    public KQueueSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    private void setTcpFastOpenConnect(boolean fastOpenConnect) {
         tcpFastopen = fastOpenConnect;
-        return this;
     }
 
     /**
      * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
      */
-    public boolean isTcpFastOpenConnect() {
+    boolean isTcpFastOpenConnect() {
         return tcpFastopen;
     }
 
-    @Override
-    public KQueueSocketChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    private void setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
     }
 
     private void calculateMaxBytesPerGatheringWrite() {
