@@ -203,7 +203,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
                     boolean success = false;
                     try {
                         decoder.decodeChunk(
-                                inputArray, inPos, chunkLength,
+                                inputArray, inPos, inPos + chunkLength,
                                 outputArray, outPos, outPos + originalLength);
                         if (uncompressed.hasArray()) {
                             uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
