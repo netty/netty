@@ -26,7 +26,7 @@ import io.netty.handler.codec.redis.RedisEncoder;
 import io.netty.handler.codec.redis.RedisMessage;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -89,10 +89,6 @@ public class RedisEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void writeArray() throws Exception {
-        encoder.write(context, redisArray.retain(), newPromise());
-    }
-
-    private Promise<Void> newPromise() {
-        return context.newPromise();
+        encoder.write(context, redisArray.retain(), CompletionHandler.ignore());
     }
 }

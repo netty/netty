@@ -39,7 +39,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
@@ -301,35 +301,35 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.register(ctx, promise);
+        public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            codec.register(ctx, handler);
         }
 
         @Override
         public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                         Promise<Void> promise) {
-            codec.bind(ctx, localAddress, promise);
+                         CompletionHandler<Void> handler) {
+            codec.bind(ctx, localAddress, handler);
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                            Promise<Void> promise) {
-            codec.connect(ctx, remoteAddress, localAddress, promise);
+                            CompletionHandler<Void> handler) {
+            codec.connect(ctx, remoteAddress, localAddress, handler);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.disconnect(ctx, promise);
+        public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            codec.disconnect(ctx, handler);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.close(ctx, promise);
+        public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            codec.close(ctx, handler);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-            codec.deregister(ctx, promise);
+        public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            codec.deregister(ctx, handler);
         }
 
         @Override
@@ -338,8 +338,8 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            codec.write(ctx, msg, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+            codec.write(ctx, msg, handler);
         }
 
         @Override
@@ -353,8 +353,8 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
-        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
-            codec.shutdown(ctx, type, promise);
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, CompletionHandler<Void> handler) {
+            codec.shutdown(ctx, type, handler);
         }
     }
 }

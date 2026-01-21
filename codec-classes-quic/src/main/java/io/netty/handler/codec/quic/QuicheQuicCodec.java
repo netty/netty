@@ -21,6 +21,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -278,14 +279,14 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         pendingPackets ++;
         int size = estimatorHandle.size(msg);
         if (size > 0) {
             pendingBytes += size;
         }
         try {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         } finally {
             flushIfNeeded(ctx);
         }
@@ -304,14 +305,15 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
+                        CompletionHandler<Void> handler) {
         if (remoteAddress instanceof QuicheQuicChannelAddress) {
             QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
             QuicheQuicChannel channel = addr.channel;
             connectQuicChannel(channel, remoteAddress, localAddress,
-                    senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config, promise);
+                    senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config,
+                    ctx.<Void>newPromise().addHandler(handler));
         } else {
-            ctx.connect(remoteAddress, localAddress, promise);
+            ctx.connect(remoteAddress, localAddress, handler);
         }
     }
 

@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -150,10 +151,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         promise.addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
-        queue.add(1L, promise);
+        queue.add(1L, promise.toCompletionHandler());
 
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2);
+        queue.add(2L, promise2.toCompletionHandler());
         queue.removeAndFailAll(new Exception());
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
@@ -166,9 +167,9 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWriteAllReentrantWrite() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
-                ctx.writeAndFlush(msg, promise);
+                ctx.writeAndFlush(msg, handler);
             }
         }, new ChannelOutboundHandler() { });
 
@@ -176,10 +177,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
-        promise.addListener(future -> queue.add(3L, promise3));
-        queue.add(1L, promise);
+        promise.addListener(future -> queue.add(3L, promise3.toCompletionHandler()));
+        queue.add(1L, promise.toCompletionHandler());
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2);
+        queue.add(2L, promise2.toCompletionHandler());
         queue.removeAndTransferAll(channel::write);
 
         assertTrue(promise.isDone());
@@ -205,13 +206,13 @@ public class PendingWriteQueueTest {
         promise3.addListener(future -> failOrder.add(3));
         promise.addListener(future -> {
             failOrder.add(1);
-            queue.add(3L, promise3);
+            queue.add(3L, promise3.toCompletionHandler());
         });
-        queue.add(1L, promise);
+        queue.add(1L, promise.toCompletionHandler());
 
         Promise<Void> promise2 = channel.newPromise();
         promise2.addListener(future -> failOrder.add(2));
-        queue.add(2L, promise2);
+        queue.add(2L, promise2.toCompletionHandler());
         queue.removeAndFailAll(new Exception());
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
@@ -232,10 +233,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         promise.addListener(future -> queue.removeAndTransferAll(channel::write));
-        queue.add(1L, promise);
+        queue.add(1L, promise.toCompletionHandler());
 
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2);
+        queue.add(2L, promise2.toCompletionHandler());
         queue.removeAndTransferAll(channel::write);
         channel.flush();
         assertTrue(promise.isSuccess());
@@ -259,7 +260,7 @@ public class PendingWriteQueueTest {
 
         IllegalStateException ex = new IllegalStateException();
         Promise<Void> promise = channel.newPromise();
-        queue.add(1L, promise);
+        queue.add(1L, promise.toCompletionHandler());
         queue.removeAndFailAll(ex);
         assertSame(ex, promise.cause());
     }
@@ -276,8 +277,8 @@ public class PendingWriteQueueTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            queue.add(msg, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+            queue.add(msg, handler);
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());
             assertNotNull(queue.current());

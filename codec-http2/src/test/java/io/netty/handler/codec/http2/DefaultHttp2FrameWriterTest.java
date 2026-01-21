@@ -20,6 +20,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -89,7 +90,7 @@ public class DefaultHttp2FrameWriterTest {
             }
         };
         when(ctx.write(any())).then(answer);
-        doAnswer(answer).when(ctx).write(any(), any(Promise.class));
+        doAnswer(answer).when(ctx).write(any(), any(CompletionHandler.class));
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

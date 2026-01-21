@@ -22,7 +22,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.Future;
@@ -30,9 +30,9 @@ import java.util.concurrent.Future;
 /**
  * {@link ChannelInboundHandler} / {@link ChannelOutboundHandler}  which consolidates
  * {@link Channel#flush()} / {@link ChannelHandlerContext#flush()} operations (which also includes
- * {@link Channel#writeAndFlush(Object)} / {@link ChannelOutboundInvoker#writeAndFlush(Object, Promise)} and
+ * {@link Channel#writeAndFlush(Object)} / {@link ChannelOutboundInvoker#writeAndFlush(Object, CompletionHandler)} and
  * {@link ChannelOutboundInvoker#writeAndFlush(Object)} /
- * {@link ChannelOutboundInvoker#writeAndFlush(Object, Promise)}).
+ * {@link ChannelOutboundInvoker#writeAndFlush(Object, CompletionHandler)}).
  * <p>
  * Flush operations are generally speaking expensive as these may trigger a syscall on the transport level. Thus it is
  * in most cases (where write latency can be traded with throughput) a good idea to try to minimize flush operations
@@ -160,17 +160,17 @@ public class FlushConsolidationHandler implements ChannelInboundHandler, Channel
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         // Try to flush one last time if flushes are pending before disconnect the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.disconnect(promise);
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         // Try to flush one last time if flushes are pending before close the channel.
         resetReadAndFlushIfNeeded(ctx);
-        ctx.close(promise);
+        ctx.close(handler);
     }
 
     @Override

@@ -18,9 +18,9 @@ package io.netty.channel;
 import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -118,15 +118,15 @@ public final class PendingWriteQueue {
     /**
      * Add the given {@code msg} and {@link Promise}.
      */
-    public void add(Object msg, Promise<Void> promise) {
+    public void add(Object msg, CompletionHandler<Void> handler) {
         assert executor.inEventLoop();
         ObjectUtil.checkNotNull(msg, "msg");
-        ObjectUtil.checkNotNull(promise, "promise");
+        ObjectUtil.checkNotNull(handler, "handler");
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
         int messageSize = size(msg);
 
-        PendingWrite write = PendingWrite.newInstance(msg, messageSize, promise);
+        PendingWrite write = PendingWrite.newInstance(msg, messageSize, handler);
         PendingWrite currentTail = tail;
         if (currentTail == null) {
             tail = head = write;
@@ -152,37 +152,28 @@ public final class PendingWriteQueue {
       {@link BiConsumer#accept(Object, Object)}.
      *
      */
-    public void removeAndTransferAll(BiConsumer<Object, Promise<Void>> transferFunc) {
+    public void removeAndTransferAll(BiConsumer<Object, CompletionHandler<Void>> transferFunc) {
         assert executor.inEventLoop();
 
         if (isEmpty()) {
             return;
         }
 
-        Promise<Void> p = executor.newPromise();
-        PromiseCombiner combiner = new PromiseCombiner(executor);
-        try {
-            // It is possible for some of the written promises to trigger more writes. The new writes
-            // will "revive" the queue, so we need to write them up until the queue is empty.
-            for (PendingWrite write = head; write != null; write = head) {
-                head = tail = null;
-                size = 0;
-                bytes = 0;
+        // It is possible for some of the written promises to trigger more writes. The new writes
+        // will "revive" the queue, so we need to write them up until the queue is empty.
+        for (PendingWrite write = head; write != null; write = head) {
+            head = tail = null;
+            size = 0;
+            bytes = 0;
 
-                while (write != null) {
-                    PendingWrite next = write.next;
-                    Object msg = write.msg;
-                    Promise<Void> promise = write.promise;
-                    recycle(write, false);
-                    combiner.add(promise);
-
-                    transferFunc.accept(msg, promise);
-                    write = next;
-                }
+            while (write != null) {
+                PendingWrite next = write.next;
+                Object msg = write.msg;
+                CompletionHandler<Void> handler = write.handler;
+                recycle(write, false);
+                transferFunc.accept(msg, handler);
+                write = next;
             }
-            combiner.finish(p);
-        } catch (Throwable cause) {
-            p.setFailure(cause);
         }
         assertEmpty();
     }
@@ -203,9 +194,9 @@ public final class PendingWriteQueue {
             while (write != null) {
                 PendingWrite next = write.next;
                 ReferenceCountUtil.safeRelease(write.msg);
-                Promise<Void> promise = write.promise;
+                CompletionHandler<Void> handler = write.handler;
                 recycle(write, false);
-                safeFail(promise, cause);
+                handler.onFailure(cause);
                 write = next;
             }
         }
@@ -225,8 +216,8 @@ public final class PendingWriteQueue {
             return;
         }
         ReferenceCountUtil.safeRelease(write.msg);
-        Promise<Void> promise = write.promise;
-        safeFail(promise, cause);
+        CompletionHandler<Void> handler = write.handler;
+        handler.onFailure(cause);
         recycle(write, true);
     }
 
@@ -238,34 +229,34 @@ public final class PendingWriteQueue {
      * Removes a pending write operation and performs it via
      * {@link BiConsumer#accept(Object, Object)}.
      */
-    public void removeAndTransfer(BiConsumer<Object, Promise<Void>> transferFunc) {
+    public void removeAndTransfer(BiConsumer<Object, CompletionHandler<Void>> transferFunc) {
         assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return;
         }
         Object msg = write.msg;
-        Promise<Void> promise = write.promise;
+        CompletionHandler<Void> handler = write.handler;
         recycle(write, true);
-        transferFunc.accept(msg, promise);
+        transferFunc.accept(msg, handler);
     }
 
     /**
      * Removes a pending write operation and release it's message via {@link ReferenceCountUtil#safeRelease(Object)}.
      *
-     * @return  {@link Promise} of the pending write or {@code null} if the queue is empty.
+     * @return {@link CompletionHandler} of the pending write or {@code null} if the queue is empty.
      *
      */
-    public Promise<Void> remove() {
+    public CompletionHandler<Void> remove() {
         assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
             return null;
         }
-        Promise<Void> promise = write.promise;
+        CompletionHandler<Void> handler = write.handler;
         ReferenceCountUtil.safeRelease(write.msg);
         recycle(write, true);
-        return promise;
+        return handler;
     }
 
     /**
@@ -323,18 +314,18 @@ public final class PendingWriteQueue {
         private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
-        private Promise<Void> promise;
+        private CompletionHandler<Void> handler;
         private Object msg;
 
         private PendingWrite(ObjectPool.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 
-        static PendingWrite newInstance(Object msg, int size, Promise<Void> promise) {
+        static PendingWrite newInstance(Object msg, int size, CompletionHandler<Void> handler) {
             PendingWrite write = RECYCLER.get();
             write.size = size;
             write.msg = msg;
-            write.promise = promise;
+            write.handler = handler;
             return write;
         }
 
@@ -342,7 +333,7 @@ public final class PendingWriteQueue {
             size = 0;
             next = null;
             msg = null;
-            promise = null;
+            handler = null;
             handle.recycle(this);
         }
     }

@@ -41,11 +41,10 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import org.jetbrains.annotations.Nullable;
-
-import java.net.SocketAddress;
 
 /**
  * This handler converts from {@link Http3RequestStreamFrame} to {@link HttpObject},
@@ -134,7 +133,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * @throws Exception    is thrown if an error occurs
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (!(msg instanceof HttpObject)) {
             throw new UnsupportedMessageTypeException(msg, HttpObject.class);
         }
@@ -145,7 +144,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             if (res.status().equals(HttpResponseStatus.CONTINUE)) {
                 if (res instanceof FullHttpResponse) {
                     final Http3Headers headers = toHttp3Headers(res);
-                    ctx.write(new DefaultHttp3HeadersFrame(headers), promise);
+                    ctx.write(new DefaultHttp3HeadersFrame(headers), handler);
                     ((FullHttpResponse) res).release();
                     return;
                 } else {
@@ -162,6 +161,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
         // we will unvoid.
         boolean isLast = msg instanceof LastHttpContent;
 
+        Promise<Void> promise = ctx.<Void>newPromise().addHandler(handler);
         if (msg instanceof HttpMessage) {
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
             DefaultHttp3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);
@@ -225,7 +225,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             Promise<Void> outerPromise,
             @Nullable PromiseCombiner combiner) {
         if (combiner == null) {
-            ctx.write(msg, outerPromise);
+            ctx.write(msg, outerPromise.toCompletionHandler());
         } else {
             combiner.add(ctx.write(msg));
         }
@@ -259,47 +259,5 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     @Override
     public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
-    }
-
-    @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
-    }
-
-    @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
-    }
-
-    @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
-    }
-
-    @Override
-    public void read(ChannelHandlerContext ctx) {
-        ctx.read();
-    }
-
-    @Override
-    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                         Promise<Void> promise) {
-        ctx.shutdown(type, promise);
     }
 }

@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -50,9 +51,9 @@ public class AbstractCoalescingBufferQueueTest {
     private static void testDecrementAll(boolean write) {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 ReferenceCountUtil.release(msg);
-                promise.setSuccess(null);
+                handler.onSuccess(null);
             }
         }, new ChannelHandler() { });
         final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {

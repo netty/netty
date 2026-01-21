@@ -17,6 +17,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -34,7 +35,9 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
+public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V>,
+        // Directly implement CompletionHandler to reduce object allocations.
+        CompletionHandler<V> {
     /**
      * System property with integer type value, that determine the max reentrancy/recursion level for when
      * listener notifications prompt other listeners to be notified.
@@ -63,13 +66,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private volatile Object result;
 
     /**
-     * One or more listeners. Can be a {@link FutureListener} or a {@link DefaultFutureListeners}.
+     * One or more listeners / handlers. Can be a {@link FutureListener}, {@link CompletionHandler} or
+     * a {@link DefaultFutureListenersAndHandlers}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
      * <p>
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
-    private FutureListener<?> listener;
-    private DefaultFutureListeners listeners;
+    private Object listenerOrHandler;
+    private DefaultFutureListenersAndHandlers listenersAndHandlers;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
      */
@@ -79,7 +83,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * Threading - synchronized(this). We must prevent concurrent notification and FIFO listener notification if the
      * executor changes.
      */
-    private boolean notifyingListeners;
+    private boolean notifyingListenersAndHandlers;
 
     /**
      * Creates a new instance.
@@ -194,22 +198,26 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         checkNotNull(listener, "listener");
 
         synchronized (this) {
-            addListener0(listener);
+            addListenerOrHandler0(listener);
         }
 
         if (isDone()) {
-            notifyListeners();
+            notifyListenersAndHandlers();
         }
 
         return this;
     }
 
     @Override
-    public Promise<V> removeListener(FutureListener<? super V> listener) {
-        checkNotNull(listener, "listener");
+    public Promise<V> addHandler(CompletionHandler<? super V> handler) {
+        checkNotNull(handler, "handler");
 
         synchronized (this) {
-            removeListener0(listener);
+            addListenerOrHandler0(handler);
+        }
+
+        if (isDone()) {
+            notifyListenersAndHandlers();
         }
 
         return this;
@@ -364,7 +372,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (isCancellationSupported() &&
                 RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
-                notifyListeners();
+                notifyListenersAndHandlers();
             }
             return true;
         }
@@ -392,6 +400,22 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     public Promise<V> syncUninterruptibly() {
         awaitUninterruptibly();
         rethrowIfFailed();
+        return this;
+    }
+
+    @Override
+    public void onSuccess(V result) {
+        PromiseNotificationUtil.trySuccess(this, result, logger);
+    }
+
+    @Override
+    public void onFailure(Throwable cause) {
+        PromiseNotificationUtil.tryFailure(this, cause, logger);
+    }
+
+    @Override
+    public CompletionHandler<V> toCompletionHandler() {
+        // Override to reduce object allocations.
         return this;
     }
 
@@ -442,15 +466,15 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @param future the future that is complete.
      * @param listener the listener to notify.
      */
-    protected static void notifyListener(
-            EventExecutor eventExecutor, final Future<?> future, final FutureListener<?> listener) {
+    protected static <V> void notifyListener(
+            EventExecutor eventExecutor, final Future<V> future, final FutureListener<? super V> listener) {
         notifyListenerWithStackOverFlowProtection(
                 checkNotNull(eventExecutor, "eventExecutor"),
                 checkNotNull(future, "future"),
                 checkNotNull(listener, "listener"));
     }
 
-    private void notifyListeners() {
+    private void notifyListenersAndHandlers() {
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
@@ -475,13 +499,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     /**
-     * The logic in this method should be identical to {@link #notifyListeners()} but
+     * The logic in this method should be identical to {@link #notifyListenersAndHandlers()} but
      * cannot share code because the listener(s) cannot be cached for an instance of {@link DefaultPromise} since the
      * listener(s) may be changed and is protected by a synchronized operation.
      */
-    private static void notifyListenerWithStackOverFlowProtection(final EventExecutor executor,
-                                                                  final Future<?> future,
-                                                                  final FutureListener<?> listener) {
+    private static <V> void notifyListenerWithStackOverFlowProtection(final EventExecutor executor,
+                                                                  final Future<V> future,
+                                                                  final FutureListener<? super V> listener) {
         if (executor.inEventLoop()) {
             final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
             final int stackDepth = threadLocals.futureListenerStackDepth();
@@ -505,56 +529,65 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListenersNow() {
-        FutureListener<?> listener;
-        DefaultFutureListeners listeners;
+        Object listener;
+        DefaultFutureListenersAndHandlers listenersOrHandlers;
         synchronized (this) {
-            listener = this.listener;
-            listeners = this.listeners;
+            listener = this.listenerOrHandler;
+            listenersOrHandlers = this.listenersAndHandlers;
             // Only proceed if there are listeners to notify and we are not already notifying listeners.
-            if (notifyingListeners || (listener == null && listeners == null)) {
+            if (notifyingListenersAndHandlers || (listener == null && listenersOrHandlers == null)) {
                 return;
             }
-            notifyingListeners = true;
+            notifyingListenersAndHandlers = true;
             if (listener != null) {
-                this.listener = null;
+                this.listenerOrHandler = null;
             } else {
-                this.listeners = null;
+                this.listenersAndHandlers = null;
             }
         }
         for (;;) {
             if (listener != null) {
-                notifyListener0(this, listener);
+                if (listener instanceof FutureListener<?>) {
+                    notifyListener0(this, (FutureListener<V>) listener);
+                } else {
+                    notifyHandler0(this, (CompletionHandler<V>) listener);
+                }
             } else {
-                notifyListeners0(listeners);
+                notifyListeners0(this, listenersOrHandlers);
             }
             synchronized (this) {
-                if (this.listener == null && this.listeners == null) {
+                if (this.listenerOrHandler == null && this.listenersAndHandlers == null) {
                     // Nothing can throw from within this method, so setting notifyingListeners back to false does not
                     // need to be in a finally block.
-                    notifyingListeners = false;
+                    notifyingListenersAndHandlers = false;
                     return;
                 }
-                listener = this.listener;
-                listeners = this.listeners;
+                listener = this.listenerOrHandler;
+                listenersOrHandlers = this.listenersAndHandlers;
                 if (listener != null) {
-                    this.listener = null;
+                    this.listenerOrHandler = null;
                 } else {
-                    this.listeners = null;
+                    this.listenersAndHandlers = null;
                 }
             }
         }
     }
 
-    private void notifyListeners0(DefaultFutureListeners listeners) {
-        FutureListener<?>[] a = listeners.listeners();
+    @SuppressWarnings("unchecked")
+    private static <V> void notifyListeners0(Future<V> future, DefaultFutureListenersAndHandlers listeners) {
+        Object[] a = listeners.listenersAndHandlers();
         int size = listeners.size();
         for (int i = 0; i < size; i ++) {
-            notifyListener0(this, a[i]);
+            Object listener = a[i];
+            if (listener instanceof FutureListener<?>) {
+                notifyListener0(future, (FutureListener<V>) listener);
+            } else {
+                notifyHandler0(future, (CompletionHandler<V>) listener);
+            }
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static void notifyListener0(Future future, FutureListener l) {
+    private static <V> void notifyListener0(Future<V> future, FutureListener<? super V> l) {
         try {
             l.operationComplete(future);
         } catch (Throwable t) {
@@ -564,29 +597,37 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    private void addListener0(FutureListener<? super V> listener) {
-        if (this.listener == null) {
-            if (listeners == null) {
-                this.listener = listener;
-            } else {
-                listeners.add(listener);
+    private static <V> void notifyHandler0(Future<V> future, CompletionHandler<V> handler) {
+        if (future.isSuccess()) {
+            try {
+                handler.onSuccess(future.getNow());
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onSuccess(...)", t);
+                }
             }
         } else {
-            assert listeners == null;
-            listeners = new DefaultFutureListeners(this.listener, listener);
-            this.listener = null;
+            try {
+                handler.onFailure(future.cause());
+            } catch (Throwable t) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onFailure(...)", t);
+                }
+            }
         }
     }
 
-    private void removeListener0(FutureListener<? super V> toRemove) {
-        if (listener == toRemove) {
-            listener = null;
-        } else if (listeners != null) {
-            listeners.remove(toRemove);
-            // Removal is rare, no need for compaction
-            if (listeners.size() == 0) {
-                listeners = null;
+    private void addListenerOrHandler0(Object listenerOrHandler) {
+        if (this.listenerOrHandler == null) {
+            if (listenersAndHandlers == null) {
+                this.listenerOrHandler = listenerOrHandler;
+            } else {
+                listenersAndHandlers.add(listenerOrHandler);
             }
+        } else {
+            assert listenersAndHandlers == null;
+            listenersAndHandlers = new DefaultFutureListenersAndHandlers(this.listenerOrHandler, listenerOrHandler);
+            this.listenerOrHandler = null;
         }
     }
 
@@ -602,7 +643,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
             if (checkNotifyWaiters()) {
-                notifyListeners();
+                notifyListenersAndHandlers();
             }
             return true;
         }
@@ -617,7 +658,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (waiters > 0) {
             notifyAll();
         }
-        return listener != null || listeners != null;
+        return listenerOrHandler != null || listenersAndHandlers != null;
     }
 
     private void incWaiters() {

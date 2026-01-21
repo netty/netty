@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -128,8 +128,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN>
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        encoder.write(ctx, msg, promise);
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+        encoder.write(ctx, msg, handler);
     }
 
     /**

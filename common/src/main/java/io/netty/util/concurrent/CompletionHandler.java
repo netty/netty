@@ -1,0 +1,90 @@
+/*
+ * Copyright 2026 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.util.concurrent;
+
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
+
+/**
+ * Handler that will be notified once an operation completes.
+ * @param <V>
+ */
+public interface CompletionHandler<V> {
+    /**
+     * Will be called once an operation completes successfully.
+     *
+     * @param result    the value of the result.
+     */
+    void onSuccess(@Nullable V result);
+
+    /**
+     * Will be called once an operation completes with an error.
+     *
+     * @param cause     the error.
+     */
+    void onFailure(Throwable cause);
+
+    /**
+     * Returns a composed {@code CompletionHandler} that performs, in sequence, this
+     * operation followed by the {@code after} operation. If performing either
+     * operation throws an exception, it is relayed to the caller of the
+     * composed operation. If performing this operation throws an exception,
+     * the {@code after} operation will not be performed.
+     *
+     * @param after the operation to perform after this operation
+     * @param executor the {@link EventExecutor} on which {@code after} is executed.
+     * @return a composed {@code CompletionHandler} that performs in sequence this
+     * operation followed by the {@code after} operation
+     */
+    default CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
+        Objects.requireNonNull(after);
+        Objects.requireNonNull(executor);
+
+        return new CompletionHandler<>() {
+            @Override
+            public void onSuccess(V result) {
+                CompletionHandler.this.onSuccess(result);
+                if (executor.inEventLoop()) {
+                    after.onSuccess(result);
+                } else {
+                    executor.execute(() -> after.onSuccess(result));
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable cause) {
+                CompletionHandler.this.onFailure(cause);
+                if (executor.inEventLoop()) {
+                    after.onFailure(cause);
+                } else {
+                    executor.execute(() -> after.onFailure(cause));
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link CompletionHandler} that just ignores the completion.
+     *
+     * @return      handler.
+     * @param <V>   the type of the result.
+     */
+    @SuppressWarnings("unchecked")
+    static <V> CompletionHandler<V> ignore() {
+        return (CompletionHandler<V>) CompletionHandlers.IGNORE;
+    }
+}

@@ -23,10 +23,10 @@ import java.net.SocketAddress;
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link ChannelOutboundInvoker#connect(SocketAddress, io.netty.util.concurrent.Promise)}</li>
- * <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.Promise)}</li>
- * <li>{@link ChannelOutboundInvoker#shutdown(ChannelShutdownType, io.netty.util.concurrent.Promise)}</li>
- * <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#connect(SocketAddress, io.netty.util.concurrent.CompletionHandler)}</li>
+ * <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.CompletionHandler)}</li>
+ * <li>{@link ChannelOutboundInvoker#shutdown(ChannelShutdownType, io.netty.util.concurrent.CompletionHandler)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.CompletionHandler)}</li>
  * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>

@@ -17,10 +17,10 @@ package io.netty.channel;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -956,38 +956,38 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final void register(Promise<Void> promise) {
-        tail.register(promise);
+    public final void register(CompletionHandler<Void> handler) {
+        tail.register(handler);
     }
 
     @Override
-    public final void bind(SocketAddress localAddress, Promise<Void> promise) {
-        tail.bind(localAddress, promise);
+    public final void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+        tail.bind(localAddress, handler);
     }
 
     @Override
-    public final void connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        tail.connect(remoteAddress, promise);
+    public final void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
+        tail.connect(remoteAddress, handler);
     }
 
     @Override
     public final void connect(
-            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        tail.connect(remoteAddress, localAddress, promise);
+            SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        tail.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public final void disconnect(Promise<Void> promise) {
-        tail.disconnect(promise);
+    public final void disconnect(CompletionHandler<Void> handler) {
+        tail.disconnect(handler);
     }
 
     @Override
-    public final void close(Promise<Void> promise) {
-        tail.close(promise);
+    public final void close(CompletionHandler<Void> handler) {
+        tail.close(handler);
     }
 
     @Override
-    public final void deregister(final Promise<Void> promise) {
+    public final void deregister(final CompletionHandler<Void> promise) {
         tail.deregister(promise);
     }
 
@@ -1002,12 +1002,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final void write(Object msg, Promise<Void> promise) {
-        tail.write(msg, promise);
+    public final void write(Object msg, CompletionHandler<Void> handler) {
+        tail.write(msg, handler);
     }
 
     @Override
-    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+    public final void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         tail.writeAndFlush(msg, promise);
     }
 
@@ -1017,8 +1017,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final void shutdown(ChannelShutdownType type, Promise<Void> promise) {
-        tail.shutdown(type, promise);
+    public final void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
+        tail.shutdown(type, handler);
     }
 
     private void checkDuplicateName(String name) {
@@ -1224,9 +1224,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     final void closeTransport() {
         if (executor().inEventLoop()) {
-            head.close(head, newPromise());
+            head.close(head, CompletionHandler.ignore());
         }  else {
-            executor().execute(() ->  head.close(head, newPromise()));
+            executor().execute(() ->  head.close(head, CompletionHandler.ignore()));
         }
     }
 
@@ -1323,49 +1323,51 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-            Promise<Void> registerPromise = newPromise();
-            registerPromise.addListener(f -> {
-                if (f.isSuccess()) {
+        public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            transport.register(new CompletionHandler<>() {
+                @Override
+                public void onSuccess(Void result) {
                     // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                     // user may already fire events through the pipeline in the FutureListener that the user
                     // attached the the original promise.
                     invokeHandlerAddedIfNeeded();
-                    promise.setSuccess(null);
-                } else {
-                    promise.setFailure(f.cause());
+                    handler.onSuccess(null);
+                }
+
+                @Override
+                public void onFailure(Throwable cause) {
+                    handler.onFailure(cause);
                 }
             });
-            transport.register(registerPromise);
         }
 
         @Override
         public void bind(
-                ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-            transport.bind(localAddress, promise);
+                ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+            transport.bind(localAddress, handler);
         }
 
         @Override
         public void connect(
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
-                Promise<Void> promise) {
-            transport.connect(remoteAddress, localAddress, promise);
+                CompletionHandler<Void> handler) {
+            transport.connect(remoteAddress, localAddress, handler);
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-            transport.disconnect(promise);
+        public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            transport.disconnect(handler);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-            transport.close(promise);
+        public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            transport.close(handler);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-            transport.deregister(promise);
+        public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            transport.deregister(handler);
         }
 
         @Override
@@ -1374,8 +1376,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            transport.write(msg, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+            transport.write(msg, handler);
         }
 
         @Override
@@ -1384,8 +1386,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
-            transport.shutdown(type, promise);
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, CompletionHandler<Void> handler) {
+            transport.shutdown(type, handler);
         }
 
         @Override

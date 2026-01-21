@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -33,15 +33,15 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         log(Event.REGISTER);
-        ctx.register(promise);
+        ctx.register(handler);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         log(Event.WRITE);
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     @Override
@@ -51,34 +51,34 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
         log(Event.BIND, "localAddress=" + localAddress);
-        ctx.bind(localAddress, promise);
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
+                        CompletionHandler<Void> handler) {
         log(Event.CONNECT, "remoteAddress=" + remoteAddress + " localAddress=" + localAddress);
-        ctx.connect(remoteAddress, localAddress, promise);
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         log(Event.DISCONNECT);
-        ctx.disconnect(promise);
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         log(Event.CLOSE);
-        ctx.close(promise);
+        ctx.close(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         log(Event.DEREGISTER);
-        ctx.deregister(promise);
+        ctx.deregister(handler);
     }
 
     @Override
@@ -159,9 +159,9 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
 
     @Override
     public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                         Promise<Void> promise) {
+                         CompletionHandler<Void> handler) {
         log(Event.SHUTDOWN);
-        ctx.shutdown(type, promise);
+        ctx.shutdown(type, handler);
     }
 
     String getLog() throws InterruptedException {

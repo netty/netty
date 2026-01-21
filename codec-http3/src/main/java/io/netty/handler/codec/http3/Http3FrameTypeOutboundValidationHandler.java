@@ -17,6 +17,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
@@ -32,20 +33,20 @@ class Http3FrameTypeOutboundValidationHandler<T extends Http3Frame> implements C
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         T frame = validateFrameWritten(frameType, msg);
         if (frame != null) {
-            write(ctx, frame, promise);
+            write(ctx, frame, handler);
         } else {
-            writeFrameDiscarded(msg, promise);
+            writeFrameDiscarded(msg, handler);
         }
     }
 
-    void write(ChannelHandlerContext ctx, T msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
+    void write(ChannelHandlerContext ctx, T msg, CompletionHandler<Void> handler) {
+        ctx.write(msg, handler);
     }
 
-    void writeFrameDiscarded(Object discardedFrame, Promise<Void> promise) {
-        frameTypeUnexpected(promise, discardedFrame);
+    void writeFrameDiscarded(Object discardedFrame, CompletionHandler<Void> handler) {
+        frameTypeUnexpected(handler, discardedFrame);
     }
 }

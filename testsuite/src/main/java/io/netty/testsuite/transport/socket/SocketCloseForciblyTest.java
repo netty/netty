@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -44,7 +45,7 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 SocketChannel childChannel = (SocketChannel) msg;
                 childChannel.config().setOption(ChannelOption.SO_LINGER, 0);
-                childChannel.close(childChannel.newPromise());
+                childChannel.close(CompletionHandler.ignore());
             }
         }).childHandler(new ChannelInboundHandler() { });
 

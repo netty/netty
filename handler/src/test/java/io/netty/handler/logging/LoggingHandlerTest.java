@@ -125,7 +125,7 @@ public class LoggingHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         // this is used to switch the channel to become unwritable
         channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(5, 10));
-        channel.write("hello", channel.newPromise());
+        channel.write("hello");
 
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));
     }

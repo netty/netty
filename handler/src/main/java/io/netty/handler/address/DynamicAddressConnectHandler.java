@@ -17,7 +17,7 @@ package io.netty.handler.address;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
@@ -33,24 +33,29 @@ public abstract class DynamicAddressConnectHandler implements ChannelOutboundHan
 
     @Override
     public final void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                              SocketAddress localAddress, Promise<Void> promise) {
+                              SocketAddress localAddress, CompletionHandler<Void> handler) {
         final SocketAddress remote;
         final SocketAddress local;
         try {
             remote = remoteAddress(remoteAddress, localAddress);
             local = localAddress(remoteAddress, localAddress);
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             return;
         }
-        ctx.connect(remote, local, promise);
-        promise.addListener(future -> {
-            if (future.isSuccess()) {
+        ctx.connect(remote, local, handler.andThen(new CompletionHandler<>() {
+            @Override
+            public void onSuccess(Void result) {
                 // We only remove this handler from the pipeline once the connect was successful as otherwise
                 // the user may try to connect again.
                 ctx.pipeline().remove(DynamicAddressConnectHandler.this);
             }
-        });
+
+            @Override
+            public void onFailure(Throwable cause) {
+                // NOOP.
+            }
+        }, ctx.executor()));
     }
 
     /**

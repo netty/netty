@@ -40,6 +40,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
@@ -518,7 +519,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         @Override
         public void close() {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
         }
     }
 
@@ -609,11 +610,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     final void shutdownInput(boolean allDataRead) {
         if (!socket.isInputShutdown()) {
             if (isAllowHalfClosure()) {
-                ioTransport().shutdown(ChannelShutdownType.newInbound(), newPromise());
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), CompletionHandler.ignore());
             } else {
                 // Handle this same way as if we did read all data so we don't schedule another read.
                 inputClosedSeenErrorOnRead = true;
-                close(newPromise());
+                close(CompletionHandler.ignore());
                 return;
             }
         }

@@ -146,7 +146,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -170,7 +170,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                         .add(new AsciiString("foo2"), new AsciiString("goo2"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -192,7 +192,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(HttpHeaderNames.COOKIE, "e=f");
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -209,7 +209,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -227,7 +227,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                                          .scheme(new AsciiString("http"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -246,7 +246,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("https"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -263,7 +263,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -278,7 +278,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -295,7 +295,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -314,7 +314,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http")).authority(new AsciiString("[::1]:80"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -331,7 +331,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http")).authority(new AsciiString("localhost:80"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -348,7 +348,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .scheme(new AsciiString("http")).authority(new AsciiString("1.2.3.4:80"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
         verifyHeadersOnly(http2Headers, writePromise);
     }
 
@@ -360,7 +360,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         httpHeaders.set(HttpHeaderNames.HOST, "localhost");
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
 
         assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isDone());
@@ -377,7 +377,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         httpHeaders.set(HttpHeaderNames.HOST, "localhost");
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
 
         assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isDone());
@@ -414,7 +414,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
 
         assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isSuccess());
@@ -461,7 +461,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.writeAndFlush(request, writePromise);
+        clientChannel.writeAndFlush(request, writePromise.toCompletionHandler());
 
         assertTrue(writePromise.awaitUninterruptibly(WAIT_TIME_SECONDS, SECONDS));
         assertTrue(writePromise.isSuccess());
@@ -514,11 +514,11 @@ public class HttpToHttp2ConnectionHandlerTest {
                 .add(new AsciiString("trailing"), new AsciiString("bar"));
 
         Promise<Void> writePromise = newPromise();
-        clientChannel.write(request, writePromise);
+        clientChannel.write(request, writePromise.toCompletionHandler());
         Promise<Void> contentPromise = newPromise();
-        clientChannel.write(httpContent, contentPromise);
+        clientChannel.write(httpContent, contentPromise.toCompletionHandler());
         Promise<Void> lastContentPromise = newPromise();
-        clientChannel.write(lastHttpContent, lastContentPromise);
+        clientChannel.write(lastHttpContent, lastContentPromise.toCompletionHandler());
 
         clientChannel.flush();
 

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.PlatformDependent;
@@ -78,7 +79,7 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         CodecOutputList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -98,7 +99,7 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
                             StringUtil.simpleClassName(this) + " must produce at least one message.");
                 }
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         } catch (EncoderException e) {
             throw e;
@@ -109,9 +110,9 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
                 try {
                     final int sizeMinusOne = out.size() - 1;
                     if (sizeMinusOne == 0) {
-                        ctx.write(out.getUnsafe(0), promise);
+                        ctx.write(out.getUnsafe(0), handler);
                     } else if (sizeMinusOne > 0) {
-                        writePromiseCombiner(ctx, out, promise);
+                        writePromiseCombiner(ctx, out, handler);
                     }
                 } finally {
                     out.recycle();
@@ -120,12 +121,13 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
         }
     }
 
-    private static void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out, Promise<Void> promise) {
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out,
+                                             CompletionHandler<Void> handler) {
         final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.getUnsafe(i)));
         }
-        combiner.finish(promise);
+        combiner.finish(ctx.<Void>newPromise().addHandler(handler));
     }
 
     /**

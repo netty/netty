@@ -685,8 +685,10 @@ public class Http2FrameCodecTest {
         Promise<Void> promise1 = channel.newPromise();
         Promise<Void> promise2 = channel.newPromise();
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
+                promise1.toCompletionHandler());
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
+                promise2.toCompletionHandler());
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -717,9 +719,12 @@ public class Http2FrameCodecTest {
         Promise<Void> promise2 = channel.newPromise();
         Promise<Void> promise3 = channel.newPromise();
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3), promise3);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
+                promise1.toCompletionHandler());
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
+                promise2.toCompletionHandler());
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3),
+                promise3.toCompletionHandler());
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -757,13 +762,13 @@ public class Http2FrameCodecTest {
         Promise<Void> stream2HeaderPromise = channel.newPromise();
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
-                              stream1HeaderPromise);
+                              stream1HeaderPromise.toCompletionHandler());
         channel.runPendingTasks();
 
         frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.EMPTY_BUFFER);
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
-                              stream2HeaderPromise);
+                              stream2HeaderPromise.toCompletionHandler());
         channel.runPendingTasks();
 
         assertTrue(stream1HeaderPromise.syncUninterruptibly().isSuccess());
@@ -783,7 +788,8 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
 
         Promise<Void> writePromise = channel.newPromise();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream), writePromise);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream),
+                writePromise.toCompletionHandler());
 
         Http2GoAwayFrame goAwayFrame = inboundHandler.readInbound();
         assertNotNull(goAwayFrame);

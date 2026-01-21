@@ -456,7 +456,7 @@ public abstract class WebSocketServerHandshaker {
     }
 
     private Future<Void> close0(ChannelOutboundInvoker invoker, CloseWebSocketFrame frame, Promise<Void> promise) {
-        invoker.writeAndFlush(frame, promise);
+        invoker.writeAndFlush(frame, promise.toCompletionHandler());
         promise.addListener(f -> invoker.close());
         return promise;
     }

@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
@@ -158,17 +159,17 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
-                onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
+                onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, handler);
             } else if (msg instanceof HttpResponse) {
-                onHttpResponseWrite(ctx, (HttpResponse) msg, promise);
+                onHttpResponseWrite(ctx, (HttpResponse) msg, handler);
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         } else {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 
@@ -199,13 +200,17 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, Promise<Void> promise) {
+    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response,
+                                       CompletionHandler<Void> handler) {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
+            Promise<Void> promise = ctx.<Void>newPromise().addHandler(handler);
             handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
+            ctx.write(response, promise.toCompletionHandler());
+        } else {
+            ctx.write(response, handler);
         }
-        ctx.write(response, promise);
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,

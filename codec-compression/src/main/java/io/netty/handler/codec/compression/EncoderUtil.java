@@ -31,7 +31,7 @@ final class EncoderUtil {
             final Future<?> future = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(promise);
+                    ctx.close(promise.toCompletionHandler());
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
 
@@ -39,11 +39,11 @@ final class EncoderUtil {
                 // Cancel the scheduled timeout.
                 future.cancel(true);
                 if (!promise.isDone()) {
-                    ctx.close(promise);
+                    ctx.close(promise.toCompletionHandler());
                 }
             });
         } else {
-            ctx.close(promise);
+            ctx.close(promise.toCompletionHandler());
         }
     }
 

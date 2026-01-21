@@ -19,7 +19,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
@@ -122,34 +122,34 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.close(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -158,16 +158,16 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (!(msg instanceof HttpRequest) || currentUpgradeEvent == UpgradeEvent.UPGRADE_SUCCESSFUL) {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
             return;
         }
 
         if (currentUpgradeEvent == UpgradeEvent.UPGRADE_ISSUED) {
             // Release message before failing the promise.
             ReferenceCountUtil.release(msg);
-            promise.setFailure(new IllegalStateException(
+            handler.onFailure(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
             return;
         }
@@ -176,7 +176,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         setUpgradeRequestHeaders(ctx, (HttpRequest) msg);
 
         // Continue writing the request.
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
 
         // Notify that the upgrade request was issued.
         ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_ISSUED);
@@ -288,7 +288,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
 
     @Override
     public void shutdown(ChannelHandlerContext ctx,
-                         ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                         ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 }

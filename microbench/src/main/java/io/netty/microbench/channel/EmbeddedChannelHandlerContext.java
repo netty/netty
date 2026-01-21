@@ -24,6 +24,7 @@ import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -126,8 +127,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public void register(Promise<Void> promise) {
-        channel.register(promise);
+    public void register(CompletionHandler<Void> handler) {
+        channel.register(handler);
     }
 
     @Override
@@ -136,63 +137,63 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final void bind(SocketAddress localAddress, Promise<Void> promise) {
+    public final void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
         try {
-            channel().bind(localAddress, promise);
+            channel().bind(localAddress, handler);
             this.localAddress = localAddress;
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+    public final void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
         try {
-            channel().connect(remoteAddress, localAddress, promise);
+            channel().connect(remoteAddress, localAddress, handler);
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
     public final void connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                              Promise<Void> promise) {
+                              CompletionHandler<Void> handler) {
         try {
-            channel().connect(remoteAddress, localAddress, promise);
+            channel().connect(remoteAddress, localAddress, handler);
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void disconnect(Promise<Void> promise) {
+    public final void disconnect(CompletionHandler<Void> handler) {
         try {
-            channel().disconnect(promise);
+            channel().disconnect(handler);
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void close(Promise<Void> promise) {
+    public final void close(CompletionHandler<Void> handler) {
         try {
-            channel().close(promise);
+            channel().close(handler);
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void deregister(Promise<Void> promise) {
+    public final void deregister(CompletionHandler<Void> promise) {
         try {
             channel().deregister(promise);
         } catch (Exception e) {
-            promise.setFailure(e);
+            promise.onFailure(e);
             handleException(e);
         }
     }
@@ -212,8 +213,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public void write(Object msg, Promise<Void> promise) {
-        channel().write(msg, promise);
+    public void write(Object msg, CompletionHandler<Void> handler) {
+        channel().write(msg, handler);
     }
 
     @Override
@@ -222,7 +223,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public void writeAndFlush(Object msg, Promise<Void> promise) {
+    public void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         channel().writeAndFlush(msg, promise);
     }
 
@@ -262,7 +263,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
-        channel().shutdown(type, promise);
+    public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
+        channel().shutdown(type, handler);
     }
 }

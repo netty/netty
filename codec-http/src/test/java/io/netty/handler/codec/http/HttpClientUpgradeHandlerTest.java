@@ -88,7 +88,7 @@ public class HttpClientUpgradeHandlerTest {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
-                    ctx.writeAndFlush(afterUpgradeMessage, promise);
+                    ctx.writeAndFlush(afterUpgradeMessage, promise.toCompletionHandler());
                 }
                 ctx.fireUserEventTriggered(evt);
             }

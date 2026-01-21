@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.net.SocketAddress;
 
@@ -25,43 +25,43 @@ import java.net.SocketAddress;
 public interface IoTransport {
 
     /**
-     * Register the {@link Channel} of the {@link Promise} and notify
-     * the {@link Promise} once the registration was complete.
+     * Register the transport and notify
+     * the {@link CompletionHandler} once the registration was complete.
      */
-    void register(Promise<Void> promise);
+    void register(CompletionHandler<Void> handler);
 
     /**
-     * Bind the {@link SocketAddress} to the {@link Channel} of the {@link Promise} and notify
-     * it once its done.
+     * Bind the {@link SocketAddress} to the transport and notify the {@link CompletionHandler}
+     * once it's done.
      */
-    void bind(SocketAddress localAddress, Promise<Void> promise);
+    void bind(SocketAddress localAddress, CompletionHandler<Void> handler);
 
     /**
-     * Connect the {@link Channel} with the given remote {@link SocketAddress}.
+     * Connect the transport with the given remote {@link SocketAddress}.
      * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
      * pass {@code null} to it.
      * <p>
-     * The {@link Promise} will get notified once the connect operation was complete.
+     * The {@link CompletionHandler} will get notified once the connect operation was complete.
      */
-    void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+    void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler);
 
     /**
-     * Disconnect the {@link Channel} and notify the {@link Promise} once the
+     * Disconnect the transport and notify the {@link CompletionHandler} once the
      * operation was complete.
      */
-    void disconnect(Promise<Void> promise);
+    void disconnect(CompletionHandler<Void> handler);
 
     /**
-     * Close the {@link Channel} and notify the {@link Promise} once the
+     * Close the transport and notify the {@link CompletionHandler} once the
      * operation was complete.
      */
-    void close(Promise<Void> promise);
+    void close(CompletionHandler<Void> handler);
 
     /**
-     * Deregister the {@link Channel} from {@link EventLoop} and notify the
-     * {@link Promise} once the operation was complete.
+     * Deregister the transport from {@link EventLoop} and notify the
+     * {@link CompletionHandler} once the operation was complete.
      */
-    void deregister(Promise<Void> promise);
+    void deregister(CompletionHandler<Void> handler);
 
     /**
      * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
@@ -72,16 +72,16 @@ public interface IoTransport {
     /**
      * Schedules a write operation.
      */
-    void write(Object msg, Promise<Void> promise);
+    void write(Object msg, CompletionHandler<Void> handler);
 
     /**
-     * Flush out all write operations scheduled via {@link #write(Object, Promise)}.
+     * Flush out all write operations scheduled via {@link #write(Object, CompletionHandler)}.
      */
     void flush();
 
     /**
-     * Shutdown the {@link ChannelShutdownType} if the {@link Channel} and notify the {@link Promise}
+     * Shutdown the {@link ChannelShutdownType} if the transport and notify the {@link CompletionHandler}
      * once the operation was complete.
      */
-    void shutdown(ChannelShutdownType type, Promise<Void> promise);
+    void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler);
 }

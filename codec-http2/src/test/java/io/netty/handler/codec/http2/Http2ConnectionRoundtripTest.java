@@ -36,6 +36,7 @@ import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -726,7 +727,7 @@ public class Http2ConnectionRoundtripTest {
                         newPromise());
                 clientChannel.pipeline().addFirst(new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                         ReferenceCountUtil.release(msg);
 
                         // Ensure we update the window size so we will try to write the rest of the frame while
@@ -734,10 +735,10 @@ public class Http2ConnectionRoundtripTest {
                         try {
                             http2Client.encoder().flowController().initialWindowSize(8);
                         } catch (Http2Exception e) {
-                            promise.setFailure(e);
+                            handler.onFailure(e);
                             return;
                         }
-                        promise.setFailure(new IllegalStateException());
+                        handler.onFailure(new IllegalStateException());
                     }
                 });
 

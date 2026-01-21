@@ -24,8 +24,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.Attribute;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -495,7 +495,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                         perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
                         perChannel.queueSize -= size;
                         queuesSize.addAndGet(-size);
-                        ctx.write(toSend.toSend, toSend.promise);
+                        ctx.write(toSend.toSend, toSend.handler);
                     }
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
@@ -599,14 +599,14 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     private static final class ToSend {
         final long relativeTimeAction;
         final Object toSend;
-        final Promise<Void> promise;
+        final CompletionHandler<Void> handler;
         final long size;
 
-        private ToSend(final long delay, final Object toSend, final long size, final Promise<Void> promise) {
+        private ToSend(final long delay, final Object toSend, final long size, final CompletionHandler<Void> handler) {
             relativeTimeAction = delay;
             this.toSend = toSend;
             this.size = size;
-            this.promise = promise;
+            this.handler = handler;
         }
     }
 
@@ -650,7 +650,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final CompletionHandler<Void> handler) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
         if (size > 0) {
@@ -683,18 +683,18 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
-                submitWrite(ctx, msg, size, wait, now, promise);
+                submitWrite(ctx, msg, size, wait, now, handler);
                 return;
             }
         }
         // to maintain order of write
-        submitWrite(ctx, msg, size, 0, now, promise);
+        submitWrite(ctx, msg, size, 0, now, handler);
     }
 
     @Override
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long writedelay, final long now,
-            final Promise<Void> promise) {
+            final CompletionHandler<Void> handler) {
         Channel channel = ctx.channel();
         Integer key = channel.hashCode();
         PerChannel perChannel = channelQueues.get(key);
@@ -711,14 +711,14 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
             if (writedelay == 0 && perChannel.messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
                 perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
                 perChannel.lastWriteTimestamp = now;
                 return;
             }
             if (delay > maxTime && now + delay - perChannel.lastWriteTimestamp > maxTime) {
                 delay = maxTime;
             }
-            newToSend = new ToSend(delay + now, msg, size, promise);
+            newToSend = new ToSend(delay + now, msg, size, handler);
             perChannel.messagesQueue.addLast(newToSend);
             perChannel.queueSize += size;
             queuesSize.addAndGet(size);
@@ -751,7 +751,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     perChannel.channelTrafficCounter.bytesRealWriteFlowControl(size);
                     perChannel.queueSize -= size;
                     queuesSize.addAndGet(-size);
-                    ctx.write(newToSend.toSend, newToSend.promise);
+                    ctx.write(newToSend.toSend, newToSend.handler);
                     perChannel.lastWriteTimestamp = now;
                 } else {
                     perChannel.messagesQueue.addFirst(newToSend);

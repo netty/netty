@@ -24,6 +24,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -593,7 +594,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void closeListenerShouldBeNotifiedOnlyOneTime() throws Exception {
         handler = newHandler();
-        handler.close(ctx, ImmediateEventExecutor.INSTANCE.newPromise());
+        handler.close(ctx, CompletionHandler.ignore());
         when(connection.numActiveStreams()).thenReturn(0);
 
         // Simulate that all streams have become inactive by the time the future completes.
@@ -608,7 +609,7 @@ public class Http2ConnectionHandlerTest {
         handler.closeStream(stream, ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
         // Simulate another stream close call being made after the context should already be closed.
         handler.closeStream(stream, ImmediateEventExecutor.INSTANCE.newSucceededFuture(null));
-        verify(ctx, times(1)).close(any(Promise.class));
+        verify(ctx, times(1)).close(any(CompletionHandler.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -704,7 +705,7 @@ public class Http2ConnectionHandlerTest {
         when(channel.isActive()).thenReturn(false);
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
-        handler.close(ctx, ImmediateEventExecutor.INSTANCE.newPromise());
+        handler.close(ctx, CompletionHandler.ignore());
         verifyZeroInteractions(frameWriter);
     }
 
@@ -732,7 +733,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         final long expectedMillis = 1234;
         handler.gracefulShutdownTimeoutMillis(expectedMillis);
-        handler.close(ctx, ImmediateEventExecutor.INSTANCE.newPromise());
+        handler.close(ctx, CompletionHandler.ignore());
         verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
@@ -742,7 +743,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.numActiveStreams()).thenReturn(0);
         final long expectedMillis = 1234;
         handler.gracefulShutdownTimeoutMillis(expectedMillis);
-        handler.close(ctx, ImmediateEventExecutor.INSTANCE.newPromise());
+        handler.close(ctx, CompletionHandler.ignore());
         verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
@@ -750,7 +751,7 @@ public class Http2ConnectionHandlerTest {
     public void gracefulShutdownIndefiniteTimeoutTest() throws Exception {
         handler = newHandler();
         handler.gracefulShutdownTimeoutMillis(-1);
-        handler.close(ctx, ImmediateEventExecutor.INSTANCE.newPromise());
+        handler.close(ctx, CompletionHandler.ignore());
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
     }
 

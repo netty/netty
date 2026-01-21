@@ -29,6 +29,7 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -274,7 +275,7 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
         } else {
             releaseInboundBuffers();
         }
@@ -519,7 +520,7 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void closeNow() {
-           ioTransport().close(newPromise());
+           ioTransport().close(CompletionHandler.ignore());
         }
     }
 

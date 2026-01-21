@@ -26,9 +26,9 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
@@ -422,43 +422,43 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         assert qpackAttributes != null;
         if (writeResumptionListener != null) {
-            writeResumptionListener.enqueue(msg, promise);
+            writeResumptionListener.enqueue(msg, handler);
             return;
         }
 
         if ((msg instanceof Http3HeadersFrame || msg instanceof Http3PushPromiseFrame) &&
                 !qpackAttributes.dynamicTableDisabled() && !qpackAttributes.encoderStreamAvailable()) {
             writeResumptionListener = WriteResumptionListener.newListener(ctx, this);
-            writeResumptionListener.enqueue(msg, promise);
+            writeResumptionListener.enqueue(msg, handler);
             return;
         }
 
-        write0(ctx, msg, promise);
+        write0(ctx, msg, handler);
     }
 
-    private void write0(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    private void write0(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         try {
             if (msg instanceof Http3DataFrame) {
-                writeDataFrame(ctx, (Http3DataFrame) msg, promise);
+                writeDataFrame(ctx, (Http3DataFrame) msg, handler);
             } else if (msg instanceof Http3HeadersFrame) {
-                writeHeadersFrame(ctx, (Http3HeadersFrame) msg, promise);
+                writeHeadersFrame(ctx, (Http3HeadersFrame) msg, handler);
             } else if (msg instanceof Http3CancelPushFrame) {
-                writeCancelPushFrame(ctx, (Http3CancelPushFrame) msg, promise);
+                writeCancelPushFrame(ctx, (Http3CancelPushFrame) msg, handler);
             } else if (msg instanceof Http3SettingsFrame) {
-                writeSettingsFrame(ctx, (Http3SettingsFrame) msg, promise);
+                writeSettingsFrame(ctx, (Http3SettingsFrame) msg, handler);
             } else if (msg instanceof Http3PushPromiseFrame) {
-                writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, promise);
+                writePushPromiseFrame(ctx, (Http3PushPromiseFrame) msg, handler);
             } else if (msg instanceof Http3GoAwayFrame) {
-                writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, promise);
+                writeGoAwayFrame(ctx, (Http3GoAwayFrame) msg, handler);
             } else if (msg instanceof Http3MaxPushIdFrame) {
-                writeMaxPushIdFrame(ctx, (Http3MaxPushIdFrame) msg, promise);
+                writeMaxPushIdFrame(ctx, (Http3MaxPushIdFrame) msg, handler);
             } else if (msg instanceof Http3UnknownFrame) {
-                writeUnknownFrame(ctx, (Http3UnknownFrame) msg, promise);
+                writeUnknownFrame(ctx, (Http3UnknownFrame) msg, handler);
             } else {
-                unsupported(promise);
+                unsupported(handler);
             }
         } finally {
             ReferenceCountUtil.release(msg);
@@ -466,37 +466,38 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     private static void writeDataFrame(
-            ChannelHandlerContext ctx, Http3DataFrame frame, Promise<Void> promise) {
+            ChannelHandlerContext ctx, Http3DataFrame frame, CompletionHandler<Void> handler) {
         ByteBuf out = ctx.alloc().directBuffer(16);
         writeVariableLengthInteger(out, frame.type());
         writeVariableLengthInteger(out, frame.content().readableBytes());
         ByteBuf content = frame.content().retain();
-        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
+        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), handler);
     }
 
-    private void writeHeadersFrame(ChannelHandlerContext ctx, Http3HeadersFrame frame, Promise<Void> promise) {
+    private void writeHeadersFrame(ChannelHandlerContext ctx, Http3HeadersFrame frame,
+                                   CompletionHandler<Void> handler) {
         assert qpackAttributes != null;
         final QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
             qpackEncoder.encodeHeaders(qpackAttributes, out, ctx.alloc(), channel.streamId(), f.headers());
             return true;
-        }, promise);
+        }, handler);
     }
 
     private static void writeCancelPushFrame(
-            ChannelHandlerContext ctx, Http3CancelPushFrame frame, Promise<Void> promise) {
-        writeFrameWithId(ctx, frame.type(), frame.id(), promise);
+            ChannelHandlerContext ctx, Http3CancelPushFrame frame, CompletionHandler<Void> handler) {
+        writeFrameWithId(ctx, frame.type(), frame.id(), handler);
     }
 
     private static void writeSettingsFrame(
-            ChannelHandlerContext ctx, Http3SettingsFrame frame, Promise<Void> promise) {
+            ChannelHandlerContext ctx, Http3SettingsFrame frame, CompletionHandler<Void> handler) {
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
             for (Map.Entry<Long, Long> e : f) {
                 Long key = e.getKey();
                 if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                     Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_SETTINGS_ERROR,
                             "Received a settings key that is reserved for HTTP/2.");
-                    promise.setFailure(exception);
+                    handler.onFailure(exception);
                     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                     Http3CodecUtils.connectionError(ctx, exception, false);
                     return false;
@@ -508,12 +509,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 writeVariableLengthInteger(out, value, valueLen);
             }
             return true;
-        }, promise);
+        }, handler);
     }
 
     private static <T extends Http3Frame> void writeDynamicFrame(ChannelHandlerContext ctx, long type, T frame,
                                                                  BiFunction<T, ByteBuf, Boolean> writer,
-                                                                 Promise<Void> promise) {
+                                                                 CompletionHandler<Void> handler) {
         ByteBuf out = ctx.alloc().directBuffer();
         int initialWriterIndex = out.writerIndex();
         // Move 16 bytes forward as this is the maximum amount we could ever need for the type + payload length.
@@ -533,14 +534,15 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             writeVariableLengthInteger(out, type, typeLength);
 
             out.setIndex(startIndex, finalWriterIndex);
-            ctx.write(out, promise);
+            ctx.write(out, handler);
         } else {
             // We failed to encode, lets release the buffer so we dont leak.
             out.release();
         }
     }
 
-    private void writePushPromiseFrame(ChannelHandlerContext ctx, Http3PushPromiseFrame frame, Promise<Void> promise) {
+    private void writePushPromiseFrame(ChannelHandlerContext ctx, Http3PushPromiseFrame frame,
+                                       CompletionHandler<Void> handler) {
         assert qpackAttributes != null;
         final QuicStreamChannel channel = (QuicStreamChannel) ctx.channel();
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
@@ -548,34 +550,35 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             writeVariableLengthInteger(out, id);
             qpackEncoder.encodeHeaders(qpackAttributes, out, ctx.alloc(), channel.streamId(), f.headers());
             return true;
-        }, promise);
+        }, handler);
     }
 
     private static void writeGoAwayFrame(
-            ChannelHandlerContext ctx, Http3GoAwayFrame frame, Promise<Void> promise) {
-        writeFrameWithId(ctx, frame.type(), frame.id(), promise);
+            ChannelHandlerContext ctx, Http3GoAwayFrame frame, CompletionHandler<Void> handler) {
+        writeFrameWithId(ctx, frame.type(), frame.id(), handler);
     }
 
     private static void writeMaxPushIdFrame(
-            ChannelHandlerContext ctx, Http3MaxPushIdFrame frame, Promise<Void> promise) {
-        writeFrameWithId(ctx, frame.type(), frame.id(), promise);
+            ChannelHandlerContext ctx, Http3MaxPushIdFrame frame, CompletionHandler<Void> handler) {
+        writeFrameWithId(ctx, frame.type(), frame.id(), handler);
     }
 
-    private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id, Promise<Void> promise) {
+    private static void writeFrameWithId(ChannelHandlerContext ctx, long type, long id,
+                                         CompletionHandler<Void> handler) {
         ByteBuf out = ctx.alloc().directBuffer(24);
         writeVariableLengthInteger(out, type);
         writeVariableLengthInteger(out, numBytesForVariableLengthInteger(id));
         writeVariableLengthInteger(out, id);
-        ctx.write(out, promise);
+        ctx.write(out, handler);
     }
 
     private void writeUnknownFrame(
-            ChannelHandlerContext ctx, Http3UnknownFrame frame, Promise<Void> promise) {
+            ChannelHandlerContext ctx, Http3UnknownFrame frame, CompletionHandler<Void> handler) {
         long type = frame.type();
         if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
             Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Reserved type for HTTP/2 send.");
-            promise.setFailure(exception);
+            handler.onFailure(exception);
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
             connectionError(ctx, exception.errorCode(), exception.getMessage(), false);
             return;
@@ -583,14 +586,14 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         if (!Http3CodecUtils.isReservedFrameType(type)) {
             Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Non reserved type for HTTP/3 send.");
-            promise.setFailure(exception);
+            handler.onFailure(exception);
             return;
         }
         ByteBuf out = ctx.alloc().directBuffer();
         writeVariableLengthInteger(out, type);
         writeVariableLengthInteger(out, frame.content().readableBytes());
         ByteBuf content = frame.content().retain();
-        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), promise);
+        ctx.write(Unpooled.wrappedUnmodifiableBuffer(out, content), handler);
     }
 
     private void initReadResumptionListenerIfRequired(ChannelHandlerContext ctx) {
@@ -599,39 +602,39 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         }
     }
 
-    private static void unsupported(Promise<Void> promise) {
-        promise.setFailure(new UnsupportedOperationException());
+    private static void unsupported(CompletionHandler<Void> handler) {
+        handler.onFailure(new UnsupportedOperationException());
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.close(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -660,8 +663,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     @Override
-    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 
     private static final class ReadResumptionListener
@@ -770,16 +773,16 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             drain();
         }
 
-        void enqueue(Object msg, Promise<Void> promise) {
+        void enqueue(Object msg, CompletionHandler<Void> handler) {
             assert ctx.channel().executor().inEventLoop();
             // Touch the message to allow easier debugging of memory leaks
             ReferenceCountUtil.touch(msg);
-            queue.add(msg, promise);
+            queue.add(msg, handler);
         }
 
         void enqueueFlush() {
             assert ctx.channel().executor().inEventLoop();
-            queue.add(FLUSH, ctx.newPromise());
+            queue.add(FLUSH, CompletionHandler.ignore());
         }
 
         void drain() {
@@ -793,7 +796,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     }
                     if (entry == FLUSH) {
                         flushSeen = true;
-                        queue.remove().trySuccess(null);
+                        queue.remove().onSuccess(null);
                     } else {
                         // Retain the entry as remove() will call release() as well.
                         codec.write0(ctx, ReferenceCountUtil.retain(entry), queue.remove());

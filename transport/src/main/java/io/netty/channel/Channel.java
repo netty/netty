@@ -22,6 +22,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -72,7 +73,7 @@ import java.net.SocketAddress;
  *
  * <h3>Release resources</h3>
  * <p>
- * It is important to call {@link #close()} or {@link ChannelOutboundInvoker#close(Promise)} to release all
+ * It is important to call {@link #close()} or {@link ChannelOutboundInvoker#close(CompletionHandler)} to release all
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
@@ -252,13 +253,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default void writeAndFlush(Object msg, Promise<Void> promise) {
+    default void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         pipeline().writeAndFlush(msg, promise);
     }
 
     @Override
-    default void write(Object msg, Promise<Void> promise) {
-        pipeline().write(msg, promise);
+    default void write(Object msg, CompletionHandler<Void> handler) {
+        pipeline().write(msg, handler);
     }
 
     @Override
@@ -267,33 +268,33 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default void deregister(Promise<Void> promise) {
+    default void deregister(CompletionHandler<Void> promise) {
         pipeline().deregister(promise);
     }
 
     @Override
-    default void close(Promise<Void> promise) {
-        pipeline().close(promise);
+    default void close(CompletionHandler<Void> handler) {
+        pipeline().close(handler);
     }
 
     @Override
-    default void disconnect(Promise<Void> promise) {
-        pipeline().disconnect(promise);
+    default void disconnect(CompletionHandler<Void> handler) {
+        pipeline().disconnect(handler);
     }
 
     @Override
-    default void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        pipeline().connect(remoteAddress, localAddress, promise);
+    default void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        pipeline().connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    default void connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        pipeline().connect(remoteAddress, promise);
+    default void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
+        pipeline().connect(remoteAddress, handler);
     }
 
     @Override
-    default void bind(SocketAddress localAddress, Promise<Void> promise) {
-        pipeline().bind(localAddress, promise);
+    default void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+        pipeline().bind(localAddress, handler);
     }
 
     @Override
@@ -347,13 +348,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default void register(Promise<Void> promise) {
-        pipeline().register(promise);
+    default void register(CompletionHandler<Void> handler) {
+        pipeline().register(handler);
     }
 
     @Override
-    default void shutdown(ChannelShutdownType type, Promise<Void> promise) {
-        pipeline().shutdown(type, promise);
+    default void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
+        pipeline().shutdown(type, handler);
     }
 
     @Override

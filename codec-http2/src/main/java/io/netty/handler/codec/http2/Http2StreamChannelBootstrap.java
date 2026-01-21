@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -176,7 +177,7 @@ public final class Http2StreamChannelBootstrap {
         try {
             init(streamChannel);
         } catch (Exception e) {
-            streamChannel.close(streamChannel.newPromise());
+            streamChannel.close(CompletionHandler.ignore());
             promise.setFailure(e);
             return;
         }

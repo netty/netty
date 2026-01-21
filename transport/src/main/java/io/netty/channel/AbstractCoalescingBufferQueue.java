@@ -17,6 +17,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -260,7 +261,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.newPromise());
+                        ctx.write(previousBuf, CompletionHandler.ignore());
                     }
                     break;
                 }
@@ -268,12 +269,12 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof ByteBuf) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.newPromise());
+                        ctx.write(previousBuf, CompletionHandler.ignore());
                     }
                     previousBuf = (ByteBuf) entry;
                 } else if (entry instanceof Promise<?>) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (Promise<Void>) entry);
+                    ctx.write(previousBuf, ((Promise<Void>) entry).toCompletionHandler());
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());

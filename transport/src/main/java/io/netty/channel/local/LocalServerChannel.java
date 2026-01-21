@@ -28,6 +28,7 @@ import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -233,7 +234,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void closeNow() {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
         }
     }
 }

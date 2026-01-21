@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -84,8 +85,8 @@ public final class DelegatingChannelPromiseNotifier implements Promise<Void>, Fu
     }
 
     @Override
-    public Promise<Void> removeListener(FutureListener<? super Void> listener) {
-        delegate.removeListener(listener);
+    public Promise<Void> addHandler(CompletionHandler<? super Void> handler) {
+        delegate.addHandler(handler);
         return this;
     }
 

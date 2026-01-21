@@ -33,6 +33,7 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.IoTransport;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -253,7 +254,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private void register0() {
         Promise<Void> promise = newPromise();
-        ioTransport().register(promise);
+        ioTransport().register(promise.toCompletionHandler());
         assert promise.isDone();
         Throwable cause = promise.cause();
         if (cause != null) {
@@ -388,7 +389,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link io.netty.channel.ChannelOutboundInvoker#write(Object, Promise)}.
+     * method is conceptually equivalent to
+     * {@link io.netty.channel.ChannelOutboundInvoker#write(Object, CompletionHandler)}.
      *
      * @see #writeOneOutbound(Object, Promise)
      */
@@ -489,7 +491,8 @@ public class EmbeddedChannel extends AbstractChannel {
 
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link io.netty.channel.ChannelOutboundInvoker#write(Object, Promise)}.
+     * method is conceptually equivalent to
+     * {@link io.netty.channel.ChannelOutboundInvoker#write(Object, CompletionHandler)}.
      *
      * @see #writeOneInbound(Object, Promise)
      */
@@ -497,7 +500,7 @@ public class EmbeddedChannel extends AbstractChannel {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
-                write(msg, promise);
+                write(msg, promise.toCompletionHandler());
                 return;
             }
         } finally {
@@ -612,25 +615,25 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     public final Future<Void> close() {
         Promise<Void> promise = newPromise();
-        close(promise);
+        close(promise.toCompletionHandler());
         return promise;
     }
 
     @Override
     public final Future<Void> disconnect() {
         Promise<Void> promise = newPromise();
-        disconnect(promise);
+        disconnect(promise.toCompletionHandler());
         return promise;
     }
 
     @Override
-    public final void close(Promise<Void> promise) {
+    public final void close(CompletionHandler<Void> handler) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         executingStackCnt++;
         try {
             runPendingTasks();
-            super.close(promise);
+            super.close(handler);
 
             cancelRemainingScheduledTasks = true;
         } finally {
@@ -640,10 +643,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final void disconnect(Promise<Void> promise) {
+    public final void disconnect(CompletionHandler<Void> handler) {
         executingStackCnt++;
         try {
-            super.disconnect(promise);
+            super.disconnect(handler);
 
             if (!hasDisconnect) {
                 cancelRemainingScheduledTasks = true;
@@ -710,10 +713,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void bind(SocketAddress localAddress, Promise<Void> promise) {
+    public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
         executingStackCnt++;
         try {
-            super.bind(localAddress, promise);
+            super.bind(localAddress, handler);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -721,10 +724,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+    public void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
         executingStackCnt++;
         try {
-            super.connect(remoteAddress, promise);
+            super.connect(remoteAddress, handler);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -732,10 +735,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
         executingStackCnt++;
         try {
-            super.connect(remoteAddress, localAddress, promise);
+            super.connect(remoteAddress, localAddress, handler);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -743,7 +746,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void deregister(Promise<Void> promise) {
+    public void deregister(CompletionHandler<Void> promise) {
         executingStackCnt++;
         try {
             super.deregister(promise);
@@ -776,10 +779,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void write(Object msg, Promise<Void> promise) {
+    public void write(Object msg, CompletionHandler<Void> handler) {
         executingStackCnt++;
         try {
-            super.write(msg, promise);
+            super.write(msg, handler);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -798,7 +801,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public void writeAndFlush(Object msg, Promise<Void> promise) {
+    public void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         executingStackCnt++;
         try {
             super.writeAndFlush(msg, promise);
@@ -1194,17 +1197,27 @@ public class EmbeddedChannel extends AbstractChannel {
 
     final class EmbeddedIoTransport implements IoTransport {
         private final IoTransport transport;
-        private final FutureListener<Void> futureListener = f ->  maybeRunPendingTasks();
+        private final CompletionHandler<Void> pendingTaskHandler = new CompletionHandler<>() {
+            @Override
+            public void onSuccess(Void result) {
+                maybeRunPendingTasks();
+            }
+
+            @Override
+            public void onFailure(Throwable cause) {
+                maybeRunPendingTasks();
+            }
+        };
 
         EmbeddedIoTransport(IoTransport transport) {
             this.transport = transport;
         }
 
         @Override
-        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.shutdown(type, promise.addListener(futureListener));
+                transport.shutdown(type, handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1212,10 +1225,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void register(Promise<Void> promise) {
+        public void register(CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.register(promise.addListener(futureListener));
+                transport.register(handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1223,10 +1236,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void bind(SocketAddress localAddress, Promise<Void> promise) {
+        public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.bind(localAddress, promise.addListener(futureListener));
+                transport.bind(localAddress, handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1234,10 +1247,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.connect(remoteAddress, localAddress, promise.addListener(futureListener));
+                transport.connect(remoteAddress, localAddress, handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1245,10 +1258,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void disconnect(Promise<Void> promise) {
+        public void disconnect(CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.disconnect(promise.addListener(futureListener));
+                transport.disconnect(handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1256,10 +1269,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void close(Promise<Void> promise) {
+        public void close(CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.close(promise.addListener(futureListener));
+                transport.close(handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1267,10 +1280,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void deregister(Promise<Void> promise) {
+        public void deregister(CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.deregister(promise.addListener(futureListener));
+                transport.deregister(handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();
@@ -1289,10 +1302,10 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void write(Object msg, Promise<Void> promise) {
+        public void write(Object msg, CompletionHandler<Void> handler) {
             executingStackCnt++;
             try {
-                transport.write(msg, promise.addListener(futureListener));
+                transport.write(msg, handler.andThen(pendingTaskHandler, executor()));
             } finally {
                 executingStackCnt--;
                 maybeRunPendingTasks();

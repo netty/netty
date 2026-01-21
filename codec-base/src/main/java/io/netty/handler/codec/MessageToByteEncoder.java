@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.TypeParameterMatcher;
 
 
@@ -95,7 +95,7 @@ public abstract class MessageToByteEncoder<I> implements ChannelOutboundHandler 
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         ByteBuf buf = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -109,14 +109,14 @@ public abstract class MessageToByteEncoder<I> implements ChannelOutboundHandler 
                 }
 
                 if (buf.isReadable()) {
-                    ctx.write(buf, promise);
+                    ctx.write(buf, handler);
                 } else {
                     buf.release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    ctx.write(Unpooled.EMPTY_BUFFER, handler);
                 }
                 buf = null;
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         } catch (EncoderException e) {
             throw e;

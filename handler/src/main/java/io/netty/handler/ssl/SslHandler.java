@@ -35,6 +35,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -49,7 +50,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
@@ -515,7 +515,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Sets the number of bytes to pass to each {@link SSLEngine#wrap(ByteBuffer[], int, int, ByteBuffer)} call.
      * <p>
      * This value will partition data which is passed to write
-     * {@link ChannelOutboundHandler#write(ChannelHandlerContext, Object, Promise)}.
+     * {@link ChannelOutboundHandler#write(ChannelHandlerContext, Object, CompletionHandler)}.
      * The partitioning will work as follows:
      * <ul>
      * <li>If {@code wrapDataSize <= 0} then we will write each data chunk as is.</li>
@@ -732,36 +732,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
-    }
-
-    @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
-    }
-
-    @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
-    }
-
-    @Override
     public void disconnect(final ChannelHandlerContext ctx,
-                           final Promise<Void> promise) {
-        closeOutboundAndChannel(ctx, promise, true);
+                           final CompletionHandler<Void> handler) {
+        closeOutboundAndChannel(ctx, handler, true);
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx,
-                      final Promise<Void> promise) {
-        closeOutboundAndChannel(ctx, promise, false);
+                      final CompletionHandler<Void> handler) {
+        closeOutboundAndChannel(ctx, handler, false);
     }
 
     @Override
@@ -778,16 +757,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (!(msg instanceof ByteBuf)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
             ReferenceCountUtil.safeRelease(msg);
-            promise.setFailure(exception);
+            handler.onFailure(exception);
         } else if (pendingUnencryptedWrites == null) {
             ReferenceCountUtil.safeRelease(msg);
-            promise.setFailure(newPendingWritesNullException());
+            handler.onFailure(newPendingWritesNullException());
         } else {
-            pendingUnencryptedWrites.add((ByteBuf) msg, promise);
+            // TODO: Direclty handle CompletionHandler
+            pendingUnencryptedWrites.add((ByteBuf) msg, ctx.<Void>newPromise().addHandler(handler));
         }
     }
 
@@ -906,12 +886,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     final ByteBuf b = out;
                     out = null;
                     if (promise != null) {
-                        ctx.write(b, promise);
+                        ctx.write(b, promise.toCompletionHandler());
                     } else {
-                        ctx.write(b);
+                        ctx.write(b, CompletionHandler.ignore());
                     }
                 } else if (promise != null) {
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise.toCompletionHandler());
                 }
                 // else out is not readable we can re-use it and so save an extra allocation
 
@@ -2094,15 +2074,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext ctx, final Promise<Void> promise, boolean disconnect) {
+            final ChannelHandlerContext ctx, final CompletionHandler<Void> handler, boolean disconnect) {
         setState(STATE_OUTBOUND_CLOSED);
         engine.closeOutbound();
 
         if (!ctx.channel().isActive()) {
             if (disconnect) {
-                ctx.disconnect(promise);
+                ctx.disconnect(handler);
             } else {
-                ctx.close(promise);
+                ctx.close(handler);
             }
             return;
         }
@@ -2121,10 +2101,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // because of a propagated Exception.
                 //
                 // See https://github.com/netty/netty/issues/5931
-                safeClose(ctx, closeNotifyPromise, PromiseNotifier.cascade(false, ctx.newPromise(), promise));
+                safeClose(ctx, closeNotifyPromise, ctx.<Void>newPromise().addHandler(handler));
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
-                sslClosePromise.addListener(f -> promise.setSuccess(null));
+                sslClosePromise.addListener(f -> handler.onSuccess(null));
             }
         }
     }
@@ -2325,7 +2305,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final ChannelHandlerContext ctx, final Future<Void> flushFuture,
             final Promise<Void> promise) {
         if (!ctx.channel().isActive()) {
-            ctx.close(promise);
+            ctx.close(promise.toCompletionHandler());
             return;
         }
 
@@ -2439,8 +2419,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void shutdown(ChannelHandlerContext ctx,
-                         ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                         ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 
     @Override

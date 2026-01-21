@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.util.function.BooleanSupplier;
@@ -72,16 +73,16 @@ final class Http3RequestStreamValidationHandler extends Http3FrameTypeDuplexVali
     }
 
     @Override
-    void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, Promise<Void> promise) {
+    void write(ChannelHandlerContext ctx, Http3RequestStreamFrame frame, CompletionHandler<Void> handler) {
         if (!server) {
-            if (!validateClientWrite(frame, promise, ctx, goAwayReceivedSupplier, encodeState)) {
+            if (!validateClientWrite(frame, handler, ctx, goAwayReceivedSupplier, encodeState)) {
                 return;
             }
             if (frame instanceof Http3HeadersFrame) {
                 clientHeadRequest = HEAD.asciiName().equals(((Http3HeadersFrame) frame).headers().method());
             }
         }
-        ctx.write(frame, promise);
+        ctx.write(frame, handler);
     }
 
     @Override

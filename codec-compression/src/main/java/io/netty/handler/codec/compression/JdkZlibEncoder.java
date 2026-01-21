@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -298,10 +299,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+    public void close(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler) {
         Promise<Void> p = ctx().newPromise();
         finishEncode(ctx, p);
-        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, ctx.<Void>newPromise().addHandler(handler));
     }
 
     private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
@@ -335,7 +336,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             footer.writeIntLE(uncBytes);
         }
         deflater.end();
-        ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise.toCompletionHandler());
     }
 
     private void deflate(ByteBuf out) {

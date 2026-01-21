@@ -33,9 +33,9 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -459,12 +459,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 if (dropPackets.get()) {
                     ReferenceCountUtil.release(msg);
-                    promise.setSuccess(null);
+                    handler.onSuccess(null);
                 } else {
-                    ctx.write(msg, promise);
+                    ctx.write(msg, handler);
                 }
             }
         }
@@ -537,8 +537,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         channel.pipeline().addLast(new ChannelOutboundHandler() {
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                                Promise<Void> promise) {
-                promise.setFailure(exception);
+                                CompletionHandler<Void> handler) {
+                handler.onFailure(exception);
             }
         });
         try {

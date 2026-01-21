@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
@@ -87,7 +88,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
         for (int i = 0; i < numWrites; ++i) {
             ByteBuf wrapSrcBuffer = this.wrapSrcBuffer.retainedSlice();
 
-            clientSslHandler.write(clientCtx, wrapSrcBuffer, clientCtx.newPromise());
+            clientSslHandler.write(clientCtx, wrapSrcBuffer, CompletionHandler.ignore());
         }
         clientSslHandler.flush(clientCtx);
         return clientCtx.cumulation().retainedSlice();

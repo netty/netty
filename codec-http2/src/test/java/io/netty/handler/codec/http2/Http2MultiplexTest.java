@@ -33,6 +33,7 @@ import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -988,7 +989,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             channelOpen.set(childChannel.isOpen());
             channelActive.set(childChannel.isActive());
         });
-        childChannel.close(p);
+        childChannel.close(p.toCompletionHandler());
         p.syncUninterruptibly();
 
         assertFalse(channelOpen.get());
@@ -1224,10 +1225,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     public void callUnsafeCloseMultipleTimes() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        childChannel.close(childChannel.newPromise());
+        childChannel.close();
 
         Promise<Void> promise = childChannel.newPromise();
-        childChannel.close(promise);
+        childChannel.close(promise.toCompletionHandler());
         promise.syncUninterruptibly();
         childChannel.closeFuture().syncUninterruptibly();
     }
@@ -1710,7 +1711,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     private static final class ParentChannel extends EmbeddedChannel {
 
         void addBuffer(ByteBuf buf) {
-            outboundBuffer().addMessage(buf, buf.readableBytes(), newPromise());
+            outboundBuffer().addMessage(buf, buf.readableBytes(), CompletionHandler.ignore());
         }
     }
 }

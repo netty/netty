@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.util.Comparator;
@@ -342,16 +343,16 @@ final class SpdySession {
 
     public static final class PendingWrite {
         final SpdyDataFrame spdyDataFrame;
-        final Promise<Void> promise;
+        final CompletionHandler<Void> handler;
 
-        PendingWrite(SpdyDataFrame spdyDataFrame, Promise<Void> promise) {
+        PendingWrite(SpdyDataFrame spdyDataFrame, CompletionHandler<Void> handler) {
             this.spdyDataFrame = spdyDataFrame;
-            this.promise = promise;
+            this.handler = handler;
         }
 
         void fail(Throwable cause) {
             spdyDataFrame.release();
-            promise.setFailure(cause);
+            handler.onFailure(cause);
         }
     }
 }

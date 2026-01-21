@@ -28,7 +28,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -300,14 +300,14 @@ public final class PcapWriteHandler implements ChannelInboundHandler, ChannelOut
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         // Initialize if needed
         if (state.get() == State.INIT) {
             try {
                 initializeIfNecessary(ctx);
             } catch (Exception ex) {
                 ReferenceCountUtil.release(msg);
-                promise.setFailure(ex);
+                handler.onFailure(ex);
                 return;
             }
         }
@@ -322,7 +322,7 @@ public final class PcapWriteHandler implements ChannelInboundHandler, ChannelOut
                 logDiscard();
             }
         }
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     /**

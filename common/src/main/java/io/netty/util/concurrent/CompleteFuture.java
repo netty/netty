@@ -34,15 +34,23 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         super(executor);
     }
 
+    // TODO: Improve impl to reduce GC
     @Override
-    public Future<V> addListener(FutureListener<? super V> listener) {
-        DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
+    public Future<V> addHandler(CompletionHandler<? super V> handler) {
+        ObjectUtil.checkNotNull(handler, "handler");
+        addListener(f -> {
+            if (f.isSuccess()) {
+                handler.onSuccess(null);
+            } else {
+                handler.onFailure(f.cause());
+            }
+        });
         return this;
     }
 
     @Override
-    public Future<V> removeListener(FutureListener<? super V> listener) {
-        // NOOP
+    public Future<V> addListener(FutureListener<? super V> listener) {
+        DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
         return this;
     }
 

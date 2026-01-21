@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.MockTicker;
@@ -214,7 +215,7 @@ public class EmbeddedChannelTest {
             @Override
             public Future<Void> doRun(Channel channel) {
                 Promise<Void> promise = channel.newPromise();
-                channel.close(promise);
+                channel.close(promise.toCompletionHandler());
                 return promise;
             }
         });
@@ -234,7 +235,7 @@ public class EmbeddedChannelTest {
             @Override
             public Future<Void> doRun(Channel channel) {
                 Promise<Void> promise = channel.newPromise();
-                channel.disconnect(promise);
+                channel.disconnect(promise.toCompletionHandler());
                 return promise;
             }
         });
@@ -294,8 +295,8 @@ public class EmbeddedChannelTest {
     public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelOutboundHandler() {
             @Override
-            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-                promise.tryFailure(new Throwable());
+            public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                handler.onFailure(new Throwable());
             }
         });
         assertFalse(channel.disconnect().isSuccess());
@@ -386,11 +387,12 @@ public class EmbeddedChannelTest {
     public void testWriteLater() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+            public void write(
+                    final ChannelHandlerContext ctx, final Object msg, final CompletionHandler<Void> handler) {
                 ctx.executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.write(msg, promise);
+                        ctx.write(msg, handler);
                     }
                 });
             }
@@ -408,11 +410,12 @@ public class EmbeddedChannelTest {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+            public void write(
+                    final ChannelHandlerContext ctx, final Object msg, final CompletionHandler<Void> handler) {
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
-                        ctx.writeAndFlush(msg, promise);
+                        ctx.writeAndFlush(msg, handler);
                     }
                 }, delay, TimeUnit.MILLISECONDS);
             }
@@ -498,8 +501,8 @@ public class EmbeddedChannelTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                ctx.write(msg, promise);
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                ctx.write(msg, handler);
                 latch.countDown();
             }
 
@@ -834,15 +837,15 @@ public class EmbeddedChannelTest {
         private final Queue<Integer> queue = new ArrayDeque<Integer>();
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(DISCONNECT);
-            promise.setSuccess(null);
+            handler.onSuccess(null);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(CLOSE);
-            promise.setSuccess(null);
+            handler.onSuccess(null);
         }
 
         Integer pollEvent() {

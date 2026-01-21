@@ -25,6 +25,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.StringUtil;
@@ -99,7 +100,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         try {
             if (acceptOutboundMessage(msg)) {
                 encode(ctx, msg, out);
@@ -108,36 +109,37 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                             StringUtil.simpleClassName(this) + " must produce at least one message.");
                 }
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         } catch (EncoderException e) {
             throw e;
         } catch (Throwable t) {
             throw new EncoderException(t);
         } finally {
-            writeOutList(ctx, out, promise);
+            writeOutList(ctx, out, handler);
         }
     }
 
-    private static void writeOutList(ChannelHandlerContext ctx, List<Object> out, Promise<Void> promise) {
+    private static void writeOutList(ChannelHandlerContext ctx, List<Object> out, CompletionHandler<Void> handler) {
         final int size = out.size();
         try {
             if (size == 1) {
-                ctx.write(out.get(0), promise);
+                ctx.write(out.get(0), handler);
             } else if (size > 1) {
-                writePromiseCombiner(ctx, out, promise);
+                writePromiseCombiner(ctx, out, handler);
             }
         } finally {
             out.clear();
         }
     }
 
-    private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out, Promise<Void> promise) {
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out,
+                                             CompletionHandler<Void> handler) {
         final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.get(i)));
         }
-        combiner.finish(promise);
+        combiner.finish(ctx.<Void>newPromise().addHandler(handler));
     }
 
     @Override

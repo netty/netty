@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -258,12 +259,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, Promise<Void> promise) {
+            SocketAddress localAddress, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.bind(outboundCtx, localAddress, promise);
+            outboundHandler.bind(outboundCtx, localAddress, handler);
         } else {
-            outboundCtx.bind(localAddress, promise);
+            outboundCtx.bind(localAddress, handler);
         }
     }
 
@@ -271,42 +272,42 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            Promise<Void> promise) {
+            CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
+            outboundHandler.connect(outboundCtx, remoteAddress, localAddress, handler);
         } else {
-            outboundCtx.connect(remoteAddress, localAddress, promise);
+            outboundCtx.connect(remoteAddress, localAddress, handler);
         }
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.disconnect(outboundCtx, promise);
+            outboundHandler.disconnect(outboundCtx, handler);
         } else {
-            outboundCtx.disconnect(promise);
+            outboundCtx.disconnect(handler);
         }
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.close(outboundCtx, promise);
+            outboundHandler.close(outboundCtx, handler);
         } else {
-            outboundCtx.close(promise);
+            outboundCtx.close(handler);
         }
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.deregister(outboundCtx, promise);
+            outboundHandler.deregister(outboundCtx, handler);
         } else {
-            outboundCtx.deregister(promise);
+            outboundCtx.deregister(handler);
         }
     }
 
@@ -321,12 +322,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.write(outboundCtx, msg, promise);
+            outboundHandler.write(outboundCtx, msg, handler);
         } else {
-            outboundCtx.write(msg, promise);
+            outboundCtx.write(msg, handler);
         }
     }
 
@@ -341,23 +342,23 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.register(outboundCtx, promise);
+            outboundHandler.register(outboundCtx, handler);
         } else {
-            outboundCtx.register(promise);
+            outboundCtx.register(handler);
         }
     }
 
     @Override
     public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                         Promise<Void> promise) {
+                         CompletionHandler<Void> handler) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
-            outboundHandler.shutdown(outboundCtx, type, promise);
+            outboundHandler.shutdown(outboundCtx, type, handler);
         } else {
-            outboundCtx.shutdown(type, promise);
+            outboundCtx.shutdown(type, handler);
         }
     }
 
@@ -492,38 +493,38 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public void register(Promise<Void> promise) {
-            ctx.register(promise);
+        public void register(CompletionHandler<Void> handler) {
+            ctx.register(handler);
         }
 
         @Override
-        public void bind(SocketAddress localAddress, Promise<Void> promise) {
-            ctx.bind(localAddress, promise);
+        public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+            ctx.bind(localAddress, handler);
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            ctx.connect(remoteAddress, promise);
+        public void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
+            ctx.connect(remoteAddress, handler);
         }
 
         @Override
         public void connect(
-                SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            ctx.connect(remoteAddress, localAddress, promise);
+                SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
+            ctx.connect(remoteAddress, localAddress, handler);
         }
 
         @Override
-        public void disconnect(Promise<Void> promise) {
-            ctx.disconnect(promise);
+        public void disconnect(CompletionHandler<Void> handler) {
+            ctx.disconnect(handler);
         }
 
         @Override
-        public void close(Promise<Void> promise) {
-            ctx.close(promise);
+        public void close(CompletionHandler<Void> handler) {
+            ctx.close(handler);
         }
 
         @Override
-        public void deregister(Promise<Void> promise) {
+        public void deregister(CompletionHandler<Void> promise) {
             ctx.deregister(promise);
         }
 
@@ -538,8 +539,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public void write(Object msg, Promise<Void> promise) {
-            ctx.write(msg, promise);
+        public void write(Object msg, CompletionHandler<Void> handler) {
+            ctx.write(msg, handler);
         }
 
         @Override
@@ -548,7 +549,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public void writeAndFlush(Object msg, Promise<Void> promise) {
+        public void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
             ctx.writeAndFlush(msg, promise);
         }
 
@@ -558,8 +559,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
-            ctx.shutdown(type, promise);
+        public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
+            ctx.shutdown(type, handler);
         }
 
         @Override

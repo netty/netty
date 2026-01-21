@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -37,36 +38,36 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> write(Object msg) {
         Promise<Void> promise = newPromise();
-        write(msg, promise);
+        write(msg, promise.toCompletionHandler());
         return promise;
     }
 
     @Override
-    public final void write(Object msg, Promise<Void> promise) {
+    public final void write(Object msg, CompletionHandler<Void> handler) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
+                handler.onSuccess(null);
             } else {
-                channel().write(msg, promise);
+                channel().write(msg, handler);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.onFailure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+    public final void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
+                promise.onSuccess(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            promise.onFailure(e);
             handleException(e);
         }
     }
@@ -74,7 +75,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
         Promise<Void> promise = newPromise();
-        writeAndFlush(msg, promise);
+        writeAndFlush(msg, promise.toCompletionHandler());
         return promise;
     }
 }

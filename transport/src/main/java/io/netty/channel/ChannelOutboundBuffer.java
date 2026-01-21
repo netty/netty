@@ -21,13 +21,12 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -114,13 +113,12 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Add given message to this {@link ChannelOutboundBuffer}. The given {@link Promise} will be notified once
-     * the message was written.
+     * Add given message to this {@link ChannelOutboundBuffer}. The given {@link CompletionHandler} will be
+     * notified once the message was written.
      */
-
-    public void addMessage(Object msg, int size, Promise<Void> promise) {
+    public void addMessage(Object msg, int size, CompletionHandler<Void> handler) {
         assert executor.inEventLoop();
-        Entry entry = Entry.newInstance(msg, size, total(msg), promise);
+        Entry entry = Entry.newInstance(msg, size, total(msg), handler);
         if (tailEntry == null) {
             flushedEntry = null;
         } else {
@@ -201,7 +199,7 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Will remove the current message, mark its {@link Promise} as success and return {@code true}. If no
+     * Will remove the current message, mark its {@link CompletionHandler} as success and return {@code true}. If no
      * flushed message exists at the time this method is called it will return {@code false} to signal that no more
      * messages are ready to be handled.
      */
@@ -215,7 +213,7 @@ public final class ChannelOutboundBuffer {
         }
         Object msg = e.msg;
 
-        Promise<Void> promise = e.promise;
+        CompletionHandler<Void> handler = e.handler;
         int size = e.pendingSize;
 
         removeEntry(e);
@@ -232,7 +230,7 @@ public final class ChannelOutboundBuffer {
         } else {
             ReferenceCountUtil.safeRelease(msg);
         }
-        safeSuccess(promise);
+        handler.onSuccess(null);
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -242,7 +240,7 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Will remove the current message, mark its {@link Promise} as failure using the given {@link Throwable}
+     * Will remove the current message, mark its {@link CompletionHandler} as failure using the given {@link Throwable}
      * and return {@code true}. If no   flushed message exists at the time this method is called it will return
      * {@code false} to signal that no more messages are ready to be handled.
      */
@@ -255,14 +253,14 @@ public final class ChannelOutboundBuffer {
         }
         Object msg = e.msg;
 
-        Promise<Void> promise = e.promise;
+        CompletionHandler<Void> handler = e.handler;
         int size = e.pendingSize;
 
         removeEntry(e);
 
         ReferenceCountUtil.safeRelease(msg);
 
-        safeFail(promise, cause);
+        handler.onFailure(cause);
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -547,21 +545,13 @@ public final class ChannelOutboundBuffer {
                 decrementPendingOutboundBytes(size);
 
                 ReferenceCountUtil.safeRelease(e.msg);
-                safeFail(e.promise, cause);
+                e.handler.onFailure(cause);
                 e = e.unguardedRecycleAndGetNext();
             }
         } finally {
             inFail = false;
         }
         clearNioBuffers();
-    }
-
-    private static void safeSuccess(Promise<Void> promise) {
-        PromiseNotificationUtil.trySuccess(promise, null, logger);
-    }
-
-    private static void safeFail(Promise<Void> promise, Throwable cause) {
-        PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
     @Deprecated
@@ -619,7 +609,7 @@ public final class ChannelOutboundBuffer {
         Object msg;
         ByteBuffer[] bufs;
         ByteBuffer buf;
-        Promise<Void> promise;
+        CompletionHandler<Void> handler;
         long progress;
         long total;
         int pendingSize;
@@ -629,12 +619,12 @@ public final class ChannelOutboundBuffer {
             this.handle = (EnhancedHandle<Entry>) handle;
         }
 
-        static Entry newInstance(Object msg, int size, long total, Promise<Void> promise) {
+        static Entry newInstance(Object msg, int size, long total, CompletionHandler<Void> handler) {
             Entry entry = RECYCLER.get();
             entry.msg = msg;
             entry.pendingSize = size + CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD;
             entry.total = total;
-            entry.promise = promise;
+            entry.handler = handler;
             return entry;
         }
 
@@ -643,7 +633,7 @@ public final class ChannelOutboundBuffer {
             bufs = null;
             buf = null;
             msg = null;
-            promise = null;
+            handler = null;
             progress = 0;
             total = 0;
             pendingSize = 0;
