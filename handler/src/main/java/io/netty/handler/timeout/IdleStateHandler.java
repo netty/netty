@@ -19,7 +19,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.Channel.Unsafe;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -100,15 +99,6 @@ import java.util.concurrent.TimeUnit;
 public class IdleStateHandler extends ChannelDuplexHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            lastWriteTime = ticker.nanoTime();
-            firstWriterIdleEvent = firstAllIdleEvent = true;
-        }
-    };
-
     private final boolean observeOutput;
     private final long readerIdleTimeNanos;
     private final long writerIdleTimeNanos;
@@ -137,6 +127,11 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private int lastMessageHashCode;
     private long lastPendingWriteBytes;
     private long lastFlushProgress;
+    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
+    private final ChannelFutureListener writeListener = future -> {
+        lastWriteTime = ticker.nanoTime();
+        firstWriterIdleEvent = firstAllIdleEvent = true;
+    };
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.

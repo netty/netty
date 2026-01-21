@@ -21,12 +21,12 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,8 +52,12 @@ public class ResourceLeakDetector<T> {
     // There is a minor performance benefit in TLR if this is a power of 2.
     private static final int DEFAULT_SAMPLING_INTERVAL = 128;
 
+    private static final String PROP_TRACK_CLOSE = "io.netty.leakDetection.trackClose";
+    private static final boolean DEFAULT_TRACK_CLOSE = true;
+
     private static final int TARGET_RECORDS;
     static final int SAMPLING_INTERVAL;
+    private static final boolean TRACK_CLOSE;
 
     /**
      * Represents the level of resource leak detection.
@@ -123,6 +127,7 @@ public class ResourceLeakDetector<T> {
 
         TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
         SAMPLING_INTERVAL = SystemPropertyUtil.getInt(PROP_SAMPLING_INTERVAL, DEFAULT_SAMPLING_INTERVAL);
+        TRACK_CLOSE = SystemPropertyUtil.getBoolean(PROP_TRACK_CLOSE, DEFAULT_TRACK_CLOSE);
 
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
@@ -200,7 +205,8 @@ public class ResourceLeakDetector<T> {
      * @param maxActive This is deprecated and will be ignored.
      */
     @Deprecated
-    public ResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
+    public ResourceLeakDetector(
+            Class<?> resourceType, int samplingInterval, @SuppressWarnings("unused") long maxActive) {
         this(resourceType, samplingInterval);
     }
 
@@ -220,7 +226,8 @@ public class ResourceLeakDetector<T> {
      * @param maxActive This is deprecated and will be ignored.
      */
     @Deprecated
-    public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
+    public ResourceLeakDetector(
+            String resourceType, int samplingInterval, @SuppressWarnings("unused") long maxActive) {
         this.resourceType = ObjectUtil.checkNotNull(resourceType, "resourceType");
         this.samplingInterval = samplingInterval;
     }
@@ -243,40 +250,47 @@ public class ResourceLeakDetector<T> {
      *
      * @return the {@link ResourceLeakTracker} or {@code null}
      */
-    @SuppressWarnings("unchecked")
-    public final ResourceLeakTracker<T> track(T obj) {
+    public ResourceLeakTracker<T> track(T obj) {
         return track0(obj, false);
     }
 
     /**
      * Creates a new {@link ResourceLeakTracker} which is expected to be closed via
      * {@link ResourceLeakTracker#close(Object)} when the related resource is deallocated.
-     *
+     * <p>
      * Unlike {@link #track(Object)}, this method always returns a tracker, regardless
      * of the detection settings.
      *
      * @return the {@link ResourceLeakTracker}
      */
-    @SuppressWarnings("unchecked")
     public ResourceLeakTracker<T> trackForcibly(T obj) {
         return track0(obj, true);
     }
 
-    @SuppressWarnings("unchecked")
-    private DefaultResourceLeak track0(T obj, boolean force) {
+    /**
+     * Check whether {@link ResourceLeakTracker#record()} does anything for this detector.
+     *
+     * @return {@code true} if {@link ResourceLeakTracker#record()} should be called
+     */
+    public boolean isRecordEnabled() {
+        Level level = getLevel();
+        return (level == Level.ADVANCED || level == Level.PARANOID) && TARGET_RECORDS > 0;
+    }
+
+    private DefaultResourceLeak<T> track0(T obj, boolean force) {
         Level level = ResourceLeakDetector.level;
         if (force ||
                 level == Level.PARANOID ||
                 (level != Level.DISABLED && ThreadLocalRandom.current().nextInt(samplingInterval) == 0)) {
             reportLeak();
-            return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
+            return new DefaultResourceLeak<>(obj, refQueue, allLeaks, getInitialHint(resourceType));
         }
         return null;
     }
 
     private void clearRefQueue() {
         for (;;) {
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
+            DefaultResourceLeak<?> ref = (DefaultResourceLeak<?>) refQueue.poll();
             if (ref == null) {
                 break;
             }
@@ -302,7 +316,7 @@ public class ResourceLeakDetector<T> {
 
         // Detect and report previous leaks.
         for (;;) {
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
+            DefaultResourceLeak<?> ref = (DefaultResourceLeak<?>) refQueue.poll();
             if (ref == null) {
                 break;
             }
@@ -386,12 +400,12 @@ public class ResourceLeakDetector<T> {
     private static final class DefaultResourceLeak<T>
             extends WeakReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
 
-        @SuppressWarnings("unchecked") // generics and updaters do not mix.
+        @SuppressWarnings({"unchecked", "rawtypes"}) // generics and updaters do not mix.
         private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, TraceRecord> headUpdater =
                 (AtomicReferenceFieldUpdater)
                         AtomicReferenceFieldUpdater.newUpdater(DefaultResourceLeak.class, TraceRecord.class, "head");
 
-        @SuppressWarnings("unchecked") // generics and updaters do not mix.
+        @SuppressWarnings({"unchecked", "rawtypes"}) // generics and updaters do not mix.
         private static final AtomicIntegerFieldUpdater<DefaultResourceLeak<?>> droppedRecordsUpdater =
                 (AtomicIntegerFieldUpdater)
                         AtomicIntegerFieldUpdater.newUpdater(DefaultResourceLeak.class, "droppedRecords");
@@ -455,7 +469,7 @@ public class ResourceLeakDetector<T> {
          * {@link #TARGET_RECORDS} accesses, backoff occurs. This matches typical access patterns,
          * where there are either a high number of accesses (i.e. a cached buffer), or low (an ephemeral buffer), but
          * not many in between.
-         *
+         * <p>
          * The use of atomics avoids serializing a high number of accesses, when most of the records will be thrown
          * away. High contention only happens when there are very few existing records, which is only likely when the
          * object isn't shared! If this is a problem, the loop can be aborted and the record dropped, because another
@@ -469,7 +483,8 @@ public class ResourceLeakDetector<T> {
                 TraceRecord newHead;
                 boolean dropped;
                 do {
-                    if ((prevHead = oldHead = headUpdater.get(this)) == null) {
+                    if ((prevHead = oldHead = headUpdater.get(this)) == null ||
+                            oldHead.pos == TraceRecord.CLOSE_MARK_POS) {
                         // already closed.
                         return;
                     }
@@ -501,7 +516,7 @@ public class ResourceLeakDetector<T> {
             if (allLeaks.remove(this)) {
                 // Call clear so the reference is not even enqueued.
                 clear();
-                headUpdater.set(this, null);
+                headUpdater.set(this, TRACK_CLOSE ? new TraceRecord(true) : null);
                 return true;
             }
             return false;
@@ -542,12 +557,22 @@ public class ResourceLeakDetector<T> {
          * @param ref the reference. If {@code null}, this method has no effect.
          * @see java.lang.ref.Reference#reachabilityFence
          */
+        @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter", "EmptySynchronizedStatement"})
         private static void reachabilityFence0(Object ref) {
             if (ref != null) {
                 synchronized (ref) {
                     // Empty synchronized is ok: https://stackoverflow.com/a/31933260/1151521
                 }
             }
+        }
+
+        @Override
+        public @Nullable Throwable getCloseStackTraceIfAny() {
+            TraceRecord head = headUpdater.get(this);
+            if (head != null && head.pos == TraceRecord.CLOSE_MARK_POS) {
+                return head;
+            }
+            return null;
         }
 
         @Override
@@ -576,7 +601,7 @@ public class ResourceLeakDetector<T> {
             buf.append("Recent access records: ").append(NEWLINE);
 
             int i = 1;
-            Set<String> seen = new HashSet<String>(present);
+            Set<String> seen = new HashSet<>(present);
             for (; oldHead != TraceRecord.BOTTOM; oldHead = oldHead.next) {
                 String s = oldHead.toString();
                 if (seen.add(s)) {
@@ -614,10 +639,10 @@ public class ResourceLeakDetector<T> {
     }
 
     private static final AtomicReference<String[]> excludedMethods =
-            new AtomicReference<String[]>(EmptyArrays.EMPTY_STRINGS);
+            new AtomicReference<>(EmptyArrays.EMPTY_STRINGS);
 
-    public static void addExclusions(Class clz, String ... methodNames) {
-        Set<String> nameSet = new HashSet<String>(Arrays.asList(methodNames));
+    public static void addExclusions(@SuppressWarnings("rawtypes") Class clz, String ... methodNames) {
+        Set<String> nameSet = new HashSet<>(Arrays.asList(methodNames));
         // Use loop rather than lookup. This avoids knowing the parameters, and doesn't have to handle
         // NoSuchMethodException.
         for (Method method : clz.getDeclaredMethods()) {
@@ -642,8 +667,10 @@ public class ResourceLeakDetector<T> {
 
     private static class TraceRecord extends Throwable {
         private static final long serialVersionUID = 6065153674892850720L;
+        public static final int BOTTOM_POS = -1;
+        public static final int CLOSE_MARK_POS = -2;
 
-        private static final TraceRecord BOTTOM = new TraceRecord() {
+        private static final TraceRecord BOTTOM = new TraceRecord(false) {
             private static final long serialVersionUID = 7396077602074694571L;
 
             // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
@@ -673,10 +700,10 @@ public class ResourceLeakDetector<T> {
         }
 
         // Used to terminate the stack
-        private TraceRecord() {
+        private TraceRecord(boolean closeMarker) {
             hintString = null;
             next = null;
-            pos = -1;
+            pos = closeMarker ? CLOSE_MARK_POS : BOTTOM_POS;
         }
 
         @Override

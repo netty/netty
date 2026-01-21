@@ -115,6 +115,15 @@ final class Native {
     static final boolean IS_SUPPORTING_TCP_FASTOPEN_CLIENT = isSupportingFastOpenClient();
     static final boolean IS_SUPPORTING_TCP_FASTOPEN_SERVER = isSupportingFastOpenServer();
 
+    static final KQueueIoOps READ_ENABLED_OPS =
+            KQueueIoOps.newOps(Native.EVFILT_READ, Native.EV_ADD_ENABLE, 0);
+    static final KQueueIoOps WRITE_ENABLED_OPS =
+            KQueueIoOps.newOps(Native.EVFILT_WRITE, Native.EV_ADD_ENABLE, 0);
+    static final KQueueIoOps READ_DISABLED_OPS =
+            KQueueIoOps.newOps(Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
+    static final KQueueIoOps WRITE_DISABLED_OPS =
+            KQueueIoOps.newOps(Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
+
     static FileDescriptor newKQueue() {
         return new FileDescriptor(kqueueCreate());
     }

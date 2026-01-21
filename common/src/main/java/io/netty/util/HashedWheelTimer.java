@@ -350,7 +350,8 @@ public class HashedWheelTimer implements Timer {
      *                               {@linkplain #stop() stopped} already
      */
     public void start() {
-        switch (WORKER_STATE_UPDATER.get(this)) {
+        int state = WORKER_STATE_UPDATER.get(this);
+        switch (state) {
             case WORKER_STATE_INIT:
                 if (WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
                     workerThread.start();
@@ -361,7 +362,7 @@ public class HashedWheelTimer implements Timer {
             case WORKER_STATE_SHUTDOWN:
                 throw new IllegalStateException("cannot be started once stopped");
             default:
-                throw new Error("Invalid WorkerState");
+                throw new Error("Invalid WorkerState: " + state);
         }
 
         // Wait until the startTime is initialized by the worker.
@@ -801,26 +802,22 @@ public class HashedWheelTimer implements Timer {
         }
 
         public HashedWheelTimeout remove(HashedWheelTimeout timeout) {
+            HashedWheelTimeout prev = timeout.prev;
             HashedWheelTimeout next = timeout.next;
+
             // remove timeout that was either processed or cancelled by updating the linked-list
-            if (timeout.prev != null) {
-                timeout.prev.next = next;
+            if (prev != null) {
+                prev.next = next;
             }
-            if (timeout.next != null) {
-                timeout.next.prev = timeout.prev;
+            if (next != null) {
+                next.prev = prev;
             }
 
             if (timeout == head) {
-                // if timeout is also the tail we need to adjust the entry too
-                if (timeout == tail) {
-                    tail = null;
-                    head = null;
-                } else {
-                    head = next;
-                }
-            } else if (timeout == tail) {
-                // if the timeout is the tail modify the tail to be the prev node.
-                tail = timeout.prev;
+                head = next;
+            }
+            if (timeout == tail) {
+                tail = prev;
             }
             // null out prev, next and bucket to allow for GC.
             timeout.prev = null;

@@ -30,6 +30,7 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
+import static io.netty.util.internal.StringUtil.className;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
@@ -127,7 +129,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+            if (close ||
+                    cause instanceof OutOfMemoryError ||
+                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                    cause instanceof IOException) {
                 closeOnRead(pipeline);
             }
         }
@@ -246,7 +251,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         } else {
             // Should not reach here.
-            throw new Error();
+            throw new Error("Unexpected message type: " + className(msg));
         }
         return WRITE_STATUS_SNDBUF_FULL;
     }

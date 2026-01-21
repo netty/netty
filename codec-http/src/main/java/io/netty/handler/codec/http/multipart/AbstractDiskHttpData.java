@@ -228,7 +228,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         file = tempFile();
         RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
-        int written = 0;
+        long written = 0;
         try {
             accessFile.setLength(0);
             FileChannel localfileChannel = accessFile.getChannel();

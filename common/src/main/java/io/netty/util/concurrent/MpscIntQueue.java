@@ -111,7 +111,7 @@ public interface MpscIntQueue {
             super(MathUtil.safeFindNextPositivePowerOfTwo(capacity));
             if (emptyValue != 0) {
                 this.emptyValue = emptyValue;
-                int end = capacity - 1;
+                int end = length() - 1;
                 for (int i = 0; i < end; i++) {
                     lazySet(i, emptyValue);
                 }

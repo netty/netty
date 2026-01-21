@@ -162,7 +162,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 in.skipBytes(actualReadableBytes());
                 return;
             default:
-                throw new Error("Unknown state reached: " + state);
+                throw new Error("Unexpected state reached: " + state);
         }
     }
 

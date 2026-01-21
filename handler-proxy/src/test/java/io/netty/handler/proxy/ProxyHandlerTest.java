@@ -22,7 +22,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -131,11 +130,20 @@ public class ProxyHandlerTest {
     static final ProxyServer socks5Proxy =
             new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, USERNAME, PASSWORD);
 
+    // Define private auth method and token for SOCKS5 private authentication
+    static final byte PRIVATE_AUTH_METHOD = (byte) 0x80; // Custom authentication method (range 0x80-0xFE)
+    static final byte[] PRIVATE_AUTH_TOKEN = "privateAuthToken123".getBytes(CharsetUtil.US_ASCII);
+    static final byte[] BAD_PRIVATE_AUTH_TOKEN = "wrongAuthToken".getBytes(CharsetUtil.US_ASCII);
+
+    // SOCKS5 proxy with private authentication
+    static final ProxyServer socks5PrivateProxy =
+            new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN);
+
     private static final Collection<ProxyServer> allProxies = Arrays.asList(
             deadHttpProxy, interHttpProxy, anonHttpProxy, httpProxy,
             deadHttpsProxy, interHttpsProxy, anonHttpsProxy, httpsProxy,
             deadSocks4Proxy, interSocks4Proxy, anonSocks4Proxy, socks4Proxy,
-            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy
+            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy, socks5PrivateProxy
     );
 
     // set to non-zero value in case you need predictable shuffling of test cases
@@ -361,6 +369,44 @@ public class ProxyHandlerTest {
                         "SOCKS5: timeout",
                         new Socks5ProxyHandler(deadSocks5Proxy.address())),
 
+                // SOCKS5 Private Authentication ---------------------------
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new SuccessTestItem(
+                    "SOCKS5: successful connection to anonymous server, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ off",
+                    DESTINATION,
+                    false,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected connection",
+                    BAD_DESTINATION, "status: FORBIDDEN",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: authentication failure",
+                    DESTINATION, "privateAuthStatus: FAILURE",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, BAD_PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected anonymous connection",
+                    DESTINATION, "unexpected authMethod",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address())),
+
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 
                 new SuccessTestItem(
@@ -526,14 +572,11 @@ public class ProxyHandlerTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII)).addListener(
-                    new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            latch.countDown();
-                            if (!(future.cause() instanceof ProxyConnectException)) {
-                                exceptions.add(new AssertionError(
-                                        "Unexpected failure cause for initial write: " + future.cause()));
-                            }
+                    future -> {
+                        latch.countDown();
+                        if (!(future.cause() instanceof ProxyConnectException)) {
+                            exceptions.add(new AssertionError(
+                                    "Unexpected failure cause for initial write: " + future.cause()));
                         }
                     });
         }

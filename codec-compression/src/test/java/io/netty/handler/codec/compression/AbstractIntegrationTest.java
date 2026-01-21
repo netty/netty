@@ -17,16 +17,24 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.Test;
 
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Random;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -177,6 +185,83 @@ public abstract class AbstractIntegrationTest {
             decompressed.release();
             in.release();
             closeChannels();
+        }
+    }
+
+    @Test
+    @DisabledForSlowLeakDetection
+    public void testHugeDecompress() throws Exception {
+        int chunkSize = 1024 * 1024;
+        int numberOfChunks = 256;
+        int memoryLimit = chunkSize * 128;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+        EmbeddedChannel compressChannel = createEncoder();
+        ByteBuf compressed = compressChannel.alloc().buffer();
+        for (int i = 0; i <= numberOfChunks; i++) {
+            if (i < numberOfChunks) {
+                ByteBuf in = compressChannel.alloc().buffer(chunkSize);
+                for (int j = 0; j < chunkSize; j++) {
+                    byte byteValue = (byte) (i + (j & 0xA0));
+                    in.writeByte(byteValue);
+                    digest.update(byteValue);
+                }
+                compressChannel.writeOutbound(in);
+            } else {
+                compressChannel.close();
+            }
+            while (true) {
+                ByteBuf buf = compressChannel.readOutbound();
+                if (buf == null) {
+                    break;
+                }
+                compressed.writeBytes(buf);
+                buf.release();
+            }
+        }
+        byte[] expectedData = digest.digest();
+
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(false);
+
+        HugeDecompressIncomingHandler endHandler = new HugeDecompressIncomingHandler(memoryLimit, digest);
+        EmbeddedChannel decompressChannel = createDecoder();
+        decompressChannel.pipeline().addLast(endHandler);
+        decompressChannel.config().setAllocator(allocator);
+        decompressChannel.writeInbound(compressed);
+        decompressChannel.finishAndReleaseAll();
+        assertEquals((long) chunkSize * numberOfChunks, endHandler.total);
+        assertArrayEquals(expectedData, digest.digest());
+    }
+
+    private static final class HugeDecompressIncomingHandler
+            extends ChannelInboundHandlerAdapter implements ByteProcessor {
+        final int memoryLimit;
+        final MessageDigest digest;
+        long total;
+
+        HugeDecompressIncomingHandler(int memoryLimit, MessageDigest digest) {
+            this.memoryLimit = memoryLimit;
+            this.digest = digest;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ByteBuf buf = (ByteBuf) msg;
+            total += buf.readableBytes();
+            try {
+                buf.forEachByte(this);
+                PooledByteBufAllocator allocator = (PooledByteBufAllocator) ctx.alloc();
+                assertThat(allocator.metric().usedHeapMemory()).isLessThan(memoryLimit);
+                assertThat(allocator.metric().usedDirectMemory()).isLessThan(memoryLimit);
+            } finally {
+                buf.release();
+            }
+        }
+
+        @Override
+        public boolean process(byte value) throws Exception {
+            digest.update(value);
+            return true;
         }
     }
 }

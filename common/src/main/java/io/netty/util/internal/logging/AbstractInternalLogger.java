@@ -60,7 +60,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
         case ERROR:
             return isErrorEnabled();
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -108,7 +108,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             error(msg, cause);
             break;
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -131,7 +131,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
                 error(cause);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -154,7 +154,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             error(msg);
             break;
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -177,7 +177,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             error(format, arg);
             break;
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -200,7 +200,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             error(format, argA, argB);
             break;
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 
@@ -223,7 +223,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
             error(format, arguments);
             break;
         default:
-            throw new Error();
+            throw new Error("Unexpected log level: " + level);
         }
     }
 

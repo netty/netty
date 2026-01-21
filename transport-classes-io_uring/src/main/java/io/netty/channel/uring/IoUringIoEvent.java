@@ -16,6 +16,9 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.IoEvent;
+import io.netty.channel.IoRegistration;
+
+import java.nio.ByteBuffer;
 
 /**
  * {@link IoEvent} that will be produced as an result of a {@link IoUringIoOps}.
@@ -26,6 +29,7 @@ public final class IoUringIoEvent implements IoEvent {
     private int res;
     private int flags;
     private short data;
+    private ByteBuffer extraCqeData;
 
     /**
      * Create a new instance
@@ -43,11 +47,12 @@ public final class IoUringIoEvent implements IoEvent {
     }
 
     // Used internally to reduce object creation
-    void update(int res, int flags, byte opcode, short data) {
+    void update(int res, int flags, byte opcode, short data, ByteBuffer extraCqeData) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
         this.data = data;
+        this.extraCqeData = extraCqeData;
     }
 
     /**
@@ -84,7 +89,18 @@ public final class IoUringIoEvent implements IoEvent {
      */
     public short data() {
         return data;
-    };
+    }
+
+    /**
+     * Returns the extra data for the CQE. This will only be non-null of the ring was setup with
+     * {@code IORING_SETUP_CQE32}. As this {@link ByteBuffer} maps into the shared completion queue its important
+     * to not hold any reference to it outside of the {@link IoUringIoHandle#handle(IoRegistration, IoEvent)} method.
+     *
+     * @return extra data for the CQE or {@code null}.
+     */
+    public ByteBuffer extraCqeData() {
+        return extraCqeData;
+    }
 
     @Override
     public String toString() {

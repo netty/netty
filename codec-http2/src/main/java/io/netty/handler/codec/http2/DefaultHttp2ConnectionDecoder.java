@@ -230,11 +230,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
-    void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload) throws Http2Exception {
-        listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-    }
-
     // See https://tools.ietf.org/html/rfc7540#section-8.1.2.6
     private void verifyContentLength(Http2Stream stream, int data, boolean isEnd) throws Http2Exception {
         ContentLength contentLength = stream.getProperty(contentLengthKey);
@@ -621,7 +616,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) throws Http2Exception {
-            onUnknownFrame0(ctx, frameType, streamId, flags, payload);
+            Http2Stream stream = connection.stream(streamId);
+            if (stream == null) {
+                return;
+            }
+
+            listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
         }
 
         /**
@@ -792,7 +792,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                 ByteBuf payload) throws Http2Exception {
-            onUnknownFrame0(ctx, frameType, streamId, flags, payload);
+            verifyPrefaceReceived();
+            internalFrameListener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
         }
     }
 

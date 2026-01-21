@@ -26,6 +26,11 @@ import java.util.concurrent.ThreadFactory;
 
 /**
  * {@link IoEventLoopGroup} implementation that will handle its tasks with multiple threads.
+ * <p>
+ * This group supports advanced thread management strategies, such as dynamic auto-scaling,
+ * by providing a custom {@link EventExecutorChooserFactory}. To enable utilization-based
+ * auto-scaling, pass an instance of
+ * {@link io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory}.
  */
 public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup implements IoEventLoopGroup {
 

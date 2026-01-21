@@ -323,7 +323,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
             case OPTIONAL:
                 return BoringSSL.SSL_VERIFY_PEER;
             default:
-                throw new Error(mode.toString());
+                throw new Error("Unexpected mode: " + mode);
         }
     }
 

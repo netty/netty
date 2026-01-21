@@ -46,12 +46,7 @@ public class PendingWriteQueueTest {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWrite();
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        assertQueueEmpty(queue);
-                    }
-                });
+                future.addListener(f -> assertQueueEmpty(queue));
                 super.flush(ctx);
             }
         }, 1);
@@ -65,12 +60,7 @@ public class PendingWriteQueueTest {
                 assertFalse(ctx.channel().isWritable(), "Should not be writable anymore");
 
                 ChannelFuture future = queue.removeAndWriteAll();
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        assertQueueEmpty(queue);
-                    }
-                });
+                future.addListener(f -> assertQueueEmpty(queue));
                 super.flush(ctx);
             }
         }, 3);
@@ -215,12 +205,7 @@ public class PendingWriteQueueTest {
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                queue.removeAndFailAll(new IllegalStateException());
-            }
-        });
+        promise.addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
         queue.add(1L, promise);
 
         ChannelPromise promise2 = channel.newPromise();
@@ -247,12 +232,7 @@ public class PendingWriteQueueTest {
 
         ChannelPromise promise = channel.newPromise();
         final ChannelPromise promise3 = channel.newPromise();
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                queue.add(3L, promise3);
-            }
-        });
+        promise.addListener(future -> queue.add(3L, promise3));
         queue.add(1L, promise);
         ChannelPromise promise2 = channel.newPromise();
         queue.add(2L, promise2);
@@ -302,28 +282,15 @@ public class PendingWriteQueueTest {
 
         ChannelPromise promise = channel.newPromise();
         final ChannelPromise promise3 = channel.newPromise();
-        promise3.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                failOrder.add(3);
-            }
-        });
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                failOrder.add(1);
-                queue.add(3L, promise3);
-            }
+        promise3.addListener(future -> failOrder.add(3));
+        promise.addListener(future -> {
+            failOrder.add(1);
+            queue.add(3L, promise3);
         });
         queue.add(1L, promise);
 
         ChannelPromise promise2 = channel.newPromise();
-        promise2.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                failOrder.add(2);
-            }
-        });
+        promise2.addListener(future -> failOrder.add(2));
         queue.add(2L, promise2);
         queue.removeAndFailAll(new Exception());
         assertTrue(promise.isDone());
@@ -344,12 +311,7 @@ public class PendingWriteQueueTest {
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
         ChannelPromise promise = channel.newPromise();
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                queue.removeAndWriteAll();
-            }
-        });
+        promise.addListener(future -> queue.removeAndWriteAll());
         queue.add(1L, promise);
 
         ChannelPromise promise2 = channel.newPromise();

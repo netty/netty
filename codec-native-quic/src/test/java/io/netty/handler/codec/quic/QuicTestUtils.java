@@ -22,11 +22,12 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -56,8 +57,9 @@ final class QuicTestUtils {
     private QuicTestUtils() {
     }
 
-    private static final EventLoopGroup GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() :
-            new NioEventLoopGroup();
+    private static final EventLoopGroup GROUP = Epoll.isAvailable() ?
+            new MultiThreadIoEventLoopGroup(EpollIoHandler.newFactory()) :
+            new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
     static final ChannelHandlerAdapter NOOP_HANDLER = new ChannelHandlerAdapter() {
         @Override
@@ -85,7 +87,7 @@ final class QuicTestUtils {
 
     private static Bootstrap newBootstrap() {
         Bootstrap bs = new Bootstrap();
-        if (GROUP instanceof EpollEventLoopGroup) {
+        if (Epoll.isAvailable()) {
             bs.channel(EpollDatagramChannel.class)
                     // Use recvmmsg when possible.
                     .option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, DATAGRAM_SIZE)
@@ -106,7 +108,7 @@ final class QuicTestUtils {
 
     static QuicChannelBootstrap newQuicChannelBootstrap(Channel channel) {
         QuicChannelBootstrap bs = QuicChannel.newBootstrap(channel);
-        if (GROUP instanceof EpollEventLoopGroup) {
+        if (Epoll.isAvailable()) {
             bs.option(QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR,
                     EpollQuicUtils.newSegmentedAllocator(10));
         }
@@ -149,7 +151,7 @@ final class QuicTestUtils {
                 .initialMaxStreamsUnidirectional(100)
                 .activeMigration(false)
                 .sslTaskExecutor(sslTaskExecutor);
-        if (GROUP instanceof EpollEventLoopGroup) {
+        if (Epoll.isAvailable()) {
             builder.option(QuicChannelOption.SEGMENTED_DATAGRAM_PACKET_ALLOCATOR,
                     EpollQuicUtils.newSegmentedAllocator(10));
         }
@@ -200,7 +202,7 @@ final class QuicTestUtils {
 
     @Nullable
     static ChannelOption<Boolean> soReusePortOption() {
-        if (GROUP instanceof EpollEventLoopGroup) {
+        if (Epoll.isAvailable()) {
             return EpollChannelOption.SO_REUSEPORT;
         }
         return null;

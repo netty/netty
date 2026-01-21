@@ -1,4 +1,5 @@
 ![Build project](https://github.com/netty/netty/workflows/Build%20project/badge.svg)
+[![LFX Health Score](https://insights.linuxfoundation.org/api/badge/health-score?project=netty)](https://insights.linuxfoundation.org/project/netty)
 
 # Netty Project
 

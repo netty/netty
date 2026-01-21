@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -23,6 +24,7 @@ import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,6 +40,12 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new KQueueEventLoopGroup();
+    }
+
+    @Override
+    protected EventLoopGroup newAutoScalingEventLoopGroup() {
+        return new KQueueEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
+                                        DefaultSelectStrategyFactory.INSTANCE);
     }
 
     @Override

@@ -54,18 +54,55 @@ final class Algorithms {
                 return "2.16.840.1.101.3.4.3.18";
             case "ml-dsa-87":
                 return "2.16.840.1.101.3.4.3.19";
+            case "slh-dsa-sha2-128s":
+                return "2.16.840.1.101.3.4.3.20";
+            case "slh-dsa-sha2-128f":
+                return "2.16.840.1.101.3.4.3.21";
+            case "slh-dsa-shake-128s":
+                return "2.16.840.1.101.3.4.3.22";
+            case "slh-dsa-shake-128f":
+                return "2.16.840.1.101.3.4.3.23";
+            case "slh-dsa-sha2-192s":
+                return "2.16.840.1.101.3.4.3.24";
+            case "slh-dsa-sha2-192f":
+                return "2.16.840.1.101.3.4.3.25";
+            case "slh-dsa-shake-192s":
+                return "2.16.840.1.101.3.4.3.26";
+            case "slh-dsa-shake-192f":
+                return "2.16.840.1.101.3.4.3.27";
+            case "slh-dsa-sha2-256s":
+                return "2.16.840.1.101.3.4.3.28";
+            case "slh-dsa-sha2-256f":
+                return "2.16.840.1.101.3.4.3.29";
+            case "slh-dsa-shake-256s":
+                return "2.16.840.1.101.3.4.3.30";
+            case "slh-dsa-shake-256f":
+                return "2.16.840.1.101.3.4.3.31";
             default:
                 throw new UnsupportedOperationException("Algorithm not supported: " + algorithmIdentifier);
         }
     }
 
-    static KeyPairGenerator keyPairGenerator(String keyType, AlgorithmParameterSpec spec, SecureRandom rng)
-            throws GeneralSecurityException {
+    static KeyPairGenerator keyPairGenerator(String keyType, AlgorithmParameterSpec spec,
+            SecureRandom rng, Provider provider) throws GeneralSecurityException {
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType);
-            keyGen.initialize(spec, rng);
+            KeyPairGenerator keyGen;
+            if (provider == null) {
+                keyGen = KeyPairGenerator.getInstance(keyType);
+            } else {
+                keyGen = KeyPairGenerator.getInstance(keyType, provider);
+            }
+            try {
+                keyGen.initialize(spec, rng);
+            } catch (UnsupportedOperationException ignore) {
+                // The key generators for some algorithms, in some providers, don't support key gen initialization.
+            }
             return keyGen;
         } catch (GeneralSecurityException e) {
+            if (provider != null) {
+                 // Don't fall back to BouncyCastle if we were explicitly told to use a specific provider.
+                throw e;
+            }
             try {
                 KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType, bouncyCastle());
                 keyGen.initialize(spec, rng);
@@ -77,12 +114,12 @@ final class Algorithms {
         }
     }
 
-    static Signature signature(String algorithmIdentifier) throws NoSuchAlgorithmException {
+    static Signature signature(String algorithmIdentifier, Provider provider) throws NoSuchAlgorithmException {
         try {
             return Signature.getInstance(algorithmIdentifier);
         } catch (NoSuchAlgorithmException e) {
             try {
-                return Signature.getInstance(algorithmIdentifier, bouncyCastle());
+                return Signature.getInstance(algorithmIdentifier, provider != null ? provider : bouncyCastle());
             } catch (NoSuchAlgorithmException ex) {
                 e.addSuppressed(ex);
             }
@@ -90,9 +127,13 @@ final class Algorithms {
         }
     }
 
+    private static final class DefaultProvider {
+        private static final Provider INSTANCE = new BouncyCastleProvider();
+    }
+
     private static synchronized Provider bouncyCastle() {
         if (bouncyCastle == null) {
-            bouncyCastle = new BouncyCastleProvider();
+            bouncyCastle = DefaultProvider.INSTANCE;
         }
         return bouncyCastle;
     }

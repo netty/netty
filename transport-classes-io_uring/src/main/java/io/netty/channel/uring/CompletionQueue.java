@@ -34,27 +34,28 @@ final class CompletionQueue {
     private static final int CQE_RES_FIELD = 8;
     private static final int CQE_FLAGS_FIELD = 12;
 
-    static final int CQE_SIZE = 16;
-
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel and us
     // using a VarHandle.
     private final ByteBuffer khead;
     private final ByteBuffer ktail;
+    private final ByteBuffer kflags;
     private final ByteBuffer completionQueueArray;
+    private final ByteBuffer[] extraCqeData;
 
     final int ringSize;
     final long ringAddress;
     final int ringFd;
     final int ringEntries;
     final int ringCapacity;
+    private final int cqeLength;
 
     private final int ringMask;
     private int ringHead;
     private boolean closed;
 
-    CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries,
+    CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries, ByteBuffer kflags,
                     ByteBuffer completionQueueArray, int ringSize, long ringAddress,
-                    int ringFd, int ringCapacity) {
+                    int ringFd, int ringCapacity, int cqeLength, boolean extraCqeDataNeeded) {
         this.khead = kHead;
         this.ktail = kTail;
         this.completionQueueArray = completionQueueArray;
@@ -62,14 +63,38 @@ final class CompletionQueue {
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
         this.ringCapacity = ringCapacity;
-
+        this.cqeLength = cqeLength;
         this.ringEntries = ringEntries;
+        this.kflags = kflags;
         this.ringMask = ringMask;
         ringHead = (int) INT_HANDLE.getVolatile(kHead, 0);
+
+        if (extraCqeDataNeeded) {
+            // Let's create the slices up front to reduce GC-pressure and also ensure that the user
+            // can not escape the memory range.
+            // We slice every Native.CQE_SIZE to support IORING_SETUP_CQE32 and IORING_SETUP_CQE_MIXED.
+            this.extraCqeData = new ByteBuffer[ringEntries];
+            for (int i = 0; i < ringEntries; i++) {
+                int position = i * cqeLength;
+                completionQueueArray.position(position).limit(position + Native.CQE_SIZE);
+                extraCqeData[i] = completionQueueArray.slice();
+                completionQueueArray.clear();
+            }
+        } else {
+            this.extraCqeData = null;
+        }
     }
 
     void close() {
         closed = true;
+    }
+
+    int flags() {
+        if (closed) {
+            return 0;
+        }
+        // we only need memory_order_relaxed
+        return (int) INT_HANDLE.getOpaque(kflags, 0);
     }
 
     /**
@@ -99,18 +124,36 @@ final class CompletionQueue {
         try {
             int i = 0;
             while (ringHead != tail) {
-                int cqePosition = cqeIdx(ringHead, ringMask);
+                int cqeIdx = cqeIdx(ringHead, ringMask);
+                int cqePosition = cqeIdx * cqeLength;
 
                 long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
                 int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
                 int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
 
                 ringHead++;
+                final ByteBuffer extraCqeData;
+                if ((flags & Native.IORING_CQE_F_32) != 0) {
+                    extraCqeData = extraCqeData(cqeIdx + 1);
+                    // We used mixed mode and this was a 32 byte CQE, let's increment the head once more.
+                    ringHead++;
+                } else if (cqeLength == Native.CQE32_SIZE) {
+                    extraCqeData = extraCqeData(cqeIdx + 1);
+                } else {
+                    extraCqeData = null;
+                }
+                // Check if we should just skip it.
+                if ((flags & Native.IORING_CQE_F_SKIP) == 0) {
+                    i++;
 
-                i++;
-                if (!callback.handle(res, flags, udata)) {
-                    // Stop processing. as the callback can not handle any more completions for now,
-                    break;
+                    callback.handle(res, flags, udata, extraCqeData);
+                }
+
+                if (ringHead == tail) {
+                    // Let's fetch the tail one more time as it might have changed because a completion might have
+                    // triggered a submission (io_uring_enter). This can happen as we automatically submit once we
+                    // run out of space in the submission queue.
+                    tail = (int) INT_HANDLE.getVolatile(ktail, 0);
                 }
             }
             return i;
@@ -118,6 +161,15 @@ final class CompletionQueue {
             // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
             INT_HANDLE.setRelease(khead, 0, ringHead);
         }
+    }
+
+    private ByteBuffer extraCqeData(int cqeIdx) {
+        if (extraCqeData == null) {
+            return null;
+        }
+        ByteBuffer buffer = extraCqeData[cqeIdx];
+        buffer.clear();
+        return buffer;
     }
 
     @Override
@@ -129,11 +181,14 @@ final class CompletionQueue {
             int tail = (int) INT_HANDLE.getVolatile(ktail, 0);
             int head = ringHead;
             while (head != tail) {
-                int cqePosition = cqeIdx(head++, ringMask);
+                int cqePosition = cqeIdx(head++, ringMask) * cqeLength;
                 long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
                 int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
                 int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
-
+                if ((flags & Native.IORING_CQE_F_32) != 0) {
+                    // We used mixed mode and this was a 32 byte CQE, let's increment the head once more.
+                    head++;
+                }
                 sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
             }
         }
@@ -141,6 +196,6 @@ final class CompletionQueue {
     }
 
     private static int cqeIdx(int ringHead, int ringMask) {
-        return (ringHead & ringMask) * CQE_SIZE;
+        return ringHead & ringMask;
     }
 }

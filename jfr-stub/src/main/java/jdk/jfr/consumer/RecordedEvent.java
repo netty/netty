@@ -15,7 +15,9 @@
  */
 package jdk.jfr.consumer;
 
-public class RecordedEvent {
+import jdk.jfr.EventType;
+
+public final class RecordedEvent {
     public RecordedEvent() {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
@@ -29,6 +31,14 @@ public class RecordedEvent {
     }
 
     public int getInt(String fieldName) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public EventType getEventType() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public boolean hasField(String fieldName) {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 }

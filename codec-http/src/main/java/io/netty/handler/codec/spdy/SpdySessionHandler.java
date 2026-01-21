@@ -500,12 +500,9 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 final ChannelHandlerContext context = ctx;
-                ctx.write(partialDataFrame).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
-                        }
+                ctx.write(partialDataFrame).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 });
                 return;
@@ -517,12 +514,9 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 final ChannelHandlerContext context = ctx;
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
-                        }
+                promise.addListener(future -> {
+                    if (!future.isSuccess()) {
+                        issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 });
             }
@@ -776,13 +770,9 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                         writeStreamId, spdyDataFrame.content().readRetainedSlice(sendWindowSize));
 
                 // The transfer window size is pre-decremented when sending a data frame downstream.
-                // Close the session on write failures that leave the transfer window in a corrupt state.
-                ctx.writeAndFlush(partialDataFrame).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
-                        }
+                ctx.writeAndFlush(partialDataFrame).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 });
             } else {
@@ -798,12 +788,9 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
 
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
-                ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
-                        }
+                ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 });
             }

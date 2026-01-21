@@ -50,7 +50,7 @@ public class SocksAuthResponseDecoder extends ReplayingDecoder<State> {
                 break;
             }
             default: {
-                throw new Error();
+                throw new Error("Unexpected response decoder state: " + state());
             }
         }
         channelHandlerContext.pipeline().remove(this);

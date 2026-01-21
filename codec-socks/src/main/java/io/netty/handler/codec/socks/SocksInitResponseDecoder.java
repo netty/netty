@@ -49,7 +49,7 @@ public class SocksInitResponseDecoder extends ReplayingDecoder<State> {
                 break;
             }
             default: {
-                throw new Error();
+                throw new Error("Unexpected response decoder type: " + state());
             }
         }
         ctx.pipeline().remove(this);

@@ -84,7 +84,7 @@ public final class Errors {
         }
 
         public NativeIoException(String method, int expectedErr, boolean fillInStackTrace) {
-            super(method + "(..) failed: " + errnoString(-expectedErr));
+            super(method + "(..) failed with error(" + expectedErr + "): " + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
             this.fillInStackTrace = fillInStackTrace;
         }
@@ -106,7 +106,7 @@ public final class Errors {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;
         NativeConnectException(String method, int expectedErr) {
-            super(method + "(..) failed: " + errnoString(-expectedErr));
+            super(method + "(..) failed with error(" + expectedErr + "):" + errnoString(-expectedErr));
             this.expectedErr = expectedErr;
         }
 
@@ -163,7 +163,7 @@ public final class Errors {
         if (err == ERRNO_ENOENT_NEGATIVE) {
             return new FileNotFoundException();
         }
-        return new ConnectException(method + "(..) failed: " + errnoString(-err));
+        return new ConnectException(method + "(..) failed with error(" + err + "): " + errnoString(-err));
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {

@@ -22,10 +22,11 @@ import jdk.jfr.Name;
 
 @SuppressWarnings("Since15")
 @Label("Buffer Reallocation")
-@Name("ReallocateBufferEvent")
+@Name(ReallocateBufferEvent.NAME)
 @Description("Triggered when a buffer is reallocated for resizing in an allocator. " +
         "Will be followed by an AllocateBufferEvent")
 final class ReallocateBufferEvent extends AbstractBufferEvent {
+    static final String NAME = "io.netty.ReallocateBuffer";
     private static final ReallocateBufferEvent INSTANCE = new ReallocateBufferEvent();
 
     /**

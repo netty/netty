@@ -133,6 +133,20 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5PrivateAuthRequestDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5PrivateAuthRequestDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.socksx.v5.Socks5PrivateAuthResponseDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5PrivateAuthResponseDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.socksx.v5.Socks5ServerEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.socksx.v5.Socks5ServerEncoder"

@@ -39,26 +39,6 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
         return SslProvider.OPENSSL_REFCNT;
     }
 
-    @Override
-    protected void cleanupClientSslContext(SslContext ctx) {
-        ReferenceCountUtil.release(ctx);
-    }
-
-    @Override
-    protected void cleanupClientSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(unwrapEngine(engine));
-    }
-
-    @Override
-    protected void cleanupServerSslContext(SslContext ctx) {
-        ReferenceCountUtil.release(ctx);
-    }
-
-    @Override
-    protected void cleanupServerSslEngine(SSLEngine engine) {
-        ReferenceCountUtil.release(unwrapEngine(engine));
-    }
-
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testNotLeakOnException(SSLEngineTestParam param) throws Exception {

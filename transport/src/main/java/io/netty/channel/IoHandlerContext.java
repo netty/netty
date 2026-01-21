@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 
 /**
@@ -46,4 +47,37 @@ public interface IoHandlerContext {
      * @return deadline.
      */
     long deadlineNanos();
+
+    /**
+     * Reports the amount of time in nanoseconds that was spent actively processing I/O events.
+     * <p>
+     * This metric is needed for the dynamic, utilization-based auto-scaling feature
+     * in {@link MultithreadEventExecutorGroup}. The reported time
+     * allows the auto-scaler to accurately measure the I/O workload of an event loop.
+     * <p>
+     * {@code IoHandler} implementations should measure the time spent in their event processing
+     * logic and report the duration via this method. This should only include time spent
+     * actively handling ready I/O events and should <strong>not</strong> include time spent blocking or
+     * waiting for I/O (e.g., in an {@code epoll_wait}) call.
+     * <p>
+     * The default implementation of this method is a no-op. Failing to override it in an
+     * {@link IoHandlerContext} that supports auto-scaling will result in the I/O utilization
+     * being perceived as zero.
+     *
+     * @param activeNanos The duration in nanoseconds of active, non-blocking I/O work.
+     */
+    default void reportActiveIoTime(long activeNanos) {
+        // no-op
+    }
+
+    /**
+     * Returns {@code true} if the I/O handler should measure and report its active I/O time.
+     * This is used as a guard to avoid the overhead of calling {@link System#nanoTime()}
+     * when the feature is not in use.
+     *
+     * @return {@code true} if active I/O time should be reported, {@code false} otherwise.
+     */
+    default boolean shouldReportActiveIoTime() {
+        return false;
+    }
 }

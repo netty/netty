@@ -27,6 +27,7 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -80,6 +81,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OpenSslEngineTest extends SSLEngineTest {
@@ -1579,6 +1581,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @ParameterizedTest
     @Override
     public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        assumeFalse(PlatformDependent.javaVersion() == 26, "Fails on JDK26, possible JDK bug?");
         checkShouldUseKeyManagerFactory();
         super.testRSASSAPSS(param);
     }

@@ -36,7 +36,7 @@ abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
     @MemoryAddress
     public long address;
 
-    public void fill(AbstractByteBuf buf, AllocatorType allocatorType) {
+    public void fill(AbstractByteBuf buf, Class<? extends AbstractByteBufAllocator> allocatorType) {
         this.allocatorType = allocatorType;
         size = buf.capacity();
         maxFastCapacity = buf.maxFastWritableBytes() + buf.writerIndex();

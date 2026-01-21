@@ -20,8 +20,6 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -224,18 +222,15 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        if (future.isSuccess()) {
-                            for (WebSocketServerExtension extension : validExtensionsList) {
-                                WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
-                                WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                                String name = ctx.name();
-                                ctx.pipeline()
-                                    .addAfter(name, decoder.getClass().getName(), decoder)
-                                    .addAfter(name, encoder.getClass().getName(), encoder);
-                            }
+                promise.addListener(future -> {
+                    if (future.isSuccess()) {
+                        for (WebSocketServerExtension extension : validExtensionsList) {
+                            WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
+                            WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
+                            String name = ctx.name();
+                            ctx.pipeline()
+                                .addAfter(name, decoder.getClass().getName(), decoder)
+                                .addAfter(name, encoder.getClass().getName(), encoder);
                         }
                     }
                 });
@@ -245,12 +240,9 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 }
             }
 
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
-                    }
+            promise.addListener(future -> {
+                if (future.isSuccess()) {
+                    ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                 }
             });
         }

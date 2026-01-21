@@ -28,6 +28,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -277,7 +278,12 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Initialize if needed
         if (state.get() == State.INIT) {
-            initializeIfNecessary(ctx);
+            try {
+                initializeIfNecessary(ctx);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(msg);
+                throw ex;
+            }
         }
 
         // Only write if State is STARTED
@@ -297,7 +303,13 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         // Initialize if needed
         if (state.get() == State.INIT) {
-            initializeIfNecessary(ctx);
+            try {
+                initializeIfNecessary(ctx);
+            } catch (Exception ex) {
+                ReferenceCountUtil.release(msg);
+                promise.setFailure(ex);
+                return;
+            }
         }
 
         // Only write if State is STARTED

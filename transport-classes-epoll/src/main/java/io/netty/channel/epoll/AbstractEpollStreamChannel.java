@@ -35,6 +35,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -53,6 +54,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.StringUtil.className;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -126,8 +128,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
      *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
-     *
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len) {
         return spliceTo(ch, len, newPromise());
     }
@@ -144,8 +147,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
      *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
-     *
+     * @deprecated will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len,
                                         final ChannelPromise promise) {
         if (ch.eventLoop() != eventLoop()) {
@@ -179,7 +183,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelFuture} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len) {
         return spliceTo(ch, offset, len, newPromise());
     }
@@ -197,7 +203,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelPromise} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
                                         final ChannelPromise promise) {
         checkPositiveOrZero(len, "len");
@@ -480,7 +488,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return 1;
         } else {
             // Should never reach here.
-            throw new Error();
+            throw new Error("Unexpected message type: " + className(msg));
         }
     }
 
@@ -725,7 +733,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
-            if (allDataRead || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+            if (allDataRead ||
+                    cause instanceof OutOfMemoryError ||
+                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                    cause instanceof IOException) {
                 shutdownInput(true);
             }
         }

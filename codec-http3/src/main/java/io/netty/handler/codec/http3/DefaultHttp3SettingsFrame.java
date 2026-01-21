@@ -15,33 +15,68 @@
  */
 package io.netty.handler.codec.http3;
 
-import io.netty.util.collection.LongObjectHashMap;
-import io.netty.util.collection.LongObjectMap;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * Default implementation of {@link Http3SettingsFrame}.
+ *
+ */
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>(4);
+    private final Http3Settings settings;
 
-    @Override
-    public Long get(long key) {
-        return settings.get(key);
+    public DefaultHttp3SettingsFrame(Http3Settings settings) {
+        this.settings = ObjectUtil.checkNotNull(settings, "settings");
+    }
+
+    public DefaultHttp3SettingsFrame() {
+        this.settings = new Http3Settings();
     }
 
     @Override
+    public Http3Settings settings() {
+        return settings;
+    }
+
+    /**
+     * Get a setting by its key.
+     *
+     * @param key the HTTP/3 setting key
+     * @return the value, or {@code null} if not set
+     * @deprecated  use {@link #settings()}  and manipulate the {@link Http3Settings} directly
+     */
+    @Override
+    @Deprecated
+    @Nullable
+    public Long get(long key) {
+        // Legacy behavior: direct map access.
+        return settings.get(key);
+    }
+
+    /**
+     * Set a setting value by key.
+     *
+     * @param key the HTTP/3 setting key
+     * @param value the value to set
+     * @return the previous value, or {@code null} if none
+     * @throws IllegalArgumentException if the key is reserved for HTTP/2
+     * @deprecated  use {@link #settings()}  and manipulate the {@link Http3Settings} directly
+     */
+    @Override
+    @Deprecated
+    @Nullable
     public Long put(long key, Long value) {
-        if (Http3CodecUtils.isReservedHttp2Setting(key)) {
-            throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
-        }
         return settings.put(key, value);
     }
 
     @Override
     public Iterator<Map.Entry<Long, Long>> iterator() {
-        return settings.entrySet().iterator();
+       return settings.iterator();
     }
 
     @Override

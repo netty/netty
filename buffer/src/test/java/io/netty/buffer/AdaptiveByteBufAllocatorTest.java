@@ -19,6 +19,8 @@ import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -26,8 +28,13 @@ import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Array;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
+import java.util.SplittableRandom;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -123,24 +130,29 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     void adaptiveChunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
         AdaptiveByteBufAllocator allocator = newAllocator(false);
-        ByteBuf a = allocator.heapBuffer(28 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        ByteBuf b = allocator.heapBuffer(100 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        b.release();
-        a.release();
-        assertEquals(262144, allocator.usedHeapMemory());
-        a = allocator.heapBuffer(28 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        b = allocator.heapBuffer(100 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        a.release();
-        ByteBuf c = allocator.heapBuffer(28 * 1024);
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
-        c.release();
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
-        b.release();
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
+        Deque<ByteBuf> bufs = new ArrayDeque<>();
+        assertEquals(0, allocator.usedHeapMemory());
+        assertEquals(0, allocator.usedHeapMemory());
+        bufs.add(allocator.heapBuffer(256));
+        long usedHeapMemory = allocator.usedHeapMemory();
+        int buffersPerChunk = Math.toIntExact(usedHeapMemory / 256);
+        for (int i = 0; i < buffersPerChunk; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        bufs.pop().release();
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        while (!bufs.isEmpty()) {
+            bufs.pop().release();
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        for (int i = 0; i < 2 * buffersPerChunk; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        while (!bufs.isEmpty()) {
+            bufs.pop().release();
+        }
     }
 
     @ParameterizedTest
@@ -220,7 +232,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
 
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(), allocateFuture::complete);
+            stream.onEvent(AllocateChunkEvent.NAME, allocateFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
@@ -242,7 +254,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(2);
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(),
+            stream.onEvent(AllocateChunkEvent.NAME,
                            event -> {
                                 eventsFlushed.countDown();
                            });
@@ -274,7 +286,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             final CountDownLatch eventsFlushed = new CountDownLatch(1);
             final AtomicInteger chunksAllocations = new AtomicInteger();
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(),
+            stream.onEvent(AllocateChunkEvent.NAME,
                            event -> {
                                chunksAllocations.incrementAndGet();
                                eventsFlushed.countDown();
@@ -310,9 +322,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
             stream.enable(AllocateBufferEvent.class);
-            stream.onEvent(AllocateBufferEvent.class.getSimpleName(), allocateFuture::complete);
+            stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
             stream.enable(FreeBufferEvent.class);
-            stream.onEvent(FreeBufferEvent.class.getSimpleName(), releaseFuture::complete);
+            stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
@@ -350,9 +362,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 alloc.directBuffer(128).release();
 
                 stream.enable(AllocateBufferEvent.class);
-                stream.onEvent(AllocateBufferEvent.class.getSimpleName(), allocateFuture::complete);
+                stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
                 stream.enable(FreeBufferEvent.class);
-                stream.onEvent(FreeBufferEvent.class.getSimpleName(), releaseFuture::complete);
+                stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
                 stream.startAsync();
 
                 // Allocate out of the cache.
@@ -378,5 +390,70 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         FastThreadLocalThread thread = new FastThreadLocalThread(task);
         thread.start();
         task.get();
+    }
+
+    @RepeatedTest(100)
+    void buddyAllocationConsistency(RepetitionInfo info) {
+        SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        int small = 32768;
+        int large = 2 * small;
+        int xlarge = 2 * large;
+
+        int[] allocationSizes = {
+                small, small, small, small, small, small, small, small,
+                large, large, large, large,
+                xlarge, xlarge,
+        };
+
+        shuffle(rng, allocationSizes);
+
+        ByteBuf[] bufs = new ByteBuf[allocationSizes.length];
+        Arrays.setAll(bufs, i -> allocator.buffer(allocationSizes[i], allocationSizes[i]));
+
+        shuffle(rng, bufs);
+
+        int[] reallocations = new int[bufs.length / 2];
+        for (int i = 0; i < reallocations.length; i++) {
+            reallocations[i] = bufs[i].capacity();
+            bufs[i].release();
+            bufs[i] = null;
+        }
+        for (int i = 0; i < reallocations.length; i++) {
+            assertNull(bufs[i]);
+            bufs[i] = allocator.buffer(reallocations[i], reallocations[i]);
+        }
+
+        for (int i = 0; i < bufs.length; i++) {
+            while (bufs[i].isWritable()) {
+                bufs[i].writeByte(i + 1);
+            }
+        }
+        try {
+            for (int i = 0; i < bufs.length; i++) {
+                while (bufs[i].isReadable()) {
+                    int b = Byte.toUnsignedInt(bufs[i].readByte());
+                    if (b != i + 1) {
+                        fail("Expected byte " + (i + 1) +
+                                " at index " + (bufs[i].readerIndex() - 1) +
+                                " but got " + b);
+                    }
+                }
+            }
+        } finally {
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+        }
+    }
+
+    private static void shuffle(SplittableRandom rng, Object array) {
+        int len = Array.getLength(array);
+        for (int i = 0; i < len; i++) {
+            int n = rng.nextInt(i, len);
+            Object value = Array.get(array, i);
+            Array.set(array, i, Array.get(array, n));
+            Array.set(array, n, value);
+        }
     }
 }

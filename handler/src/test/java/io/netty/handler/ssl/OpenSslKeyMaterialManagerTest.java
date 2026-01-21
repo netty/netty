@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
@@ -79,5 +80,7 @@ public class OpenSslKeyMaterialManagerTest {
         OpenSslEngine engine =
                 (OpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         manager.setKeyMaterialClientSide(engine, EmptyArrays.EMPTY_STRINGS, null);
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 }

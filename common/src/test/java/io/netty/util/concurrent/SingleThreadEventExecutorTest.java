@@ -17,7 +17,6 @@ package io.netty.util.concurrent;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
-
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
@@ -138,6 +137,32 @@ public class SingleThreadEventExecutorTest {
         assertTrue(executor.isShutdown());
 
         // Guarantee that al tasks were able to die...
+        while ((currentThread = threadFactory.threads.poll()) != null) {
+            currentThread.join();
+        }
+    }
+
+    @Test
+    void testSuspensionWhenExecutorIsNotStarted() throws Exception {
+        TestThreadFactory threadFactory = new TestThreadFactory();
+        final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
+        // suspend when executor is not started yet
+        assertTrue(executor.trySuspend());
+        assertTrue(executor.isSuspended());
+
+        // recover from suspension by executing a task
+        LatchTask task1 = new LatchTask();
+        executor.execute(task1);
+        Thread currentThread = threadFactory.threads.take();
+        assertFalse(executor.isSuspended());
+        task1.await();
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        currentThread.join();
+        assertFalse(executor.isSuspended());
+        assertTrue(executor.isShutdown());
+
+        // Guarantee that all threads were able to die...
         while ((currentThread = threadFactory.threads.poll()) != null) {
             currentThread.join();
         }

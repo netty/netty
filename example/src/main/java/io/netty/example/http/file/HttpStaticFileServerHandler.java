@@ -246,7 +246,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         try {
             uri = URLDecoder.decode(uri, "UTF-8");
         } catch (UnsupportedEncodingException e) {
-            throw new Error(e);
+            throw new Error("Invalid URI: " + uri, e);
         }
 
         if (uri.isEmpty() || uri.charAt(0) != '/') {

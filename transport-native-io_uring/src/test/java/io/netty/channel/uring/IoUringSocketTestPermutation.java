@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
@@ -56,6 +57,8 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                             .batchSize(8)
                             .incremental(incremental)
                             .allocator(new IoUringFixedBufferRingAllocator(1024))
+                            // Ensure we test both variants
+                            .batchAllocation(ThreadLocalRandom.current().nextBoolean())
                             .build()
             );
         }
@@ -135,8 +138,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @Override
-    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+    List<BootstrapFactory<Bootstrap>> clientSocketIoUringOnly() {
         List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<>();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
@@ -155,6 +157,12 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                         }
                     });
         }
+        return toReturn;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+        List<BootstrapFactory<Bootstrap>> toReturn = clientSocketIoUringOnly();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
@@ -265,8 +273,25 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    @Override
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_GROUP).channel(IoUringDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public static DomainSocketAddress newDomainSocketAddress() {
         return UnixTestUtils.newDomainSocketAddress();
+    }
+
+    public static DomainSocketAddress newAbstractSocketAddress() {
+        // Abstract namespace sockets start with a null byte followed by a unique name
+        return new DomainSocketAddress("\0netty_test_abstract_" + System.nanoTime());
     }
 
 }

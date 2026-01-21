@@ -130,7 +130,7 @@ public final class MqttConnectPayload {
             .append(", willTopic=").append(willTopic)
             .append(", willMessage=").append(Arrays.toString(willMessage))
             .append(", userName=").append(userName)
-            .append(", password=").append(Arrays.toString(password))
+            .append(", password=").append("****")
             .append(']')
             .toString();
     }

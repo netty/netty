@@ -236,7 +236,7 @@ public final class NioDatagramChannel
 
     @Override
     protected void doFinishConnect() throws Exception {
-        throw new Error();
+        throw new UnsupportedOperationException("finishConnect is not supported for " + getClass().getName());
     }
 
     @Override
@@ -558,7 +558,7 @@ public final class NioDatagramChannel
                         try {
                             key.block(sourceToBlock);
                         } catch (IOException e) {
-                            promise.setFailure(e);
+                            return promise.setFailure(e);
                         }
                     }
                 }

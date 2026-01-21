@@ -99,12 +99,8 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
         }
 
         subscriptions.add(subscription);
-        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                chatDestinations.get(subscription.destination()).remove(subscription);
-            }
-        });
+        ctx.channel().closeFuture().addListener(f ->
+                chatDestinations.get(subscription.destination()).remove(subscription));
 
         String receiptId = inboundFrame.headers().getAsString(RECEIPT);
         if (receiptId != null) {

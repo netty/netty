@@ -27,5 +27,4 @@ module io.netty.testsuite_jpms.main {
     requires io.netty.tcnative.classes.openssl;
     requires io.netty.codec.http3;
     requires io.netty.codec.classes.quic;
-    requires org.bouncycastle.provider;
 }

@@ -33,6 +33,7 @@
 
 #define STATICALLY_CLASSNAME "io/netty/handler/codec/quic/BoringSSLNativeStaticallyReferencedJniMethods"
 #define CLASSNAME "io/netty/handler/codec/quic/BoringSSL"
+#define AUTH_UNKNOWN "UNKNOWN"
 
 #define ERR_LEN 256
 
@@ -359,11 +360,17 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
     const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl);
     if (cipher == NULL) {
         // No cipher available so return UNKNOWN.
-        authentication_method = "UNKNOWN";
+        authentication_method = AUTH_UNKNOWN;
     } else {
         authentication_method = SSL_CIPHER_get_kx_name(cipher);
         if (authentication_method == NULL) {
-            authentication_method = "UNKNOWN";
+            authentication_method = AUTH_UNKNOWN;
+        } else if (strcmp(authentication_method, "GENERIC") == 0) {
+            // Only TLS 1.3 will report the kx name as generic.
+            // Map this UNKNOWN, which will signal to Java to validate that
+            // the certificate's keyUsage has at least the digitalSignature bit set.
+            // (Per the SunJCE implementation).
+            authentication_method = AUTH_UNKNOWN;
         }
     }
 

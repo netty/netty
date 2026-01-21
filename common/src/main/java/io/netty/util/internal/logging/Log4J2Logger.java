@@ -137,7 +137,7 @@ class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
             case TRACE:
                 return Level.TRACE;
             default:
-                throw new Error();
+                throw new Error("Unexpected log level: " + level);
         }
     }
 }

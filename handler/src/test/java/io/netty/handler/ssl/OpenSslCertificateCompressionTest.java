@@ -32,6 +32,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -335,6 +336,8 @@ public class OpenSslCertificateCompressionTest {
             serverChannel.close().syncUninterruptibly();
         } finally  {
             group.shutdownGracefully();
+            ReferenceCountUtil.release(clientSslContext);
+            ReferenceCountUtil.release(serverSslContext);
         }
     }
 

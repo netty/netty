@@ -63,6 +63,16 @@
 #define UDP_GRO 104
 #endif
 
+// IP_MULTICAST_ALL defined in linux 2.6.31. We define this here so older kernels can compile.
+#ifndef IP_MULTICAST_ALL
+#define IP_MULTICAST_ALL 49
+#endif
+
+// IPV6_MULTICAST_ALL supported since 4.20. We define this here so older kernels can compile.
+#ifndef IPV6_MULTICAST_ALL
+#define IPV6_MULTICAST_ALL 29
+#endif
+
 static jweak peerCredentialsClassWeak = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
@@ -164,6 +174,14 @@ static void netty_io_uring_linuxsocket_setIpTransparent(JNIEnv* env, jclass claz
 
 static void netty_io_uring_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
+}
+
+static void netty_io_uring_linuxsocket_setIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
+    if (ipv6 == JNI_TRUE) {
+        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval));
+    } else {
+        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval));
+    }
 }
 
 static void netty_io_uring_linuxsocket_setSoBusyPoll(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -531,6 +549,22 @@ static jint netty_io_uring_linuxsocket_isIpRecvOrigDestAddr(JNIEnv* env, jclass 
      return optval;
 }
 
+static jint netty_io_uring_linuxsocket_isIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
+    if (ipv6 == JNI_TRUE) {
+        int optval;
+        if (netty_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
+            return -1;
+        }
+        return optval;
+    } else {
+        int optval;
+        if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
+            return -1;
+        }
+        return optval;
+    }
+}
+
 static void netty_io_uring_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
      struct tcp_info tcp_info;
      if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
@@ -684,6 +718,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setIpFreeBind", "(II)V", (void *) netty_io_uring_linuxsocket_setIpFreeBind },
   { "setIpTransparent", "(II)V", (void *) netty_io_uring_linuxsocket_setIpTransparent },
   { "setIpRecvOrigDestAddr", "(II)V", (void *) netty_io_uring_linuxsocket_setIpRecvOrigDestAddr },
+  { "setIpMulticastAll", "(IZI)V", (void *) netty_io_uring_linuxsocket_setIpMulticastAll },
   { "getTcpKeepIdle", "(I)I", (void *) netty_io_uring_linuxsocket_getTcpKeepIdle },
   { "getTcpKeepIntvl", "(I)I", (void *) netty_io_uring_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty_io_uring_linuxsocket_getTcpKeepCnt },
@@ -691,6 +726,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "isIpFreeBind", "(I)I", (void *) netty_io_uring_linuxsocket_isIpFreeBind },
   { "isIpTransparent", "(I)I", (void *) netty_io_uring_linuxsocket_isIpTransparent },
   { "isIpRecvOrigDestAddr", "(I)I", (void *) netty_io_uring_linuxsocket_isIpRecvOrigDestAddr },
+  { "isIpMulticastAll", "(IZ)I", (void *) netty_io_uring_linuxsocket_isIpMulticastAll },
   { "getTcpInfo", "(I[J)V", (void *) netty_io_uring_linuxsocket_getTcpInfo },
   { "setTcpMd5Sig", "(IZ[BI[B)V", (void *) netty_io_uring_linuxsocket_setTcpMd5Sig },
   { "joinGroup", "(IZ[B[BII)V", (void *) netty_io_uring_linuxsocket_joinGroup },

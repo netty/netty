@@ -102,7 +102,7 @@ public class SniHandlerTest {
             case JDK:
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected alpn provider: " + provider);
         }
     }
 
@@ -603,7 +603,7 @@ public class SniHandlerTest {
             case JDK:
                 return;
             default:
-                throw new Error();
+                throw new Error("Unexpected ssl provider: " + provider);
         }
     }
 

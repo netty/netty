@@ -272,7 +272,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                         ++deallocationsSmall;
                         break;
                     default:
-                        throw new Error();
+                        throw new Error("Unexpected size class: " + sizeClass);
                 }
             }
             destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer);

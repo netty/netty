@@ -273,7 +273,7 @@ This product is statically linked against Quiche.
 
 This product is statically linked against boringssl.
 
-  * LICENSE (Combination ISC and OpenSSL license)
-    * license/LICENSE.boringssl.txt (Combination ISC and OpenSSL license)
+  * LICENSE
+    * license/LICENSE.boringssl.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://boringssl.googlesource.com/boringssl/

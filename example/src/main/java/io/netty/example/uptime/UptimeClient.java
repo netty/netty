@@ -16,8 +16,6 @@
 package io.netty.example.uptime;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -59,13 +57,10 @@ public final class UptimeClient {
     }
 
     static void connect() {
-        bs.connect().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.cause() != null) {
-                    handler.startTime = -1;
-                    handler.println("Failed to connect: " + future.cause());
-                }
+        bs.connect().addListener(future -> {
+            if (future.cause() != null) {
+                handler.startTime = -1;
+                handler.println("Failed to connect: " + future.cause());
             }
         });
     }

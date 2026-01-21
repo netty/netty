@@ -23,6 +23,7 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -370,7 +371,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         Object result = this.result;
         if (!isDone0(result)) {
             if (!await(timeout, unit)) {
-                throw new TimeoutException();
+                throw new TimeoutException("timeout after " + timeout + " " + unit.name().toLowerCase(Locale.ENGLISH));
             }
             result = this.result;
         }

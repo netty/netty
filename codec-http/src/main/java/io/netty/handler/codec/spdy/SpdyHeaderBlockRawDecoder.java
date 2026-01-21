@@ -275,7 +275,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
                     return;
 
                 default:
-                    throw new Error("Shouldn't reach here.");
+                    throw new Error("Unexpected state: " + state);
             }
         }
     }

@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.LongLongHashMap;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.nio.ByteBuffer;

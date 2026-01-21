@@ -376,7 +376,7 @@ public class JdkSslContext extends SslContext {
                 case NONE:
                     break; // exhaustive cases
                 default:
-                    throw new Error("Unknown auth " + clientAuth);
+                    throw new Error("Unexpected auth " + clientAuth);
             }
         }
         configureSSLParameters(engine);
