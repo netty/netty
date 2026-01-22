@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Netty Project
+ * Copyright 2026 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,6 +33,6 @@ final class FailedScheduledFuture<V> extends FailedFuture<V> implements Schedule
 
     @Override
     public int compareTo(@NotNull Delayed o) {
-        return 0;
+        return Long.compare(0L, o.getDelay(TimeUnit.NANOSECONDS));
     }
 }

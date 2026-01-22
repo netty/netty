@@ -140,9 +140,9 @@ public interface EventExecutorGroup extends Executor, Iterable<EventExecutor> {
      * @throws IllegalArgumentException if delay less than or equal to zero
      */
     ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
-                                                                          long initialDelay,
-                                                                          long delay,
-                                                                          TimeUnit unit);
+                                              long initialDelay,
+                                              long delay,
+                                              TimeUnit unit);
 
     /**
      * Returns {@code true} if this executor has been shut down.
@@ -171,8 +171,7 @@ public interface EventExecutorGroup extends Executor, Iterable<EventExecutor> {
      *         {@code false} if the timeout elapsed before termination
      * @throws InterruptedException if interrupted while waiting
      */
-    boolean awaitTermination(long timeout, TimeUnit unit)
-            throws InterruptedException;
+    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Submits a value-returning task for execution and returns a
