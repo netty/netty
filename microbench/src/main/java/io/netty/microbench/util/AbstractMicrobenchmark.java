@@ -20,6 +20,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -30,6 +31,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -53,10 +55,6 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
                     new LinkedBlockingQueue<Runnable>(),
                     new DefaultThreadFactory(prefix));
             EventExecutor eventExecutor = new AbstractEventExecutor() {
-                @Override
-                public void shutdown() {
-                    throw new UnsupportedOperationException();
-                }
 
                 @Override
                 public boolean inEventLoop(Thread thread) {
@@ -95,6 +93,28 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
 
                 @Override
                 public void execute(Runnable command) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public ScheduledFuture<?> scheduleAtFixedRate(
+                        Runnable command, long initialDelay, long period, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public ScheduledFuture<?> scheduleWithFixedDelay(
+                        Runnable command, long initialDelay, long delay, TimeUnit unit) {
                     throw new UnsupportedOperationException();
                 }
             };

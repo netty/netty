@@ -17,6 +17,8 @@ package io.netty.handler.traffic;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
+
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -147,7 +149,7 @@ public class TrafficCounter {
     /**
      * Executor that will run the monitor
      */
-    final ScheduledExecutorService executor;
+    final EventExecutor executor;
     /**
      * Monitor created once in start()
      */
@@ -251,7 +253,7 @@ public class TrafficCounter {
      * @param checkInterval
      *            the checkInterval in millisecond between two computations.
      */
-    public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
+    public TrafficCounter(EventExecutor executor, String name, long checkInterval) {
 
         this.name = checkNotNull(name, "name");
         trafficShapingHandler = null;
@@ -275,7 +277,7 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(
-            AbstractTrafficShapingHandler trafficShapingHandler, ScheduledExecutorService executor,
+            AbstractTrafficShapingHandler trafficShapingHandler, EventExecutor executor,
             String name, long checkInterval) {
         this.name = checkNotNull(name, "name");
         this.trafficShapingHandler = checkNotNullWithIAE(trafficShapingHandler, "trafficShapingHandler");

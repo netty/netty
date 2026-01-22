@@ -87,10 +87,6 @@ public class DefaultPromiseTest {
         }
 
         @Override
-        public void shutdown() {
-        }
-
-        @Override
         public boolean isShutdown() {
             return false;
         }

@@ -109,7 +109,7 @@ public class SingleThreadEventLoopTest {
     @Test
     @SuppressWarnings("deprecation")
     public void shutdownBeforeStart() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).sync();
         assertRejection(loopA);
     }
 
@@ -128,7 +128,7 @@ public class SingleThreadEventLoopTest {
         latch.await();
 
         // Request the event loop thread to stop.
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).sync();
         assertRejection(loopA);
 
         assertTrue(loopA.isShutdown());
@@ -359,7 +359,7 @@ public class SingleThreadEventLoopTest {
         assertEquals(1, ranTasks.get());
 
         // Shut down the event loop to test if the other tasks are run before termination.
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 
         // Let the other tasks run.
         latch.countDown();
@@ -378,7 +378,7 @@ public class SingleThreadEventLoopTest {
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -408,7 +408,7 @@ public class SingleThreadEventLoopTest {
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     @SuppressWarnings("deprecation")
     public void testRegistrationAfterShutdown2() throws Exception {
-        loopA.shutdown();
+        loopA.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
         Promise<Void> promise = ch.newPromise();

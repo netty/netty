@@ -172,7 +172,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 }
             });
             t.start();
-            group.shutdownNow();
+            group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
             t.join();
             group.terminationFuture().syncUninterruptibly();
             assertInstanceOf(RejectedExecutionException.class, error.get());

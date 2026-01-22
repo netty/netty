@@ -25,24 +25,18 @@ import org.jetbrains.annotations.Async.Schedule;
 
 import java.lang.Thread.State;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.Lock;
@@ -842,12 +836,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     @Override
-    @Deprecated
-    public void shutdown() {
-        shutdown0(-1, -1, ST_SHUTDOWN);
-    }
-
-    @Override
     public boolean isShuttingDown() {
         return state >= ST_SHUTTING_DOWN;
     }
@@ -1046,39 +1034,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
         if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
-        }
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks);
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks, timeout, unit);
-    }
-
-    @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks);
-    }
-
-    @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks, timeout, unit);
-    }
-
-    private void throwIfInEventLoop(String method) {
-        if (inEventLoop()) {
-            throw new RejectedExecutionException("Calling " + method + " from within the EventLoop is not allowed");
         }
     }
 

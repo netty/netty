@@ -19,9 +19,11 @@ import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.openjdk.jmh.annotations.Fork;
@@ -99,13 +101,6 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
             return executor.terminationFuture();
         }
 
-        @Override
-        @Deprecated
-        public void shutdown() {
-            executor.shutdown();
-        }
-
-        @Override
         public boolean isShuttingDown() {
             return executor.isShuttingDown();
         }
@@ -138,6 +133,27 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
         @Override
         public <V> Promise<V> newPromise() {
             return executor.newPromise();
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            return executor.schedule(command, delay, unit);
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            return executor.schedule(callable, delay, unit);
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            return executor.scheduleAtFixedRate(command, initialDelay, period, unit);
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            return executor.scheduleWithFixedDelay(command, initialDelay, delay, unit);
         }
     }
 

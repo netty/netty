@@ -348,13 +348,15 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         final AbstractTrafficShapingHandler handler;
         if (limitRead) {
             if (globalLimit) {
-                handler = new GlobalTrafficShapingHandler(groupForGlobal, 0, bandwidthFactor * messageSize, check);
+                handler = new GlobalTrafficShapingHandler(
+                        groupForGlobal.next(), 0, bandwidthFactor * messageSize, check);
             } else {
                 handler = new ChannelTrafficShapingHandler(0, bandwidthFactor * messageSize, check);
             }
         } else if (limitWrite) {
             if (globalLimit) {
-                handler = new GlobalTrafficShapingHandler(groupForGlobal, bandwidthFactor * messageSize, 0, check);
+                handler = new GlobalTrafficShapingHandler(
+                        groupForGlobal.next(), bandwidthFactor * messageSize, 0, check);
             } else {
                 handler = new ChannelTrafficShapingHandler(bandwidthFactor * messageSize, 0, check);
             }

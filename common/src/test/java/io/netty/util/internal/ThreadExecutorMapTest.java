@@ -20,9 +20,11 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -32,10 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ThreadExecutorMapTest {
     private static final EventExecutor EVENT_EXECUTOR = new AbstractEventExecutor() {
-        @Override
-        public void shutdown() {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public boolean inEventLoop(Thread thread) {
@@ -74,6 +72,27 @@ public class ThreadExecutorMapTest {
 
         @Override
         public void execute(@NotNull Runnable command) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
     };

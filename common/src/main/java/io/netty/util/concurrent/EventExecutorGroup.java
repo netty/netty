@@ -16,9 +16,11 @@
 package io.netty.util.concurrent;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,7 +29,202 @@ import java.util.concurrent.TimeUnit;
  * life-cycle and allows shutting them down in a global fashion.
  *
  */
-public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<EventExecutor> {
+public interface EventExecutorGroup extends Executor, Iterable<EventExecutor> {
+
+    /**
+     * Submits a one-shot task that becomes enabled after the given delay.
+     *
+     * @param command the task to execute
+     * @param delay the time from now to delay execution
+     * @param unit the time unit of the delay parameter
+     * @return a ScheduledFuture representing pending completion of
+     *         the task and whose {@code get()} method will return
+     *         {@code null} upon completion
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if command or unit is null
+     */
+    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
+
+    /**
+     * Submits a value-returning one-shot task that becomes enabled
+     * after the given delay.
+     *
+     * @param callable the function to execute
+     * @param delay the time from now to delay execution
+     * @param unit the time unit of the delay parameter
+     * @param <V> the type of the callable's result
+     * @return a ScheduledFuture that can be used to extract result or cancel
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if callable or unit is null
+     */
+     <V> ScheduledFuture<V> schedule(Callable<V> callable,
+                                     long delay, TimeUnit unit);
+
+    /**
+     * Submits a periodic action that becomes enabled first after the
+     * given initial delay, and subsequently with the given period;
+     * that is, executions will commence after
+     * {@code initialDelay}, then {@code initialDelay + period}, then
+     * {@code initialDelay + 2 * period}, and so on.
+     *
+     * <p>The sequence of task executions continues indefinitely until
+     * one of the following exceptional completions occur:
+     * <ul>
+     * <li>The task is {@linkplain java.util.concurrent.Future#cancel explicitly cancelled}
+     * via the returned future.
+     * <li>The executor terminates, also resulting in task cancellation.
+     * <li>An execution of the task throws an exception.  In this case
+     * calling {@link java.util.concurrent.Future#get() get} on the returned future will throw
+     * {@link ExecutionException}, holding the exception as its cause.
+     * </ul>
+     * Subsequent executions are suppressed.  Subsequent calls to
+     * {@link java.util.concurrent.Future#isDone isDone()} on the returned future will
+     * return {@code true}.
+     *
+     * <p>If any execution of this task takes longer than its period, then
+     * subsequent executions may start late, but will not concurrently
+     * execute.
+     *
+     * @param command the task to execute
+     * @param initialDelay the time to delay first execution
+     * @param period the period between successive executions
+     * @param unit the time unit of the initialDelay and period parameters
+     * @return a ScheduledFuture representing pending completion of
+     *         the series of repeated tasks.  The future's {@link
+     *         java.util.concurrent.Future#get() get()} method will never return normally,
+     *         and will throw an exception upon task cancellation or
+     *         abnormal termination of a task execution.
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if command or unit is null
+     * @throws IllegalArgumentException if period less than or equal to zero
+     */
+    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay,
+                                           long period, TimeUnit unit);
+
+    /**
+     * Submits a periodic action that becomes enabled first after the
+     * given initial delay, and subsequently with the given delay
+     * between the termination of one execution and the commencement of
+     * the next.
+     *
+     * <p>The sequence of task executions continues indefinitely until
+     * one of the following exceptional completions occur:
+     * <ul>
+     * <li>The task is {@linkplain java.util.concurrent.Future#cancel explicitly cancelled}
+     * via the returned future.
+     * <li>The executor terminates, also resulting in task cancellation.
+     * <li>An execution of the task throws an exception.  In this case
+     * calling {@link java.util.concurrent.Future#get() get} on the returned future will throw
+     * {@link ExecutionException}, holding the exception as its cause.
+     * </ul>
+     * Subsequent executions are suppressed.  Subsequent calls to
+     * {@link java.util.concurrent.Future#isDone isDone()} on the returned future will
+     * return {@code true}.
+     *
+     * @param command the task to execute
+     * @param initialDelay the time to delay first execution
+     * @param delay the delay between the termination of one
+     * execution and the commencement of the next
+     * @param unit the time unit of the initialDelay and delay parameters
+     * @return a ScheduledFuture representing pending completion of
+     *         the series of repeated tasks.  The future's {@link
+     *         java.util.concurrent.Future#get() get()} method will never return normally,
+     *         and will throw an exception upon task cancellation or
+     *         abnormal termination of a task execution.
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if command or unit is null
+     * @throws IllegalArgumentException if delay less than or equal to zero
+     */
+    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
+                                              long initialDelay,
+                                              long delay,
+                                              TimeUnit unit);
+
+    /**
+     * Returns {@code true} if this executor has been shut down.
+     *
+     * @return {@code true} if this executor has been shut down
+     */
+    boolean isShutdown();
+
+    /**
+     * Returns {@code true} if all tasks have completed following shut down.
+     * Note that {@code isTerminated} is never {@code true} unless
+     * either {@code shutdown} or {@code shutdownNow} was called first.
+     *
+     * @return {@code true} if all tasks have completed following shut down
+     */
+    boolean isTerminated();
+
+    /**
+     * Blocks until all tasks have completed execution after a shutdown
+     * request, or the timeout occurs, or the current thread is
+     * interrupted, whichever happens first.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the timeout argument
+     * @return {@code true} if this executor terminated and
+     *         {@code false} if the timeout elapsed before termination
+     * @throws InterruptedException if interrupted while waiting
+     */
+    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
+     * Submits a value-returning task for execution and returns a
+     * Future representing the pending results of the task. The
+     * Future's {@code get} method will return the task's result upon
+     * successful completion.
+     *
+     * <p>
+     * If you would like to immediately block waiting
+     * for a task, you can use constructions of the form
+     * {@code result = exec.submit(aCallable).get();}
+     *
+     * <p>Note: The {@link Executors} class includes a set of methods
+     * that can convert some other common closure-like objects,
+     * for example, {@link java.security.PrivilegedAction} to
+     * {@link Callable} form so they can be submitted.
+     *
+     * @param task the task to submit
+     * @param <T> the type of the task's result
+     * @return a Future representing pending completion of the task
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if the task is null
+     */
+    <T> Future<T> submit(Callable<T> task);
+
+    /**
+     * Submits a Runnable task for execution and returns a Future
+     * representing that task. The Future's {@code get} method will
+     * return the given result upon successful completion.
+     *
+     * @param task the task to submit
+     * @param result the result to return
+     * @param <T> the type of the result
+     * @return a Future representing pending completion of the task
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if the task is null
+     */
+    <T> Future<T> submit(Runnable task, T result);
+
+    /**
+     * Submits a Runnable task for execution and returns a Future
+     * representing that task. The Future's {@code get} method will
+     * return {@code null} upon <em>successful</em> completion.
+     *
+     * @param task the task to submit
+     * @return a Future representing pending completion of the task
+     * @throws RejectedExecutionException if the task cannot be
+     *         scheduled for execution
+     * @throws NullPointerException if the task is null
+     */
+    Future<?> submit(Runnable task);
 
     /**
      * Returns {@code true} if and only if all {@link EventExecutor}s managed by this {@link EventExecutorGroup}
@@ -45,12 +242,11 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     /**
      * Signals this executor that the caller wants the executor to be shut down.  Once this method is called,
      * {@link #isShuttingDown()} starts to return {@code true}, and the executor prepares to shut itself down.
-     * Unlike {@link #shutdown()}, graceful shutdown ensures that no tasks are submitted for <i>'the quiet period'</i>
-     * (usually a couple seconds) before it shuts itself down.  If a task is submitted during the quiet period,
+     * If a task is submitted during the quiet period,
      * it is guaranteed to be accepted and the quiet period will start over.
      *
      * @param quietPeriod the quiet period as described in the documentation
-     * @param timeout     the maximum amount of time to wait until the executor is {@linkplain #shutdown()}
+     * @param timeout     the maximum amount of time to wait until the executor is shutdown
      *                    regardless if a task was submitted during the quiet period
      * @param unit        the unit of {@code quietPeriod} and {@code timeout}
      *
@@ -63,21 +259,6 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      * {@link EventExecutorGroup} have been terminated.
      */
     Future<?> terminationFuture();
-
-    /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
-     */
-    @Override
-    @Deprecated
-    void shutdown();
-
-    /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
-     */
-    @Override
-    @Deprecated
-    List<Runnable> shutdownNow();
-
     /**
      * Returns one of the {@link EventExecutor}s managed by this {@link EventExecutorGroup}.
      */
@@ -85,15 +266,6 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     @Override
     Iterator<EventExecutor> iterator();
-
-    @Override
-    Future<?> submit(Runnable task);
-
-    @Override
-    <T> Future<T> submit(Runnable task, T result);
-
-    @Override
-    <T> Future<T> submit(Callable<T> task);
 
     /**
      * The ticker for this executor. Usually the {@link #schedule} methods will follow the
@@ -107,16 +279,4 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     default Ticker ticker() {
         return Ticker.systemTicker();
     }
-
-    @Override
-    ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
-
-    @Override
-    <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit);
-
-    @Override
-    ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit);
-
-    @Override
-    ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit);
 }

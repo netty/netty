@@ -34,10 +34,12 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -176,8 +178,8 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
     @Param({ "0", "10" })
     private int work;
 
-    private ExecutorService executor;
-    private ExecutorService executorToShutdown;
+    private Executor executor;
+    private AutoCloseable executorToShutdown;
 
     @Setup
     public void setup() {
@@ -188,23 +190,27 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             //4 is to leave some room between the offers and 1024 is to leave some room
             //between producer/consumer when work is > 0 and 1 producer.
             //If work = 0 then the task queue is supposed to be near empty most of the time.
-            executor = new SpinExecutorService(Math.min(1024, burstLength * 4));
-            executorToShutdown = executor;
+            io.netty.microbench.concurrent.BurstCostExecutorsBenchmark.SpinExecutorService spinExecutor
+                    = new SpinExecutorService(Math.min(1024, burstLength * 4));
+            executor = spinExecutor;
+            executorToShutdown = spinExecutor;
             break;
         case defaultEventExecutor:
-            executor = new DefaultEventExecutor();
-            executorToShutdown = executor;
+            io.netty.util.concurrent.EventExecutor eventExecutor = new DefaultEventExecutor();
+            executor = eventExecutor;
+            executorToShutdown = eventExecutor::shutdownGracefully;
             break;
         case juc:
-            executor = Executors.newSingleThreadScheduledExecutor();
-            executorToShutdown = executor;
+            java.util.concurrent.ScheduledExecutorService scheduled = Executors.newSingleThreadScheduledExecutor();
+            executor = scheduled;
+            executorToShutdown = scheduled;
             break;
         }
     }
 
     @TearDown
-    public void tearDown() {
-        executorToShutdown.shutdown();
+    public void tearDown() throws Exception {
+        executorToShutdown.close();
     }
 
     @State(Scope.Thread)
@@ -293,7 +299,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
     }
 
     private int executeBurst(final PerThreadState state) {
-        final ExecutorService executor = this.executor;
+        final Executor executor = this.executor;
         final int burstLength = this.burstLength;
         final Runnable completeTask = state.completeTask;
         for (int i = 0; i < burstLength; i++) {
