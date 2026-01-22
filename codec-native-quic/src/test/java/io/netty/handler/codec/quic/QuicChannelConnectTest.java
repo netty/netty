@@ -1805,7 +1805,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     public void testConnectWithActiveConnectionIdLimit(Executor executor) throws Throwable {
         int numBytes = 8;
 
-        class ExceptionHandler extends ChannelInboundHandlerAdapter {
+        class ExceptionHandler implements ChannelInboundHandler {
 
             private final AtomicReference<Throwable> causeRef = new AtomicReference<>();
             @Override
@@ -1842,7 +1842,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
@@ -1864,7 +1864,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     quicheQuicSslEngine.getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
 
             clientQuicChannelHandler.assertState();
