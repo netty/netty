@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -183,11 +182,6 @@ public interface EventExecutorGroup extends Executor, Iterable<EventExecutor> {
      * If you would like to immediately block waiting
      * for a task, you can use constructions of the form
      * {@code result = exec.submit(aCallable).get();}
-     *
-     * <p>Note: The {@link Executors} class includes a set of methods
-     * that can convert some other common closure-like objects,
-     * for example, {@link java.security.PrivilegedAction} to
-     * {@link Callable} form so they can be submitted.
      *
      * @param task the task to submit
      * @param <T> the type of the task's result

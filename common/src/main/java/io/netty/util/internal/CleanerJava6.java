@@ -21,8 +21,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Objects;
 
 import static java.lang.invoke.MethodType.methodType;
@@ -43,43 +41,29 @@ final class CleanerJava6 implements Cleaner {
         Throwable error = null;
         final ByteBuffer direct = ByteBuffer.allocateDirect(1);
         try {
-            Object mayBeCleanerField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        Class<?> cleanerClass = Class.forName("sun.misc.Cleaner");
-                        Class<?> directBufClass = Class.forName("sun.nio.ch.DirectBuffer");
-                        MethodHandles.Lookup lookup = MethodHandles.lookup();
+            Class<?> cleanerClass = Class.forName("sun.misc.Cleaner");
+            Class<?> directBufClass = Class.forName("sun.nio.ch.DirectBuffer");
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
 
-                        // Call clean() on the cleaner
-                        MethodHandle clean = lookup.findVirtual(
-                                cleanerClass, "clean", methodType(void.class));
-                        // But only if the cleaner is non-null
-                        MethodHandle nullTest = lookup.findStatic(
-                                Objects.class, "nonNull", methodType(boolean.class, Object.class));
-                        clean = MethodHandles.guardWithTest(
-                                nullTest.asType(methodType(boolean.class, cleanerClass)),
-                                clean,
-                                nullTest.asType(methodType(void.class, cleanerClass)));
-                        // Change receiver to DirectBuffer, convert DirectBuffer to Cleaner by calling cleaner()
-                        clean = MethodHandles.filterArguments(clean, 0, lookup.findVirtual(
-                                directBufClass,
-                                "cleaner",
-                                methodType(cleanerClass)));
-                        // Change receiver to ByteBuffer, convert using explicit cast to DirectBuffer
-                        clean = MethodHandles.explicitCastArguments(clean,
-                                methodType(void.class, ByteBuffer.class));
-                        return clean;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
-                }
-            });
-            if (mayBeCleanerField instanceof Throwable) {
-                throw (Throwable) mayBeCleanerField;
-            }
+            // Call clean() on the cleaner
+            clean = lookup.findVirtual(
+                    cleanerClass, "clean", methodType(void.class));
+            // But only if the cleaner is non-null
+            MethodHandle nullTest = lookup.findStatic(
+                    Objects.class, "nonNull", methodType(boolean.class, Object.class));
+            clean = MethodHandles.guardWithTest(
+                    nullTest.asType(methodType(boolean.class, cleanerClass)),
+                    clean,
+                    nullTest.asType(methodType(void.class, cleanerClass)));
+            // Change receiver to DirectBuffer, convert DirectBuffer to Cleaner by calling cleaner()
+            clean = MethodHandles.filterArguments(clean, 0, lookup.findVirtual(
+                    directBufClass,
+                    "cleaner",
+                    methodType(cleanerClass)));
+            // Change receiver to ByteBuffer, convert using explicit cast to DirectBuffer
+            clean = MethodHandles.explicitCastArguments(clean,
+                    methodType(void.class, ByteBuffer.class));
 
-            clean = (MethodHandle) mayBeCleanerField;
             clean.invokeExact(direct);
         } catch (Throwable t) {
             // We don't have ByteBuffer.cleaner().
@@ -114,30 +98,9 @@ final class CleanerJava6 implements Cleaner {
         if (!buffer.isDirect()) {
             return;
         }
-        if (System.getSecurityManager() == null) {
-            try {
-                freeDirectBuffer0(buffer);
-            } catch (Throwable cause) {
-                PlatformDependent0.throwException(cause);
-            }
-        } else {
-            freeDirectBufferPrivileged(buffer);
-        }
-    }
-
-    private static void freeDirectBufferPrivileged(final ByteBuffer buffer) {
-        Throwable cause = AccessController.doPrivileged(new PrivilegedAction<Throwable>() {
-            @Override
-            public Throwable run() {
-                try {
-                    freeDirectBuffer0(buffer);
-                    return null;
-                } catch (Throwable cause) {
-                    return cause;
-                }
-            }
-        });
-        if (cause != null) {
+        try {
+            freeDirectBuffer0(buffer);
+        } catch (Throwable cause) {
             PlatformDependent0.throwException(cause);
         }
     }

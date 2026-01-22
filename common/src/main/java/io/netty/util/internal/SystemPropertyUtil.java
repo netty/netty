@@ -15,13 +15,10 @@
  */
 package io.netty.util.internal;
 
-import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
-
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 /**
  * A collection of utility methods to retrieve and parse the values of the Java system properties.
@@ -60,21 +57,7 @@ public final class SystemPropertyUtil {
     public static String get(final String key, String def) {
         checkNonEmpty(key, "key");
 
-        String value = null;
-        try {
-            if (System.getSecurityManager() == null) {
-                value = System.getProperty(key);
-            } else {
-                value = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty(key);
-                    }
-                });
-            }
-        } catch (SecurityException e) {
-            logger.warn("Unable to retrieve a system property '{}'; default values will be used.", key, e);
-        }
+        String value = System.getProperty(key);
 
         if (value == null) {
             return def;

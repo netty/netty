@@ -21,11 +21,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Field;
-import java.security.AccessController;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivilegedAction;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
@@ -96,43 +94,36 @@ final class OpenSslX509TrustManagerWrapper {
             if (cause != null) {
                 LOGGER.debug("Unable to access wrapped TrustManager", cause);
             } else {
-                final SSLContext finalContext = context;
-                Object maybeWrapper = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            Field contextSpiField = SSLContext.class.getDeclaredField("contextSpi");
-                            final long spiOffset = PlatformDependent.objectFieldOffset(contextSpiField);
-                            Object spi = PlatformDependent.getObject(finalContext, spiOffset);
-                            if (spi != null) {
-                                Class<?> clazz = spi.getClass();
-
-                                // Let's cycle through the whole hierarchy until we find what we are looking for or
-                                // there is nothing left in which case we will not wrap at all.
-                                do {
-                                    try {
-                                        Field trustManagerField = clazz.getDeclaredField("trustManager");
-                                        final long tmOffset = PlatformDependent.objectFieldOffset(trustManagerField);
-                                        Object trustManager = PlatformDependent.getObject(spi, tmOffset);
-                                        if (trustManager instanceof X509ExtendedTrustManager) {
-                                            return new UnsafeTrustManagerWrapper(spiOffset, tmOffset);
-                                        }
-                                    } catch (NoSuchFieldException ignore) {
-                                        // try next
-                                    }
-                                    clazz = clazz.getSuperclass();
-                                } while (clazz != null);
+                try {
+                    Field contextSpiField = SSLContext.class.getDeclaredField("contextSpi");
+                    final long spiOffset = PlatformDependent.objectFieldOffset(contextSpiField);
+                    Object spi = PlatformDependent.getObject(context, spiOffset);
+                    boolean success = false;
+                    if (spi != null) {
+                        Class<?> clazz = spi.getClass();
+                        // Let's cycle through the whole hierarchy until we find what we are looking for or
+                        // there is nothing left in which case we will not wrap at all.
+                        do {
+                            try {
+                                Field trustManagerField = clazz.getDeclaredField("trustManager");
+                                final long tmOffset = PlatformDependent.objectFieldOffset(trustManagerField);
+                                Object trustManager = PlatformDependent.getObject(spi, tmOffset);
+                                if (trustManager instanceof X509ExtendedTrustManager) {
+                                    wrapper = new UnsafeTrustManagerWrapper(spiOffset, tmOffset);
+                                    success = true;
+                                    break;
+                                }
+                            } catch (NoSuchFieldException ignore) {
+                                // try next
                             }
-                            throw new NoSuchFieldException();
-                        } catch (NoSuchFieldException | SecurityException e) {
-                            return e;
-                        }
+                            clazz = clazz.getSuperclass();
+                        } while (clazz != null);
                     }
-                });
-                if (maybeWrapper instanceof Throwable) {
-                    LOGGER.debug("Unable to access wrapped TrustManager", (Throwable) maybeWrapper);
-                } else {
-                    wrapper = (TrustManagerWrapper) maybeWrapper;
+                    if (!success) {
+                        throw new NoSuchFieldException();
+                    }
+                } catch (NoSuchFieldException | SecurityException e) {
+                    LOGGER.debug("Unable to access wrapped TrustManager", e);
                 }
             }
         } else {

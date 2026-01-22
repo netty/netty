@@ -30,10 +30,8 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
-import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -410,29 +408,20 @@ public final class NativeLibraryLoader {
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
             throws UnsatisfiedLinkError {
-        Object ret = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    // Invoke the helper to load the native library, if it succeeds, then the native
-                    // library belong to the specified ClassLoader.
-                    Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
-                    method.setAccessible(true);
-                    return method.invoke(null, name, absolute);
-                } catch (Exception e) {
-                    return e;
-                }
-            }
-        });
-        if (ret instanceof Throwable) {
-            Throwable t = (Throwable) ret;
-            assert !(t instanceof UnsatisfiedLinkError) : t + " should be a wrapper throwable";
-            Throwable cause = t.getCause();
+        try {
+            // Invoke the helper to load the native library, if it succeeds, then the native
+            // library belong to the specified ClassLoader.
+            Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
+            method.setAccessible(true);
+            method.invoke(null, name, absolute);
+        } catch (Throwable e) {
+            assert !(e instanceof UnsatisfiedLinkError) : e + " should be a wrapper throwable";
+            Throwable cause = e.getCause();
             if (cause instanceof UnsatisfiedLinkError) {
                 throw (UnsatisfiedLinkError) cause;
             }
-            UnsatisfiedLinkError ule = new UnsatisfiedLinkError(t.getMessage());
-            ule.initCause(t);
+            UnsatisfiedLinkError ule = new UnsatisfiedLinkError(e.getMessage());
+            ule.initCause(e);
             throw ule;
         }
     }
@@ -456,22 +445,17 @@ public final class NativeLibraryLoader {
             try {
                 // The helper class is NOT found in target ClassLoader, we have to define the helper class.
                 final byte[] classBinary = classToByteArray(helper);
-                return AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
-                    @Override
-                    public Class<?> run() {
-                        try {
-                            // Define the helper class in the target ClassLoader,
-                            //  then we can call the helper to load the native library.
-                            Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
-                                    byte[].class, int.class, int.class);
-                            defineClass.setAccessible(true);
-                            return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
-                                    classBinary.length);
-                        } catch (Exception e) {
-                            throw new IllegalStateException("Define class failed!", e);
-                        }
-                    }
-                });
+                try {
+                    // Define the helper class in the target ClassLoader,
+                    //  then we can call the helper to load the native library.
+                    Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
+                            byte[].class, int.class, int.class);
+                    defineClass.setAccessible(true);
+                    return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
+                            classBinary.length);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Define class failed!", e);
+                }
             } catch (ClassNotFoundException | RuntimeException | Error e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;
