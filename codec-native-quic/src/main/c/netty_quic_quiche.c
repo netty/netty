@@ -578,7 +578,8 @@ static jlongArray netty_quiche_conn_peer_transport_params(JNIEnv* env, jclass cl
         (jlong)params.peer_initial_max_streams_bidi,
         (jlong)params.peer_initial_max_streams_uni,
         (jlong)params.peer_ack_delay_exponent,
-        (jlong)params.peer_disable_active_migration ? 1: 0,
+        (jlong)params.peer_max_ack_delay,
+        (jlong)(params.peer_disable_active_migration == true ? 1: 0),
         (jlong)params.peer_active_conn_id_limit,
         (jlong)params.peer_max_datagram_frame_size
     };
