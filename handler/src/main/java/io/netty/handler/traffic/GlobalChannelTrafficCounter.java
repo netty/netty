@@ -18,6 +18,7 @@ package io.netty.handler.traffic;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 import io.netty.handler.traffic.GlobalChannelTrafficShapingHandler.PerChannel;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +37,7 @@ public class GlobalChannelTrafficCounter extends TrafficCounter {
      * @param checkInterval the checkInterval in millisecond between two computations.
      */
     public GlobalChannelTrafficCounter(GlobalChannelTrafficShapingHandler trafficShapingHandler,
-            ScheduledExecutorService executor, String name, long checkInterval) {
+                                       EventExecutor executor, String name, long checkInterval) {
         super(trafficShapingHandler, executor, name, checkInterval);
         checkNotNullWithIAE(executor, "executor");
     }

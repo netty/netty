@@ -20,9 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -316,87 +313,6 @@ public class SingleThreadEventExecutorTest {
         assertEquals(thread.isDaemon(), threadProperties.isDaemon());
         assertTrue(threadProperties.stackTrace().length > 0);
         executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAnyInEventLoop() {
-        testInvokeInEventLoop(true, false);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAnyInEventLoopWithTimeout() {
-        testInvokeInEventLoop(true, true);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAllInEventLoop() {
-        testInvokeInEventLoop(false, false);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAllInEventLoopWithTimeout() {
-        testInvokeInEventLoop(false, true);
-    }
-
-    private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
-                Executors.defaultThreadFactory(), true) {
-            @Override
-            protected void run() {
-                while (!confirmShutdown()) {
-                    Runnable task = takeTask();
-                    if (task != null) {
-                        task.run();
-                    }
-                }
-            }
-        };
-        try {
-            assertThrows(RejectedExecutionException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    final Promise<Void> promise = executor.newPromise();
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(
-                                        new Callable<Boolean>() {
-                                    @Override
-                                    public Boolean call() throws Exception {
-                                        promise.setFailure(new AssertionError("Should never execute the Callable"));
-                                        return Boolean.TRUE;
-                                    }
-                                });
-                                if (any) {
-                                    if (timeout) {
-                                        executor.invokeAny(set, 10, TimeUnit.SECONDS);
-                                    } else {
-                                        executor.invokeAny(set);
-                                    }
-                                } else {
-                                    if (timeout) {
-                                        executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                                    } else {
-                                        executor.invokeAll(set);
-                                    }
-                                }
-                                promise.setFailure(new AssertionError("Should never reach here"));
-                            } catch (Throwable cause) {
-                                promise.setFailure(cause);
-                            }
-                        }
-                    });
-                    promise.syncUninterruptibly();
-                }
-            });
-        } finally {
-            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
-        }
     }
 
     static class LatchTask extends CountDownLatch implements Runnable {

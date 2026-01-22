@@ -26,15 +26,10 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThreadExecutorMap;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -470,12 +465,6 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    @Deprecated
-    public final void shutdown() {
-        shutdown0(-1, -1, ST_SHUTDOWN);
-    }
-
-    @Override
     public final Future<?> terminationFuture() {
         return terminationFuture;
     }
@@ -583,45 +572,6 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
         // No tasks were added for last quiet period - hopefully safe to shut down.
         // (Hopefully because we really cannot make a guarantee that there will be no execute() calls by a user.)
         return true;
-    }
-
-    @Override
-    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
-        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks);
-    }
-
-    @Override
-    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
-        throwIfInEventLoop("invokeAny");
-        return super.invokeAny(tasks, timeout, unit);
-    }
-
-    @Override
-    public final <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
-        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks);
-    }
-
-    @Override
-    public final <T> List<java.util.concurrent.Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
-        throwIfInEventLoop("invokeAll");
-        return super.invokeAll(tasks, timeout, unit);
-    }
-
-    private void throwIfInEventLoop(String method) {
-        if (inEventLoop()) {
-            throw new RejectedExecutionException(
-                    "Calling " + method + " from within the EventLoop is not allowed as it would deadlock");
-        }
     }
 
     private class BlockingIoHandlerContext implements IoHandlerContext {

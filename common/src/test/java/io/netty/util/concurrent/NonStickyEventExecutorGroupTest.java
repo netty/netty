@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -139,20 +140,11 @@ public class NonStickyEventExecutorGroupTest {
         final AtomicInteger executeCount = new AtomicInteger();
 
         final EventExecutorGroup wrapper = new AbstractEventExecutorGroup() {
-            @Override
-            public void shutdown() {
-                shutdownGracefully();
-            }
 
             private final EventExecutor executor = new AbstractEventExecutor(this) {
                 @Override
                 public boolean inEventLoop(Thread thread) {
                     return underlying.inEventLoop(thread);
-                }
-
-                @Override
-                public void shutdown() {
-                    shutdownGracefully();
                 }
 
                 @Override
@@ -194,6 +186,28 @@ public class NonStickyEventExecutorGroupTest {
                 @Override
                 public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
                     return underlying.awaitTermination(timeout, unit);
+                }
+
+                @Override
+                public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+                    return underlying.schedule(command, delay, unit);
+                }
+
+                @Override
+                public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+                    return underlying.schedule(callable, delay, unit);
+                }
+
+                @Override
+                public ScheduledFuture<?> scheduleAtFixedRate(
+                        Runnable command, long initialDelay, long period, TimeUnit unit) {
+                    return underlying.scheduleAtFixedRate(command, initialDelay, period, unit);
+                }
+
+                @Override
+                public ScheduledFuture<?> scheduleWithFixedDelay(
+                        Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                    return underlying.scheduleWithFixedDelay(command, initialDelay, delay, unit);
                 }
             };
 

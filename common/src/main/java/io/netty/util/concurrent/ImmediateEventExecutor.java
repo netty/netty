@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -78,10 +79,6 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     }
 
     @Override
-    @Deprecated
-    public void shutdown() { }
-
-    @Override
     public boolean isShuttingDown() {
         return false;
     }
@@ -125,6 +122,26 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         } else {
             DELAYED_RUNNABLES.get().add(command);
         }
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        return newFailedScheduledFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        return newFailedScheduledFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        return newFailedScheduledFuture(new UnsupportedOperationException());
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        return newFailedScheduledFuture(new UnsupportedOperationException());
     }
 
     @Override

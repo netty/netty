@@ -16,9 +16,6 @@
 
 package io.netty.handler.traffic;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -34,6 +31,8 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -45,27 +44,27 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class TrafficShapingHandlerTest {
 
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
-    private static final ScheduledExecutorService SES = Executors.newSingleThreadScheduledExecutor();
+    private static final EventExecutorGroup SES = new DefaultEventExecutorGroup(1);
     private static final EventLoopGroup GROUP = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
     @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
-        SES.shutdown();
+        SES.shutdownGracefully();
     }
 
     @Test
     public void testHandlerRemove() throws Exception {
         testHandlerRemove0(new ChannelTrafficShapingHandler(0, READ_LIMIT_BYTES_PER_SECOND));
         GlobalTrafficShapingHandler trafficHandler1 =
-                new GlobalTrafficShapingHandler(SES, 0, READ_LIMIT_BYTES_PER_SECOND);
+                new GlobalTrafficShapingHandler(SES.next(), 0, READ_LIMIT_BYTES_PER_SECOND);
         try {
             testHandlerRemove0(trafficHandler1);
         } finally {
             trafficHandler1.release();
         }
         GlobalChannelTrafficShapingHandler trafficHandler2 =
-                new GlobalChannelTrafficShapingHandler(SES, 0,
+                new GlobalChannelTrafficShapingHandler(SES.next(), 0,
                         READ_LIMIT_BYTES_PER_SECOND, 0, READ_LIMIT_BYTES_PER_SECOND);
         try {
             testHandlerRemove0(trafficHandler2);

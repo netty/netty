@@ -88,7 +88,7 @@ public class FileRegionThrottleTest {
     @Test
     public void testGlobalWriteThrottle() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final GlobalTrafficShapingHandler gtsh = new GlobalTrafficShapingHandler(group, WRITE_LIMIT, 0);
+        final GlobalTrafficShapingHandler gtsh = new GlobalTrafficShapingHandler(group.next(), WRITE_LIMIT, 0);
         ServerBootstrap bs = new ServerBootstrap();
         bs.group(group).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
