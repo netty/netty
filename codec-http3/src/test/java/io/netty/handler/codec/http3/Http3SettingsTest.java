@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * unit tests for {@link Http3Settings}.
@@ -183,6 +182,14 @@ public class Http3SettingsTest {
         long customKey = 0xdeadbeefL;
         settings.put(customKey, 123L);
         assertNull(settings.get(customKey));
+    }
+
+    @Test
+    void testCustomSettingsNotIgnoredWithValidator() {
+        long customKey = 0xdeadbeefL;
+        Http3Settings settings = new Http3Settings((id, v) -> customKey == id);
+        settings.put(customKey, 123L);
+        assertNotNull(settings.get(customKey));
     }
 
     @Test
