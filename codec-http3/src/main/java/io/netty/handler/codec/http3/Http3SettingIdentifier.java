@@ -17,9 +17,10 @@ package io.netty.handler.codec.http3;
 
 import org.jetbrains.annotations.Nullable;
 
+import io.netty.util.internal.UnstableApi;
+
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,7 +87,26 @@ public enum Http3SettingIdentifier {
      * <br>
      * Enables use of the CONNECT protocol in HTTP/3 when set to 1; disabled when 0.
      */
-    HTTP3_SETTINGS_H3_DATAGRAM(0x33);
+    HTTP3_SETTINGS_H3_DATAGRAM(0x33),
+    
+    /**
+     * Incubating WebTransport
+     * https://ietf-wg-webtrans.github.io/draft-ietf-webtrans-http3/draft-ietf-webtrans-http3.html#name-http-3-settings-parameter-r
+     */
+    @UnstableApi
+    HTTP3_SETTINGS_ENABLE_WEBTRANSPORT(0x2b603742),
+
+    @UnstableApi
+    HTTP3_SETTINGS_WT_MAX_SESSIONS(0x14e9cd29),
+    
+    @UnstableApi
+    HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_UNI(0x2b64),
+    
+    @UnstableApi
+    HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_BIDI(0x2b65),
+    
+    @UnstableApi
+    HTTP3_SETTINGS_WT_INITIAL_MAX_DATA(0x2b61);
 
     private final long id;
 

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.internal.UnstableApi;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -223,6 +224,122 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      */
     public Http3Settings enableH3Datagram(boolean enabled) {
         put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), enabled ? TRUE : FALSE);
+        return this;
+    }
+
+    /**
+     * Returns whether the {@code ENABLE_WEBTRANSPORT} setting is enabled.
+     *
+     * @return {@code true} if enabled, {@code false} if disabled, or {@code null} if not set
+     */
+    @UnstableApi
+    @Nullable
+    public Boolean webTransportEnabled() {
+        Long value = get(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_WEBTRANSPORT.id());
+        return value == null ? null : TRUE.equals(value);
+    }
+
+    /**
+     * Sets the {@code ENABLE_WEBTRANSPORT} settings identifier.
+     *
+     * @param enabled whether to enable the WebTransport
+     * @return this instance for method chaining
+     */
+    @UnstableApi
+    public Http3Settings enableWebTransport(boolean enabled) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_WEBTRANSPORT.id(), enabled ? TRUE : FALSE);
+        return this;
+    }
+
+    /**
+     * Returns the {@code WT_MAX_SESSIONS} value.
+     *
+     * @return the maximum number of sessions, or {@code null} if not set
+     */
+    @Nullable
+    @UnstableApi
+    public Long wtMaxSessions() {
+        return get(Http3SettingIdentifier.HTTP3_SETTINGS_WT_MAX_SESSIONS.id());
+    }
+
+    /**
+     * Sets the {@code WT_MAX_SESSIONS} value.
+     *
+     * @param value the maximum number of sessions (must be ≥ 0)
+     * @return this instance for method chaining
+     */
+    @UnstableApi
+    public Http3Settings wtMaxSessions(long value) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_WT_MAX_SESSIONS.id(), value);
+        return this;
+    }
+
+    /**
+     * Returns the {@code WT_INITIAL_MAX_STREAMS_UNI} value.
+     *
+     * @return the initial maximum number of unidirectional streams, or {@code null} if not set
+     */
+    @Nullable
+    @UnstableApi
+    public Long wtInitialMaxStreamsUni() {
+        return get(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_UNI.id());
+    }
+
+    /**
+     * Sets the {@code WT_INITIAL_MAX_STREAMS_UNI} value.
+     *
+     * @param value the initial maximum number of unidirectional streams (must be ≥ 0)
+     * @return this instance for method chaining
+     */
+    @UnstableApi
+    public Http3Settings wtInitialMaxStreamsUni(long value) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_UNI.id(), value);
+        return this;
+    }
+
+    /**
+     * Returns the {@code WT_INITIAL_MAX_STREAMS_BIDI} value.
+     *
+     * @return the initial maximum number of bidirectional streams, or {@code null} if not set
+     */
+    @Nullable
+    @UnstableApi
+    public Long wtInitialMaxStreamsBidi() {
+        return get(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_BIDI.id());
+    }
+
+    /**
+     * Sets the {@code WT_INITIAL_MAX_STREAMS_BIDI} value.
+     *
+     * @param value the initial maximum number of bidirectional streams (must be ≥ 0)
+     * @return this instance for method chaining
+     */
+    @UnstableApi
+    public Http3Settings wtInitialMaxStreamsBidi(long value) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_STREAMS_BIDI.id(), value);
+        return this;
+    }
+
+    /**
+     * Returns the {@code WT_INITIAL_MAX_DATA} value.
+     *
+     * @return the initial maximum data, or {@code null} if not set
+     */
+    @Nullable
+    @UnstableApi
+    public Long wtInitialMaxData() {
+        return get(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_DATA.id());
+    }
+
+    /**
+     * Sets the {@code WT_INITIAL_MAX_DATA} value.
+     *
+     * @param value the initial maximum data (must be ≥ 0)
+     * @return this instance for method chaining
+     */
+    @UnstableApi
+    public Http3Settings wtInitialMaxData(long value) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_WT_INITIAL_MAX_DATA.id(), value);
         return this;
     }
 
