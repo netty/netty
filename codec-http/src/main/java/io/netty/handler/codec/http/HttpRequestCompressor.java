@@ -255,21 +255,14 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     private void handleChunkedHttpRequest(ChannelHandlerContext ctx, ChannelPromise promise, HttpRequest req) {
-        // only process requests that are allowed to have content
-        if (req.method().equals(HttpMethod.POST)
-                || req.method().equals(HttpMethod.PUT)
-                || req.method().equals(HttpMethod.PATCH)) {
-            if (!ctx.channel().attr(reqAttrKey).compareAndSet(null, ReferenceCountUtil.retain(req))) {
-                ReferenceCountUtil.release(req);
-                throw new IllegalStateException(
-                        "new HttpRequest received while waiting for LastHttpContent of the previous request");
-            }
-
-            final ByteBuf buf = allocateBuffer(ctx, req);
-            ctx.channel().attr(bufAttrKey).set(buf);
-        } else {
-            ctx.write(req, promise);
+        if (!ctx.channel().attr(reqAttrKey).compareAndSet(null, ReferenceCountUtil.retain(req))) {
+            ReferenceCountUtil.release(req);
+            throw new IllegalStateException(
+                    "new HttpRequest received while waiting for LastHttpContent of the previous request");
         }
+
+        final ByteBuf buf = allocateBuffer(ctx, req);
+        ctx.channel().attr(bufAttrKey).set(buf);
     }
 
     private void handleHttpContent(ChannelHandlerContext ctx, ChannelPromise promise,
@@ -420,15 +413,11 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     private void cleanup(ChannelHandlerContext ctx) throws Exception {
         Exception err1 = withExceptionCaught(() -> {
             ByteBuf buf = ctx.channel().attr(bufAttrKey).getAndSet(null);
-            if (buf != null) {
-                buf.release();
-            }
+            ReferenceCountUtil.release(buf);
         });
         Exception err2 = withExceptionCaught(() -> {
             HttpRequest req = ctx.channel().attr(reqAttrKey).getAndSet(null);
-            if (req != null) {
-                ReferenceCountUtil.release(req);
-            }
+            ReferenceCountUtil.release(req);
         });
         Exception err3 = withExceptionCaught(() -> {
             EmbeddedChannel encoderChannel = ctx.channel().attr(encoderChannelAttrKey).getAndSet(null);
