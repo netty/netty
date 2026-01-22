@@ -711,6 +711,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             } catch (UnsupportedOperationException e) {
                 ReferenceCountUtil.release(msg);
                 promise.setFailure(e);
+                return;
             }
 
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
