@@ -132,7 +132,7 @@ public class SslHandlerTest {
                     if (((ByteBuf) msg).isReadable()) {
                         writesToFail.add(handler);
                     } else {
-                        handler.onSuccess(null);
+                        handler.success(null);
                     }
                 }
                 ReferenceCountUtil.release(msg);
@@ -151,7 +151,7 @@ public class SslHandlerTest {
             // Simulate failing the SslHandler non-application writes after there are applications writes queued.
             CompletionHandler<Void> handlerToFail;
             while ((handlerToFail = writesToFail.poll()) != null) {
-                handlerToFail.onFailure(new RuntimeException("fake exception"));
+                handlerToFail.failure(new RuntimeException("fake exception"));
             }
 
             writeCauseLatch.await();
@@ -380,7 +380,7 @@ public class SslHandlerTest {
 
         Promise<Void> promise = ch.newPromise();
         ByteBuf buf = Unpooled.buffer(10).writeZero(10);
-        ch.writeAndFlush(buf, promise.toCompletionHandler());
+        ch.writeAndFlush(buf, promise);
         assertFalse(promise.isDone());
         assertTrue(ch.finishAndReleaseAll());
         assertTrue(promise.isDone());

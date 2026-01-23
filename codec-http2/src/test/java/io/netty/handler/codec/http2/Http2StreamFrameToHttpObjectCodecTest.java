@@ -940,7 +940,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
                 public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        handler.onSuccess(null);
+                        handler.success(null);
                     } else {
                         ctx.write(msg, handler);
                     }
@@ -953,7 +953,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
                 public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                     if (msg instanceof Http2StreamFrame) {
                         frames.add((Http2StreamFrame) msg);
-                        handler.onSuccess(null);
+                        handler.success(null);
                     } else {
                         ctx.write(msg, handler);
                     }

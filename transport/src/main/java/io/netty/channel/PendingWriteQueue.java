@@ -196,7 +196,7 @@ public final class PendingWriteQueue {
                 ReferenceCountUtil.safeRelease(write.msg);
                 CompletionHandler<Void> handler = write.handler;
                 recycle(write, false);
-                handler.onFailure(cause);
+                handler.failure(cause);
                 write = next;
             }
         }
@@ -217,7 +217,7 @@ public final class PendingWriteQueue {
         }
         ReferenceCountUtil.safeRelease(write.msg);
         CompletionHandler<Void> handler = write.handler;
-        handler.onFailure(cause);
+        handler.failure(cause);
         recycle(write, true);
     }
 

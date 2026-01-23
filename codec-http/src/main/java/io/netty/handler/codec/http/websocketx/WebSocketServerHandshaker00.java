@@ -214,7 +214,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      */
     @Override
     public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
-        channel.writeAndFlush(frame, promise.toCompletionHandler());
+        channel.writeAndFlush(frame, promise);
         return promise;
     }
 
@@ -231,7 +231,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     @Override
     public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame,
                                Promise<Void> promise) {
-        ctx.writeAndFlush(frame, promise.toCompletionHandler());
+        ctx.writeAndFlush(frame, promise);
         return promise;
     }
 

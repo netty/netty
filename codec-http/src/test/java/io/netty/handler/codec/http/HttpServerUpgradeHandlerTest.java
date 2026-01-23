@@ -113,12 +113,12 @@ public class HttpServerUpgradeHandlerTest {
                     public void run() {
                         ctx.write(msg, handler.andThen(new CompletionHandler<>() {
                             @Override
-                            public void onSuccess(Void result) {
+                            public void success(Void result) {
                                 writeFlushed = true;
                             }
 
                             @Override
-                            public void onFailure(Throwable cause) {
+                            public void failure(Throwable cause) {
                                 writeFlushed = true;
                             }
                         }, ctx.executor()));

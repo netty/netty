@@ -40,9 +40,9 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         ObjectUtil.checkNotNull(handler, "handler");
         addListener(f -> {
             if (f.isSuccess()) {
-                handler.onSuccess(null);
+                handler.success(null);
             } else {
-                handler.onFailure(f.cause());
+                handler.failure(f.cause());
             }
         });
         return this;

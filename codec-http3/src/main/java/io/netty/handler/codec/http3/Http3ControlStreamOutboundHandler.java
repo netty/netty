@@ -108,7 +108,7 @@ final class Http3ControlStreamOutboundHandler
 
         // See https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-32#section-7.2.7
         if (sentMaxPushId != null && id < sentMaxPushId) {
-            handler.onFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR, "MAX_PUSH_ID reduced limit."));
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR, "MAX_PUSH_ID reduced limit."));
             return false;
         }
 
@@ -121,13 +121,13 @@ final class Http3ControlStreamOutboundHandler
 
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2
         if (server && id % 4 != 0) {
-            handler.onFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
                     "GOAWAY id not valid : " + id));
             return false;
         }
 
         if (sendGoAwayId != null && id > sendGoAwayId) {
-            handler.onFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
                     "GOAWAY id is bigger then the last sent: " + id + " > " + sendGoAwayId));
             return false;
         }

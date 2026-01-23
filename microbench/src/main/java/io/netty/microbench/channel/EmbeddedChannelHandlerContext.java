@@ -142,7 +142,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
             channel().bind(localAddress, handler);
             this.localAddress = localAddress;
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -152,7 +152,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
         try {
             channel().connect(remoteAddress, localAddress, handler);
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -163,7 +163,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
         try {
             channel().connect(remoteAddress, localAddress, handler);
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -173,7 +173,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
         try {
             channel().disconnect(handler);
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -183,7 +183,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
         try {
             channel().close(handler);
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -193,7 +193,7 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
         try {
             channel().deregister(promise);
         } catch (Exception e) {
-            promise.onFailure(e);
+            promise.failure(e);
             handleException(e);
         }
     }

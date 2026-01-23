@@ -238,7 +238,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynStreamFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdySynStreamFrame);
-                handler.onFailure(e);
+                handler.failure(e);
                 return;
             }
             try {
@@ -263,7 +263,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynReplyFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdySynReplyFrame);
-                handler.onFailure(e);
+                handler.failure(e);
                 return;
             }
 
@@ -324,7 +324,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdyHeadersFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdyHeadersFrame);
-                handler.onFailure(e);
+                handler.failure(e);
                 return;
             }
 

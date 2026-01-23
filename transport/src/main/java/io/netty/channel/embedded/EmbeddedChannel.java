@@ -254,7 +254,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private void register0() {
         Promise<Void> promise = newPromise();
-        ioTransport().register(promise.toCompletionHandler());
+        ioTransport().register(promise);
         assert promise.isDone();
         Throwable cause = promise.cause();
         if (cause != null) {
@@ -500,7 +500,7 @@ public class EmbeddedChannel extends AbstractChannel {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
-                write(msg, promise.toCompletionHandler());
+                write(msg, promise);
                 return;
             }
         } finally {
@@ -615,14 +615,14 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     public final Future<Void> close() {
         Promise<Void> promise = newPromise();
-        close(promise.toCompletionHandler());
+        close(promise);
         return promise;
     }
 
     @Override
     public final Future<Void> disconnect() {
         Promise<Void> promise = newPromise();
-        disconnect(promise.toCompletionHandler());
+        disconnect(promise);
         return promise;
     }
 
@@ -1199,12 +1199,12 @@ public class EmbeddedChannel extends AbstractChannel {
         private final IoTransport transport;
         private final CompletionHandler<Void> pendingTaskHandler = new CompletionHandler<>() {
             @Override
-            public void onSuccess(Void result) {
+            public void success(Void result) {
                 maybeRunPendingTasks();
             }
 
             @Override
-            public void onFailure(Throwable cause) {
+            public void failure(Throwable cause) {
                 maybeRunPendingTasks();
             }
         };

@@ -274,7 +274,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     previousBuf = (ByteBuf) entry;
                 } else if (entry instanceof Promise<?>) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, ((Promise<Void>) entry).toCompletionHandler());
+                    ctx.write(previousBuf, (Promise<Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());

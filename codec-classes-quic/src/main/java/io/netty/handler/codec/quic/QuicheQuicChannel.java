@@ -478,7 +478,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // We already have a close scheduled that uses a close data. Lets release the buffer early.
             reason.release();
         }
-        close(promise.toCompletionHandler());
+        close(promise);
     }
 
     @Override

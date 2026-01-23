@@ -307,7 +307,7 @@ public final class PcapWriteHandler implements ChannelInboundHandler, ChannelOut
                 initializeIfNecessary(ctx);
             } catch (Exception ex) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(ex);
+                handler.failure(ex);
                 return;
             }
         }

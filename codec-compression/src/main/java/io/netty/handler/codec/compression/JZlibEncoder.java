@@ -386,7 +386,7 @@ public class JZlibEncoder extends ZlibEncoder {
             z.next_in = null;
             z.next_out = null;
         }
-        ctx.writeAndFlush(footer, promise.toCompletionHandler());
+        ctx.writeAndFlush(footer, promise);
     }
 
     @Override

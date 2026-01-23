@@ -170,7 +170,7 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
             CompletionHandler<Void> handler) {
 
         if (destinationAddress != null) {
-            handler.onFailure(new ConnectionPendingException());
+            handler.failure(new ConnectionPendingException());
             return;
         }
 

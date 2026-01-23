@@ -93,7 +93,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     ByteBuf buf = (ByteBuf) msg;
                     try {
                         if (buf.readableBytes() == 1) {
-                            lastWriteHandler.onSuccess(null);
+                            lastWriteHandler.success(null);
                             lastWriteHandler = null;
                         } else {
                             throw new AssertionError();

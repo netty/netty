@@ -323,7 +323,7 @@ public class ChunkedWriteHandlerTest {
                     ctx.write(msg, handler);
                 } else {
                     ReferenceCountUtil.release(msg);
-                    handler.onFailure(new RuntimeException());
+                    handler.failure(new RuntimeException());
                 }
             }
         };
@@ -454,7 +454,7 @@ public class ChunkedWriteHandlerTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(new RuntimeException());
+                handler.failure(new RuntimeException());
             }
         };
 
@@ -612,7 +612,7 @@ public class ChunkedWriteHandlerTest {
                 ReferenceCountUtil.release(msg);
                 // Calling close so we will drop all queued messages in the ChunkedWriteHandler.
                 ctx.close();
-                handler.onSuccess(null);
+                handler.success(null);
             }
         }, new ChunkedWriteHandler());
 
@@ -677,7 +677,7 @@ public class ChunkedWriteHandlerTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(new RuntimeException());
+                handler.failure(new RuntimeException());
             }
         };
 
@@ -700,7 +700,7 @@ public class ChunkedWriteHandlerTest {
                 } else {
                     this.alreadyFailed = true;
                     ReferenceCountUtil.release(msg);
-                    handler.onFailure(new RuntimeException());
+                    handler.failure(new RuntimeException());
                 }
             }
         };

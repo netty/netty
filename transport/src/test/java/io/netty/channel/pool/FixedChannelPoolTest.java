@@ -280,7 +280,7 @@ public class FixedChannelPoolTest {
         final Promise<Void> closePromise = sc.newPromise();
         pool.closeAsync().addListener(future -> {
             assertEquals(0, pool.acquiredChannelCount());
-            sc.close(closePromise.toCompletionHandler());
+            sc.close(closePromise);
             closePromise.syncUninterruptibly();
         }).awaitUninterruptibly();
         closePromise.awaitUninterruptibly();

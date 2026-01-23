@@ -630,13 +630,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         @Override
         public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
             // TODO: Can we do better ?
-            handler.onFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         @Override
         public void connect(final SocketAddress remoteAddress,
                             SocketAddress localAddress, final CompletionHandler<Void> handler) {
-            handler.onFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
@@ -650,13 +650,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         @Override
         public void register(CompletionHandler<Void> handler) {
             if (registered) {
-                handler.onFailure(new UnsupportedOperationException("Re-register is not supported"));
+                handler.failure(new UnsupportedOperationException("Re-register is not supported"));
                 return;
             }
 
             registered = true;
 
-            handler.onSuccess(null);
+            handler.success(null);
 
             pipeline().fireChannelRegistered();
             if (isActive()) {
@@ -666,7 +666,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
-            handler.onFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         @Override
@@ -683,10 +683,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (closeInitiated) {
                 if (closePromise.isDone()) {
                     // Closed already.
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
                     // This means close() was called before so we just register a listener and return
-                    closePromise.addListener(future -> handler.onSuccess(null));
+                    closePromise.addListener(future -> handler.success(null));
                 }
                 return;
             }
@@ -732,7 +732,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // The promise should be notified before we call fireChannelInactive().
             outboundClosed = true;
             closePromise.setSuccess(null);
-            handler.onSuccess(null);
+            handler.success(null);
 
             fireChannelInactiveAndDeregister(CompletionHandler.ignore(), wasActive);
         }
@@ -745,7 +745,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private void fireChannelInactiveAndDeregister(final CompletionHandler<Void> handler,
                                                       final boolean fireChannelInactive) {
             if (!registered) {
-                handler.onSuccess(null);
+                handler.success(null);
                 return;
             }
 
@@ -768,7 +768,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         registered = false;
                         pipeline.fireChannelUnregistered();
                     }
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
             });
         }
@@ -967,7 +967,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     // Once the outbound side was closed we should not allow header / data frames
                     outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(new ClosedChannelException());
+                handler.failure(new ClosedChannelException());
                 return;
             }
 
@@ -978,7 +978,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         Http2WindowUpdateFrame updateFrame = (Http2WindowUpdateFrame) msg;
                         if (config.autoStreamFlowControl) {
                             ReferenceCountUtil.release(msg);
-                            handler.onFailure(new UnsupportedOperationException(
+                            handler.failure(new UnsupportedOperationException(
                                     Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL + " is set to false"));
                             return;
                         }
@@ -987,13 +987,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                                     flowControlledBytes, "windowSizeIncrement");
                         } catch (RuntimeException e) {
                             ReferenceCountUtil.release(updateFrame);
-                            handler.onFailure(e);
+                            handler.failure(e);
                             return;
                         }
                         flowControlledBytes -= updateFrame.windowSizeIncrement();
                         if (parentContext().isRemoved()) {
                             ReferenceCountUtil.release(msg);
-                            handler.onFailure(new ClosedChannelException());
+                            handler.failure(new ClosedChannelException());
                             return;
                         }
                         Future<Void> f = writeWindowUpdateFrame(updateFrame);
@@ -1008,12 +1008,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 } else {
                     String msgStr = msg.toString();
                     ReferenceCountUtil.release(msg);
-                    handler.onFailure(new IllegalArgumentException(
+                    handler.failure(new IllegalArgumentException(
                             "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
                                     ": " + msgStr));
                 }
             } catch (Throwable t) {
-                handler.onFailure(t);
+                handler.failure(t);
             }
         }
 
@@ -1030,7 +1030,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private void writeHttp2StreamFrame(Http2StreamFrame frame, final CompletionHandler<Void> handler) {
             if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
                 ReferenceCountUtil.release(frame);
-                handler.onFailure(
+                handler.failure(
                     new IllegalArgumentException("The first frame must be a headers frame. Was: "
                         + frame.name()));
                 return;
@@ -1071,18 +1071,18 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private void firstWriteComplete(Future<?> future, CompletionHandler<Void> handler) {
             Throwable cause = future.cause();
             if (cause == null) {
-                handler.onSuccess(null);
+                handler.success(null);
             } else {
                 // If the first write fails there is not much we can do, just close
                 unsafe.close(CompletionHandler.ignore());
-                handler.onFailure(wrapStreamClosedError(cause));
+                handler.failure(wrapStreamClosedError(cause));
             }
         }
 
         private void writeComplete(Future<?> future, CompletionHandler<Void> handler) {
             Throwable cause = future.cause();
             if (cause == null) {
-                handler.onSuccess(null);
+                handler.success(null);
             } else {
                 Throwable error = wrapStreamClosedError(cause);
                 // To make it more consistent with AbstractChannel we handle all IOExceptions here.
@@ -1095,7 +1095,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         outboundClosed = true;
                     }
                 }
-                handler.onFailure(error);
+                handler.failure(error);
             }
         }
 

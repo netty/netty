@@ -159,7 +159,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         } else {
             reason.release();
         }
-        close(promise.toCompletionHandler());
+        close(promise);
     }
 
     @Override

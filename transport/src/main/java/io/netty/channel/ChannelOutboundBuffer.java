@@ -230,7 +230,7 @@ public final class ChannelOutboundBuffer {
         } else {
             ReferenceCountUtil.safeRelease(msg);
         }
-        handler.onSuccess(null);
+        handler.success(null);
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -260,7 +260,7 @@ public final class ChannelOutboundBuffer {
 
         ReferenceCountUtil.safeRelease(msg);
 
-        handler.onFailure(cause);
+        handler.failure(cause);
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -545,7 +545,7 @@ public final class ChannelOutboundBuffer {
                 decrementPendingOutboundBytes(size);
 
                 ReferenceCountUtil.safeRelease(e.msg);
-                e.handler.onFailure(cause);
+                e.handler.failure(cause);
                 e = e.unguardedRecycleAndGetNext();
             }
         } finally {

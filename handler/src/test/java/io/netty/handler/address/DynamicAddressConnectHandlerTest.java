@@ -43,9 +43,9 @@ public class DynamicAddressConnectHandlerTest {
                 try {
                     assertSame(REMOTE_NEW, remoteAddress);
                     assertSame(LOCAL_NEW, localAddress);
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } catch (Throwable cause) {
-                    handler.onFailure(cause);
+                    handler.failure(cause);
                 }
             }
         }, new DynamicAddressConnectHandler() {

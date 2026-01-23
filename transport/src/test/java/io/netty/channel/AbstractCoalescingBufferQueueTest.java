@@ -53,7 +53,7 @@ public class AbstractCoalescingBufferQueueTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 ReferenceCountUtil.release(msg);
-                handler.onSuccess(null);
+                handler.success(null);
             }
         }, new ChannelHandler() { });
         final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {

@@ -497,7 +497,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                     Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_SETTINGS_ERROR,
                             "Received a settings key that is reserved for HTTP/2.");
-                    handler.onFailure(exception);
+                    handler.failure(exception);
                     // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
                     Http3CodecUtils.connectionError(ctx, exception, false);
                     return false;
@@ -578,7 +578,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         if (Http3CodecUtils.isReservedHttp2FrameType(type)) {
             Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Reserved type for HTTP/2 send.");
-            handler.onFailure(exception);
+            handler.failure(exception);
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
             connectionError(ctx, exception.errorCode(), exception.getMessage(), false);
             return;
@@ -586,7 +586,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         if (!Http3CodecUtils.isReservedFrameType(type)) {
             Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Non reserved type for HTTP/3 send.");
-            handler.onFailure(exception);
+            handler.failure(exception);
             return;
         }
         ByteBuf out = ctx.alloc().directBuffer();
@@ -603,7 +603,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     private static void unsupported(CompletionHandler<Void> handler) {
-        handler.onFailure(new UnsupportedOperationException());
+        handler.failure(new UnsupportedOperationException());
     }
 
     @Override
@@ -796,7 +796,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     }
                     if (entry == FLUSH) {
                         flushSeen = true;
-                        queue.remove().onSuccess(null);
+                        queue.remove().success(null);
                     } else {
                         // Retain the entry as remove() will call release() as well.
                         codec.write0(ctx, ReferenceCountUtil.retain(entry), queue.remove());

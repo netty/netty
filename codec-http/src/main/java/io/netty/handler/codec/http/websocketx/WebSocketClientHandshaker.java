@@ -668,7 +668,7 @@ public abstract class WebSocketClientHandshaker {
 
     private void close0(final ChannelOutboundInvoker invoker, final Channel channel,
                         CloseWebSocketFrame frame, Promise<Void> promise) {
-        invoker.writeAndFlush(frame, promise.toCompletionHandler());
+        invoker.writeAndFlush(frame, promise);
         final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
         final WebSocketClientHandshaker handshaker = this;
         if (forceCloseTimeoutMillis <= 0 || !channel.isActive() || forceCloseInit != 0) {

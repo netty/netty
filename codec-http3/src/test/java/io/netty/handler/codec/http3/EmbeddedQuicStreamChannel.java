@@ -70,12 +70,12 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                     // Mimic the API.
                     handler = handler.andThen(new CompletionHandler<>() {
                         @Override
-                        public void onSuccess(Void result) {
+                        public void success(Void result) {
                             outputShutdown = 0;
                         }
 
                         @Override
-                        public void onFailure(Throwable cause) {
+                        public void failure(Throwable cause) {
                             outputShutdown = 0;
                         }
                     }, ctx.executor());

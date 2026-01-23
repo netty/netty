@@ -373,7 +373,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * {@link EventExecutor} as this {@link ChannelHandlerContext}. The result of the new
      * {@link CompletionHandler} is cascaded to the old {@link CompletionHandler}.
      *
-     * This is done to ensure that {@link FutureListener}s that are added to the {@link Promise} by an
+     * This is done to ensure that {@link CompletionHandler}s that are added to the {@link CompletionHandler} by an
      * {@link ChannelOutboundHandler} are executed in the same thread as the handler itself. By doing so we can
      * ensure that there are not issues even if fields etc that are stored in the handler are modified by the listener.
      */
@@ -383,7 +383,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (!p.executor().inEventLoop()) {
                 Promise<Void> newPromise = newPromise();
                 newPromise.addHandler(handler);
-                return newPromise.toCompletionHandler();
+                return newPromise;
             }
         }
 
@@ -406,7 +406,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).register(next, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -436,7 +436,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).bind(next, localAddress, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -473,7 +473,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).connect(next, remoteAddress, localAddress, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -508,7 +508,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).disconnect(next, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -537,7 +537,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).close(next, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -566,7 +566,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).deregister(next, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -597,7 +597,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).shutdown(next, type, handler);
                 } catch (Throwable t) {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 } finally {
                     next.updatePendingBytesIfNeeded();
                 }
@@ -634,7 +634,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public Future<Void> write(Object msg) {
         Promise<Void> promise = newPromise();
-        write(msg, false, promise.toCompletionHandler());
+        write(msg, false, promise);
         return promise;
     }
 
@@ -683,7 +683,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                         next.saveCurrentPendingBytesIfNeeded();
                         ((ChannelOutboundHandler) next.handler()).write(next, msg, handler);
                     } catch (Throwable t) {
-                        handler.onFailure(t);
+                        handler.failure(t);
                     } finally {
                         next.updatePendingBytesIfNeeded();
                     }
@@ -887,7 +887,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     ReferenceCountUtil.release(msg);
                 }
             } finally {
-                handler.onFailure(cause);
+                handler.failure(cause);
             }
             return false;
         }
@@ -930,7 +930,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     ctx.pipeline.incrementPendingOutboundBytes(task.size);
                 } catch (Throwable t) {
                     ReferenceCountUtil.release(msg);
-                    handler.onFailure(t);
+                    handler.failure(t);
                     task.recycle();
                     return null;
                 }

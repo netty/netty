@@ -251,27 +251,27 @@ public class CombinedChannelDuplexHandlerTest {
         ChannelPipeline pipeline = ch.pipeline();
 
         Promise<Void> promise = ch.newPromise();
-        pipeline.bind(LOCAL_ADDRESS, promise.toCompletionHandler());
+        pipeline.bind(LOCAL_ADDRESS, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.connect(REMOTE_ADDRESS, LOCAL_ADDRESS, promise.toCompletionHandler());
+        pipeline.connect(REMOTE_ADDRESS, LOCAL_ADDRESS, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.close(promise.toCompletionHandler());
+        pipeline.close(promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.disconnect(promise.toCompletionHandler());
+        pipeline.disconnect(promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.write(MSG, promise.toCompletionHandler());
+        pipeline.write(MSG, promise);
         promise.syncUninterruptibly();
 
         promise = ch.newPromise();
-        pipeline.deregister(promise.toCompletionHandler());
+        pipeline.deregister(promise);
         promise.syncUninterruptibly();
         ch.finish();
     }
@@ -361,9 +361,9 @@ public class CombinedChannelDuplexHandlerTest {
             try {
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.BIND);
-                handler.onSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                handler.onFailure(e);
+                handler.failure(e);
             }
         }
 
@@ -374,28 +374,28 @@ public class CombinedChannelDuplexHandlerTest {
                 assertSame(REMOTE_ADDRESS, remoteAddress);
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.CONNECT);
-                handler.onSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                handler.onFailure(e);
+                handler.failure(e);
             }
         }
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.DISCONNECT);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         @Override
         public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.CLOSE);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         @Override
         public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.DEREGISTER);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         @Override
@@ -408,9 +408,9 @@ public class CombinedChannelDuplexHandlerTest {
             try {
                 assertSame(MSG, msg);
                 queue.add(Event.WRITE);
-                handler.onSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                handler.onFailure(e);
+                handler.failure(e);
             }
         }
 

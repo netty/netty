@@ -452,15 +452,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
             if (!isActive()) {
                 if (isOpen()) {
-                    handler.onFailure(new NotYetConnectedException());
+                    handler.failure(new NotYetConnectedException());
                 } else {
-                    handler.onFailure(new ClosedChannelException());
+                    handler.failure(new ClosedChannelException());
                 }
                 return;
             }
             if (isShutdown(type.direction())) {
                 // Already shutdown so let's just make this a noop.
-                handler.onSuccess(null);
+                handler.success(null);
                 return;
             }
 
@@ -476,12 +476,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         default:
                             throw new AssertionError();
                     }
-                    handler.onSuccess(null);
+                    handler.success(null);
                     if (type.direction() == ChannelShutdownDirection.Outbound) {
                         pipeline().fireChannelShutdown(ChannelShutdownType.newOutbound());
                     }
                 } else {
-                    handler.onFailure(f.cause());
+                    handler.failure(f.cause());
                 }
             }));
         }
@@ -496,7 +496,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
             if (isRegistered()) {
-                handler.onFailure(new IllegalStateException("registered to an event loop already"));
+                handler.failure(new IllegalStateException("registered to an event loop already"));
                 return;
             }
 
@@ -507,7 +507,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     neverRegistered = false;
                     registered = true;
 
-                    handler.onSuccess(null);
+                    handler.success(null);
                     pipeline.fireChannelRegistered();
                     // Only fire a channelActive if the channel has never been registered. This prevents firing
                     // multiple channel actives if the channel is deregistered and re-registered.
@@ -526,7 +526,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // Close the channel directly to avoid FD leak.
                     close(CompletionHandler.ignore());
                     closeFuture.setClosed();
-                    handler.onFailure(future.cause());
+                    handler.failure(future.cause());
                 }
             });
             doRegister(registerPromise);
@@ -565,10 +565,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                             }
                         });
                     }
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
                     closeIfClosed();
-                    handler.onFailure(f.cause());
+                    handler.failure(f.cause());
                 }
             });
             doBind(localAddress, bindPromise);
@@ -588,11 +588,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (connectPromise != null) {
                 if (!connectPromise.isDone()) {
                     // Already a connect in process.
-                    handler.onFailure(new ConnectionPendingException());
+                    handler.failure(new ConnectionPendingException());
                 } else if (connectPromise.isSuccess()) {
-                    handler.onFailure(new AlreadyConnectedException());
+                    handler.failure(new AlreadyConnectedException());
                 } else {
-                    handler.onFailure(connectPromise.cause());
+                    handler.failure(connectPromise.cause());
                 }
                 return;
             }
@@ -687,9 +687,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
 
                 if (f.isSuccess()) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
-                    handler.onFailure(f.cause());
+                    handler.failure(f.cause());
                 }
                 closeIfClosed(); // doDisconnect() might have closed the channel
             });
@@ -710,10 +710,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (closeInitiated) {
                 if (closeFuture.isDone()) {
                     // Closed already.
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
                     // This means close() was called before so we just register a listener and return
-                    closeFuture.addListener(future -> handler.onSuccess(null));
+                    closeFuture.addListener(future -> handler.success(null));
                 }
                 return;
             }
@@ -737,9 +737,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     }
                 });
                 if (f.isSuccess()) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
-                    handler.onFailure(f.cause());
+                    handler.failure(f.cause());
                 }
             });
 
@@ -789,7 +789,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void deregister(final CompletionHandler<Void> handler, final boolean fireChannelInactive) {
             if (!registered) {
-                handler.onSuccess(null);
+                handler.success(null);
                 return;
             }
 
@@ -819,9 +819,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 registered = false;
                                 pipeline.fireChannelUnregistered();
                             }
-                            handler.onSuccess(null);
+                            handler.success(null);
                         } else {
-                            handler.onFailure(f.cause());
+                            handler.failure(f.cause());
                         }
                     });
                     doDeregister(deregisterPromise);
@@ -861,10 +861,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // will be done in flush0()
                     // See https://github.com/netty/netty/issues/2362
                     if (!isActive()) {
-                        handler.onFailure(newClosedChannelException(
+                        handler.failure(newClosedChannelException(
                                 IoTransportImpl.class, initialCloseCause, "write(Object, Promise)"));
                     } else {
-                        handler.onFailure(new ChannelOutputShutdownException("Channel output shutdown"));
+                        handler.failure(new ChannelOutputShutdownException("Channel output shutdown"));
                     }
                 }
                 return;
@@ -881,7 +881,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 try {
                     ReferenceCountUtil.release(msg);
                 } finally {
-                    handler.onFailure(t);
+                    handler.failure(t);
                 }
                 return;
             }
@@ -942,7 +942,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            handler.onFailure(newClosedChannelException(
+            handler.failure(newClosedChannelException(
                     IoTransportImpl.class, initialCloseCause, "ensureOpen(Promise<Void>)"));
             return false;
         }
@@ -1039,7 +1039,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private void shutdownOutput(final CompletionHandler<Void> handler, Throwable cause) {
         final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
         if (outboundBuffer == null) {
-            handler.onFailure(new ClosedChannelException());
+            handler.failure(new ClosedChannelException());
             return;
         }
 
@@ -1060,9 +1060,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             if (f.isSuccess()) {
                 outputShutdown = true;
-                handler.onSuccess(null);
+                handler.success(null);
             } else {
-                handler.onFailure(f.cause());
+                handler.failure(f.cause());
             }
 
             ioTransport.closeAndUpdateWritability(outboundBuffer, shutdownCause, shutdownCause);

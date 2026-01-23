@@ -51,7 +51,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> bind(SocketAddress localAddress) {
         Promise<Void> promise = newPromise();
-        bind(localAddress, promise.toCompletionHandler());
+        bind(localAddress, promise);
         return promise;
     }
 
@@ -70,7 +70,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> connect(SocketAddress remoteAddress) {
         Promise<Void> promise = newPromise();
-        connect(remoteAddress, promise.toCompletionHandler());
+        connect(remoteAddress, promise);
         return promise;
     }
 
@@ -86,7 +86,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         Promise<Void> promise = newPromise();
-        connect(remoteAddress, localAddress, promise.toCompletionHandler());
+        connect(remoteAddress, localAddress, promise);
         return promise;
     }
 
@@ -101,7 +101,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> disconnect() {
         Promise<Void> promise = newPromise();
-        disconnect(promise.toCompletionHandler());
+        disconnect(promise);
         return promise;
     }
 
@@ -119,7 +119,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> close() {
         Promise<Void> promise = newPromise();
-        close(promise.toCompletionHandler());
+        close(promise);
         return promise;
     }
 
@@ -136,7 +136,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> deregister() {
         Promise<Void> promise = newPromise();
-        deregister(promise.toCompletionHandler());
+        deregister(promise);
         return promise;
     }
 
@@ -154,7 +154,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> register() {
         Promise<Void> promise = newPromise();
-        register(promise.toCompletionHandler());
+        register(promise);
         return promise;
     }
 
@@ -266,7 +266,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> write(Object msg) {
         Promise<Void> promise = newPromise();
-        write(msg, promise.toCompletionHandler());
+        write(msg, promise);
         return promise;
     }
 
@@ -292,7 +292,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> writeAndFlush(Object msg) {
         Promise<Void> promise = newPromise();
-        writeAndFlush(msg, promise.toCompletionHandler());
+        writeAndFlush(msg, promise);
         return promise;
     }
 
@@ -315,7 +315,7 @@ public interface ChannelOutboundInvoker {
      */
     default Future<Void> shutdown(ChannelShutdownType type) {
         Promise<Void> promise = newPromise();
-        shutdown(type, promise.toCompletionHandler());
+        shutdown(type, promise);
         return promise;
     }
 

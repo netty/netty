@@ -15,12 +15,10 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.PromiseNotificationUtil;
-
 /**
  * Special {@link Future} which is writable.
  */
-public interface Promise<V> extends Future<V> {
+public interface Promise<V> extends Future<V>, CompletionHandler<V> {
 
     /**
      * Marks this future as a success and notifies all
@@ -75,24 +73,4 @@ public interface Promise<V> extends Future<V> {
 
     @Override
     Promise<V> syncUninterruptibly();
-
-    /**
-     * Returns a {@link CompletionHandler} which will notify this {@link Promise} on completion.
-     *
-     * @return  the handler.
-     */
-    default CompletionHandler<V> toCompletionHandler() {
-        return new CompletionHandler<V>() {
-
-            @Override
-            public void onSuccess(V result) {
-                PromiseNotificationUtil.trySuccess(Promise.this, result, null);
-            }
-
-            @Override
-            public void onFailure(Throwable cause) {
-                PromiseNotificationUtil.tryFailure(Promise.this, cause, null);
-            }
-        };
-    }
 }

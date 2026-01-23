@@ -40,19 +40,19 @@ public abstract class DynamicAddressConnectHandler implements ChannelOutboundHan
             remote = remoteAddress(remoteAddress, localAddress);
             local = localAddress(remoteAddress, localAddress);
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             return;
         }
         ctx.connect(remote, local, handler.andThen(new CompletionHandler<>() {
             @Override
-            public void onSuccess(Void result) {
+            public void success(Void result) {
                 // We only remove this handler from the pipeline once the connect was successful as otherwise
                 // the user may try to connect again.
                 ctx.pipeline().remove(DynamicAddressConnectHandler.this);
             }
 
             @Override
-            public void onFailure(Throwable cause) {
+            public void failure(Throwable cause) {
                 // NOOP.
             }
         }, ctx.executor()));

@@ -989,7 +989,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             channelOpen.set(childChannel.isOpen());
             channelActive.set(childChannel.isActive());
         });
-        childChannel.close(p.toCompletionHandler());
+        childChannel.close(p);
         p.syncUninterruptibly();
 
         assertFalse(channelOpen.get());
@@ -1228,7 +1228,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.close();
 
         Promise<Void> promise = childChannel.newPromise();
-        childChannel.close(promise.toCompletionHandler());
+        childChannel.close(promise);
         promise.syncUninterruptibly();
         childChannel.closeFuture().syncUninterruptibly();
     }

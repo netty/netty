@@ -372,11 +372,11 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
 
         void fail(Throwable cause) {
             ReferenceCountUtil.release(msg);
-            handler.onFailure(cause);
+            handler.failure(cause);
         }
 
         void success(long total) {
-            handler.onSuccess(null);
+            handler.success(null);
         }
     }
 }

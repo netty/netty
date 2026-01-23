@@ -56,7 +56,7 @@ final class Http3RequestStreamValidationUtils {
         if (goAwayReceivedSupplier.getAsBoolean() && !encodeState.started()) {
             String type = StringUtil.simpleClassName(frame);
             ReferenceCountUtil.release(frame);
-            handler.onFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Frame of type " + type + " unexpected as we received a GOAWAY already."));
             ctx.close();
             return false;

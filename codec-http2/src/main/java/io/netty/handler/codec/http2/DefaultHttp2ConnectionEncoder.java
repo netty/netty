@@ -479,7 +479,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         // queue and it is not end of stream yet. Just complete their promises by getting the buffer
                         // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
                         Promise<Void> writePromise = ctx.<Void>newPromise().addListener(this);
-                        ctx.write(queue.remove(ctx.alloc(), 0, writePromise), writePromise.toCompletionHandler());
+                        ctx.write(queue.remove(ctx.alloc(), 0, writePromise), writePromise);
                     }
                     return;
                 }

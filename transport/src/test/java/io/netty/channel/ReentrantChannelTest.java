@@ -307,12 +307,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
             public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 ctx.write(msg, handler.andThen(new CompletionHandler<>() {
                     @Override
-                    public void onSuccess(Void result) {
+                    public void success(Void result) {
                         ctx.channel().close();
                     }
 
                     @Override
-                    public void onFailure(Throwable cause) {
+                    public void failure(Throwable cause) {
                         ctx.channel().close();
                     }
                 }, ctx.executor()));

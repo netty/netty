@@ -324,7 +324,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
         footer.writerIndex(idx + HEADER_LENGTH);
 
-        ctx.writeAndFlush(footer, promise.toCompletionHandler());
+        ctx.writeAndFlush(footer, promise);
     }
 
     /**

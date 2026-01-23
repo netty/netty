@@ -204,7 +204,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             if (spdyDataFrame.isLast()) {
                 CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
                 if (closeHandler != null) {
-                    closeHandler.onSuccess(null);
+                    closeHandler.success(null);
                 }
             }
 
@@ -282,7 +282,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             if (spdySynReplyFrame.isLast()) {
                 CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
                 if (closeHandler != null) {
-                    closeHandler.onSuccess(null);
+                    closeHandler.success(null);
                 }
             }
 
@@ -300,7 +300,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
             CompletionHandler<Void> removeHandler = removeStream(spdyRstStreamFrame.streamId());
             if (removeHandler != null) {
-                removeHandler.onSuccess(null);
+                removeHandler.success(null);
             }
 
         } else if (msg instanceof SpdySettingsFrame) {
@@ -382,7 +382,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             if (spdyHeadersFrame.isLast()) {
                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
                if (closeHandler != null) {
-                   closeHandler.onSuccess(null);
+                   closeHandler.success(null);
                }
             }
 
@@ -428,7 +428,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
         for (Integer streamId: spdySession.activeStreams().keySet()) {
             CompletionHandler<Void> removeHandler = removeStream(streamId);
             if (removeHandler != null) {
-                removeHandler.onSuccess(null);
+                removeHandler.success(null);
             }
         }
         ctx.fireChannelInactive();
@@ -475,7 +475,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
                 spdyDataFrame.release();
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -532,12 +532,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                 final ChannelHandlerContext context = ctx;
                 handler = handler.andThen(new CompletionHandler<>() {
                     @Override
-                    public void onSuccess(Void result) {
+                    public void success(Void result) {
                         // NOOP.
                     }
 
                     @Override
-                    public void onFailure(Throwable cause) {
+                    public void failure(Throwable cause) {
                         issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 }, ctx.executor());
@@ -547,7 +547,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             if (spdyDataFrame.isLast()) {
                 CompletionHandler<Void> closeHandler = halfCloseStream(streamId, false);
                 if (closeHandler != null) {
-                    closeHandler.onSuccess(null);
+                    closeHandler.success(null);
                 }
             }
 
@@ -557,7 +557,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             int streamId = spdySynStreamFrame.streamId();
 
             if (isRemoteInitiatedId(streamId)) {
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -565,7 +565,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -576,7 +576,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedId(streamId) || spdySession.isLocalSideClosed(streamId)) {
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -602,7 +602,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
             if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
                 // Settings frame had the wrong minor version
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -640,7 +640,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            handler.onFailure(PROTOCOL_EXCEPTION);
+            handler.failure(PROTOCOL_EXCEPTION);
             return;
 
         } else if (msg instanceof SpdyHeadersFrame) {
@@ -650,7 +650,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
-                handler.onFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -665,7 +665,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            handler.onFailure(PROTOCOL_EXCEPTION);
+            handler.failure(PROTOCOL_EXCEPTION);
             return;
         }
 
@@ -832,12 +832,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 handler.andThen(new CompletionHandler<>() {
                     @Override
-                    public void onSuccess(Void result) {
+                    public void success(Void result) {
                         // NOOP
                     }
 
                     @Override
-                    public void onFailure(Throwable cause) {
+                    public void failure(Throwable cause) {
                         issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 }, ctx.executor());
@@ -889,12 +889,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
         }
 
         @Override
-        public void onSuccess(Void result) {
+        public void success(Void result) {
             ctx.close(handler);
         }
 
         @Override
-        public void onFailure(Throwable cause) {
+        public void failure(Throwable cause) {
             ctx.close(handler);
         }
     }

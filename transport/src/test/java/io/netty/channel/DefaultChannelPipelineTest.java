@@ -36,7 +36,6 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -154,7 +153,7 @@ public class DefaultChannelPipelineTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 pending = -1;
-                handler.onSuccess(null);
+                handler.success(null);
             }
         });
         pipeline.channel().write(new Object());
@@ -176,7 +175,7 @@ public class DefaultChannelPipelineTest {
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 // Returning a value that will result in an overflow
                 pending = 2;
-                handler.onSuccess(null);
+                handler.success(null);
             }
         }, new ChannelOutboundHandler() {
             long pending;
@@ -608,26 +607,26 @@ public class DefaultChannelPipelineTest {
             @Override
             public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
                 events.add("bind");
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
                                 CompletionHandler<Void> handler)  {
                 events.add("connect");
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 events.add("close");
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler)  {
                 events.add("deregister");
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -638,7 +637,7 @@ public class DefaultChannelPipelineTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 events.add("write");
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -916,33 +915,33 @@ public class DefaultChannelPipelineTest {
                 @Override
                 public void bind(
                         ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
                 public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                                     SocketAddress localAddress, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
                 public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
                 public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
                 public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
                 public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
             }, new ChannelOutboundHandler() {
 
@@ -952,12 +951,12 @@ public class DefaultChannelPipelineTest {
                 public void handlerAdded(ChannelHandlerContext ctx) {
                     executorHandler = new CompletionHandler<>() {
                         @Override
-                        public void onSuccess(Void result) {
+                        public void success(Void result) {
                             queue.add(ctx.executor().inEventLoop());
                         }
 
                         @Override
-                        public void onFailure(Throwable cause) {
+                        public void failure(Throwable cause) {
                             queue.add(ctx.executor().inEventLoop());
                         }
                     };
@@ -998,27 +997,27 @@ public class DefaultChannelPipelineTest {
             pipeline.channel().register();
 
             Promise<Void> promise = new DefaultPromise<>(executor);
-            pipeline.bind(new SocketAddress() { }, promise.toCompletionHandler());
+            pipeline.bind(new SocketAddress() { }, promise);
             promise.sync();
 
             promise = new DefaultPromise<>(executor);
-            pipeline.connect(new SocketAddress() { }, promise.toCompletionHandler());
+            pipeline.connect(new SocketAddress() { }, promise);
             promise.sync();
 
             promise = new DefaultPromise<>(executor);
-            pipeline.disconnect(promise.toCompletionHandler());
+            pipeline.disconnect(promise);
             promise.sync();
 
             promise = new DefaultPromise<>(executor);
-            pipeline.close(promise.toCompletionHandler());
+            pipeline.close(promise);
             promise.sync();
 
             promise = new DefaultPromise<>(executor);
-            pipeline.deregister(promise.toCompletionHandler());
+            pipeline.deregister(promise);
             promise.sync();
 
             promise = new DefaultPromise<>(executor);
-            pipeline.write("", promise.toCompletionHandler());
+            pipeline.write("", promise);
             promise.sync();
         } finally {
             // Remove the handlers before closing so we don't intercept it.
@@ -1044,7 +1043,7 @@ public class DefaultChannelPipelineTest {
             assertThrows(IllegalArgumentException.class, new Executable() {
                 @Override
                 public void execute() {
-                    pipeline.close(promise.toCompletionHandler());
+                    pipeline.close(promise);
                 }
             });
         } finally {
@@ -1583,32 +1582,32 @@ public class DefaultChannelPipelineTest {
             @Override
             public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
                 executionMask |= MASK_BIND;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                                 SocketAddress localAddress, CompletionHandler<Void> handler) {
                 executionMask |= MASK_CONNECT;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_DISCONNECT;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_CLOSE;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_DEREGISTER;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -1619,7 +1618,7 @@ public class DefaultChannelPipelineTest {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 executionMask |= MASK_WRITE;
-                handler.onSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -1806,9 +1805,9 @@ public class DefaultChannelPipelineTest {
             Promise<Void> promise = channel2.newPromise();
             promise.setSuccess(null);
             if (flush) {
-                channel.writeAndFlush(referenceCounted, promise.toCompletionHandler());
+                channel.writeAndFlush(referenceCounted, promise);
             } else {
-                channel.write(referenceCounted, promise.toCompletionHandler());
+                channel.write(referenceCounted, promise);
             }
             fail();
         } catch (IllegalArgumentException expected) {

@@ -167,7 +167,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         if (currentUpgradeEvent == UpgradeEvent.UPGRADE_ISSUED) {
             // Release message before failing the promise.
             ReferenceCountUtil.release(msg);
-            handler.onFailure(new IllegalStateException(
+            handler.failure(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
             return;
         }

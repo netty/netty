@@ -84,12 +84,12 @@ public class HttpServerKeepAliveHandler implements ChannelInboundHandler, Channe
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
             handler = handler.andThen(new CompletionHandler<>() {
                 @Override
-                public void onSuccess(Void result) {
+                public void success(Void result) {
                     ctx.close();
                 }
 
                 @Override
-                public void onFailure(Throwable cause) {
+                public void failure(Throwable cause) {
                     ctx.close();
                 }
             }, ctx.executor());

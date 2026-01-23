@@ -29,14 +29,14 @@ public interface CompletionHandler<V> {
      *
      * @param result    the value of the result.
      */
-    void onSuccess(@Nullable V result);
+    void success(@Nullable V result);
 
     /**
      * Will be called once an operation completes with an error.
      *
      * @param cause     the error.
      */
-    void onFailure(Throwable cause);
+    void failure(Throwable cause);
 
     /**
      * Returns a composed {@code CompletionHandler} that performs, in sequence, this
@@ -54,27 +54,7 @@ public interface CompletionHandler<V> {
         Objects.requireNonNull(after);
         Objects.requireNonNull(executor);
 
-        return new CompletionHandler<>() {
-            @Override
-            public void onSuccess(V result) {
-                CompletionHandler.this.onSuccess(result);
-                if (executor.inEventLoop()) {
-                    after.onSuccess(result);
-                } else {
-                    executor.execute(() -> after.onSuccess(result));
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable cause) {
-                CompletionHandler.this.onFailure(cause);
-                if (executor.inEventLoop()) {
-                    after.onFailure(cause);
-                } else {
-                    executor.execute(() -> after.onFailure(cause));
-                }
-            }
-        };
+        return executor.<V>newPromise().addHandler(after);
     }
 
     /**

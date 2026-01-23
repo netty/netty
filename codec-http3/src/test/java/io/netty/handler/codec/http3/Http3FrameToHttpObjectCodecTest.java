@@ -63,7 +63,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -793,7 +792,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
         for (CompletionHandler<Void> frameHandler : frameHandlers) {
-            frameHandler.onSuccess(null);
+            frameHandler.success(null);
         }
         if (last) {
             assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));

@@ -1326,17 +1326,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             transport.register(new CompletionHandler<>() {
                 @Override
-                public void onSuccess(Void result) {
+                public void success(Void result) {
                     // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                     // user may already fire events through the pipeline in the FutureListener that the user
                     // attached the the original promise.
                     invokeHandlerAddedIfNeeded();
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
 
                 @Override
-                public void onFailure(Throwable cause) {
-                    handler.onFailure(cause);
+                public void failure(Throwable cause) {
+                    handler.failure(cause);
                 }
             });
         }

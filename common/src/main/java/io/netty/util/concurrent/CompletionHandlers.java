@@ -21,12 +21,12 @@ final class CompletionHandlers {
 
     static final CompletionHandler<?> IGNORE = new CompletionHandler<Void>() {
         @Override
-        public void onSuccess(Void result) {
+        public void success(Void result) {
             // NOOP
         }
 
         @Override
-        public void onFailure(Throwable cause) {
+        public void failure(Throwable cause) {
             // NOOP.
         }
     };

@@ -23,6 +23,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
@@ -35,9 +36,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V>,
-        // Directly implement CompletionHandler to reduce object allocations.
-        CompletionHandler<V> {
+public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     /**
      * System property with integer type value, that determine the max reentrancy/recursion level for when
      * listener notifications prompt other listeners to be notified.
@@ -404,24 +403,28 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V>,
     }
 
     @Override
-    public void onSuccess(V result) {
+    public void success(@Nullable V result) {
         PromiseNotificationUtil.trySuccess(this, result, logger);
     }
 
     @Override
-    public void onFailure(Throwable cause) {
+    public void failure(Throwable cause) {
         PromiseNotificationUtil.tryFailure(this, cause, logger);
-    }
-
-    @Override
-    public CompletionHandler<V> toCompletionHandler() {
-        // Override to reduce object allocations.
-        return this;
     }
 
     @Override
     public String toString() {
         return toStringBuilder().toString();
+    }
+
+    @Override
+    public CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
+        if (executor() == executor) {
+            // Just add the handler and return the same instance to reduce object allocations.
+            addHandler(after);
+            return this;
+        }
+        return Promise.super.andThen(after, executor);
     }
 
     protected StringBuilder toStringBuilder() {
@@ -600,7 +603,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V>,
     private static <V> void notifyHandler0(Future<V> future, CompletionHandler<V> handler) {
         if (future.isSuccess()) {
             try {
-                handler.onSuccess(future.getNow());
+                handler.success(future.getNow());
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onSuccess(...)", t);
@@ -608,7 +611,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V>,
             }
         } else {
             try {
-                handler.onFailure(future.cause());
+                handler.failure(future.cause());
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onFailure(...)", t);

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.util.concurrent.CompletionHandler;
-import io.netty.util.concurrent.Promise;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -352,7 +351,7 @@ final class SpdySession {
 
         void fail(Throwable cause) {
             spdyDataFrame.release();
-            handler.onFailure(cause);
+            handler.failure(cause);
         }
     }
 }

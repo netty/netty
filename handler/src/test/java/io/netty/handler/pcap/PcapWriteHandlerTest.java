@@ -1499,7 +1499,7 @@ public class PcapWriteHandlerTest {
         public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             //Discard
             ReferenceCountUtil.release(msg);
-            handler.onSuccess(null);
+            handler.success(null);
         }
     }
 

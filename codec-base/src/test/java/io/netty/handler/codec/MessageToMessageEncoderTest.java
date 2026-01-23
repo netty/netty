@@ -71,7 +71,7 @@ public class MessageToMessageEncoderTest {
                     ctx.write(msg, handler);
                 } else {
                     firstWritten = true;
-                    handler.onFailure(firstWriteException);
+                    handler.failure(firstWriteException);
                 }
             }
         };

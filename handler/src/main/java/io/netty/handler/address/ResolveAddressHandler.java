@@ -51,7 +51,7 @@ public class ResolveAddressHandler implements ChannelOutboundHandler {
             resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {
                 Throwable cause = future.cause();
                 if (cause != null) {
-                    handler.onFailure(cause);
+                    handler.failure(cause);
                 } else {
                     ctx.connect(future.getNow(), localAddress, handler);
                 }

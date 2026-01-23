@@ -510,7 +510,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // https://github.com/netty/netty/issues/5307
         Promise<Void> p = ctx.newPromise();
         if (connection().goAwaySent()) {
-            ctx.write(EMPTY_BUFFER, p.toCompletionHandler());
+            ctx.write(EMPTY_BUFFER, p);
         } else {
             goAway(ctx, null, p);
         }

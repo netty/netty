@@ -826,7 +826,7 @@ public class LocalChannelTest {
                 }
             });
             // Connect to the server
-            cc.connect(sc.localAddress(), promise.toCompletionHandler());
+            cc.connect(sc.localAddress(), promise);
             promise.sync();
 
             assertPromise.syncUninterruptibly();

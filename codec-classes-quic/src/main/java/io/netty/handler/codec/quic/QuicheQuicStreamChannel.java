@@ -36,7 +36,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -348,7 +347,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void connect(SocketAddress remote, SocketAddress local, CompletionHandler<Void> handler) {
             assert executor().inEventLoop();
-            handler.onFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         @SuppressWarnings("deprecation")
@@ -362,7 +361,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
             if (type.data() != null && !(type.data() instanceof Integer)) {
-                handler.onFailure(new IllegalArgumentException(
+                handler.failure(new IllegalArgumentException(
                         "ChannelShutdownType with data if non integer type is allowed: " + type));
                 return;
             }
@@ -378,34 +377,34 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     write = false;
                     break;
                 default:
-                    handler.onFailure(new UnsupportedOperationException());
+                    handler.failure(new UnsupportedOperationException());
                     return;
             }
 
             if (write) {
                 if (outputShutdown) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                     return;
                 }
                 ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, new CompletionHandler<>() {
                     @Override
-                    public void onSuccess(Void result) {
+                    public void success(Void result) {
                         if (type.data() == null) {
-                            handler.onSuccess(null);
+                            handler.success(null);
                         } else {
                             shutdown0(read, write, (Integer) type.data(), handler);
                         }
                     }
 
                     @Override
-                    public void onFailure(Throwable cause) {
-                        handler.onFailure(cause);
+                    public void failure(Throwable cause) {
+                        handler.failure(cause);
                     }
                 });
                 ioTransport.flush();
             } else {
                 if (inputShutdown) {
-                    handler.onSuccess(null);
+                    handler.success(null);
                     return;
                 }
                 int error;
@@ -429,9 +428,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     if (read) {
                         inputShutdown = true;
                     }
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
-                    handler.onFailure(f.cause());
+                    handler.failure(f.cause());
                 }
                 closeIfDone();
             }));
@@ -440,11 +439,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void register(CompletionHandler<Void> handler) {
             if (registered) {
-                handler.onFailure(new IllegalStateException());
+                handler.failure(new IllegalStateException());
                 return;
             }
             registered = true;
-            handler.onSuccess(null);
+            handler.success(null);
             pipeline.fireChannelRegistered();
             pipeline.fireChannelActive();
         }
@@ -452,7 +451,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
             assert executor().inEventLoop();
-            handler.onFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         @Override
@@ -487,7 +486,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     queue.removeAndFailAll(writeFailCause);
                 }
 
-                handler.onSuccess(null);
+                handler.success(null);
                 closePromise.trySuccess(null);
                 if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
                     inputShutdown = true;
@@ -509,7 +508,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         private void deregister(final CompletionHandler<Void> handler, final boolean fireChannelInactive) {
             assert executor().inEventLoop();
             if (!registered) {
-                handler.onSuccess(null);
+                handler.success(null);
                 return;
             }
 
@@ -534,7 +533,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     registered = false;
                     pipeline.fireChannelUnregistered();
                 }
-                handler.onSuccess(null);
+                handler.success(null);
             });
         }
 
@@ -608,7 +607,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     try {
                         int res = write0(msg);
                         if (res == 1) {
-                            queue.remove().onSuccess(null);
+                            queue.remove().success(null);
                             written = true;
                         } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                             break;
@@ -620,10 +619,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                                     new ChannelOutputShutdownException("STOP_SENDING frame received"));
                             break;
                         } else {
-                            queue.remove().onFailure(Quiche.convertToException(res));
+                            queue.remove().failure(Quiche.convertToException(res));
                         }
                     } catch (Exception e) {
-                        queue.remove().onFailure(e);
+                        queue.remove().failure(e);
                     }
                 }
                 if (written) {
@@ -653,7 +652,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     msg = filterMsg(msg);
                 } catch (UnsupportedOperationException e) {
                     ReferenceCountUtil.release(msg);
-                    handler.onFailure(e);
+                    handler.failure(e);
                     return;
                 }
 
@@ -714,7 +713,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 msg = filterMsg(msg);
             } catch (UnsupportedOperationException e) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(e);
+                handler.failure(e);
                 return;
             }
 
@@ -724,7 +723,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 int res = write0(msg);
                 if (res > 0) {
                     ReferenceCountUtil.release(msg);
-                    handler.onSuccess(null);
+                    handler.success(null);
                     mayNeedWritabilityUpdate = capacity == 0;
                 } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                     // Touch the message to make things easier in terms of debugging buffer leaks.
@@ -738,7 +737,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 }
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
-                handler.onFailure(e);
+                handler.failure(e);
                 mayNeedWritabilityUpdate = capacity == 0;
             } finally {
                 if (mayNeedWritabilityUpdate) {

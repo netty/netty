@@ -96,7 +96,7 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public Future<Void> writeWebSocketFrame() throws Exception {
         Promise<Void> promise = newPromise();
-        websocketEncoder.write(context, webSocketFrame, promise.toCompletionHandler());
+        websocketEncoder.write(context, webSocketFrame, promise);
         return promise;
     }
 

@@ -462,7 +462,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 if (dropPackets.get()) {
                     ReferenceCountUtil.release(msg);
-                    handler.onSuccess(null);
+                    handler.success(null);
                 } else {
                     ctx.write(msg, handler);
                 }
@@ -538,7 +538,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
                                 CompletionHandler<Void> handler) {
-                handler.onFailure(exception);
+                handler.failure(exception);
             }
         });
         try {

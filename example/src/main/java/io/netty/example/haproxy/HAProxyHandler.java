@@ -34,13 +34,13 @@ public class HAProxyHandler implements ChannelOutboundHandler {
         if (msg instanceof HAProxyMessage) {
             handler = handler.andThen(new CompletionHandler<>() {
                 @Override
-                public void onSuccess(Void result) {
+                public void success(Void result) {
                     ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     ctx.pipeline().remove(HAProxyHandler.this);
                 }
 
                 @Override
-                public void onFailure(Throwable cause) {
+                public void failure(Throwable cause) {
                     ctx.close();
                 }
             }, ctx.executor());

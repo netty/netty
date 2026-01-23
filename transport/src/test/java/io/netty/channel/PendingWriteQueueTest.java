@@ -151,10 +151,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         promise.addListener(future -> queue.removeAndFailAll(new IllegalStateException()));
-        queue.add(1L, promise.toCompletionHandler());
+        queue.add(1L, promise);
 
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2.toCompletionHandler());
+        queue.add(2L, promise2);
         queue.removeAndFailAll(new Exception());
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
@@ -177,10 +177,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         final Promise<Void> promise3 = channel.newPromise();
-        promise.addListener(future -> queue.add(3L, promise3.toCompletionHandler()));
-        queue.add(1L, promise.toCompletionHandler());
+        promise.addListener(future -> queue.add(3L, promise3));
+        queue.add(1L, promise);
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2.toCompletionHandler());
+        queue.add(2L, promise2);
         queue.removeAndTransferAll(channel::write);
 
         assertTrue(promise.isDone());
@@ -206,13 +206,13 @@ public class PendingWriteQueueTest {
         promise3.addListener(future -> failOrder.add(3));
         promise.addListener(future -> {
             failOrder.add(1);
-            queue.add(3L, promise3.toCompletionHandler());
+            queue.add(3L, promise3);
         });
-        queue.add(1L, promise.toCompletionHandler());
+        queue.add(1L, promise);
 
         Promise<Void> promise2 = channel.newPromise();
         promise2.addListener(future -> failOrder.add(2));
-        queue.add(2L, promise2.toCompletionHandler());
+        queue.add(2L, promise2);
         queue.removeAndFailAll(new Exception());
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
@@ -233,10 +233,10 @@ public class PendingWriteQueueTest {
 
         Promise<Void> promise = channel.newPromise();
         promise.addListener(future -> queue.removeAndTransferAll(channel::write));
-        queue.add(1L, promise.toCompletionHandler());
+        queue.add(1L, promise);
 
         Promise<Void> promise2 = channel.newPromise();
-        queue.add(2L, promise2.toCompletionHandler());
+        queue.add(2L, promise2);
         queue.removeAndTransferAll(channel::write);
         channel.flush();
         assertTrue(promise.isSuccess());
@@ -260,7 +260,7 @@ public class PendingWriteQueueTest {
 
         IllegalStateException ex = new IllegalStateException();
         Promise<Void> promise = channel.newPromise();
-        queue.add(1L, promise.toCompletionHandler());
+        queue.add(1L, promise);
         queue.removeAndFailAll(ex);
         assertSame(ex, promise.cause());
     }

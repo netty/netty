@@ -735,10 +735,10 @@ public class Http2ConnectionRoundtripTest {
                         try {
                             http2Client.encoder().flowController().initialWindowSize(8);
                         } catch (Http2Exception e) {
-                            handler.onFailure(e);
+                            handler.failure(e);
                             return;
                         }
-                        handler.onFailure(new IllegalStateException());
+                        handler.failure(new IllegalStateException());
                     }
                 });
 

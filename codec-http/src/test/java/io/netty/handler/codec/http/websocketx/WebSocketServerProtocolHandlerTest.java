@@ -494,7 +494,7 @@ public class WebSocketServerProtocolHandlerTest {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             responses.add((FullHttpResponse) msg);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         @Override

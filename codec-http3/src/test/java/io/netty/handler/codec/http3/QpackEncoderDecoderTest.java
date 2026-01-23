@@ -532,20 +532,20 @@ public class QpackEncoderDecoderTest {
                         try {
                             other.channelRead(ctx, msg);
                         } catch (Exception e) {
-                            handler.onFailure(e);
+                            handler.failure(e);
                             return null;
                         }
-                        handler.onSuccess(null);
+                        handler.success(null);
                         return null;
                     });
                 } else {
                     try {
                         other.channelRead(ctx, msg);
                     } catch (Exception e) {
-                        handler.onFailure(e);
+                        handler.failure(e);
                         return;
                     }
-                    handler.onSuccess(null);
+                    handler.success(null);
                 }
             } else {
                 ctx.write(msg, handler);

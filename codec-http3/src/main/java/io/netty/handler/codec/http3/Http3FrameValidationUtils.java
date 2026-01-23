@@ -18,7 +18,6 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,7 +79,7 @@ final class Http3FrameValidationUtils {
     static void frameTypeUnexpected(CompletionHandler<Void> handler, Object frame) {
         String type = StringUtil.simpleClassName(frame);
         ReferenceCountUtil.release(frame);
-        handler.onFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+        handler.failure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                 "Frame of type " + type + " unexpected"));
     }
 

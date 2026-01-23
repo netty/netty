@@ -215,7 +215,7 @@ public class EmbeddedChannelTest {
             @Override
             public Future<Void> doRun(Channel channel) {
                 Promise<Void> promise = channel.newPromise();
-                channel.close(promise.toCompletionHandler());
+                channel.close(promise);
                 return promise;
             }
         });
@@ -235,7 +235,7 @@ public class EmbeddedChannelTest {
             @Override
             public Future<Void> doRun(Channel channel) {
                 Promise<Void> promise = channel.newPromise();
-                channel.disconnect(promise.toCompletionHandler());
+                channel.disconnect(promise);
                 return promise;
             }
         });
@@ -296,7 +296,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelOutboundHandler() {
             @Override
             public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
-                handler.onFailure(new Throwable());
+                handler.failure(new Throwable());
             }
         });
         assertFalse(channel.disconnect().isSuccess());
@@ -839,13 +839,13 @@ public class EmbeddedChannelTest {
         @Override
         public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(DISCONNECT);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         @Override
         public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(CLOSE);
-            handler.onSuccess(null);
+            handler.success(null);
         }
 
         Integer pollEvent() {

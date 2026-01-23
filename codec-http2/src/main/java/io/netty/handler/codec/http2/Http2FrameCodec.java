@@ -314,9 +314,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 } else {
                     consumeBytes(frameStream.id(), frame.windowSizeIncrement());
                 }
-                handler.onSuccess(null);
+                handler.success(null);
             } catch (Throwable t) {
-                handler.onFailure(t);
+                handler.failure(t);
             }
         } else if (msg instanceof Http2ResetFrame) {
             Http2ResetFrame rstFrame = (Http2ResetFrame) msg;
@@ -328,7 +328,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                         ctx.<Void>newPromise().addHandler(handler));
             } else {
                 ReferenceCountUtil.release(rstFrame);
-                handler.onFailure(Http2Exception.streamError(
+                handler.failure(Http2Exception.streamError(
                         rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream never existed"));
             }
         } else if (msg instanceof Http2PingFrame) {

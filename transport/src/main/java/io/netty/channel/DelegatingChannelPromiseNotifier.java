@@ -188,4 +188,14 @@ public final class DelegatingChannelPromiseNotifier implements Promise<Void>, Fu
     public EventExecutor executor() {
         return delegate.executor();
     }
+
+    @Override
+    public void success(Void result) {
+        delegate.success(result);
+    }
+
+    @Override
+    public void failure(Throwable cause) {
+        delegate.failure(cause);
+    }
 }

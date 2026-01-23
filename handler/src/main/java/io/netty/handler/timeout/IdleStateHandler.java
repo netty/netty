@@ -123,13 +123,13 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     // Not create a new FutureListener per write operation to reduce GC pressure.
     private final CompletionHandler<Void> writeHandler = new CompletionHandler<>() {
         @Override
-        public void onSuccess(Void result) {
+        public void success(Void result) {
             lastWriteTime = ticker.nanoTime();
             firstWriterIdleEvent = firstAllIdleEvent = true;
         }
 
         @Override
-        public void onFailure(Throwable cause) {
+        public void failure(Throwable cause) {
             lastWriteTime = ticker.nanoTime();
             firstWriterIdleEvent = firstAllIdleEvent = true;
         }

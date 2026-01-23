@@ -38,7 +38,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> write(Object msg) {
         Promise<Void> promise = newPromise();
-        write(msg, promise.toCompletionHandler());
+        write(msg, promise);
         return promise;
     }
 
@@ -47,12 +47,12 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                handler.onSuccess(null);
+                handler.success(null);
             } else {
                 channel().write(msg, handler);
             }
         } catch (Exception e) {
-            handler.onFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
@@ -62,12 +62,12 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.onSuccess(null);
+                promise.success(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
         } catch (Exception e) {
-            promise.onFailure(e);
+            promise.failure(e);
             handleException(e);
         }
     }
@@ -75,7 +75,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
         Promise<Void> promise = newPromise();
-        writeAndFlush(msg, promise.toCompletionHandler());
+        writeAndFlush(msg, promise);
         return promise;
     }
 }

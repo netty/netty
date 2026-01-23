@@ -310,7 +310,7 @@ final class Http2FrameInboundWriter {
         @Override
         public Future<Void> write(Object msg) {
             Promise<Void> promise = newPromise();
-            write(msg, promise.toCompletionHandler());
+            write(msg, promise);
             return promise;
         }
 
@@ -324,16 +324,16 @@ final class Http2FrameInboundWriter {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
-                promise.onSuccess(null);
+                promise.success(null);
             } catch (Throwable cause) {
-                promise.onFailure(cause);
+                promise.failure(cause);
             }
         }
 
         @Override
         public Future<Void> writeAndFlush(Object msg) {
             Promise<Void> promise = newPromise();
-            writeAndFlush(msg, promise.toCompletionHandler());
+            writeAndFlush(msg, promise);
             return promise;
         }
 

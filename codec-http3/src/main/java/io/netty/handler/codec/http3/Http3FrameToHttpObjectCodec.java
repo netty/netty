@@ -225,7 +225,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             Promise<Void> outerPromise,
             @Nullable PromiseCombiner combiner) {
         if (combiner == null) {
-            ctx.write(msg, outerPromise.toCompletionHandler());
+            ctx.write(msg, outerPromise);
         } else {
             combiner.add(ctx.write(msg));
         }
