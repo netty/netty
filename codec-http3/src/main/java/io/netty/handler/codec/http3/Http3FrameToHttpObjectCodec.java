@@ -161,7 +161,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
         // we will unvoid.
         boolean isLast = msg instanceof LastHttpContent;
 
-        Promise<Void> promise = ctx.<Void>newPromise().addHandler(handler);
+        Promise<Void> promise = handler.toPromise(ctx.executor());
         if (msg instanceof HttpMessage) {
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
             DefaultHttp3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);

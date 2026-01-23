@@ -174,7 +174,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     public void close(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler) {
         Promise<Void> p = ctx.newPromise();
         finishEncode(ctx, p);
-        EncoderUtil.closeAfterFinishEncode(ctx, p, ctx.<Void>newPromise().addHandler(handler));
+        EncoderUtil.closeAfterFinishEncode(ctx, p, handler.toPromise(ctx.executor()));
     }
 
     /**

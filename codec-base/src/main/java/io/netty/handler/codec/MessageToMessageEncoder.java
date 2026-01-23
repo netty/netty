@@ -127,7 +127,7 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.getUnsafe(i)));
         }
-        combiner.finish(ctx.<Void>newPromise().addHandler(handler));
+        combiner.finish(handler.toPromise(ctx.executor()));
     }
 
     /**

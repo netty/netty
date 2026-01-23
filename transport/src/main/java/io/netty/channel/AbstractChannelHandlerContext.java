@@ -378,16 +378,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * ensure that there are not issues even if fields etc that are stored in the handler are modified by the listener.
      */
     private CompletionHandler<Void> ensureCompletionHandlerUseCorrectExecutor(CompletionHandler<Void> handler) {
-        if  (handler instanceof Promise<?>) {
-            Promise<Void> p = (Promise<Void>) handler;
-            if (!p.executor().inEventLoop()) {
-                Promise<Void> newPromise = newPromise();
-                newPromise.addHandler(handler);
-                return newPromise;
-            }
-        }
-
-        return handler;
+        return handler.toPromise(executor());
     }
 
     @Override

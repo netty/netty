@@ -202,7 +202,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     public void close(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler) {
         Promise<Void> p = ctx().newPromise();
         finishEncode(ctx, p);
-        EncoderUtil.closeAfterFinishEncode(ctx, p, ctx.<Void>newPromise().addHandler(handler));
+        EncoderUtil.closeAfterFinishEncode(ctx, p, handler.toPromise(ctx.executor()));
     }
 
     private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {

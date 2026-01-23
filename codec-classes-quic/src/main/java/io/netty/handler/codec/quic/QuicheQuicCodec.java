@@ -311,7 +311,7 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
             QuicheQuicChannel channel = addr.channel;
             connectQuicChannel(channel, remoteAddress, localAddress,
                     senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config,
-                    ctx.<Void>newPromise().addHandler(handler));
+                    handler.toPromise(ctx.executor()));
         } else {
             ctx.connect(remoteAddress, localAddress, handler);
         }

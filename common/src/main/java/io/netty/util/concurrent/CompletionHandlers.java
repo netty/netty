@@ -29,5 +29,11 @@ final class CompletionHandlers {
         public void failure(Throwable cause) {
             // NOOP.
         }
+
+        @Override
+        public Promise<Void> toPromise(EventExecutor executor) {
+            // Just return a new instance and not call addHandler as we ignore the notification anyway.
+            return executor.newPromise();
+        }
     };
 }

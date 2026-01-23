@@ -211,6 +211,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     public Promise<V> addHandler(CompletionHandler<? super V> handler) {
         checkNotNull(handler, "handler");
 
+        if (handler == CompletionHandlers.IGNORE) {
+            // Just return directly as the handler is a NOOP.
+            return this;
+        }
+
         synchronized (this) {
             addListenerOrHandler0(handler);
         }

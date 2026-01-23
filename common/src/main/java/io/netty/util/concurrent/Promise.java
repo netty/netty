@@ -83,4 +83,13 @@ public interface Promise<V> extends Future<V>, CompletionHandler<V> {
         }
         return CompletionHandler.super.andThen(after, executor);
     }
+
+    @Override
+    default Promise<V> toPromise(EventExecutor executor) {
+        if (executor() == executor) {
+            // Just return itself.
+            return this;
+        }
+        return CompletionHandler.super.toPromise(executor);
+    }
 }

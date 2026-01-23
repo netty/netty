@@ -767,7 +767,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             handler.failure(newPendingWritesNullException());
         } else {
             // TODO: Direclty handle CompletionHandler
-            pendingUnencryptedWrites.add((ByteBuf) msg, ctx.<Void>newPromise().addHandler(handler));
+            pendingUnencryptedWrites.add((ByteBuf) msg, handler.toPromise(ctx.executor()));
         }
     }
 
@@ -2101,7 +2101,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // because of a propagated Exception.
                 //
                 // See https://github.com/netty/netty/issues/5931
-                safeClose(ctx, closeNotifyPromise, ctx.<Void>newPromise().addHandler(handler));
+                safeClose(ctx, closeNotifyPromise, handler.toPromise(ctx.executor()));
             } else {
                 /// We already handling the close_notify so just attach the promise to the sslClosePromise.
                 sslClosePromise.addListener(f -> handler.success(null));

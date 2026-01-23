@@ -139,7 +139,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.get(i)));
         }
-        combiner.finish(ctx.<Void>newPromise().addHandler(handler));
+        combiner.finish(handler.toPromise(ctx.executor()));
     }
 
     @Override

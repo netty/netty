@@ -300,9 +300,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         if (msg instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) msg;
             encoder().writeData(ctx, dataFrame.stream().id(), dataFrame.content(),
-                    dataFrame.padding(), dataFrame.isEndStream(), ctx.<Void>newPromise().addHandler(handler));
+                    dataFrame.padding(), dataFrame.isEndStream(), handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2HeadersFrame) {
-            writeHeadersFrame(ctx, (Http2HeadersFrame) msg, ctx.<Void>newPromise().addHandler(handler));
+            writeHeadersFrame(ctx, (Http2HeadersFrame) msg, handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2WindowUpdateFrame) {
             Http2WindowUpdateFrame frame = (Http2WindowUpdateFrame) msg;
             Http2FrameStream frameStream = frame.stream();
@@ -325,7 +325,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // stream in an invalid state and cause a connection error.
             if (connection().streamMayHaveExisted(id)) {
                 encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(),
-                        ctx.<Void>newPromise().addHandler(handler));
+                        handler.toPromise(ctx.executor()));
             } else {
                 ReferenceCountUtil.release(rstFrame);
                 handler.failure(Http2Exception.streamError(
@@ -333,27 +333,27 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             }
         } else if (msg instanceof Http2PingFrame) {
             Http2PingFrame frame = (Http2PingFrame) msg;
-            encoder().writePing(ctx, frame.ack(), frame.content(), ctx.<Void>newPromise().addHandler(handler));
+            encoder().writePing(ctx, frame.ack(), frame.content(), handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2SettingsFrame) {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(),
-                    ctx.<Void>newPromise().addHandler(handler));
+                    handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2SettingsAckFrame) {
             // In the event of manual SETTINGS ACK, it is assumed the encoder will apply the earliest received but not
             // yet ACKed settings.
-            encoder().writeSettingsAck(ctx, ctx.<Void>newPromise().addHandler(handler));
+            encoder().writeSettingsAck(ctx, handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2GoAwayFrame) {
-            writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, ctx.<Void>newPromise().addHandler(handler));
+            writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2PushPromiseFrame) {
             Http2PushPromiseFrame pushPromiseFrame = (Http2PushPromiseFrame) msg;
-            writePushPromise(ctx, pushPromiseFrame, ctx.<Void>newPromise().addHandler(handler));
+            writePushPromise(ctx, pushPromiseFrame, handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2PriorityFrame) {
             Http2PriorityFrame priorityFrame = (Http2PriorityFrame) msg;
             encoder().writePriority(ctx, priorityFrame.stream().id(), priorityFrame.streamDependency(),
-                    priorityFrame.weight(), priorityFrame.exclusive(), ctx.<Void>newPromise().addHandler(handler));
+                    priorityFrame.weight(), priorityFrame.exclusive(), handler.toPromise(ctx.executor()));
         } else if (msg instanceof Http2UnknownFrame) {
             Http2UnknownFrame unknownFrame = (Http2UnknownFrame) msg;
             encoder().writeFrame(ctx, unknownFrame.frameType(), unknownFrame.stream().id(),
-                    unknownFrame.flags(), unknownFrame.content(), ctx.<Void>newPromise().addHandler(handler));
+                    unknownFrame.flags(), unknownFrame.content(), handler.toPromise(ctx.executor()));
         } else if (!(msg instanceof Http2Frame)) {
             ctx.write(msg, handler);
         } else {

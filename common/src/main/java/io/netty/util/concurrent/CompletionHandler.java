@@ -53,8 +53,17 @@ public interface CompletionHandler<V> {
     default CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
         Objects.requireNonNull(after);
         Objects.requireNonNull(executor);
+        return toPromise(executor).addHandler(after);
+    }
 
-        return executor.<V>newPromise().addHandler(after);
+    /**
+     * Returns a {@link Promise} which will notify this {@link CompletionHandler} once completed.
+     *
+     * @param executor  the {@link EventExecutor} that will be used to create the {@link Promise}.
+     * @return          a promise.
+     */
+    default Promise<V> toPromise(EventExecutor executor) {
+        return executor.<V>newPromise().addHandler(this);
     }
 
     /**

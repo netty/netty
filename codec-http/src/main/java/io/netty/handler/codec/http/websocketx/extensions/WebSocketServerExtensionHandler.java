@@ -205,7 +205,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
-            Promise<Void> promise = ctx.<Void>newPromise().addHandler(handler);
+            Promise<Void> promise = handler.toPromise(ctx.executor());
             handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
             ctx.write(response, promise);
         } else {

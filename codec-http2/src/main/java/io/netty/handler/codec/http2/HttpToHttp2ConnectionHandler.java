@@ -93,7 +93,7 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
         boolean release = true;
         SimpleChannelPromiseAggregator promiseAggregator = new SimpleChannelPromiseAggregator(
-                        ctx.<Void>newPromise().addHandler(handler), ctx.channel(), ctx.executor());
+                handler.toPromise(ctx.executor()), ctx.channel(), ctx.executor());
         try {
             Http2ConnectionEncoder encoder = encoder();
             boolean endStream = false;

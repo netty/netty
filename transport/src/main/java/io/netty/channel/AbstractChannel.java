@@ -599,8 +599,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             boolean wasActive = isActive();
             // TODO: Just use the handler directly ?
-            connectPromise = newPromise();
-            connectPromise.addHandler(handler);
+            connectPromise = handler.toPromise(executor());
 
             Promise<Void> p = newPromise();
             p.addListener(f -> {

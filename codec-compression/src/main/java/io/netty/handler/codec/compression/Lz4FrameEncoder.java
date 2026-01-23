@@ -370,7 +370,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         Promise<Void> p = ctx.newPromise();
         finishEncode(ctx, p);
 
-        EncoderUtil.closeAfterFinishEncode(ctx, p, ctx.<Void>newPromise().addHandler(handler));
+        EncoderUtil.closeAfterFinishEncode(ctx, p, handler.toPromise(ctx.executor()));
     }
 
     private ChannelHandlerContext ctx() {
