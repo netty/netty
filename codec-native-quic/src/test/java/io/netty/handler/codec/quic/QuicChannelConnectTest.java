@@ -1543,6 +1543,78 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
+    public void testSniWithClientAuth(Executor executor) throws Throwable {
+        String hostname = "quic.netty.io";
+
+        QuicSslContext sniServerSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .clientAuth(ClientAuth.REQUIRE)
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
+
+        QuicSslContext serverSslContext = QuicSslContextBuilder.forServer(
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .sni(new DomainWildcardMappingBuilder<>(sniServerSslContext)
+                        .add(hostname, sniServerSslContext).build())
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
+
+        CountDownLatch sniEventLatch = new CountDownLatch(1);
+        CountDownLatch sslEventLatch = new CountDownLatch(1);
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof SniCompletionEvent) {
+                            if (hostname.equals(((SniCompletionEvent) evt).hostname())) {
+                                sniEventLatch.countDown();
+                            }
+                        } else if (evt instanceof SslHandshakeCompletionEvent) {
+                            if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
+                                sslEventLatch.countDown();
+                            }
+                        }
+                        super.userEventTriggered(ctx, evt);
+                    }
+                },
+                new ChannelInboundHandlerAdapter());
+
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+
+        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .keyManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
+                .sslEngineProvider(c -> clientSslContext.newEngine(c.alloc(), hostname, 8080)));
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+            clientQuicChannelHandler.assertState();
+            sniEventLatch.await();
+            sslEventLatch.await();
+        } finally {
+            server.close().sync();
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
     public void testConnectKeyless(Executor executor) throws Throwable {
         testConnectKeyless0(executor, false);
     }
