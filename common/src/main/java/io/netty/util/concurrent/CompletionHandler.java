@@ -73,7 +73,6 @@ public interface CompletionHandler<V> {
      * @return          handler.
      */
     default CompletionHandler<V> onExecutor(EventExecutor executor) {
-        Objects.requireNonNull(executor);
         return CompletionHandlers.onExecutor(this, executor);
     }
 

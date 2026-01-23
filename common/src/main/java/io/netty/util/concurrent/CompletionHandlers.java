@@ -26,6 +26,8 @@ final class CompletionHandlers {
     static final CompletionHandler<?> IGNORE = new WrappingCompletionHandler<>(null, null);
 
     static <V> CompletionHandler<V> onExecutor(CompletionHandler<V> handler, EventExecutor executor) {
+        Objects.requireNonNull(handler, "handler");
+        Objects.requireNonNull(executor, "executor");
         return new WrappingCompletionHandler<>(handler, executor);
     }
 
