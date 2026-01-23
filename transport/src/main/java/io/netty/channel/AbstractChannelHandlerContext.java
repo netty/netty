@@ -378,7 +378,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
      * ensure that there are not issues even if fields etc that are stored in the handler are modified by the listener.
      */
     private CompletionHandler<Void> ensureCompletionHandlerUseCorrectExecutor(CompletionHandler<Void> handler) {
-        return handler.toPromise(executor());
+        return handler.onExecutor(executor());
     }
 
     @Override
