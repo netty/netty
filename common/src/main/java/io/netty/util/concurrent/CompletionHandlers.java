@@ -68,8 +68,11 @@ final class CompletionHandlers {
 
         @Override
         public Promise<V> toPromise(EventExecutor executor) {
-            // Just return a new instance and not call addHandler as we ignore the notification anyway.
-            return executor.newPromise();
+            if (wrapped == null) {
+                // Just return a new instance and not call addHandler as we ignore the notification anyway.
+                return executor.newPromise();
+            }
+            return CompletionHandler.super.toPromise(executor);
         }
 
         @Override
