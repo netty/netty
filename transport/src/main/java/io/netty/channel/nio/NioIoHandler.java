@@ -149,23 +149,23 @@ public final class NioIoHandler implements IoHandler {
             return new SelectorTuple(unwrappedSelector);
         }
 
-        Class<?> selectorImplClass;
+        final Class<?> selectorImplClass;
         try {
-            selectorImplClass = Class.forName(
+            Class<?> cls = Class.forName(
                     "sun.nio.ch.SelectorImpl",
                     false,
                     PlatformDependent.getSystemClassLoader());
-            // ensure the current selector implementation is what we can instrument.
-            if (!selectorImplClass.isAssignableFrom(unwrappedSelector.getClass())) {
+            if (!cls.isAssignableFrom(unwrappedSelector.getClass())) {
+                // ensure the current selector implementation is what we can instrument.
                 return new SelectorTuple(unwrappedSelector);
             }
+            selectorImplClass = cls;
         } catch (Throwable cause) {
             logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, cause);
             return new SelectorTuple(unwrappedSelector);
         }
 
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
-
         try {
             Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
             Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
@@ -182,24 +182,24 @@ public final class NioIoHandler implements IoHandler {
                             unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
                     PlatformDependent.putObject(
                             unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
-                    return null;
                 }
                 // We could not retrieve the offset, lets try reflection as last-resort.
             }
 
             Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
-            if (cause == null) {
-                cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
+            if (cause != null) {
+                throw cause;
             }
+            cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
             if (cause != null) {
                 throw cause;
             }
 
             selectedKeysField.set(unwrappedSelector, selectedKeySet);
             publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
-        } catch (Throwable e) {
+        } catch (Throwable throwable) {
             selectedKeys = null;
-            logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, e);
+            logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, throwable);
             return new SelectorTuple(unwrappedSelector);
         }
 
