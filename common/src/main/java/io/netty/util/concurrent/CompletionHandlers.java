@@ -46,5 +46,11 @@ final class CompletionHandlers {
             }
             return CompletionHandler.super.andThen(after, executor);
         }
+
+        @Override
+        public CompletionHandler<Void> onExecutor(EventExecutor executor) {
+            Objects.requireNonNull(executor, "executor");
+            return this;
+        }
     };
 }
