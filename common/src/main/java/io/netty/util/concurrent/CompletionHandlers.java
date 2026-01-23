@@ -86,6 +86,10 @@ final class CompletionHandlers {
                 Objects.requireNonNull(executor, "executor");
                 return this;
             }
+            if (executor == this.executor) {
+                // It uses the same executor so just turne itself.
+                return this;
+            }
             return CompletionHandler.super.onExecutor(executor);
         }
     }
