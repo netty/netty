@@ -417,16 +417,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return toStringBuilder().toString();
     }
 
-    @Override
-    public CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
-        if (executor() == executor) {
-            // Just add the handler and return the same instance to reduce object allocations.
-            addHandler(after);
-            return this;
-        }
-        return Promise.super.andThen(after, executor);
-    }
-
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = new StringBuilder(64)
                 .append(StringUtil.simpleClassName(this))

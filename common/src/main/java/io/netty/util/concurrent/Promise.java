@@ -73,4 +73,14 @@ public interface Promise<V> extends Future<V>, CompletionHandler<V> {
 
     @Override
     Promise<V> syncUninterruptibly();
+
+    @Override
+    default CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
+        if (executor() == executor) {
+            // Just add the handler and return the same instance to reduce object allocations.
+            addHandler(after);
+            return this;
+        }
+        return CompletionHandler.super.andThen(after, executor);
+    }
 }
