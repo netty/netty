@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -291,21 +290,13 @@ public class Http2ConnectionRoundtripTest {
             @Override
             public void run() throws Http2Exception {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
-                        .addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        clientHeadersWriteException.set(future.cause());
-                    }
-                });
+                        .addListener(future -> clientHeadersWriteException.set(future.cause()));
                 // It is expected that this write should fail locally and the remote peer will never see this.
                 http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
-                    .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            clientDataWriteException.set(future.cause());
-                            clientDataWrite.countDown();
-                        }
-                });
+                    .addListener(future -> {
+                        clientDataWriteException.set(future.cause());
+                        clientDataWrite.countDown();
+                    });
                 http2Client.flush(ctx());
             }
         });
@@ -333,13 +324,10 @@ public class Http2ConnectionRoundtripTest {
             @Override
             public void run() throws Http2Exception {
                 http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
-                        newPromise()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        clientHeadersWriteException2.set(future.cause());
-                        clientHeadersLatch.countDown();
-                    }
-                });
+                        newPromise()).addListener(future -> {
+                            clientHeadersWriteException2.set(future.cause());
+                            clientHeadersLatch.countDown();
+                        });
                 http2Client.flush(ctx());
             }
         });
@@ -557,12 +545,9 @@ public class Http2ConnectionRoundtripTest {
             @Override
             public void run() throws Http2Exception {
                 http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
-                        .addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                serverWriteHeadersCauseRef.set(future.cause());
-                                serverWriteHeadersLatch.countDown();
-                            }
+                        .addListener(future -> {
+                            serverWriteHeadersCauseRef.set(future.cause());
+                            serverWriteHeadersLatch.countDown();
                         });
                 http2Server.flush(serverCtx());
             }
@@ -587,12 +572,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                closeLatch.countDown();
-            }
-        });
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -633,12 +613,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                closeLatch.countDown();
-            }
-        });
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         runInChannel(clientChannel, new Http2Runnable() {
@@ -792,12 +767,7 @@ public class Http2ConnectionRoundtripTest {
 
         // Create a latch to track when the close occurs.
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        clientChannel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                closeLatch.countDown();
-            }
-        });
+        clientChannel.closeFuture().addListener(future -> closeLatch.countDown());
 
         // Create a single stream by sending a HEADERS frame to the server.
         final Http2Headers headers = dummyHeaders();
@@ -919,12 +889,7 @@ public class Http2ConnectionRoundtripTest {
                         true, newPromise());
                 clientWriteAfterGoAwayFutureRef.set(f);
                 http2Client.flush(ctx());
-                f.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        clientWriteAfterGoAwayLatch.countDown();
-                    }
-                });
+                f.addListener(future -> clientWriteAfterGoAwayLatch.countDown());
             }
         });
 

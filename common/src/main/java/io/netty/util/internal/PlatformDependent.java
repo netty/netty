@@ -1064,6 +1064,27 @@ public final class PlatformDependent {
         }
     }
 
+    public static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, byte[] src, int srcOffset, int length) {
+        if (PlatformDependent0.hasAbsolutePutArrayMethod()) {
+            return PlatformDependent0.absolutePut(dst, dstOffset, src, srcOffset, length);
+        } else {
+            ByteBuffer tmp = (ByteBuffer) dst.duplicate().clear().position(dstOffset).limit(dstOffset + length);
+            tmp.put(ByteBuffer.wrap(src, srcOffset, length));
+            return dst;
+        }
+    }
+
+    public static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, ByteBuffer src, int srcOffset, int length) {
+        if (PlatformDependent0.hasAbsolutePutBufferMethod()) {
+            return PlatformDependent0.absolutePut(dst, dstOffset, src, srcOffset, length);
+        } else {
+            ByteBuffer a = (ByteBuffer) dst.duplicate().clear().position(dstOffset).limit(dstOffset + length);
+            ByteBuffer b = (ByteBuffer) src.duplicate().clear().position(srcOffset).limit(srcOffset + length);
+            a.put(b);
+            return dst;
+        }
+    }
+
     private static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);

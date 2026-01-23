@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <version>4.2.10.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -32,7 +32,7 @@
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
-    <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
+    <fragmentHost>io.netty.codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
@@ -330,18 +330,21 @@
                     <itemWithProperty>
                       <name>arm64-v8a</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86_64</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
@@ -763,7 +766,7 @@
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}" failonerror="false"/>
+                    <delete dir="${boringsslSourceDir}" failonerror="false" />
                   </else>
                 </if>
               </target>
@@ -817,7 +820,7 @@
                       <equals arg1="${platform}" arg2="android" />
                       <then>
                         <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg line="ndk ${cargoTarget} -p ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
+                          <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
                           <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />

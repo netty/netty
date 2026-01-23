@@ -234,7 +234,7 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     }
 
     @Test
-    public void searchDomainsWithMultipleSearchSeperatedByWhitespace(@TempDir Path tempDir) throws IOException {
+    public void searchDomainsWithMultipleSearchSeparatedByWhitespace(@TempDir Path tempDir) throws IOException {
         File f = buildFile(tempDir, "search linecorp.local squarecorp.local\n" +
                            "nameserver 127.0.0.2\n");
         List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
@@ -242,7 +242,7 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     }
 
     @Test
-    public void searchDomainsWithMultipleSearchSeperatedByTab(@TempDir Path tempDir) throws IOException {
+    public void searchDomainsWithMultipleSearchSeparatedByTab(@TempDir Path tempDir) throws IOException {
         File f = buildFile(tempDir, "search linecorp.local\tsquarecorp.local\n" +
                 "nameserver 127.0.0.2\n");
         List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);

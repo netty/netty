@@ -58,12 +58,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 public void run() {
                     latch.countDown();
                 }
-            }).addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) throws Exception {
-                    latch.countDown();
-                }
-            });
+            }).addListener((FutureListener<Object>) f -> latch.countDown());
             exchanger.exchange(null);
             latch.await();
             future.syncUninterruptibly();

@@ -61,7 +61,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     // Pick a number that no task could have previously used.
-    private long prevDeadlineNanos = nanoTime() - 1;
+    private long prevDeadlineNanos = NONE;
     private FileDescriptor epollFd;
     private FileDescriptor eventFd;
     private FileDescriptor timerFd;

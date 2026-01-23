@@ -17,13 +17,13 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.Principal;
@@ -35,20 +35,46 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.X509ExtendedTrustManager;
+import javax.security.auth.x500.X500Principal;
 
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_DNS;
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_IP;
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_URI;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class EnhancedX509ExtendedTrustManagerTest {
+
+    private static final String HOSTNAME = "netty.io";
+    private static final String SAN_ENTRY_DNS = "some.netty.io";
+    private static final String SAN_ENTRY_IP = "127.0.0.1";
+    private static final String SAN_ENTRY_URI = "URI:https://uri.netty.io/profile";
+    private static final String SAN_ENTRY_RFC822 = "info@netty.io";
+    private static final String COMMON_NAME = "leaf.netty.io";
 
     private static final X509Certificate TEST_CERT = new X509Certificate() {
 
         @Override
         public Collection<List<?>> getSubjectAlternativeNames() {
-            return Arrays.asList(Arrays.asList(1, new Object()), Arrays.asList(2, "some.netty.io"));
+            return Arrays.asList(Arrays.asList(1, new Object()),
+                    Arrays.asList(ALTNAME_DNS, SAN_ENTRY_DNS), Arrays.asList(ALTNAME_IP, SAN_ENTRY_IP),
+                    Arrays.asList(ALTNAME_URI, SAN_ENTRY_URI), Arrays.asList(1 /* rfc822Name */, SAN_ENTRY_RFC822));
+        }
+
+        @Override
+        public X500Principal getSubjectX500Principal() {
+            return new X500Principal("CN=" + COMMON_NAME + ", O=Netty");
         }
 
         @Override
@@ -192,7 +218,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
                 throws CertificateException {
-            throw new CertificateException("No subject alternative DNS name matching netty.io.");
+            throw newCertificateExceptionWithMatchingMessage();
         }
 
         @Override
@@ -203,7 +229,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
-            throw new CertificateException("No subject alternative DNS name matching netty.io.");
+            throw newCertificateExceptionWithMatchingMessage();
         }
 
         @Override
@@ -214,32 +240,49 @@ public class EnhancedX509ExtendedTrustManagerTest {
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType)
                 throws CertificateException {
-            throw new CertificateException("No subject alternative DNS name matching netty.io.");
+            throw newCertificateExceptionWithMatchingMessage();
         }
 
         @Override
         public X509Certificate[] getAcceptedIssuers() {
             return new X509Certificate[0];
         }
+
+        private CertificateException newCertificateExceptionWithMatchingMessage() {
+            return new CertificateException("No subject alternative DNS name matching " + HOSTNAME + " found.");
+        }
     });
 
-    static List<Executable> throwingMatchingExecutables() {
-        return Arrays.asList(new Executable() {
+    static List<Arguments> throwingMatchingExecutables() {
+        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
             @Override
             public void execute() throws Throwable {
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
             @Override
             public void execute() throws Throwable {
-                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
+                SSLSession session = mockSSLSession();
+                SSLEngine engine = Mockito.mock(SSLEngine.class);
+                Mockito.when(engine.getHandshakeSession()).thenReturn(session);
+                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, engine);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
             @Override
             public void execute() throws Throwable {
-                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
+                SSLSession session = mockSSLSession();
+                SSLSocket socket = Mockito.mock(SSLSocket.class);
+                Mockito.when(socket.getHandshakeSession()).thenReturn(session);
+                MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, socket);
             }
-        });
+        })));
+    }
+
+    private static SSLSession mockSSLSession() {
+        ExtendedSSLSession session = Mockito.mock(ExtendedSSLSession.class);
+        Mockito.when(session.getRequestedServerNames()).thenReturn(Arrays.asList(new SNIHostName(HOSTNAME)));
+        Mockito.when(session.getPeerHost()).thenReturn(HOSTNAME);
+        return session;
     }
 
     private static final EnhancingX509ExtendedTrustManager NON_MATCHING_MANAGER =
@@ -286,32 +329,42 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 }
             });
 
-    static List<Executable> throwingNonMatchingExecutables() {
-        return Arrays.asList(new Executable() {
+    static List<Arguments> throwingNonMatchingExecutables() {
+        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
-        });
+        })));
     }
 
     @ParameterizedTest
     @MethodSource("throwingMatchingExecutables")
-    void testEnhanceException(Executable executable)  {
+    void testEnhanceException(Executable executable, TestInfo testInfo)  {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
-        assertThat(exception.getMessage()).contains("some.netty.io");
+        String message = exception.getMessage();
+        if (testInfo.getDisplayName().contains("with")) {
+            // The following data can be extracted only when we run the test with SSLEngine or SSLSocket:
+            assertThat(message).contains("SNIHostName=" + HOSTNAME);
+            assertThat(message).contains("peerHost=" + HOSTNAME);
+        }
+        assertThat(message).contains("DNS:" + SAN_ENTRY_DNS);
+        assertThat(message).contains("IP:" + SAN_ENTRY_IP);
+        assertThat(message).contains("URI:" + SAN_ENTRY_URI);
+        assertThat(message).contains("CN=" + COMMON_NAME);
+        assertThat(message).doesNotContain(SAN_ENTRY_RFC822);
     }
 
     @ParameterizedTest

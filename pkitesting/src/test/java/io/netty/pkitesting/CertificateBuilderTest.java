@@ -19,6 +19,7 @@ import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -108,7 +109,7 @@ class CertificateBuilderTest {
     void createKeyPairWithProvider(Algorithm algorithm) throws Exception {
         assumeTrue(algorithm.isSupported());
 
-        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleJsseProvider());
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleProvider());
         assertNotNull(keyPair);
         assertNotNull(keyPair.getPrivate());
         assertNotNull(keyPair.getPublic());
@@ -422,6 +423,47 @@ class CertificateBuilderTest {
         assertThat(bundle.getKeyPair().getPublic()).isSameAs(keyPair.getPublic());
         assertThat(bundle.getKeyPair().getPrivate()).isNull();
         assertThrows(NullPointerException.class, () -> bundle.getPrivateKeyPEM());
+    }
+
+    @Test
+    void generateCertificateWithGivenKeyPair() throws Exception {
+        X509Bundle root = BASE.copy()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
+                .buildSelfSigned();
+        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom(), null);
+        X509Bundle bundle = BASE.copy()
+                .subject("CN=leaf.netty.io")
+                .keyPair(keyPair)
+                .buildIssuedBy(root);
+        assertThat(bundle.getKeyPair().getPublic()).isSameAs(keyPair.getPublic());
+        assertThat(bundle.getKeyPair().getPrivate()).isSameAs(keyPair.getPrivate());
+        assertNotNull(bundle.getPrivateKeyPEM());
+    }
+
+    @Test
+    void authenticatingCrossSignedCertificate() throws Exception {
+        CertificateBuilder caBuilder = BASE.copy()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign);
+
+        // Roots. Different subjects.
+        X509Bundle oldRoot = caBuilder.subject("CN=root-a").buildSelfSigned();
+        X509Bundle newRoot = caBuilder.subject("CN=root-b").buildSelfSigned();
+
+        // Intermediates. Same subject. Will be cross-signed.
+        CertificateBuilder intermediateBuilder = caBuilder.copy().subject("CN=issuer.netty.io");
+        X509Bundle oldIssuer = intermediateBuilder.buildIssuedBy(oldRoot);
+        X509Bundle crossIssuer = intermediateBuilder.keyPair(oldIssuer.getKeyPair()).buildIssuedBy(newRoot);
+
+        // Leaf. Cross-signed by cross-signed issuer.
+        CertificateBuilder leafBuilder = BASE.copy().subject("CN=leaf.netty.io").addExtendedKeyUsageClientAuth();
+        X509Bundle leaf = leafBuilder.buildIssuedBy(crossIssuer)
+                .mergeIntermediates(leafBuilder.buildIssuedBy(oldIssuer));
+
+        // This trust manager only knows about the old root. It will throw if it can't find a path to it.
+        X509TrustManager oldRootTrustManager = (X509TrustManager) oldRoot.toTrustManager();
+        oldRootTrustManager.checkClientTrusted(leaf.getCertificatePath(), "UNKNOWN");
     }
 
     private static X509TrustManager getX509TrustManager(X509Bundle root) throws Exception {
