@@ -15,31 +15,63 @@
  */
 package io.netty.util.concurrent;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Objects;
 
 final class CompletionHandlers {
 
     private CompletionHandlers() { }
 
-    static final CompletionHandler<?> IGNORE = new CompletionHandler<Void>() {
+    static final CompletionHandler<?> IGNORE = new WrappingCompletionHandler<>(null, null);
+
+    static <V> CompletionHandler<V> onExecutor(CompletionHandler<V> handler, EventExecutor executor) {
+        return new WrappingCompletionHandler<>(handler, executor);
+    }
+
+    private static final class WrappingCompletionHandler<V> implements CompletionHandler<V> {
+        private final CompletionHandler<V> wrapped;
+        private final EventExecutor executor;
+
+        WrappingCompletionHandler(CompletionHandler<V> wrapped, EventExecutor executor) {
+            this.executor = executor;
+            this.wrapped = wrapped;
+        }
+
         @Override
-        public void success(Void result) {
-            // NOOP
+        public void success(@Nullable V result) {
+            if (wrapped == null) {
+                // if wrapped is null we know that this is the static IGNORE instance
+                return;
+            }
+            if (executor.inEventLoop()) {
+                wrapped.success(result);
+            } else {
+                executor.execute(() -> wrapped.success(result));
+            }
         }
 
         @Override
         public void failure(Throwable cause) {
-            // NOOP.
+            if (wrapped == null) {
+                // if wrapped is null we know that this is the static IGNORE instance
+                return;
+            }
+            if (executor.inEventLoop()) {
+                wrapped.failure(cause);
+            } else {
+                executor.execute(() -> wrapped.failure(cause));
+            }
         }
 
         @Override
-        public Promise<Void> toPromise(EventExecutor executor) {
+        public Promise<V> toPromise(EventExecutor executor) {
             // Just return a new instance and not call addHandler as we ignore the notification anyway.
             return executor.newPromise();
         }
 
         @Override
-        public CompletionHandler<Void> andThen(CompletionHandler<? super Void> after, EventExecutor executor) {
+        public CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
             if (after == this) {
                 Objects.requireNonNull(executor, "executor");
                 return this;
@@ -48,9 +80,13 @@ final class CompletionHandlers {
         }
 
         @Override
-        public CompletionHandler<Void> onExecutor(EventExecutor executor) {
-            Objects.requireNonNull(executor, "executor");
-            return this;
+        public CompletionHandler<V> onExecutor(EventExecutor executor) {
+            if (wrapped == null) {
+                // if wrapped is null we know that this is the static IGNORE instance
+                Objects.requireNonNull(executor, "executor");
+                return this;
+            }
+            return CompletionHandler.super.onExecutor(executor);
         }
-    };
+    }
 }

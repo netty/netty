@@ -74,25 +74,7 @@ public interface CompletionHandler<V> {
      */
     default CompletionHandler<V> onExecutor(EventExecutor executor) {
         Objects.requireNonNull(executor);
-        return new CompletionHandler<>() {
-            @Override
-            public void success(@Nullable V result) {
-                if (executor.inEventLoop()) {
-                    CompletionHandler.this.success(result);
-                } else {
-                    executor.execute(() -> success(result));
-                }
-            }
-
-            @Override
-            public void failure(Throwable cause) {
-                if (executor.inEventLoop()) {
-                    CompletionHandler.this.failure(cause);
-                } else {
-                    executor.execute(() -> failure(cause));
-                }
-            }
-        };
+        return CompletionHandlers.onExecutor(this, executor);
     }
 
     /**
