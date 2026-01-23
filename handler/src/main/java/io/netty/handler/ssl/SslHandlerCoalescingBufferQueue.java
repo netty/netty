@@ -17,9 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.AbstractCoalescingBufferQueue;
-import io.netty.channel.Channel;
 import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;

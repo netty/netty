@@ -767,7 +767,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             handler.failure(newPendingWritesNullException());
         } else {
             // TODO: Direclty handle CompletionHandler
-            pendingUnencryptedWrites.add((ByteBuf) msg, handler.toPromise(ctx.executor()));
+            pendingUnencryptedWrites.add((ByteBuf) msg, handler);
         }
     }
 
@@ -803,7 +803,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // may want to add a FutureListener to the Promise<Void> later.
             //
             // See https://github.com/netty/netty/issues/3364
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
+            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, CompletionHandler.ignore());
         }
         if (!handshakePromise.isDone()) {
             setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
@@ -2109,11 +2109,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private void flush(ChannelHandlerContext ctx, Promise<Void> promise) {
+    private void flush(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         if (pendingUnencryptedWrites != null) {
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, promise);
+            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, handler);
         } else {
-            promise.setFailure(newPendingWritesNullException());
+            handler.failure(newPendingWritesNullException());
         }
         flush(ctx);
     }
