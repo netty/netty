@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Objects;
+
 final class CompletionHandlers {
 
     private CompletionHandlers() { }
@@ -34,6 +36,15 @@ final class CompletionHandlers {
         public Promise<Void> toPromise(EventExecutor executor) {
             // Just return a new instance and not call addHandler as we ignore the notification anyway.
             return executor.newPromise();
+        }
+
+        @Override
+        public CompletionHandler<Void> andThen(CompletionHandler<? super Void> after, EventExecutor executor) {
+            if (after == this) {
+                Objects.requireNonNull(executor, "executor");
+                return this;
+            }
+            return CompletionHandler.super.andThen(after, executor);
         }
     };
 }
