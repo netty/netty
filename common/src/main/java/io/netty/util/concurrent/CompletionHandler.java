@@ -74,7 +74,7 @@ public interface CompletionHandler<V> {
      */
     default CompletionHandler<V> onExecutor(EventExecutor executor) {
         Objects.requireNonNull(executor);
-        return new CompletionHandler<V>() {
+        return new CompletionHandler<>() {
             @Override
             public void success(@Nullable V result) {
                 if (executor.inEventLoop()) {
