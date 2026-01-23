@@ -213,7 +213,7 @@ public abstract class AbstractCoalescingBufferQueue {
             if (entry instanceof FutureListener<?>) {
                 aggregatePromise.addListener((FutureListener<Void>) entry);
                 bufAndListenerPairs.poll();
-            } else if  (entry instanceof CompletionHandler<?>) {
+            } else if (entry instanceof CompletionHandler<?>) {
                 aggregatePromise.addHandler((CompletionHandler<Void>) entry);
                 bufAndListenerPairs.poll();
             }
@@ -281,9 +281,9 @@ public abstract class AbstractCoalescingBufferQueue {
                         ctx.write(previousBuf, CompletionHandler.ignore());
                     }
                     previousBuf = (ByteBuf) entry;
-                } else if (entry instanceof Promise<?>) {
+                } else if (entry instanceof CompletionHandler<?>) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (Promise<Void>) entry);
+                    ctx.write(previousBuf, (CompletionHandler<Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());
@@ -400,8 +400,15 @@ public abstract class AbstractCoalescingBufferQueue {
                     ByteBuf buffer = (ByteBuf) entry;
                     decrementReadableBytes(buffer.readableBytes());
                     safeRelease(buffer);
-                } else {
+                } else if (entry instanceof FutureListener<?>) {
                     ((FutureListener<Void>) entry).operationComplete(future);
+                } else {
+                    CompletionHandler<Void> handler = (CompletionHandler<Void>) entry;
+                    if (future.isSuccess()) {
+                        handler.success(future.getNow());
+                    } else {
+                        handler.failure(future.cause());
+                    }
                 }
             } catch (Throwable t) {
                 if (pending == null) {
