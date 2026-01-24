@@ -76,10 +76,16 @@ final class CompletionHandlers {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
             if (after == this) {
                 Objects.requireNonNull(executor, "executor");
                 return this;
+            }
+            if (wrapped == null) {
+                // if wrapped is null we know that this is the static IGNORE instance and so
+                // can just ensure we run after on the correct executor.
+                return ((CompletionHandler<V>) after).onExecutor(executor);
             }
             return CompletionHandler.super.andThen(after, executor);
         }
