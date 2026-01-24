@@ -42,6 +42,7 @@ import io.netty.util.internal.StringUtil;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -96,6 +97,11 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
     private final String encoding;
 
+    /**
+     * allows to define custom rules for whether a request should be skipped and not processed
+     */
+    private final Predicate<HttpRequest> skipRequestWhen;
+
     private final Supplier<MessageToByteEncoder<ByteBuf>> encoderFactory;
 
     /**
@@ -148,19 +154,37 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     /**
+     * Create a new instance using the preferred encoding and the given threshold.
+     * shortcut for
+     * {@code new HttpRequestCompressor(preferredEncoding, contentSizeThreshold, compressionOptions, null)}
+     * @param preferredEncoding the preferred encoding.
+     * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
+     * @param contentSizeThreshold the size in byte the http body must have before compressing the request
+     * @param compressionOptions the desired compression options to use.
+     * if {@code null}, the defaults for the given encoding will be used.
+     * @see #HttpRequestCompressor(java.lang.String, int, CompressionOptions, Predicate)
+     */
+    public HttpRequestCompressor(String preferredEncoding, int contentSizeThreshold,
+            CompressionOptions compressionOptions) {
+        this(preferredEncoding, contentSizeThreshold, compressionOptions, null);
+    }
+
+    /**
      * Create a new instance using the preferred encoding, threshold and compression options.
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
      * @param contentSizeThreshold the size in byte the http body must have before compressing the request
      * @param compressionOptions the desired compression options to use.
      * if {@code null}, the defaults for the given encoding will be used.
+     * @param skipRequestWhen allows to define custom rules for whether a request
+     * should be skipped and not processed
      * @see StandardCompressionOptions#brotli() default brotli options
      * @see StandardCompressionOptions#gzip() default gzip options
      * @see StandardCompressionOptions#zstd() default zstd options
      * @see StandardCompressionOptions#deflate() default deflate options
      */
     public HttpRequestCompressor(String preferredEncoding, int contentSizeThreshold,
-            CompressionOptions compressionOptions) {
+            CompressionOptions compressionOptions, Predicate<HttpRequest> skipRequestWhen) {
         ObjectUtil.checkNonEmpty(preferredEncoding, "preferredEncoding");
         this.contentSizeThreshold = ObjectUtil.
                 checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
@@ -170,6 +194,8 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
                     String.format("Unsupported encoding %s. Supported encodings are: %s",
                             preferredEncoding, StringUtil.join(",", SUPPORTED_ENCODINGS)));
         }
+
+        this.skipRequestWhen = skipRequestWhen;
 
         final String optsName = "compressionOptions";
         if ("br".equals(preferredEncoding) && Brotli.isAvailable()) {
@@ -214,14 +240,15 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
             final FullHttpRequest req = (FullHttpRequest) msg;
             if (!isContentEncodingSet(req)
                     && req.content().isReadable()
-                    && req.content().readableBytes() >= contentSizeThreshold) {
+                    && req.content().readableBytes() >= contentSizeThreshold
+                    && !skipRequest(req)) {
                 handleFullHttpRequest(ctx, promise, req);
             } else {
                 super.write(ctx, msg, promise);
             }
         } else if (msg instanceof HttpRequest) {
             final HttpRequest req = (HttpRequest) msg;
-            if (!isContentEncodingSet(req)) {
+            if (!isContentEncodingSet(req) && !skipRequest(req)) {
                 handleChunkedHttpRequest(ctx, promise, req);
             } else {
                 super.write(ctx, msg, promise);
@@ -431,6 +458,20 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
             throw err2;
         } else if (err3 != null) {
             throw err3;
+        }
+    }
+
+    private boolean skipRequest(HttpRequest request) {
+        if (skipRequestWhen == null) {
+            return false;
+        } else {
+            // this prevents changes to the original request outside of this handler
+            HttpRequest copy = new DefaultHttpRequest(
+                    request.protocolVersion(),
+                    request.method(),
+                    request.uri(),
+                    request.headers().copy());
+            return skipRequestWhen.test(copy);
         }
     }
 

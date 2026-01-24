@@ -152,6 +152,57 @@ class HttpRequestCompressorTest {
     }
 
     @Test
+    void testSkipRequestBasedOnCustomRule() {
+        HttpRequestCompressor uut = new HttpRequestCompressor(
+                HttpRequestCompressor.DEFAULT_ENCODING,
+                HttpRequestCompressor.DEFAULT_THRESHOLD,
+                null,
+                req -> true
+        );
+        EmbeddedChannel channel = new EmbeddedChannel(uut);
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PATCH,
+                "ignored", TEST_CONTENT_BUFFER);
+        channel.writeOutbound(req);
+        Object res = channel.readOutbound();
+        assertThat(res).asInstanceOf(InstanceOfAssertFactories.type(FullHttpRequest.class)).satisfies(actual -> {
+            assertThat(ByteBufUtil.getBytes(actual.content())).asString().isEqualTo(TEST_CONTENT);
+            assertThat(actual.headers().contains(HttpHeaderNames.TRANSFER_ENCODING)).isFalse();
+            actual.release();
+        });
+        res = channel.readOutbound();
+        assertThat(res).isNull();
+
+        channel.checkException();
+        channel.close();
+    }
+
+    @Test
+    void testSkipChunkedRequestBasedOnCustomRule() {
+        HttpRequestCompressor uut = new HttpRequestCompressor(
+                HttpRequestCompressor.DEFAULT_ENCODING,
+                HttpRequestCompressor.DEFAULT_THRESHOLD,
+                null,
+                req -> req.method().equals(HttpMethod.DELETE)
+        );
+        EmbeddedChannel channel = new EmbeddedChannel(uut);
+        DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "ignored");
+        channel.writeOutbound(req);
+        channel.writeAndFlush(new DefaultLastHttpContent(TEST_CONTENT_BUFFER));
+        Object res = channel.readOutbound();
+        assertThat(res).isInstanceOf(DefaultHttpRequest.class);
+        Object last = channel.readOutbound();
+        assertThat(last).asInstanceOf(InstanceOfAssertFactories.type(LastHttpContent.class)).satisfies(actual -> {
+            assertThat(ByteBufUtil.getBytes(actual.content())).asString().isEqualTo(TEST_CONTENT);
+            actual.release();
+        });
+        res = channel.readOutbound();
+        assertThat(res).isNull();
+
+        channel.checkException();
+        channel.close();
+    }
+
+    @Test
     void testUnsupportedEncoding() {
         assertThatCode(() -> new HttpRequestCompressor("foo"))
                 .isInstanceOf(IllegalArgumentException.class)
