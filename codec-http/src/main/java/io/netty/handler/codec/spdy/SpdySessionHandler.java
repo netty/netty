@@ -830,7 +830,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                 }
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
-                handler.andThen(new CompletionHandler<>() {
+                handler = handler.andThen(new CompletionHandler<>() {
                     @Override
                     public void success(Void result) {
                         // NOOP
