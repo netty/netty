@@ -16,7 +16,7 @@
 /*
  * Written by Doug Lea with assistance from members of JCP JSR-166
  * Expert Group and released to the public domain, as explained at
- * http://creativecommons.org/publicdomain/zero/1.0/
+ * https://creativecommons.org/publicdomain/zero/1.0/
  *
  * With substantial modifications by The Netty Project team.
  */
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * The map is sorted according to the natural ordering of its {@code int} keys.
  *
  * <p>This class implements a concurrent variant of <a
- * href="http://en.wikipedia.org/wiki/Skip_list" target="_top">SkipLists</a>
+ * href="https://en.wikipedia.org/wiki/Skip_list" target="_top">SkipLists</a>
  * providing expected average <i>log(n)</i> time cost for the
  * {@code containsKey}, {@code get}, {@code put} and
  * {@code remove} operations and their variants.  Insertion, removal,
@@ -80,8 +80,6 @@ import static java.util.Objects.requireNonNull;
  * because some null return values cannot be reliably distinguished from
  * the absence of elements.
  *
- * @author Doug Lea
- * @author Chris Vest
  * @param <V> the type of mapped values
  */
 public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentSkipListIntObjMultimap.IntEntry<V>> {
@@ -114,10 +112,10 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      * The base lists use a variant of the HM linked ordered set
      * algorithm. See Tim Harris, "A pragmatic implementation of
      * non-blocking linked lists"
-     * http://www.cl.cam.ac.uk/~tlh20/publications.html and Maged
+     * https://www.cl.cam.ac.uk/~tlh20/publications.html and Maged
      * Michael "High Performance Dynamic Lock-Free Hash Tables and
      * List-Based Sets"
-     * http://www.research.ibm.com/people/m/michael/pubs.htm.  The
+     * https://www.research.ibm.com/people/m/michael/pubs.htm.  The
      * basic idea in these lists is to mark the "next" pointers of
      * deleted nodes when deleting to avoid conflicts with concurrent
      * insertions, and when traversing to keep track of triples
@@ -287,9 +285,9 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      *
      * For explanation of algorithms sharing at least a couple of
      * features with this one, see Mikhail Fomitchev's thesis
-     * (http://www.cs.yorku.ca/~mikhail/), Keir Fraser's thesis
-     * (http://www.cl.cam.ac.uk/users/kaf24/), and Hakan Sundell's
-     * thesis (http://www.cs.chalmers.se/~phs/).
+     * (https://www.cs.yorku.ca/~mikhail/), Keir Fraser's thesis
+     * (https://www.cl.cam.ac.uk/users/kaf24/), and Hakan Sundell's
+     * thesis (https://www.cs.chalmers.se/~phs/).
      *
      * Notation guide for local variables
      * Node:         b, n, f, p for  predecessor, node, successor, aux
@@ -428,8 +426,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
                 if ((f = n.next) != null && f.key == noKey) {
                     p = f.next;               // already marked
                     break;
-                }
-                else if (NEXT.compareAndSet(n, f,
+                } else if (NEXT.compareAndSet(n, f,
                                             new Node<V>(noKey, null, f))) {
                     p = f;                    // add marker
                     break;
@@ -613,8 +610,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
                 Node<V> base = new Node<V>(noKey, null, null);
                 h = new Index<V>(base, null, null);
                 b = HEAD.compareAndSet(this, null, h) ? base : null;
-            }
-            else {
+            } else {
                 for (Index<V> q = h, r, d;;) { // count while descending
                     while ((r = q.right) != null) {
                         Node<V> p; int k;
@@ -630,8 +626,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
                     if ((d = q.down) != null) {
                         ++levels;
                         q = d;
-                    }
-                    else {
+                    } else {
                         b = q.node;
                         break;
                     }
@@ -670,7 +665,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
                     int lr = ThreadLocalRandom.current().nextInt();
                     if ((lr & 0x3) == 0) {       // add indices with 1/4 prob
                         int hr = ThreadLocalRandom.current().nextInt();
-                        long rnd = ((long)hr << 32) | ((long)lr & 0xffffffffL);
+                        long rnd = ((long) hr << 32) | ((long) lr & 0xffffffffL);
                         int skips = levels;      // levels to descend before add
                         Index<V> x = null;
                         for (;;) {               // create at most 62 indices
@@ -1207,9 +1202,9 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      */
     public int size() {
         long c;
-        return ((baseHead() == null) ? 0 :
-                ((c = getAdderCount()) >= Integer.MAX_VALUE) ?
-                Integer.MAX_VALUE : (int) c);
+        return baseHead() == null ? 0 :
+                (c = getAdderCount()) >= Integer.MAX_VALUE ?
+                Integer.MAX_VALUE : (int) c;
     }
 
     /**
@@ -1257,7 +1252,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     /* ------ ConcurrentMap API methods ------ */
 
     /**
-     * {@inheritDoc}
+     * Remove the specific entry with the given key and value, if it exist.
      *
      * @throws ClassCastException if the specified key cannot be compared
      *         with the keys currently in the map
@@ -1271,7 +1266,8 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     }
 
     /**
-     * {@inheritDoc}
+     * Replace the specific entry with the given key and value, with the given replacement value,
+     * if such an entry exist.
      *
      * @throws ClassCastException if the specified key cannot be compared
      *         with the keys currently in the map
@@ -1325,7 +1321,6 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      * no such key. The returned entry does <em>not</em> support the
      * {@code Entry.setValue} method.
      *
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public IntEntry<V> lowerEntry(int key) {
@@ -1333,7 +1328,6 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     }
 
     /**
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public int lowerKey(int key) {
@@ -1348,20 +1342,18 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      * the {@code Entry.setValue} method.
      *
      * @param key the key
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public IntEntry<V> floorEntry(int key) {
-        return findNearEntry(key, LT|EQ);
+        return findNearEntry(key, LT | EQ);
     }
 
     /**
      * @param key the key
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public int floorKey(int key) {
-        Node<V> n = findNear(key, LT|EQ);
+        Node<V> n = findNear(key, LT | EQ);
         return n == null ? noKey : n.key;
     }
 
@@ -1371,19 +1363,17 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      * there is no such entry. The returned entry does <em>not</em>
      * support the {@code Entry.setValue} method.
      *
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public IntEntry<V> ceilingEntry(int key) {
-        return findNearEntry(key, GT|EQ);
+        return findNearEntry(key, GT | EQ);
     }
 
     /**
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public int ceilingKey(int key) {
-        Node<V> n = findNear(key, GT|EQ);
+        Node<V> n = findNear(key, GT | EQ);
         return n == null ? noKey : n.key;
     }
 
@@ -1394,7 +1384,6 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      * the {@code Entry.setValue} method.
      *
      * @param key the key
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public IntEntry<V> higherEntry(int key) {
@@ -1403,7 +1392,6 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
 
     /**
      * @param key the key
-     * @throws ClassCastException {@inheritDoc}
      * @throws NullPointerException if the specified key is null
      */
     public int higherKey(int key) {
@@ -1451,7 +1439,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
         return doRemoveLastEntry();
     }
 
-    public IntEntry< V> pollCeilingEntry(int key) {
+    public IntEntry<V> pollCeilingEntry(int key) {
         // TODO optimize this
         Node<V> node;
         V val;

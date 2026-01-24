@@ -940,8 +940,8 @@ final class AdaptivePoolingAllocator {
 
                 try {
                     if (remainingCapacity >= size) {
-                        // At this point we know that this will be the last time curr will be used, so directly set it to
-                        // null and release it once we are done.
+                        // At this point we know that this will be the last time curr will be used, so directly set it
+                        // to null and release it once we are done.
                         return curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                     }
                 } finally {
