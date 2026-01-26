@@ -192,7 +192,7 @@ final class AdaptivePoolingAllocator {
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
-                this, chunkAllocator, new BuddyChunkControllerFactory(), false);
+                this, chunkAllocator, new BuddyChunkManagementStrategy(), false);
 
         boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
         threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
@@ -221,7 +221,7 @@ final class AdaptivePoolingAllocator {
         for (int i = 0; i < SIZE_CLASSES.length; i++) {
             int segmentSize = SIZE_CLASSES[i];
             groups[i] = new MagazineGroup(allocator, allocator.chunkAllocator,
-                    new SizeClassChunkControllerFactory(segmentSize), isThreadLocal);
+                    new SizeClassChunkManagementStrategy(segmentSize), isThreadLocal);
         }
         return groups;
     }
@@ -357,7 +357,7 @@ final class AdaptivePoolingAllocator {
     private static final class MagazineGroup {
         private final AdaptivePoolingAllocator allocator;
         private final ChunkAllocator chunkAllocator;
-        private final ChunkControllerFactory chunkControllerFactory;
+        private final ChunkManagementStrategy chunkManagementStrategy;
         private final ChunkCache chunkCache;
         private final StampedLock magazineExpandLock;
         private final Magazine threadLocalMagazine;
@@ -367,23 +367,23 @@ final class AdaptivePoolingAllocator {
 
         MagazineGroup(AdaptivePoolingAllocator allocator,
                       ChunkAllocator chunkAllocator,
-                      ChunkControllerFactory chunkControllerFactory,
+                      ChunkManagementStrategy chunkManagementStrategy,
                       boolean isThreadLocal) {
             this.allocator = allocator;
             this.chunkAllocator = chunkAllocator;
-            this.chunkControllerFactory = chunkControllerFactory;
-            chunkCache = chunkControllerFactory.createChunkCache(isThreadLocal);
+            this.chunkManagementStrategy = chunkManagementStrategy;
+            chunkCache = chunkManagementStrategy.createChunkCache(isThreadLocal);
             if (isThreadLocal) {
                 ownerThread = Thread.currentThread();
                 magazineExpandLock = null;
-                threadLocalMagazine = new Magazine(this, false, chunkControllerFactory.createController(this));
+                threadLocalMagazine = new Magazine(this, false, chunkManagementStrategy.createController(this));
             } else {
                 ownerThread = null;
                 magazineExpandLock = new StampedLock();
                 threadLocalMagazine = null;
                 Magazine[] mags = new Magazine[INITIAL_MAGAZINES];
                 for (int i = 0; i < mags.length; i++) {
-                    mags[i] = new Magazine(this, true, chunkControllerFactory.createController(this));
+                    mags[i] = new Magazine(this, true, chunkManagementStrategy.createController(this));
                 }
                 magazines = mags;
             }
@@ -445,7 +445,7 @@ final class AdaptivePoolingAllocator {
                     }
                     Magazine[] expanded = new Magazine[mags.length * 2];
                     for (int i = 0, l = expanded.length; i < l; i++) {
-                        expanded[i] = new Magazine(this, true, chunkControllerFactory.createController(this));
+                        expanded[i] = new Magazine(this, true, chunkManagementStrategy.createController(this));
                     }
                     magazines = expanded;
                 } finally {
@@ -540,9 +540,8 @@ final class AdaptivePoolingAllocator {
                 }
                 if (chunk.remainingCapacity() >= size) {
                     return chunk;
-                } else {
-                    queue.offer(chunk);
                 }
+                queue.offer(chunk);
             }
             return null;
         }
@@ -579,7 +578,7 @@ final class AdaptivePoolingAllocator {
             Iterator<IntEntry<Chunk>> itr = chunks.iterator();
             while (itr.hasNext()) {
                 entry = itr.next();
-                Chunk chunk;
+                final Chunk chunk;
                 if (entry != null && (chunk = entry.getValue()).hasUnprocessedFreelistEntries()) {
                     if (!chunks.remove(entry.getKey(), entry.getValue())) {
                         continue;
@@ -629,12 +628,11 @@ final class AdaptivePoolingAllocator {
                         }
                     }
                 }
-                if (toDeallocate != null) {
-                    if (chunks.remove(key, toDeallocate)) {
-                        toDeallocate.release();
-                    }
-                } else {
+                if (toDeallocate == null) {
                     break;
+                }
+                if (chunks.remove(key, toDeallocate)) {
+                    toDeallocate.release();
                 }
                 size = chunks.size();
             }
@@ -642,7 +640,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private interface ChunkControllerFactory {
+    private interface ChunkManagementStrategy {
         ChunkController createController(MagazineGroup group);
 
         ChunkCache createChunkCache(boolean isThreadLocal);
@@ -660,7 +658,7 @@ final class AdaptivePoolingAllocator {
         Chunk newChunkAllocation(int promptingSize, Magazine magazine);
     }
 
-    private static final class SizeClassChunkControllerFactory implements ChunkControllerFactory {
+    private static final class SizeClassChunkManagementStrategy implements ChunkManagementStrategy {
         // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
         // We choose 32 because it seems neither too small nor too big.
         // For segments of 16 KiB, the chunks will be half a megabyte.
@@ -668,7 +666,7 @@ final class AdaptivePoolingAllocator {
         private final int segmentSize;
         private final int chunkSize;
 
-        private SizeClassChunkControllerFactory(int segmentSize) {
+        private SizeClassChunkManagementStrategy(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
             chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
         }
@@ -740,7 +738,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static final class BuddyChunkControllerFactory implements ChunkControllerFactory {
+    private static final class BuddyChunkManagementStrategy implements ChunkManagementStrategy {
         private final AtomicInteger maxChunkSize = new AtomicInteger();
 
         @Override
