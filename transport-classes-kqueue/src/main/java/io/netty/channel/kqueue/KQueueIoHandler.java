@@ -189,7 +189,8 @@ public final class KQueueIoHandler implements IoHandler {
         return numEvents;
     }
 
-    private void processReady(int ready) {
+    private void processReady(IoHandlerContext context, int ready) {
+        context.beforeIoTasks();
         for (int i = 0; i < ready; ++i) {
             final short filter = eventList.filter(i);
             final short flags = eventList.flags(i);
@@ -212,6 +213,7 @@ public final class KQueueIoHandler implements IoHandler {
                 continue;
             }
             registration.handle(ident, filter, flags, eventList.fflags(i), eventList.data(i), id);
+            context.afterIoTask();
         }
     }
 
@@ -273,11 +275,11 @@ public final class KQueueIoHandler implements IoHandler {
                 if (context.shouldReportActiveIoTime()) {
                     // The Timer starts after the blocking kqueueWait() call returns with events.
                     long activeIoStartTimeNanos = System.nanoTime();
-                    processReady(strategy);
+                    processReady(context, strategy);
                     long activeIoEndTimeNanos = System.nanoTime();
                     context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
                 } else {
-                    processReady(strategy);
+                    processReady(context, strategy);
                 }
             } else if (context.shouldReportActiveIoTime()) {
                 context.reportActiveIoTime(0);
