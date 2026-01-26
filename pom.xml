@@ -941,7 +941,7 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.0.3</version>
+        <version>1.2.0</version>
       </dependency>
       <dependency>
         <groupId>at.yawk.lz4</groupId>
@@ -1220,7 +1220,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.15.RELEASE</version>
+        <version>1.0.16.RELEASE</version>
       </dependency>
 
       <dependency>

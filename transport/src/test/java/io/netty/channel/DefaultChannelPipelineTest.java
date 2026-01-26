@@ -35,6 +35,7 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -58,6 +59,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -913,6 +915,124 @@ public class DefaultChannelPipelineTest {
         } finally {
             pipeline.close();
             pipeline2.close();
+        }
+    }
+
+    @Test
+    public void testPromiseCorrectExecutor() throws Exception {
+        final ChannelPipeline pipeline = new LocalChannel().pipeline();
+        final BlockingQueue<Boolean> queue = new ArrayBlockingQueue<Boolean>(6);
+        EventExecutor executor = new DefaultEventExecutor();
+        try {
+            pipeline.addLast(new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+
+                @Override
+                public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                    SocketAddress localAddress, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+
+                @Override
+                public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+
+                @Override
+                public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+
+                @Override
+                public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    promise.setSuccess();
+                }
+            }, new ChannelOutboundHandlerAdapter() {
+
+                ChannelFutureListener listener;
+
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) {
+                    listener = f -> {
+                        queue.add(ctx.executor().inEventLoop());
+                    };
+                }
+
+                @Override
+                public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                    ctx.bind(localAddress, promise.addListener(listener));
+                }
+
+                @Override
+                public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                    SocketAddress localAddress, ChannelPromise promise) {
+                    ctx.connect(remoteAddress, localAddress, promise.addListener(listener));
+                }
+
+                @Override
+                public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    ctx.disconnect(promise.addListener(listener));
+                }
+
+                @Override
+                public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    ctx.close(promise.addListener(listener));
+                }
+
+                @Override
+                public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+                    ctx.deregister(promise.addListener(listener));
+                }
+
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    ctx.write(msg, promise.addListener(listener));
+                }
+            });
+            group.register(pipeline.channel()).sync();
+
+            ChannelPromise promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.bind(new SocketAddress() { }, promise);
+            promise.sync();
+
+            promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.connect(new SocketAddress() { }, promise);
+            promise.sync();
+
+            promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.disconnect(promise);
+            promise.sync();
+
+            promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.close(promise);
+            promise.sync();
+
+            promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.deregister(promise);
+            promise.sync();
+
+            promise = new DefaultChannelPromise(pipeline.channel(), executor);
+            pipeline.write("", promise);
+            promise.sync();
+        } finally {
+            // Remove the handlers before closing so we don't intercept it.
+            while (pipeline.lastContext() != null) {
+                pipeline.removeLast();
+            }
+            pipeline.close();
+            executor.shutdownGracefully();
+        }
+
+        for (int i = 0; i < 6; i++) {
+            assertTrue(queue.take());
         }
     }
 

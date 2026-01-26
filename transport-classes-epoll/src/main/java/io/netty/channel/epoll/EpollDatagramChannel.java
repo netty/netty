@@ -448,7 +448,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        try {
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        } catch (NativeIoException e) {
+            if (remoteAddress == null) {
+                throw translateForConnected(e);
+            }
+            throw e;
+        }
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
