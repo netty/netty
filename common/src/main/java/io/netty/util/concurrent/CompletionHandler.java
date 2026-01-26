@@ -21,7 +21,12 @@ import java.util.Objects;
 
 /**
  * Handler that will be notified once an operation completes.
- * @param <V>
+ * <p>
+ * Generally speaking, it should only be expected to be able to notify a {@link CompletionHandler} once per instance.
+ * What exactly happens if an already completed {@link CompletionHandler} will receive a completion again is
+ * undefined and depends on the implementation itself.
+ *
+ * @param <V>   the type of the result.
  */
 public interface CompletionHandler<V> {
     /**
@@ -44,6 +49,9 @@ public interface CompletionHandler<V> {
      * operation throws an exception, it is relayed to the caller of the
      * composed operation. If performing this operation throws an exception,
      * the {@code after} operation will not be performed.
+     * <p>
+     * Notifications should only be triggered on the returned {@link CompletionHandler} and not on
+     * this {@link CompletionHandler} anymore once this method was used to create the {@link CompletionHandler}.
      *
      * @param after the operation to perform after this operation
      * @param executor the {@link EventExecutor} on which {@code after} is executed.
@@ -58,6 +66,9 @@ public interface CompletionHandler<V> {
 
     /**
      * Returns a {@link Promise} which will notify this {@link CompletionHandler} once completed.
+     * <p>
+     * Notifications should only be triggered on the returned {@link Promise} and not on this {@link CompletionHandler}
+     * anymore once this method was used to create the {@link Promise}.
      *
      * @param executor  the {@link EventExecutor} that will be used to create the {@link Promise}.
      * @return          a promise.
@@ -69,6 +80,10 @@ public interface CompletionHandler<V> {
     /**
      * Returns a composed {@code CompletionHandler} that ensures that the execution of the execution is done in the
      * {@link EventExecutor} thread.
+     * <p>
+     * Notifications should only be triggered on the returned {@link CompletionHandler} and not on
+     * this {@link CompletionHandler} anymore once this method was used to create the {@link CompletionHandler}.
+     *
      * @param executor  the executor.
      * @return          handler.
      */

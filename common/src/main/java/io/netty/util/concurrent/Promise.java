@@ -15,8 +15,10 @@
  */
 package io.netty.util.concurrent;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
- * Special {@link Future} which is writable.
+ * Special {@link Future} which is writable and so allows to set the result.
  */
 public interface Promise<V> extends Future<V>, CompletionHandler<V> {
 
@@ -73,6 +75,16 @@ public interface Promise<V> extends Future<V>, CompletionHandler<V> {
 
     @Override
     Promise<V> syncUninterruptibly();
+
+    @Override
+    default void success(@Nullable V result) {
+        setSuccess(result);
+    }
+
+    @Override
+    default void failure(Throwable cause) {
+        setFailure(cause);
+    }
 
     @Override
     default CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {

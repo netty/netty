@@ -17,7 +17,6 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -405,16 +404,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         awaitUninterruptibly();
         rethrowIfFailed();
         return this;
-    }
-
-    @Override
-    public void success(@Nullable V result) {
-        PromiseNotificationUtil.trySuccess(this, result, logger);
-    }
-
-    @Override
-    public void failure(Throwable cause) {
-        PromiseNotificationUtil.tryFailure(this, cause, logger);
     }
 
     @Override
