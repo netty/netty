@@ -230,7 +230,7 @@ public final class ChannelOutboundBuffer {
         } else {
             ReferenceCountUtil.safeRelease(msg);
         }
-        handler.success(null);
+        safeSuccess(handler);
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -260,7 +260,8 @@ public final class ChannelOutboundBuffer {
 
         ReferenceCountUtil.safeRelease(msg);
 
-        handler.failure(cause);
+        safeFailure(handler, cause);
+
         decrementPendingOutboundBytes(size);
 
         // recycle the entry
@@ -545,13 +546,32 @@ public final class ChannelOutboundBuffer {
                 decrementPendingOutboundBytes(size);
 
                 ReferenceCountUtil.safeRelease(e.msg);
-                e.handler.failure(cause);
+                safeFailure(e.handler, cause);
                 e = e.unguardedRecycleAndGetNext();
             }
         } finally {
             inFail = false;
         }
         clearNioBuffers();
+    }
+
+
+    private static void safeSuccess(CompletionHandler<Void> handler) {
+        try {
+            handler.success(null);
+        } catch (Throwable t) {
+            logger.warn(
+                    "Failed to notify {}.success(...)", handler.getClass(), t);
+        }
+    }
+
+    private static void safeFailure(CompletionHandler<Void> handler, Throwable cause) {
+        try {
+            handler.failure(cause);
+        } catch (Throwable t) {
+            logger.warn(
+                    "Failed to notify {}.failure(...) with cause: {}", handler.getClass(), cause, t);
+        }
     }
 
     @Deprecated

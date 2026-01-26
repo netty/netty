@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.CompletionHandler;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
@@ -214,7 +215,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        Promise<Void> promise, HttpResponse httpResponse,
+                                        Future<Void> future, HttpResponse httpResponse,
                                         final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 
@@ -228,8 +229,8 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener(future -> {
-                    if (future.isSuccess()) {
+                future.addListener(f -> {
+                    if (f.isSuccess()) {
                         for (WebSocketServerExtension extension : validExtensionsList) {
                             WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
                             WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
@@ -246,8 +247,8 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
                 }
             }
 
-            promise.addListener(future -> {
-                if (future.isSuccess()) {
+            future.addListener(f -> {
+                if (f.isSuccess()) {
                     ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                 }
             });
