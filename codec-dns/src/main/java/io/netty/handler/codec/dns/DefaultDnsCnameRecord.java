@@ -22,7 +22,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * The default {@link DnsCnameRecord} implementation.
  */
-public class DefaultDnsCnameRecord extends AbstractDnsRecord implements DnsCnameRecord {
+public final class DefaultDnsCnameRecord extends AbstractDnsRecord implements DnsCnameRecord {
 
     private final String canonicalName;
 

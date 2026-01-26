@@ -22,7 +22,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * The default {@link DnsMxRecord} implementation.
  */
-public class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
+public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
 
     private final int preference;
     private final String exchange;
