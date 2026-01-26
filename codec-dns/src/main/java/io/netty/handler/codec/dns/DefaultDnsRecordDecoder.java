@@ -119,11 +119,14 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
         if (type == DnsRecordType.NS) {
             return decodeNsRecord(name, dnsClass, timeToLive, in, offset, length);
-        } else if (type == DnsRecordType.CNAME) {
+        }
+        if (type == DnsRecordType.CNAME) {
             return decodeCnameRecord(name, dnsClass, timeToLive, in, offset, length);
-        } else if (type == DnsRecordType.PTR) {
+        }
+        if (type == DnsRecordType.PTR) {
             return decodePtrRecord(name, dnsClass, timeToLive, in, offset, length);
-        } else if (type == DnsRecordType.MX) {
+        }
+        if (type == DnsRecordType.MX) {
             return decodeMxRecord(name, dnsClass, timeToLive, in, offset, length);
         }
 
