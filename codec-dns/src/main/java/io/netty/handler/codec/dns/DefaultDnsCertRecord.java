@@ -17,39 +17,58 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsMxRecord} implementation.
+ * The default {@link DnsCertRecord} implementation.
  */
-public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
+public final class DefaultDnsCertRecord extends AbstractDnsRecord implements DnsCertRecord {
 
-    private final int preference;
-    private final String exchange;
+    private final int certificateType;
+    private final int keyTag;
+    private final int algorithm;
+    private final byte[] certificate;
 
     /**
-     * Creates a new MX record.
+     * Creates a new CERT record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param preference the preference value
-     * @param exchange the mail exchange hostname
+     * @param certificateType the certificate type
+     * @param keyTag the key tag
+     * @param algorithm the algorithm
+     * @param certificate the certificate bytes
      */
-    public DefaultDnsMxRecord(String name, int dnsClass, long timeToLive, int preference, String exchange) {
-        super(name, DnsRecordType.MX, dnsClass, timeToLive);
-        this.preference = preference;
-        this.exchange = checkNotNull(exchange, "exchange");
+    public DefaultDnsCertRecord(String name, int dnsClass, long timeToLive,
+                                int certificateType, int keyTag, int algorithm, byte[] certificate) {
+        super(name, DnsRecordType.CERT, dnsClass, timeToLive);
+        this.certificateType = certificateType & 0xffff;
+        this.keyTag = keyTag & 0xffff;
+        this.algorithm = algorithm & 0xff;
+        this.certificate = checkNotNull(certificate, "certificate").clone();
     }
 
     @Override
-    public int preference() {
-        return preference;
+    public int certificateType() {
+        return certificateType;
     }
 
     @Override
-    public String exchange() {
-        return exchange;
+    public int keyTag() {
+        return keyTag;
+    }
+
+    @Override
+    public int algorithm() {
+        return algorithm;
+    }
+
+    @Override
+    public byte[] certificate() {
+        return certificate.clone();
     }
 
     @Override
@@ -57,24 +76,28 @@ public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMx
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsMxRecord)) {
+        if (!(obj instanceof DnsCertRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsMxRecord that = (DnsMxRecord) obj;
+        DnsCertRecord that = (DnsCertRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               preference == that.preference() &&
-               exchange.equalsIgnoreCase(that.exchange());
+               certificateType == that.certificateType() &&
+               keyTag == that.keyTag() &&
+               algorithm == that.algorithm() &&
+               Arrays.equals(certificate, that.certificate());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + preference;
-        hashCode = 31 * hashCode + exchange.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + certificateType;
+        hashCode = 31 * hashCode + keyTag;
+        hashCode = 31 * hashCode + algorithm;
+        hashCode = 31 * hashCode + Arrays.hashCode(certificate);
         return hashCode;
     }
 
@@ -90,9 +113,13 @@ public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMx
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(preference)
+                      .append(certificateType)
                       .append(' ')
-                      .append(exchange)
+                      .append(keyTag)
+                      .append(' ')
+                      .append(algorithm)
+                      .append(' ')
+                      .append(Arrays.toString(certificate))
                       .append(')');
 
         return buf.toString();

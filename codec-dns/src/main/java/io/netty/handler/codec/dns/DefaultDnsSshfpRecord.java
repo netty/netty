@@ -17,31 +17,50 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsSshfpRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsSshfpRecord extends AbstractDnsRecord implements DnsSshfpRecord {
 
-    private final String nameServer;
+    private final int algorithm;
+    private final int fingerprintType;
+    private final byte[] fingerprint;
 
     /**
-     * Creates a new NS record.
+     * Creates a new SSHFP record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param algorithm the algorithm
+     * @param fingerprintType the fingerprint type
+     * @param fingerprint the fingerprint bytes
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsSshfpRecord(String name, int dnsClass, long timeToLive,
+                                 int algorithm, int fingerprintType, byte[] fingerprint) {
+        super(name, DnsRecordType.SSHFP, dnsClass, timeToLive);
+        this.algorithm = algorithm & 0xff;
+        this.fingerprintType = fingerprintType & 0xff;
+        this.fingerprint = checkNotNull(fingerprint, "fingerprint").clone();
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public int algorithm() {
+        return algorithm;
+    }
+
+    @Override
+    public int fingerprintType() {
+        return fingerprintType;
+    }
+
+    @Override
+    public byte[] fingerprint() {
+        return fingerprint.clone();
     }
 
     @Override
@@ -49,22 +68,26 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsSshfpRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsSshfpRecord that = (DnsSshfpRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               algorithm == that.algorithm() &&
+               fingerprintType == that.fingerprintType() &&
+               Arrays.equals(fingerprint, that.fingerprint());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + algorithm;
+        hashCode = 31 * hashCode + fingerprintType;
+        hashCode = 31 * hashCode + Arrays.hashCode(fingerprint);
         return hashCode;
     }
 
@@ -80,7 +103,11 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(algorithm)
+                      .append(' ')
+                      .append(fingerprintType)
+                      .append(' ')
+                      .append(Arrays.toString(fingerprint))
                       .append(')');
 
         return buf.toString();

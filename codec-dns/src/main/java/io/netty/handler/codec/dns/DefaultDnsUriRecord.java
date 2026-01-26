@@ -20,28 +20,45 @@ import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsUriRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsUriRecord extends AbstractDnsRecord implements DnsUriRecord {
 
-    private final String nameServer;
+    private final int priority;
+    private final int weight;
+    private final String target;
 
     /**
-     * Creates a new NS record.
+     * Creates a new URI record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param priority the priority
+     * @param weight the weight
+     * @param target the target URI
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsUriRecord(String name, int dnsClass, long timeToLive,
+                               int priority, int weight, String target) {
+        super(name, DnsRecordType.URI, dnsClass, timeToLive);
+        this.priority = priority & 0xffff;
+        this.weight = weight & 0xffff;
+        this.target = checkNotNull(target, "target");
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public int priority() {
+        return priority;
+    }
+
+    @Override
+    public int weight() {
+        return weight;
+    }
+
+    @Override
+    public String target() {
+        return target;
     }
 
     @Override
@@ -49,22 +66,26 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsUriRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsUriRecord that = (DnsUriRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               priority == that.priority() &&
+               weight == that.weight() &&
+               target.equals(that.target());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + priority;
+        hashCode = 31 * hashCode + weight;
+        hashCode = 31 * hashCode + target.hashCode();
         return hashCode;
     }
 
@@ -80,7 +101,11 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(priority)
+                      .append(' ')
+                      .append(weight)
+                      .append(' ')
+                      .append(target)
                       .append(')');
 
         return buf.toString();

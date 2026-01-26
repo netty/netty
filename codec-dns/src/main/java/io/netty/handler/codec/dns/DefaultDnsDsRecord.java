@@ -17,31 +17,58 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsDsRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsDsRecord extends AbstractDnsRecord implements DnsDsRecord {
 
-    private final String nameServer;
+    private final int keyTag;
+    private final int algorithm;
+    private final int digestType;
+    private final byte[] digest;
 
     /**
-     * Creates a new NS record.
+     * Creates a new DS record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param keyTag the key tag
+     * @param algorithm the algorithm
+     * @param digestType the digest type
+     * @param digest the digest bytes
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsDsRecord(String name, int dnsClass, long timeToLive,
+                              int keyTag, int algorithm, int digestType, byte[] digest) {
+        super(name, DnsRecordType.DS, dnsClass, timeToLive);
+        this.keyTag = keyTag & 0xffff;
+        this.algorithm = algorithm & 0xff;
+        this.digestType = digestType & 0xff;
+        this.digest = checkNotNull(digest, "digest").clone();
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public int keyTag() {
+        return keyTag;
+    }
+
+    @Override
+    public int algorithm() {
+        return algorithm;
+    }
+
+    @Override
+    public int digestType() {
+        return digestType;
+    }
+
+    @Override
+    public byte[] digest() {
+        return digest.clone();
     }
 
     @Override
@@ -49,22 +76,28 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsDsRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsDsRecord that = (DnsDsRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               keyTag == that.keyTag() &&
+               algorithm == that.algorithm() &&
+               digestType == that.digestType() &&
+               Arrays.equals(digest, that.digest());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + keyTag;
+        hashCode = 31 * hashCode + algorithm;
+        hashCode = 31 * hashCode + digestType;
+        hashCode = 31 * hashCode + Arrays.hashCode(digest);
         return hashCode;
     }
 
@@ -80,7 +113,13 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(keyTag)
+                      .append(' ')
+                      .append(algorithm)
+                      .append(' ')
+                      .append(digestType)
+                      .append(' ')
+                      .append(Arrays.toString(digest))
                       .append(')');
 
         return buf.toString();

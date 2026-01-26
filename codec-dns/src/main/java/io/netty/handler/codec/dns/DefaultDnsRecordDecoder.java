@@ -17,6 +17,12 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.util.CharsetUtil;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -129,6 +135,54 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         if (type == DnsRecordType.MX) {
             return decodeMxRecord(name, dnsClass, timeToLive, in, offset, length);
         }
+        if (type == DnsRecordType.A) {
+            return decodeARecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.AAAA) {
+            return decodeAaaaRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.TXT) {
+            return decodeTxtRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.CAA) {
+            return decodeCaaRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.CERT) {
+            return decodeCertRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.DNSKEY) {
+            return decodeDnskeyRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.DS) {
+            return decodeDsRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.HTTPS) {
+            return decodeHttpsRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.LOC) {
+            return decodeLocRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.NAPTR) {
+            return decodeNaptrRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.SMIMEA) {
+            return decodeSmimeaRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.SRV) {
+            return decodeSrvRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.SSHFP) {
+            return decodeSshfpRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.SVCB) {
+            return decodeSvcbRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.TLSA) {
+            return decodeTlsaRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+        if (type == DnsRecordType.URI) {
+            return decodeUriRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
 
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
@@ -160,6 +214,247 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         int pref = in.getUnsignedShort(offset);
         String exchangeName = decodeName(in.duplicate().setIndex(offset + 2, offset + length));
         return new DefaultDnsMxRecord(name, dnsClass, timeToLive, pref, exchangeName);
+    }
+
+    private DnsRecord decodeARecord(String name, int dnsClass, long timeToLive,
+                                    ByteBuf in, int offset, int length) {
+        if (length != 4) {
+            throw new CorruptedFrameException("A record RDATA length is invalid: " + length);
+        }
+        byte[] address = new byte[4];
+        in.getBytes(offset, address);
+        return new DefaultDnsARecord(name, dnsClass, timeToLive, address);
+    }
+
+    private DnsRecord decodeAaaaRecord(String name, int dnsClass, long timeToLive,
+                                       ByteBuf in, int offset, int length) {
+        if (length != 16) {
+            throw new CorruptedFrameException("AAAA record RDATA length is invalid: " + length);
+        }
+        byte[] address = new byte[16];
+        in.getBytes(offset, address);
+        return new DefaultDnsAaaaRecord(name, dnsClass, timeToLive, address);
+    }
+
+    private DnsRecord decodeTxtRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        ByteBuf data = in.duplicate().setIndex(offset, offset + length);
+        List<String> texts = new ArrayList<String>();
+        while (data.isReadable()) {
+            int len = data.readUnsignedByte();
+            if (!data.isReadable(len)) {
+                throw new CorruptedFrameException("TXT record RDATA is too short");
+            }
+            texts.add(data.readCharSequence(len, CharsetUtil.UTF_8).toString());
+        }
+        return new DefaultDnsTxtRecord(name, dnsClass, timeToLive, texts);
+    }
+
+    private DnsRecord decodeCaaRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        if (length < 2) {
+            throw new CorruptedFrameException("CAA record RDATA is too short: " + length);
+        }
+        int flags = in.getUnsignedByte(offset);
+        int tagLength = in.getUnsignedByte(offset + 1);
+        if (length < 2 + tagLength) {
+            throw new CorruptedFrameException("CAA record tag is truncated");
+        }
+        int tagOffset = offset + 2;
+        String tag = in.toString(tagOffset, tagLength, CharsetUtil.US_ASCII);
+        int valueOffset = tagOffset + tagLength;
+        int valueLength = length - 2 - tagLength;
+        byte[] value = new byte[valueLength];
+        in.getBytes(valueOffset, value);
+        return new DefaultDnsCaaRecord(name, dnsClass, timeToLive, flags, tag, value);
+    }
+
+    private DnsRecord decodeCertRecord(String name, int dnsClass, long timeToLive,
+                                       ByteBuf in, int offset, int length) {
+        if (length < 5) {
+            throw new CorruptedFrameException("CERT record RDATA is too short: " + length);
+        }
+        int type = in.getUnsignedShort(offset);
+        int keyTag = in.getUnsignedShort(offset + 2);
+        int algorithm = in.getUnsignedByte(offset + 4);
+        int certLength = length - 5;
+        byte[] cert = new byte[certLength];
+        in.getBytes(offset + 5, cert);
+        return new DefaultDnsCertRecord(name, dnsClass, timeToLive, type, keyTag, algorithm, cert);
+    }
+
+    private DnsRecord decodeDnskeyRecord(String name, int dnsClass, long timeToLive,
+                                         ByteBuf in, int offset, int length) {
+        if (length < 4) {
+            throw new CorruptedFrameException("DNSKEY record RDATA is too short: " + length);
+        }
+        int flags = in.getUnsignedShort(offset);
+        int protocol = in.getUnsignedByte(offset + 2);
+        int algorithm = in.getUnsignedByte(offset + 3);
+        int keyLength = length - 4;
+        byte[] key = new byte[keyLength];
+        in.getBytes(offset + 4, key);
+        return new DefaultDnsDnskeyRecord(name, dnsClass, timeToLive, flags, protocol, algorithm, key);
+    }
+
+    private DnsRecord decodeDsRecord(String name, int dnsClass, long timeToLive,
+                                     ByteBuf in, int offset, int length) {
+        if (length < 4) {
+            throw new CorruptedFrameException("DS record RDATA is too short: " + length);
+        }
+        int keyTag = in.getUnsignedShort(offset);
+        int algorithm = in.getUnsignedByte(offset + 2);
+        int digestType = in.getUnsignedByte(offset + 3);
+        int digestLength = length - 4;
+        byte[] digest = new byte[digestLength];
+        in.getBytes(offset + 4, digest);
+        return new DefaultDnsDsRecord(name, dnsClass, timeToLive, keyTag, algorithm, digestType, digest);
+    }
+
+    private DnsRecord decodeLocRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        if (length != 16) {
+            throw new CorruptedFrameException("LOC record RDATA length is invalid: " + length);
+        }
+        int version = in.getUnsignedByte(offset);
+        int size = in.getUnsignedByte(offset + 1);
+        int horizontalPrecision = in.getUnsignedByte(offset + 2);
+        int verticalPrecision = in.getUnsignedByte(offset + 3);
+        long latitude = in.getUnsignedInt(offset + 4);
+        long longitude = in.getUnsignedInt(offset + 8);
+        long altitude = in.getUnsignedInt(offset + 12);
+        return new DefaultDnsLocRecord(name, dnsClass, timeToLive,
+                version, size, horizontalPrecision, verticalPrecision, latitude, longitude, altitude);
+    }
+
+    private DnsRecord decodeNaptrRecord(String name, int dnsClass, long timeToLive,
+                                        ByteBuf in, int offset, int length) {
+        if (length < 5) {
+            throw new CorruptedFrameException("NAPTR record RDATA is too short: " + length);
+        }
+        ByteBuf data = in.duplicate().setIndex(offset, offset + length);
+        int order = data.readUnsignedShort();
+        int preference = data.readUnsignedShort();
+        String flags = decodeCharacterString(data);
+        String services = decodeCharacterString(data);
+        String regexp = decodeCharacterString(data);
+        String replacement = decodeName(data);
+        return new DefaultDnsNaptrRecord(name, dnsClass, timeToLive,
+                order, preference, flags, services, regexp, replacement);
+    }
+
+    private DnsRecord decodeSmimeaRecord(String name, int dnsClass, long timeToLive,
+                                         ByteBuf in, int offset, int length) {
+        if (length < 3) {
+            throw new CorruptedFrameException("SMIMEA record RDATA is too short: " + length);
+        }
+        int usage = in.getUnsignedByte(offset);
+        int selector = in.getUnsignedByte(offset + 1);
+        int matchingType = in.getUnsignedByte(offset + 2);
+        int dataLength = length - 3;
+        byte[] data = new byte[dataLength];
+        in.getBytes(offset + 3, data);
+        return new DefaultDnsSmimeaRecord(name, dnsClass, timeToLive, usage, selector, matchingType, data);
+    }
+
+    private DnsRecord decodeSrvRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        if (length < 7) {
+            throw new CorruptedFrameException("SRV record RDATA is too short: " + length);
+        }
+        int priority = in.getUnsignedShort(offset);
+        int weight = in.getUnsignedShort(offset + 2);
+        int port = in.getUnsignedShort(offset + 4);
+        String target = decodeName(in.duplicate().setIndex(offset + 6, offset + length));
+        return new DefaultDnsSrvRecord(name, dnsClass, timeToLive, priority, weight, port, target);
+    }
+
+    private DnsRecord decodeSshfpRecord(String name, int dnsClass, long timeToLive,
+                                        ByteBuf in, int offset, int length) {
+        if (length < 2) {
+            throw new CorruptedFrameException("SSHFP record RDATA is too short: " + length);
+        }
+        int algorithm = in.getUnsignedByte(offset);
+        int fingerprintType = in.getUnsignedByte(offset + 1);
+        int dataLength = length - 2;
+        byte[] fingerprint = new byte[dataLength];
+        in.getBytes(offset + 2, fingerprint);
+        return new DefaultDnsSshfpRecord(name, dnsClass, timeToLive, algorithm, fingerprintType, fingerprint);
+    }
+
+    private DnsRecord decodeSvcbRecord(String name, int dnsClass, long timeToLive,
+                                       ByteBuf in, int offset, int length) {
+        return decodeSvcbRecord0(name, dnsClass, timeToLive, in, offset, length, true);
+    }
+
+    private DnsRecord decodeHttpsRecord(String name, int dnsClass, long timeToLive,
+                                        ByteBuf in, int offset, int length) {
+        return decodeSvcbRecord0(name, dnsClass, timeToLive, in, offset, length, false);
+    }
+
+    private DnsRecord decodeTlsaRecord(String name, int dnsClass, long timeToLive,
+                                       ByteBuf in, int offset, int length) {
+        if (length < 3) {
+            throw new CorruptedFrameException("TLSA record RDATA is too short: " + length);
+        }
+        int usage = in.getUnsignedByte(offset);
+        int selector = in.getUnsignedByte(offset + 1);
+        int matchingType = in.getUnsignedByte(offset + 2);
+        int dataLength = length - 3;
+        byte[] data = new byte[dataLength];
+        in.getBytes(offset + 3, data);
+        return new DefaultDnsTlsaRecord(name, dnsClass, timeToLive, usage, selector, matchingType, data);
+    }
+
+    private DnsRecord decodeUriRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        if (length < 4) {
+            throw new CorruptedFrameException("URI record RDATA is too short: " + length);
+        }
+        int priority = in.getUnsignedShort(offset);
+        int weight = in.getUnsignedShort(offset + 2);
+        int targetLength = length - 4;
+        String target = in.toString(offset + 4, targetLength, CharsetUtil.UTF_8);
+        return new DefaultDnsUriRecord(name, dnsClass, timeToLive, priority, weight, target);
+    }
+
+    private DnsRecord decodeSvcbRecord0(String name, int dnsClass, long timeToLive,
+                                        ByteBuf in, int offset, int length, boolean svcb) {
+        if (length < 3) {
+            throw new CorruptedFrameException((svcb ? "SVCB" : "HTTPS") + " record RDATA is too short: " + length);
+        }
+        ByteBuf data = in.duplicate().setIndex(offset, offset + length);
+        int priority = data.readUnsignedShort();
+        String targetName = decodeName(data);
+        Map<Integer, byte[]> params = new LinkedHashMap<Integer, byte[]>();
+        while (data.isReadable()) {
+            if (data.readableBytes() < 4) {
+                throw new CorruptedFrameException((svcb ? "SVCB" : "HTTPS") + " parameter is truncated");
+            }
+            int key = data.readUnsignedShort();
+            int valueLength = data.readUnsignedShort();
+            if (data.readableBytes() < valueLength) {
+                throw new CorruptedFrameException((svcb ? "SVCB" : "HTTPS") + " parameter value is truncated");
+            }
+            byte[] value = new byte[valueLength];
+            data.readBytes(value);
+            params.put(key, value);
+        }
+        if (svcb) {
+            return new DefaultDnsSvcbRecord(name, dnsClass, timeToLive, priority, targetName, params);
+        }
+        return new DefaultDnsHttpsRecord(name, dnsClass, timeToLive, priority, targetName, params);
+    }
+
+    private static String decodeCharacterString(ByteBuf in) {
+        if (!in.isReadable()) {
+            throw new CorruptedFrameException("Character string is truncated");
+        }
+        int length = in.readUnsignedByte();
+        if (!in.isReadable(length)) {
+            throw new CorruptedFrameException("Character string is truncated");
+        }
+        return in.readCharSequence(length, CharsetUtil.UTF_8).toString();
     }
 
     /**

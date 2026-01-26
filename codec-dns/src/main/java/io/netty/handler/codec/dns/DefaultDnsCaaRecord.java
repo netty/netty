@@ -15,33 +15,53 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
+
+import java.util.Arrays;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsCaaRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsCaaRecord extends AbstractDnsRecord implements DnsCaaRecord {
 
-    private final String nameServer;
+    private final int flags;
+    private final String tag;
+    private final byte[] value;
 
     /**
-     * Creates a new NS record.
+     * Creates a new CAA record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param flags the flags field
+     * @param tag the tag field
+     * @param value the value bytes
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsCaaRecord(String name, int dnsClass, long timeToLive,
+                               int flags, String tag, byte[] value) {
+        super(name, DnsRecordType.CAA, dnsClass, timeToLive);
+        this.flags = flags & 0xff;
+        this.tag = checkNotNull(tag, "tag");
+        this.value = checkNotNull(value, "value").clone();
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public int flags() {
+        return flags;
+    }
+
+    @Override
+    public String tag() {
+        return tag;
+    }
+
+    @Override
+    public byte[] value() {
+        return value.clone();
     }
 
     @Override
@@ -49,22 +69,26 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsCaaRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsCaaRecord that = (DnsCaaRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               flags == that.flags() &&
+               tag.equalsIgnoreCase(that.tag()) &&
+               Arrays.equals(value, that.value());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + flags;
+        hashCode = 31 * hashCode + tag.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + Arrays.hashCode(value);
         return hashCode;
     }
 
@@ -80,7 +104,11 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(flags)
+                      .append(' ')
+                      .append(tag)
+                      .append(' ')
+                      .append(new String(value, CharsetUtil.US_ASCII))
                       .append(')');
 
         return buf.toString();

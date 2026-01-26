@@ -17,39 +17,58 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsMxRecord} implementation.
+ * The default {@link DnsSmimeaRecord} implementation.
  */
-public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMxRecord {
+public final class DefaultDnsSmimeaRecord extends AbstractDnsRecord implements DnsSmimeaRecord {
 
-    private final int preference;
-    private final String exchange;
+    private final int usage;
+    private final int selector;
+    private final int matchingType;
+    private final byte[] associationData;
 
     /**
-     * Creates a new MX record.
+     * Creates a new SMIMEA record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param preference the preference value
-     * @param exchange the mail exchange hostname
+     * @param usage the usage
+     * @param selector the selector
+     * @param matchingType the matching type
+     * @param associationData the association data
      */
-    public DefaultDnsMxRecord(String name, int dnsClass, long timeToLive, int preference, String exchange) {
-        super(name, DnsRecordType.MX, dnsClass, timeToLive);
-        this.preference = preference;
-        this.exchange = checkNotNull(exchange, "exchange");
+    public DefaultDnsSmimeaRecord(String name, int dnsClass, long timeToLive,
+                                  int usage, int selector, int matchingType, byte[] associationData) {
+        super(name, DnsRecordType.SMIMEA, dnsClass, timeToLive);
+        this.usage = usage & 0xff;
+        this.selector = selector & 0xff;
+        this.matchingType = matchingType & 0xff;
+        this.associationData = checkNotNull(associationData, "associationData").clone();
     }
 
     @Override
-    public int preference() {
-        return preference;
+    public int usage() {
+        return usage;
     }
 
     @Override
-    public String exchange() {
-        return exchange;
+    public int selector() {
+        return selector;
+    }
+
+    @Override
+    public int matchingType() {
+        return matchingType;
+    }
+
+    @Override
+    public byte[] associationData() {
+        return associationData.clone();
     }
 
     @Override
@@ -57,24 +76,28 @@ public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMx
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsMxRecord)) {
+        if (!(obj instanceof DnsSmimeaRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsMxRecord that = (DnsMxRecord) obj;
+        DnsSmimeaRecord that = (DnsSmimeaRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               preference == that.preference() &&
-               exchange.equalsIgnoreCase(that.exchange());
+               usage == that.usage() &&
+               selector == that.selector() &&
+               matchingType == that.matchingType() &&
+               Arrays.equals(associationData, that.associationData());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + preference;
-        hashCode = 31 * hashCode + exchange.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + usage;
+        hashCode = 31 * hashCode + selector;
+        hashCode = 31 * hashCode + matchingType;
+        hashCode = 31 * hashCode + Arrays.hashCode(associationData);
         return hashCode;
     }
 
@@ -90,9 +113,13 @@ public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMx
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(preference)
+                      .append(usage)
                       .append(' ')
-                      .append(exchange)
+                      .append(selector)
+                      .append(' ')
+                      .append(matchingType)
+                      .append(' ')
+                      .append(Arrays.toString(associationData))
                       .append(')');
 
         return buf.toString();

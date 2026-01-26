@@ -17,31 +17,53 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsTxtRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsTxtRecord {
 
-    private final String nameServer;
+    private final List<String> texts;
 
     /**
-     * Creates a new NS record.
+     * Creates a new TXT record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param texts the TXT strings
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, String... texts) {
+        this(name, dnsClass, timeToLive, texts == null ? null : Arrays.asList(texts));
+    }
+
+    /**
+     * Creates a new TXT record.
+     *
+     * @param name the domain name
+     * @param dnsClass the class of the record, see {@link DnsRecord} for constants
+     * @param timeToLive the TTL value of the record
+     * @param texts the TXT strings
+     */
+    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, List<String> texts) {
+        super(name, DnsRecordType.TXT, dnsClass, timeToLive);
+        checkNotNull(texts, "texts");
+        List<String> copy = new ArrayList<String>(texts.size());
+        for (String text : texts) {
+            copy.add(checkNotNull(text, "text"));
+        }
+        this.texts = Collections.unmodifiableList(copy);
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public List<String> texts() {
+        return texts;
     }
 
     @Override
@@ -49,22 +71,22 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsTxtRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsTxtRecord that = (DnsTxtRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               texts.equals(that.texts());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + texts.hashCode();
         return hashCode;
     }
 
@@ -80,7 +102,7 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(texts)
                       .append(')');
 
         return buf.toString();

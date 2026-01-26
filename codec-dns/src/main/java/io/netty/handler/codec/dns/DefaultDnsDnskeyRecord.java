@@ -17,31 +17,58 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
 
+import java.util.Arrays;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsDnskeyRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsDnskeyRecord extends AbstractDnsRecord implements DnsDnskeyRecord {
 
-    private final String nameServer;
+    private final int flags;
+    private final int protocol;
+    private final int algorithm;
+    private final byte[] publicKey;
 
     /**
-     * Creates a new NS record.
+     * Creates a new DNSKEY record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param flags the flags
+     * @param protocol the protocol
+     * @param algorithm the algorithm
+     * @param publicKey the public key bytes
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsDnskeyRecord(String name, int dnsClass, long timeToLive,
+                                  int flags, int protocol, int algorithm, byte[] publicKey) {
+        super(name, DnsRecordType.DNSKEY, dnsClass, timeToLive);
+        this.flags = flags & 0xffff;
+        this.protocol = protocol & 0xff;
+        this.algorithm = algorithm & 0xff;
+        this.publicKey = checkNotNull(publicKey, "publicKey").clone();
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public int flags() {
+        return flags;
+    }
+
+    @Override
+    public int protocol() {
+        return protocol;
+    }
+
+    @Override
+    public int algorithm() {
+        return algorithm;
+    }
+
+    @Override
+    public byte[] publicKey() {
+        return publicKey.clone();
     }
 
     @Override
@@ -49,22 +76,28 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsDnskeyRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsDnskeyRecord that = (DnsDnskeyRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               flags == that.flags() &&
+               protocol == that.protocol() &&
+               algorithm == that.algorithm() &&
+               Arrays.equals(publicKey, that.publicKey());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + flags;
+        hashCode = 31 * hashCode + protocol;
+        hashCode = 31 * hashCode + algorithm;
+        hashCode = 31 * hashCode + Arrays.hashCode(publicKey);
         return hashCode;
     }
 
@@ -80,7 +113,13 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(flags)
+                      .append(' ')
+                      .append(protocol)
+                      .append(' ')
+                      .append(algorithm)
+                      .append(' ')
+                      .append(Arrays.toString(publicKey))
                       .append(')');
 
         return buf.toString();

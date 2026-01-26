@@ -15,33 +15,38 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
+
+import java.util.Arrays;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * The default {@link DnsNsRecord} implementation.
+ * The default {@link DnsAaaaRecord} implementation.
  */
-public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNsRecord {
+public final class DefaultDnsAaaaRecord extends AbstractDnsRecord implements DnsAaaaRecord {
 
-    private final String nameServer;
+    private static final int IPV6_LENGTH = 16;
+
+    private final byte[] address;
 
     /**
-     * Creates a new NS record.
+     * Creates a new AAAA record.
      *
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param nameServer the name server hostname
+     * @param address the IPv6 address bytes
      */
-    public DefaultDnsNsRecord(String name, int dnsClass, long timeToLive, String nameServer) {
-        super(name, DnsRecordType.NS, dnsClass, timeToLive);
-        this.nameServer = checkNotNull(nameServer, "nameServer");
+    public DefaultDnsAaaaRecord(String name, int dnsClass, long timeToLive, byte[] address) {
+        super(name, DnsRecordType.AAAA, dnsClass, timeToLive);
+        this.address = verifyAddress(address, IPV6_LENGTH);
     }
 
     @Override
-    public String nameServer() {
-        return nameServer;
+    public byte[] address() {
+        return address.clone();
     }
 
     @Override
@@ -49,22 +54,22 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof DnsNsRecord)) {
+        if (!(obj instanceof DnsAaaaRecord)) {
             return false;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        DnsNsRecord that = (DnsNsRecord) obj;
+        DnsAaaaRecord that = (DnsAaaaRecord) obj;
         return timeToLive() == that.timeToLive() &&
-               nameServer.equalsIgnoreCase(that.nameServer());
+               Arrays.equals(address, that.address());
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + nameServer.toLowerCase().hashCode();
+        hashCode = 31 * hashCode + Arrays.hashCode(address);
         return hashCode;
     }
 
@@ -80,9 +85,17 @@ public final class DefaultDnsNsRecord extends AbstractDnsRecord implements DnsNs
                       .append(' ')
                       .append(type().name())
                       .append(' ')
-                      .append(nameServer)
+                      .append(NetUtil.bytesToIpAddress(address))
                       .append(')');
 
         return buf.toString();
+    }
+
+    private static byte[] verifyAddress(byte[] address, int length) {
+        checkNotNull(address, "address");
+        if (address.length != length) {
+            throw new IllegalArgumentException("address.length: " + address.length + " (expected: " + length + ')');
+        }
+        return address.clone();
     }
 }
