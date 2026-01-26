@@ -48,12 +48,20 @@ public class MiByteBufAllocatorTest extends AbstractByteBufAllocatorTest<MiByteB
     public void testUnsafeHeapBufferAndUnsafeDirectBuffer() {
         MiByteBufAllocator allocator = newUnpooledAllocator();
         ByteBuf directBuffer = allocator.directBuffer();
-        assertInstanceOf(directBuffer, MiMallocByteBufAllocator.MiByteBuf.class);
+        if (Thread.currentThread() instanceof FastThreadLocalThread) {
+            assertInstanceOf(directBuffer, MiMallocByteBufAllocator.MiByteBuf.class);
+        } else {
+            assertInstanceOf(directBuffer, PooledByteBuf.class);
+        }
         assertTrue(directBuffer.isDirect());
         directBuffer.release();
 
         ByteBuf heapBuffer = allocator.heapBuffer();
-        assertInstanceOf(heapBuffer, MiMallocByteBufAllocator.MiByteBuf.class);
+        if (Thread.currentThread() instanceof FastThreadLocalThread) {
+            assertInstanceOf(heapBuffer, MiMallocByteBufAllocator.MiByteBuf.class);
+        } else {
+            assertInstanceOf(directBuffer, PooledByteBuf.class);
+        }
         assertFalse(heapBuffer.isDirect());
         heapBuffer.release();
     }
@@ -61,7 +69,7 @@ public class MiByteBufAllocatorTest extends AbstractByteBufAllocatorTest<MiByteB
     @Override
     @Test
     public void testUsedDirectMemory() {
-        MiByteBufAllocator allocator =  newAllocator(true);
+        MiByteBufAllocator allocator = newAllocator(true);
         ByteBufAllocatorMetric metric = allocator.metric();
         assertEquals(0, metric.usedDirectMemory());
         ByteBuf buffer = allocator.directBuffer(1024, 4096);

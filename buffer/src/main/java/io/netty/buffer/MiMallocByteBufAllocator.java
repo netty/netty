@@ -34,7 +34,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -168,6 +167,8 @@ final class MiMallocByteBufAllocator {
         long segmentsCurrentSize; // current size of all segments
         long segmentsPeakSize;    // peak size of all segments
         int reclaimCount; // number of reclaimed (abandoned) segments
+        boolean justAllocatedNormal;
+        int normalSegmentsCount;
         private final SpanQueue[] spanQueues = new SpanQueue[] {
             new SpanQueue(1, 0), // placeholder, not used.
             new SpanQueue(1, 1), new SpanQueue(2, 2),
@@ -829,7 +830,8 @@ final class MiMallocByteBufAllocator {
 
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
-                if (!force && this.segmentTld.segmentsCount < 8) {
+                if (!force && this.segmentTld.justAllocatedNormal) {
+                    this.segmentTld.justAllocatedNormal = false;
                     return;
                 }
                 // Remove the free spans.
@@ -849,13 +851,16 @@ final class MiMallocByteBufAllocator {
         }
 
         private void freeSpanSegments() {
+            if (this.segmentTld.normalSegmentsCount < 1) {
+                return;
+            }
             Set<Segment> segments = new HashSet<Segment>();
             SpanQueue[] spanQueues = this.segmentTld.spanQueues;
             for (SpanQueue sq : spanQueues) {
                 Span span = sq.firstSpan;
                 while (span != null) {
                     Segment segment = span.segment;
-                    if (segment.usedPages == 0) {
+                    if (segment != null && segment.usedPages == 0) {
                         segments.add(segment);
                     }
                     span = span.nextSpan;
@@ -1031,6 +1036,7 @@ final class MiMallocByteBufAllocator {
             if (buf == null) {
                 return null; // Signal OOM
             }
+            this.segmentTld.justAllocatedNormal = true;
             Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf, this);
             segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free spans.
@@ -1060,6 +1066,8 @@ final class MiMallocByteBufAllocator {
 
         private void segmentsTrackSize(long segment_size) {
             segmentTld.segmentsCount += segment_size >= 0 ? 1 : -1;
+            segmentTld.normalSegmentsCount += segment_size == DEFAULT_SEGMENT_SIZE ? 1 :
+                    segment_size == -DEFAULT_SEGMENT_SIZE ? -1 : 0;
             if (segmentTld.segmentsCount > segmentTld.segmentsPeakCount) {
                 segmentTld.segmentsPeakCount = segmentTld.segmentsCount;
             }
