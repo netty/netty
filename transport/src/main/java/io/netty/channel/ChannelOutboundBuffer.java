@@ -555,7 +555,6 @@ public final class ChannelOutboundBuffer {
         clearNioBuffers();
     }
 
-
     private static void safeSuccess(CompletionHandler<Void> handler) {
         try {
             handler.success(null);
