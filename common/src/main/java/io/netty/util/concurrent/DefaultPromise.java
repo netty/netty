@@ -22,7 +22,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
@@ -515,6 +514,53 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         });
     }
 
+    /**
+     * Notify a listener that a future has completed.
+     * <p>
+     * This method has a fixed depth of {@link #MAX_LISTENER_STACK_DEPTH} that will limit recursion to prevent
+     * {@link StackOverflowError} and will stop notifying listeners added after this threshold is exceeded.
+     * @param eventExecutor the executor to use to notify the listener {@code listener}.
+     * @param future the future that is complete.
+     * @param handler the handler to notify.
+     */
+    protected static <V> void notifyHandler(
+            EventExecutor eventExecutor, final Future<V> future, final CompletionHandler<? super V> handler) {
+        notifyHandlerWithStackOverFlowProtection(
+                checkNotNull(eventExecutor, "eventExecutor"),
+                checkNotNull(future, "future"),
+                checkNotNull(handler, "handler"));
+    }
+
+    /**
+     * The logic in this method should be identical to {@link #notifyListenersAndHandlers()} but
+     * cannot share code because the listener(s) cannot be cached for an instance of {@link DefaultPromise} since the
+     * listener(s) may be changed and is protected by a synchronized operation.
+     */
+    private static <V> void notifyHandlerWithStackOverFlowProtection(final EventExecutor executor,
+                                                                     final Future<V> future,
+                                                                     final CompletionHandler<? super V> handler) {
+        if (executor.inEventLoop()) {
+            final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
+            final int stackDepth = threadLocals.futureListenerStackDepth();
+            if (stackDepth < MAX_LISTENER_STACK_DEPTH) {
+                threadLocals.setFutureListenerStackDepth(stackDepth + 1);
+                try {
+                    notifyHandler0(future, handler);
+                } finally {
+                    threadLocals.setFutureListenerStackDepth(stackDepth);
+                }
+                return;
+            }
+        }
+
+        safeExecute(executor, new Runnable() {
+            @Override
+            public void run() {
+                notifyHandler0(future, handler);
+            }
+        });
+    }
+
     private void notifyListenersNow() {
         Object listener;
         DefaultFutureListenersAndHandlers listenersOrHandlers;
@@ -584,13 +630,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
     }
 
-    private static <V> void notifyHandler0(Future<V> future, CompletionHandler<V> handler) {
+    private static <V> void notifyHandler0(Future<V> future, CompletionHandler<? super V> handler) {
         if (future.isSuccess()) {
             try {
                 handler.success(future.getNow());
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
-                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onSuccess(...)", t);
+                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".success(...)", t);
                 }
             }
         } else {
@@ -598,7 +644,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
                 handler.failure(future.cause());
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
-                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".onFailure(...)", t);
+                    logger.warn("An exception was thrown by " + handler.getClass().getName() + ".failure(...)", t);
                 }
             }
         }

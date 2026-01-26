@@ -34,17 +34,9 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         super(executor);
     }
 
-    // TODO: Improve impl to reduce GC
     @Override
     public Future<V> addHandler(CompletionHandler<? super V> handler) {
-        ObjectUtil.checkNotNull(handler, "handler");
-        addListener(f -> {
-            if (f.isSuccess()) {
-                handler.success(null);
-            } else {
-                handler.failure(f.cause());
-            }
-        });
+        DefaultPromise.notifyHandler(executor(), this, ObjectUtil.checkNotNull(handler, "handler"));
         return this;
     }
 
