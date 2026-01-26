@@ -61,6 +61,32 @@ public final class DefaultDnsMxRecord extends AbstractDnsRecord implements DnsMx
     }
 
     @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof DnsMxRecord)) {
+            return false;
+        }
+        if (!super.equals(obj)) {
+            return false;
+        }
+        DnsMxRecord that = (DnsMxRecord) obj;
+        return timeToLive() == that.timeToLive() &&
+               preference == that.preference() &&
+               exchange.equalsIgnoreCase(that.exchange());
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = super.hashCode();
+        hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
+        hashCode = 31 * hashCode + preference;
+        hashCode = 31 * hashCode + exchange.toLowerCase().hashCode();
+        return hashCode;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
         buf.append(name().isEmpty() ? "<root>" : name())

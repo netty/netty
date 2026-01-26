@@ -53,6 +53,30 @@ public final class DefaultDnsCnameRecord extends AbstractDnsRecord implements Dn
     }
 
     @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof DnsCnameRecord)) {
+            return false;
+        }
+        if (!super.equals(obj)) {
+            return false;
+        }
+        DnsCnameRecord that = (DnsCnameRecord) obj;
+        return timeToLive() == that.timeToLive() &&
+               canonicalName.equalsIgnoreCase(that.canonicalName());
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = super.hashCode();
+        hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
+        hashCode = 31 * hashCode + canonicalName.toLowerCase().hashCode();
+        return hashCode;
+    }
+
+    @Override
     public String toString() {
         final StringBuilder buf = new StringBuilder(64).append(StringUtil.simpleClassName(this)).append('(');
         buf.append(name().isEmpty() ? "<root>" : name())
