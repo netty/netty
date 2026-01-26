@@ -88,7 +88,8 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
         assertThat(parameters.ackDelayExponent()).isGreaterThanOrEqualTo(1L);
         assertThat(parameters.maxAckDelay()).isGreaterThanOrEqualTo(1L);
         assertFalse(parameters.disableActiveMigration());
-        assertThat(parameters.activeConnIdLimit()).isGreaterThanOrEqualTo(1L);
+        // -1 is the max value for an uint64_t that is converted to int64_t.
+        assertThat(parameters.activeConnIdLimit()).isEqualTo(-1L);
         assertThat(parameters.maxDatagramFrameSize()).isGreaterThanOrEqualTo(0L);
     }
 }
