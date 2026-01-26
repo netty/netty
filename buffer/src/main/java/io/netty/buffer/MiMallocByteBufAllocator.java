@@ -167,7 +167,6 @@ final class MiMallocByteBufAllocator {
         long segmentsCurrentSize; // current size of all segments
         long segmentsPeakSize;    // peak size of all segments
         int reclaimCount; // number of reclaimed (abandoned) segments
-        boolean justAllocatedNormal;
         int normalSegmentsCount;
         private final SpanQueue[] spanQueues = new SpanQueue[] {
             new SpanQueue(1, 0), // placeholder, not used.
@@ -830,8 +829,7 @@ final class MiMallocByteBufAllocator {
 
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
-                if (!force && this.segmentTld.justAllocatedNormal) {
-                    this.segmentTld.justAllocatedNormal = false;
+                if (!force && this.segmentTld.normalSegmentsCount < 8) {
                     return;
                 }
                 // Remove the free spans.
@@ -1036,7 +1034,6 @@ final class MiMallocByteBufAllocator {
             if (buf == null) {
                 return null; // Signal OOM
             }
-            this.segmentTld.justAllocatedNormal = true;
             Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf, this);
             segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free spans.
