@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -621,13 +623,12 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
-        try {
-            ch.writeOutbound(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
-            fail();
-        } catch (EncoderException e) {
-            assertTrue(e.getCause() instanceof IllegalStateException);
-        }
+        Throwable cause = assertThrows(CompletionException.class,
+                () -> ch.writeOutbound(new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER)));
+        EncoderException e = assertInstanceOf(EncoderException.class, cause.getCause());
+        assertInstanceOf(IllegalStateException.class, e.getCause());
+
         assertTrue(ch.finish());
         for (;;) {
             Object message = ch.readOutbound();

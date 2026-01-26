@@ -53,10 +53,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -94,13 +96,14 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void encodeNonFullHttpResponse100ContinueIsRejected() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        assertThrows(EncoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeOutbound(new DefaultHttpResponse(
                         HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
             }
         });
+        assertInstanceOf(EncoderException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 

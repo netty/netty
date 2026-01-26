@@ -190,7 +190,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
     private void writeInvalidFrame(Http3ErrorCode expectedCode,
                                    EmbeddedChannel channel,
                                    Http3Frame frame) {
-        Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(frame));
+        Throwable e = assertThrows(Exception.class, () -> channel.writeOutbound(frame)).getCause();
         assertException(expectedCode, e);
     }
 

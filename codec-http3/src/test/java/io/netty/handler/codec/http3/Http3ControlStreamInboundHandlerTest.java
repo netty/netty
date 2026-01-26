@@ -236,7 +236,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     private void writeInvalidFrame(boolean forwardControlFrames, Http3ErrorCode expectedCode, EmbeddedChannel channel,
                                    Http3Frame frame) {
         if (forwardControlFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeInbound(frame));
+            Throwable e = assertThrows(Exception.class, () -> channel.writeInbound(frame)).getCause();
             assertException(expectedCode, e);
         } else {
             assertFalse(channel.writeInbound(frame));

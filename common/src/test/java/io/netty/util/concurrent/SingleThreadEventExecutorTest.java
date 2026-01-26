@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -264,12 +266,13 @@ public class SingleThreadEventExecutorTest {
         executorService.shutdownNow();
         executeShouldFail(executor);
         executeShouldFail(executor);
-        assertThrows(RejectedExecutionException.class, new Executable() {
+        Throwable wrapped = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 executor.shutdownGracefully().syncUninterruptibly();
             }
-        });
+        }).getCause();
+        assertInstanceOf(RejectedExecutionException.class, wrapped);
         assertTrue(executor.isShutdown());
     }
 

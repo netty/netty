@@ -24,9 +24,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,34 +116,37 @@ public class SmtpResponseDecoderTest {
     @Test
     public void testDecodeInvalidSeparator() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(newBuffer("200:Ok\r\n"));
             }
         });
+        assertInstanceOf(DecoderException.class, cause.getCause());
     }
 
     @Test
     public void testDecodeInvalidCode() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(newBuffer("xyz Ok\r\n"));
             }
         });
+        assertInstanceOf(DecoderException.class, cause.getCause());
     }
 
     @Test
     public void testDecodeInvalidLine() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(newBuffer("Ok\r\n"));
             }
         });
+        assertInstanceOf(DecoderException.class, cause.getCause());
     }
 
     private static EmbeddedChannel newChannel() {

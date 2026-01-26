@@ -23,8 +23,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,12 +51,13 @@ public class SnappyFrameDecoderTest {
             0x03, 0x01, 0x00, 0x00, 0x00
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -62,12 +66,13 @@ public class SnappyFrameDecoderTest {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -76,12 +81,13 @@ public class SnappyFrameDecoderTest {
             (byte) 0xff, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -90,12 +96,13 @@ public class SnappyFrameDecoderTest {
             -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -104,12 +111,13 @@ public class SnappyFrameDecoderTest {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -118,12 +126,13 @@ public class SnappyFrameDecoderTest {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -190,12 +199,13 @@ public class SnappyFrameDecoderTest {
                     0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
             });
 
-            assertThrows(DecompressionException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     channel.writeInbound(in);
                 }
             });
+            assertInstanceOf(DecompressionException.class, cause.getCause());
         } finally {
             channel.finishAndReleaseAll();
         }

@@ -29,6 +29,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
@@ -424,12 +425,13 @@ public class HttpContentEncoderTest {
         HttpContent content = new DefaultHttpContent(Unpooled.buffer().writeZero(10));
         assertTrue(channel.writeOutbound(content));
         assertEquals(1, content.refCnt());
-        assertThrows(CodecException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.finishAndReleaseAll();
             }
         });
+        assertInstanceOf(CodecException.class, cause.getCause());
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());

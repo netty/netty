@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -100,12 +101,13 @@ public class DnsResponseTest {
         final EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         final ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
                 }
             });
+            assertInstanceOf(CorruptedFrameException.class, cause.getCause());
         } finally {
             assertFalse(embedder.finish());
         }
@@ -116,12 +118,13 @@ public class DnsResponseTest {
         final EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         final ByteBuf packet = embedder.alloc().buffer(512);
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
                 }
             });
+            assertInstanceOf(CorruptedFrameException.class, cause.getCause());
         } finally {
             assertFalse(embedder.finish());
         }

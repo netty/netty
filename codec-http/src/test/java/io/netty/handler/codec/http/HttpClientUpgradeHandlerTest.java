@@ -22,6 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -231,12 +233,13 @@ public class HttpClientUpgradeHandlerTest {
         assertTrue(request.release());
 
         final FullHttpRequest secondReq = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
                     @Override
                     public void execute() throws Throwable {
                         channel.writeOutbound(secondReq);
                     }
                 });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
 
         assertEquals(0, secondReq.refCnt());
         assertFalse(channel.finish());
@@ -258,7 +261,9 @@ public class HttpClientUpgradeHandlerTest {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
         response.headers().add(HttpHeaderNames.UPGRADE, "");
         assertFalse(channel.writeInbound(response));
-        assertThrows(IllegalStateException.class, () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        Throwable cause = assertThrows(CompletionException.class,
+                () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
 
         FullHttpResponse full = channel.readInbound();
         assertTrue(full.release());

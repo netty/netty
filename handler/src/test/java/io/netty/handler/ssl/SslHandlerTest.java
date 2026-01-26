@@ -79,6 +79,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -208,23 +209,25 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testClientHandshakeTimeout() throws Exception {
-        assertThrows(SslHandshakeTimeoutException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 testHandshakeTimeout(true);
             }
         });
+        assertInstanceOf(SslHandshakeTimeoutException.class, cause.getCause());
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testServerHandshakeTimeout() throws Exception {
-        assertThrows(SslHandshakeTimeoutException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 testHandshakeTimeout(false);
             }
         });
+        assertInstanceOf(SslHandshakeTimeoutException.class, cause.getCause());
     }
 
     private static SSLEngine newServerModeSSLEngine() throws NoSuchAlgorithmException {
@@ -316,13 +319,14 @@ public class SslHandlerTest {
         // Should decode nothing yet.
         assertNull(ch.readInbound());
 
-        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+        DecoderException e = (DecoderException) assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 // Push the second part of the 5-byte handshake message.
                 ch.writeInbound(wrappedBuffer(new byte[]{2, 0, 0, 1, 0}));
             }
-        });
+        }).getCause();
+
         // Be sure we cleanup the channel and release any pending messages that may have been generated because
         // of an alert.
         // See https://github.com/netty/netty/issues/6057.
@@ -364,12 +368,13 @@ public class SslHandlerTest {
         SSLEngine engine = newServerModeSSLEngine();
         final EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(engine));
 
-        assertThrows(UnsupportedMessageTypeException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 ch.writeOutbound(new Object());
             }
         });
+        assertInstanceOf(UnsupportedMessageTypeException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 
@@ -1693,12 +1698,12 @@ public class SslHandlerTest {
         buf.writeByte(0xfe);
         buf.writeByte(0x87);
         buf.writeByte(0x2);
-        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+        DecoderException e = (DecoderException) assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(buf);
             }
-        });
+        }).getCause();
         assertInstanceOf(NotSslRecordException.class, e.getCause());
         assertTrue(channel.finishAndReleaseAll());
     }

@@ -39,6 +39,7 @@ import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.util.ReferenceCountUtil.release;
@@ -50,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -92,12 +94,8 @@ public class HttpClientCodecTest {
         ByteBuf buffer = ch.readOutbound();
         assertNotNull(buffer);
         buffer.release();
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        Throwable cause = assertThrows(CompletionException.class, ch::finish);
+        assertInstanceOf(PrematureChannelClosureException.class, cause.getCause());
     }
 
     @Test
@@ -116,12 +114,8 @@ public class HttpClientCodecTest {
         ((HttpContent) ch.readInbound()).release(); // Chunk 'second'
         assertNull(ch.readInbound());
 
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        Throwable cause = assertThrows(CompletionException.class, ch::finish);
+        assertInstanceOf(PrematureChannelClosureException.class, cause.getCause());
     }
 
     @Test

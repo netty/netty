@@ -32,12 +32,14 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.buffer.Unpooled.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -117,113 +119,123 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testV1NoUDP() {
         final String header = "PROXY UDP4 192.168.0.1 192.168.0.11 56324 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidPort() {
         final String header = "PROXY TCP4 192.168.0.1 192.168.0.11 80000 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidIPV4Address() {
         final String header = "PROXY TCP4 299.168.0.1 192.168.0.11 56324 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidIPV6Address() {
         final String header =
                 "PROXY TCP6 r001:0db8:85a3:0000:0000:8a2e:0370:7334 1050:0:0:0:5:600:300c:326b 56324 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidProtocol() {
         final String header = "PROXY TCP7 192.168.0.1 192.168.0.11 56324 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testMissingParams() {
         final String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testTooManyParams() {
         final String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443 123\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidCommand() {
         final String header = "PING TCP4 192.168.0.1 192.168.0.11 56324 443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testInvalidEOL() {
         final String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\nGET / HTTP/1.1\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
     public void testHeaderTooLong() {
         final String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                         "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -240,12 +252,13 @@ public class HAProxyMessageDecoderTest {
             final String headerPart3 = "end of header\r\n";
 
             int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
-            assertThrows(HAProxyProtocolException.class, new Executable() {
+            CompletionException cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII));
                 }
             }, "over " + discarded);
+            assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
         } finally {
             assertFalse(slowFailCh.finishAndReleaseAll());
         }
@@ -257,12 +270,13 @@ public class HAProxyMessageDecoderTest {
         try {
             final String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                                  "000000000000000000000000000000000000000000000000000000000000000000000443";
-            assertThrows(HAProxyProtocolException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                         @Override
                         public void execute() {
                             fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII));
                         }
                     }, "over " + headerPart1.length());
+            assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
         } finally {
             assertFalse(fastFailCh.finishAndReleaseAll());
         }
@@ -282,7 +296,7 @@ public class HAProxyMessageDecoderTest {
         String header = "GET / HTTP/1.1\r\n";
         try {
             ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
-        } catch (HAProxyProtocolException ppex) {
+        } catch (CompletionException ppex) {
             // swallow this exception since we're just testing to be sure the channel was closed
         }
         boolean isComplete = closeFuture.awaitUninterruptibly(5000);
@@ -935,12 +949,13 @@ public class HAProxyMessageDecoderTest {
         header[26] = 0x01; // Destination Port
         header[27] = (byte) 0xbb; // -----
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -978,12 +993,13 @@ public class HAProxyMessageDecoderTest {
         header[24] = (byte) 0xdc; // Source Port
         header[25] = 0x04; // -----
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -1024,12 +1040,13 @@ public class HAProxyMessageDecoderTest {
         header[26] = 0x01; // Destination Port
         header[27] = (byte) 0xbb; // -----
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -1070,12 +1087,13 @@ public class HAProxyMessageDecoderTest {
         header[26] = 0x01; // Destination Port
         header[27] = (byte) 0xbb; // -----
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -1118,12 +1136,13 @@ public class HAProxyMessageDecoderTest {
         header[26] = 0x01; // Destination Port
         header[27] = (byte) 0xbb; // -----
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(copiedBuffer(header));
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 
     @Test
@@ -1249,11 +1268,12 @@ public class HAProxyMessageDecoderTest {
         data.writeBytes(numsWrite.array());
         data.writeBytes(header);
 
-        assertThrows(HAProxyProtocolException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(data);
             }
         });
+        assertInstanceOf(HAProxyProtocolException.class, cause.getCause());
     }
 }

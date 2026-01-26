@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 
@@ -64,13 +65,13 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
-     * failed.
+     * failed wrapped in a {@link CompletionException}
      */
     Future<V> sync() throws InterruptedException;
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
-     * failed.
+     * failed wrapped in a {@link CompletionException}
      */
     Future<V> syncUninterruptibly();
 

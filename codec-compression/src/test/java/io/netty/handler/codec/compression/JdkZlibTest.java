@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
@@ -39,6 +40,7 @@ import java.util.zip.GZIPOutputStream;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,12 +61,13 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        assertThrows(DecompressionException.class, new Executable() {
+        CompletionException cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 JdkZlibTest.super.testZLIB_OR_NONE3();
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -222,9 +225,10 @@ public class JdkZlibTest extends ZlibTest {
         compressed[compressed.length - 8] ^= 0xFF;
 
         EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
-        assertThrows(DecompressionException.class, () -> {
+        Throwable cause = assertThrows(CompletionException.class, () -> {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 
@@ -241,9 +245,10 @@ public class JdkZlibTest extends ZlibTest {
         compressed[compressed.length - 4] ^= 0xFF;
 
         EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
-        assertThrows(DecompressionException.class, () -> {
+        Throwable cause = assertThrows(CompletionException.class, () -> {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 

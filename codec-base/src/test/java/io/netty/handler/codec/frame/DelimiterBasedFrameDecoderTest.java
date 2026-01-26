@@ -25,7 +25,11 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -38,12 +42,9 @@ public class DelimiterBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 }));
-            try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0 })));
+            assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 'A', 0 }));
             ByteBuf buf = ch.readInbound();
@@ -59,13 +60,9 @@ public class DelimiterBasedFrameDecoderTest {
                 new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
-            try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
-
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 1, 2 })));
+            assertInstanceOf(TooLongFrameException.class, cause.getCause());
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 'A', 0 }));
             ByteBuf buf = ch.readInbound();
             assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));

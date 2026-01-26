@@ -20,6 +20,7 @@ import io.netty.handler.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 import static io.netty.handler.codec.http3.Http3.setQpackAttributes;
@@ -53,7 +54,8 @@ public class QpackDecoderHandlerTest {
         setup(128L);
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = (Http3Exception) assertThrows(CompletionException.class,
+                () -> sendAckForStreamId(decoderStream.streamId())).getCause();
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -82,7 +84,8 @@ public class QpackDecoderHandlerTest {
     public void sectionAckUnknownStream() throws Exception {
         setup(128);
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(1));
+        Http3Exception e = (Http3Exception) assertThrows(CompletionException.class,
+                () -> sendAckForStreamId(1)).getCause();
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -98,7 +101,8 @@ public class QpackDecoderHandlerTest {
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
         sendAckForStreamId(decoderStream.streamId());
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = (Http3Exception) assertThrows(CompletionException.class,
+                () -> sendAckForStreamId(decoderStream.streamId())).getCause();
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -154,7 +158,8 @@ public class QpackDecoderHandlerTest {
 
         sendStreamCancellation(decoderStream.streamId());
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = (Http3Exception) assertThrows(CompletionException.class,
+                () -> sendAckForStreamId(decoderStream.streamId())).getCause();
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);

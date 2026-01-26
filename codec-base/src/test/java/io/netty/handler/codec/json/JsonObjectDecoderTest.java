@@ -24,14 +24,21 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JsonObjectDecoderTest {
+    private static final Logger log = LoggerFactory.getLogger(JsonObjectDecoderTest.class);
+
     @Test
     public void testJsonObjectOverMultipleWrites() {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
@@ -257,12 +264,13 @@ public class JsonObjectDecoderTest {
     public void testNonJsonContent1() {
         final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8));
                 }
             });
+            assertInstanceOf(CorruptedFrameException.class, cause.getCause());
         } finally {
             assertFalse(ch.finish());
         }
@@ -278,12 +286,13 @@ public class JsonObjectDecoderTest {
         res.release();
 
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8));
                 }
             });
+            assertInstanceOf(CorruptedFrameException.class, cause.getCause());
         } finally {
             assertFalse(ch.finish());
         }
@@ -293,12 +302,13 @@ public class JsonObjectDecoderTest {
     public void testMaxObjectLength() {
         final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(6));
         try {
-            assertThrows(TooLongFrameException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     ch.writeInbound(Unpooled.copiedBuffer("[2,4,5]", CharsetUtil.UTF_8));
                 }
             });
+            assertInstanceOf(TooLongFrameException.class, cause.getCause());
         } finally {
             assertFalse(ch.finish());
         }

@@ -29,6 +29,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,6 +37,7 @@ import static io.netty.handler.ssl.CloseNotifyTest.assertCloseNotify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -142,12 +144,13 @@ public class ApplicationProtocolNegotiationHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 channel.finishAndReleaseAll();
             }
         });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
     }
 
     @Test

@@ -18,6 +18,9 @@ package io.netty.handler.codec.compression;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ZlibCrossTest2 extends ZlibTest {
@@ -35,11 +38,12 @@ public class ZlibCrossTest2 extends ZlibTest {
     @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 ZlibCrossTest2.super.testZLIB_OR_NONE3();
             }
         });
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 }

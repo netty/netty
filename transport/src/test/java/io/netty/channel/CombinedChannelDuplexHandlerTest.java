@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CombinedChannelDuplexHandlerTest {
 
@@ -152,12 +152,9 @@ public class CombinedChannelDuplexHandlerTest {
 
         // Should have not received any more events as it was removed before via removeInboundHandler()
         assertNull(inboundHandler.pollEvent());
-        try {
-            channel.checkException();
-            fail();
-        } catch (Throwable cause) {
-            assertSame(CAUSE, cause);
-        }
+
+        Throwable cause = assertThrows(CompletionException.class, channel::checkException);
+        assertSame(CAUSE, cause.getCause());
 
         assertTrue(channel.finish());
         assertNull(inboundHandler.pollEvent());

@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http3.Http3.getQpackAttributes;
 import static io.netty.handler.codec.http3.Http3.setQpackAttributes;
@@ -132,7 +133,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         Http3ErrorCode errorCode = inboundErrorCodeInvalid();
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeInbound(invalid));
+            Throwable e = assertThrows(CompletionException.class, () -> channel.writeInbound(invalid)).getCause();
             assertException(errorCode, e);
 
             assertFrameReleased(invalid);
@@ -154,7 +155,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(invalid));
+            Throwable e = assertThrows(CompletionException.class, () -> channel.writeOutbound(invalid)).getCause();
             Http3TestUtils.assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
 
             assertFrameReleased(invalid);

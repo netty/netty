@@ -25,10 +25,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 public class MessageToMessageEncoderTest {
 
@@ -43,12 +45,13 @@ public class MessageToMessageEncoderTest {
                 throw new Exception();
             }
         });
-        assertThrows(EncoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeOutbound(new Object());
             }
         });
+        assertInstanceOf(EncoderException.class, cause.getCause());
     }
 
     @Test

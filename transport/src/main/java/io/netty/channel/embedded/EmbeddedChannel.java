@@ -943,7 +943,8 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     /**
-     * Check if there was any {@link Throwable} received and if so rethrow it.
+     * Check if there was any {@link Throwable} received and if so rethrow it wrapped in a
+     * {@link java.util.concurrent.CompletionException}.
      */
     public void checkException() {
         Promise<Void> promise = newPromise();

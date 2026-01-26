@@ -43,6 +43,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -166,17 +167,16 @@ public class LocalChannelTest {
 
             // Close the channel and write something.
             cc.close().sync();
-            try {
-                cc.writeAndFlush(new Object()).sync();
-                fail("must raise a ClosedChannelException");
-            } catch (Exception e) {
-                assertInstanceOf(ClosedChannelException.class, e);
-                // Ensure that the actual write attempt on a closed channel was never made by asserting that
-                // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
-                if (e.getStackTrace().length > 0) {
-                   assertEquals(AbstractChannel.class.getName() +
-                           "$IoTransportImpl", e.getStackTrace()[0].getClassName());
-                }
+            final Channel fcc = cc;
+            Throwable cause = assertThrows(CompletionException.class, () -> fcc.writeAndFlush(new Object()).sync());
+
+            Throwable e = cause.getCause();
+            assertInstanceOf(ClosedChannelException.class, e);
+            // Ensure that the actual write attempt on a closed channel was never made by asserting that
+            // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
+            if (e.getStackTrace().length > 0) {
+                assertEquals(AbstractChannel.class.getName() +
+                        "$IoTransportImpl", e.getStackTrace()[0].getClassName());
             }
         } finally {
             closeChannel(cc);
@@ -843,12 +843,13 @@ public class LocalChannelTest {
         sb.group(group1)
         .channel(LocalChannel.class)
         .handler(new TestHandler());
-        assertThrows(ConnectException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 sb.connect(LocalAddress.ANY).syncUninterruptibly();
             }
         });
+        assertInstanceOf(ConnectException.class, cause.getCause());
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements FutureListener<Void> {

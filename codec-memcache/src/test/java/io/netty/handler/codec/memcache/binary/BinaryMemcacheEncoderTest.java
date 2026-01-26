@@ -27,7 +27,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -155,11 +158,12 @@ public class BinaryMemcacheEncoderTest {
     @Test
     public void shouldFailWithoutLastContent() {
         channel.writeOutbound(new DefaultMemcacheContent(Unpooled.EMPTY_BUFFER));
-        assertThrows(EncoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeOutbound(new DefaultBinaryMemcacheRequest());
             }
         });
+        assertInstanceOf(EncoderException.class, cause.getCause());
     }
 }

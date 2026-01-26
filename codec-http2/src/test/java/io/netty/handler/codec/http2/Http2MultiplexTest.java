@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -68,6 +69,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -963,12 +965,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         handler.checkException();
 
-        assertThrows(Http2NoMoreStreamIdsException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 future.syncUninterruptibly();
             }
         });
+        assertInstanceOf(Http2NoMoreStreamIdsException.class, cause.getCause());
     }
 
     @Test

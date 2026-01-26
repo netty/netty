@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -90,12 +91,13 @@ public class BootstrapTest {
                 .handler(new ChannelInboundHandler() { })
                 .register();
 
-        assertThrows(UnsupportedOperationException.class, new  Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new  Executable() {
             @Override
             public void execute() throws Throwable {
                 cf.syncUninterruptibly();
             }
         });
+        assertInstanceOf(UnsupportedOperationException.class, cause.getCause());
     }
 
     @Test
@@ -222,12 +224,14 @@ public class BootstrapTest {
             bootstrapA.group(group);
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(dummyHandler);
-            assertThrows(ConnectException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     bootstrapA.connect(LocalAddress.ANY).syncUninterruptibly();
                 }
             });
+
+            assertInstanceOf(ConnectException.class, cause.getCause());
         } finally {
             group.shutdownGracefully();
         }

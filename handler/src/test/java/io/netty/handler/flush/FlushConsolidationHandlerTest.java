@@ -22,10 +22,12 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -140,12 +142,13 @@ public class FlushConsolidationHandlerTest {
         assertEquals(1, flushCount.get());
         assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 channel.finish();
             }
         });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
     }
 
     @Test

@@ -58,6 +58,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -66,6 +67,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -444,12 +446,8 @@ public class PcapWriteHandlerTest {
             assertEquals(24, pcapBuffer.readableBytes());
 
             // Verify thrown exception
-            try {
-                embeddedChannel.checkException();
-                fail();
-            } catch (Throwable t) {
-                assertSame(exception, t);
-            }
+            Throwable cause = assertThrows(CompletionException.class, embeddedChannel::checkException);
+            assertSame(exception, cause.getCause());
 
             assertFalse(embeddedChannel.finishAndReleaseAll());
         } finally {
@@ -867,14 +865,10 @@ public class PcapWriteHandlerTest {
         assertEquals(0, tcpPacket.readUnsignedShort()); // Urgent Pointer
 
         // Verify thrown exception
-        try {
-            embeddedChannel.checkException();
-            fail();
-        } catch (Throwable t) {
-            assertSame(exception, t);
-        } finally {
-            pcapBuffer.release();
-        }
+        // Verify thrown exception
+        Throwable cause = assertThrows(CompletionException.class, embeddedChannel::checkException);
+        assertSame(exception, cause.getCause());
+        pcapBuffer.release();
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }

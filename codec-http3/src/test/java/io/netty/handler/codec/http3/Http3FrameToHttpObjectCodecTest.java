@@ -75,6 +75,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -87,6 +88,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -122,8 +124,9 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void encodeNonFullHttpResponse100ContinueIsRejected() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
-        assertThrows(EncoderException.class, () -> ch.writeOutbound(new DefaultHttpResponse(
+        Throwable cause = assertThrows(CompletionException.class, () -> ch.writeOutbound(new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
+        assertInstanceOf(EncoderException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 
@@ -1052,8 +1055,8 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testUnsupportedIncludeSomeDetails() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        UnsupportedMessageTypeException ex = assertThrows(
-                UnsupportedMessageTypeException.class, () -> ch.writeOutbound("unsupported"));
+        UnsupportedMessageTypeException ex = (UnsupportedMessageTypeException) assertThrows(
+                CompletionException.class, () -> ch.writeOutbound("unsupported")).getCause();
         assertNotNull(ex.getMessage());
         assertFalse(ch.finish());
     }

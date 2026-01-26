@@ -32,6 +32,7 @@ import org.mockito.Mockito;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -287,12 +288,13 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
 
-        assertThrows(TooLongHttpContentException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 embedder.writeInbound(chunk2);
             }
         });
+        assertInstanceOf(TooLongHttpContentException.class, cause.getCause());
 
         assertFalse(embedder.isOpen());
         assertFalse(embedder.finish());
@@ -750,12 +752,13 @@ public class HttpObjectAggregatorTest {
         // Write the partial response.
         assertFalse(ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", CharsetUtil.US_ASCII)));
-        assertThrows(PrematureChannelClosureException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.finish();
             }
         });
+        assertInstanceOf(PrematureChannelClosureException.class, cause.getCause());
     }
 
     @Test

@@ -39,6 +39,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -47,6 +48,7 @@ import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -117,12 +119,13 @@ public class FixedChannelPoolTest {
 
         Channel channel = pool.acquire().get();
         final Future<Channel> future = pool.acquire();
-        assertThrows(TimeoutException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 future.syncUninterruptibly();
             }
         });
+        assertInstanceOf(TimeoutException.class, cause.getCause());
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
         pool.close();
@@ -184,12 +187,13 @@ public class FixedChannelPoolTest {
         Future<Channel> future = pool.acquire();
         assertFalse(future.isDone());
 
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool.acquire().syncUninterruptibly();
             }
         });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
         pool.close();
@@ -207,12 +211,13 @@ public class FixedChannelPoolTest {
 
         final Channel channel = pool.acquire().get();
 
-        assertThrows(IllegalArgumentException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool2.release(channel).syncUninterruptibly();
             }
         });
+        assertInstanceOf(IllegalArgumentException.class, cause.getCause());
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
         pool.close();
@@ -236,12 +241,13 @@ public class FixedChannelPoolTest {
                 // NOOP
             }
         }).syncUninterruptibly();
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool.release(channel).syncUninterruptibly();
             }
         });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
         // Since the pool is closed, the Channel should have been closed as well.
         channel.closeFuture().syncUninterruptibly();
         assertFalse(channel.isOpen());
@@ -306,11 +312,8 @@ public class FixedChannelPoolTest {
             }
         }, 2);
 
-        try {
-            pool.acquire().sync();
-        } catch (NullPointerException e) {
-            assertSame(e, exception);
-        }
+        Throwable cause = assertThrows(CompletionException.class, () -> pool.acquire().sync());
+        assertSame(exception, cause.getCause());
 
         sc.close().sync();
         pool.close();

@@ -23,7 +23,10 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,12 +116,13 @@ public class SmtpRequestEncoderTest {
         final EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         try {
             assertTrue(channel.writeOutbound(SmtpRequests.data()));
-            assertThrows(EncoderException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     channel.writeOutbound(SmtpRequests.noop());
                 }
             });
+            assertInstanceOf(EncoderException.class, cause.getCause());
         } finally {
             channel.finishAndReleaseAll();
         }

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -75,7 +76,7 @@ public class RedisDecoderTest {
 
     @Test
     public void shouldNotDecodeInlineCommandByDefault() {
-        assertThrows(DecoderException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 assertFalse(channel.writeInbound(byteBufOf("P")));
@@ -87,6 +88,7 @@ public class RedisDecoderTest {
                 channel.readInbound();
             }
         });
+        assertInstanceOf(DecoderException.class, cause.getCause());
     }
 
     @Test

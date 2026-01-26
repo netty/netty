@@ -20,6 +20,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -169,12 +170,12 @@ public class SniHandlerTest {
                 final byte[] bytes = new byte[1024];
                 bytes[0] = SslUtils.SSL_CONTENT_TYPE_ALERT;
 
-                DecoderException e = assertThrows(DecoderException.class, new Executable() {
+                DecoderException e = (DecoderException) assertThrows(CompletionException.class, new Executable() {
                     @Override
                     public void execute() throws Throwable {
                         ch.writeInbound(Unpooled.wrappedBuffer(bytes));
                     }
-                });
+                }).getCause();
                 assertInstanceOf(NotSslRecordException.class, e.getCause());
                 assertFalse(ch.finish());
             } finally {
@@ -286,12 +287,13 @@ public class SniHandlerTest {
                 // that isn't ASCII as per RFC 6066 - https://tools.ietf.org/html/rfc6066#page-6
                 ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
 
-                assertThrows(DecoderException.class, new Executable() {
+                Throwable cause = assertThrows(CompletionException.class, new Executable() {
                     @Override
                     public void execute() throws Throwable {
                         ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
                     }
                 });
+                assertInstanceOf(DecoderException.class, cause.getCause());
             } finally {
                 ch.finishAndReleaseAll();
             }
@@ -739,12 +741,13 @@ public class SniHandlerTest {
         buffer.writeMedium(0xFFFFFF); // Length
         buffer.writeShort((short) 0x0303); // TLS 1.2
 
-        assertThrows(TooLongFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 ch.writeInbound(buffer);
             }
         });
+        assertInstanceOf(TooLongFrameException.class, cause.getCause());
         try {
             while (completionEventRef.get() == null) {
                 Thread.sleep(100);

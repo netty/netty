@@ -24,10 +24,12 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LengthFieldBasedFrameDecoderTest {
     @Test
@@ -37,12 +39,9 @@ public class LengthFieldBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             assertFalse(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
-            try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0 })));
+            assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
             ByteBuf buf = ch.readInbound();
@@ -57,12 +56,9 @@ public class LengthFieldBasedFrameDecoderTest {
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i ++) {
-            try {
-                assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
-                fail(DecoderException.class.getSimpleName() + " must be raised.");
-            } catch (TooLongFrameException e) {
-                // Expected
-            }
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
+            assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
             ByteBuf buf = ch.readInbound();

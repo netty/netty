@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -710,11 +709,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (cause == null) {
             return;
         }
-
-        if (!(cause instanceof CancellationException) && cause.getSuppressed().length == 0) {
-            cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
         }
-        PlatformDependent.throwException(cause);
+        throw new CompletionException(cause);
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {

@@ -20,8 +20,11 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,12 +45,13 @@ public class WebSocketUtf8FrameValidatorTest {
     void testNotCloseOnProtocolViolation() {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
         final TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(new byte[] { -50 }));
-        assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 channel.writeInbound(frame);
             }
         }, "bytes are not UTF-8");
+        assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
 
         assertTrue(channel.isActive());
         assertFalse(channel.finish());
@@ -57,13 +61,13 @@ public class WebSocketUtf8FrameValidatorTest {
     private void assertCorruptedFrameExceptionHandling(byte[] data) {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
         final TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
-        assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 channel.writeInbound(frame);
             }
         }, "bytes are not UTF-8");
-
+        assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
         assertFalse(channel.isActive());
 
         CloseWebSocketFrame closeFrame = channel.readOutbound();

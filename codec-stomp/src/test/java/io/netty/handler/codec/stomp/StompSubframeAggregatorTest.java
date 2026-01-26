@@ -25,8 +25,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -148,11 +151,12 @@ public class StompSubframeAggregatorTest {
     public void testTooLongFrameException() {
         final EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(),
                 new StompSubframeAggregator(10));
-        assertThrows(TooLongFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
             }
         });
+        assertInstanceOf(TooLongFrameException.class, cause.getCause());
     }
 }

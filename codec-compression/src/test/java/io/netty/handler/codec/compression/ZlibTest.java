@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
@@ -416,12 +417,13 @@ public abstract class ZlibTest {
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
 
-        DecompressionException e = assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
             }
         });
+        DecompressionException e = (DecompressionException) cause.getCause();
         assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
         assertEquals(maxAllocation, alloc.getMaxAllocation());
         assertTrue(decoder.isClosed());

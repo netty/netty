@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
@@ -39,6 +40,7 @@ import static io.netty.util.CharsetUtil.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -310,12 +312,13 @@ public class PerMessageDeflateDecoderTest {
 
         //final part throwing exception
         try {
-            assertThrows(DecoderException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     decoderChannel.writeInbound(finalPart);
                 }
             });
+            assertInstanceOf(DecoderException.class, cause.getCause());
         } finally {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());

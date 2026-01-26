@@ -20,10 +20,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -37,12 +40,8 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf);
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        Throwable cause = assertThrows(CompletionException.class, () -> channel.writeInbound(buf));
+        assertInstanceOf(TooLongFrameException.class, cause.getCause());
         assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
@@ -65,12 +64,9 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf.readRetainedSlice(14));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        Throwable cause = assertThrows(CompletionException.class,
+                () -> channel.writeInbound(buf.readRetainedSlice(14)));
+        assertInstanceOf(TooLongFrameException.class, cause.getCause());
         assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
         assertTrue(channel.finish());

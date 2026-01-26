@@ -24,8 +24,10 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -53,8 +55,12 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
             try {
                 destroyChannel();
                 fail();
-            } catch (DecompressionException ignored) {
-                // expected
+            } catch (CompletionException exception) {
+                if (exception.getCause() instanceof DecompressionException) {
+                    // expected
+                } else {
+                    throw exception;
+                }
             }
         }
     }
@@ -63,12 +69,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     public void testUnexpectedStreamIdentifier() {
         final ByteBuf in = Unpooled.buffer();
         in.writeLong(1823080128301928729L); //random value
-        assertThrows(DecompressionException.class, new Executable() {
+        CompletionException cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 writeInboundDestroyAndExpectDecompressionException(in);
             }
         }, "Unexpected stream identifier contents");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -77,12 +84,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         in.writeMedium(MAGIC_NUMBER);
         in.writeByte('0');  //incorrect block size
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         }, "block size is invalid");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -94,12 +102,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         in.writeMedium(11); //incorrect block header
         in.writeInt(11111); //block CRC
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         }, "bad block header");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -111,12 +120,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         in.writeMedium(END_OF_STREAM_MAGIC_2);
         in.writeInt(1);  //wrong storedCombinedCRC
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         }, "stream CRC error");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -124,12 +134,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[41] = (byte) 0xDD;
 
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data));
             }
         }, "stream CRC error");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -138,12 +149,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         data[25] = 0x70;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         }, "incorrect huffman groups number");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -152,12 +164,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         data[25] = 0x2F;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 channel.writeInbound(in);
             }
         }, "incorrect selectors number");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -166,12 +179,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         data[11] = 0x77;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 writeInboundDestroyAndExpectDecompressionException(in);
             }
         }, "block CRC error");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -180,12 +194,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         data[14] = (byte) 0xFF;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 writeInboundDestroyAndExpectDecompressionException(in);
             }
         }, "start pointer invalid");
+        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Override

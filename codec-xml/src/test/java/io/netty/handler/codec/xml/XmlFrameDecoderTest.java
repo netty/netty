@@ -36,8 +36,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class XmlFrameDecoderTest {
@@ -75,36 +77,39 @@ public class XmlFrameDecoderTest {
     public void testDecodeWithFrameExceedingMaxLength() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(3);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        assertThrows(TooLongFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8));
             }
         });
+        assertInstanceOf(TooLongFrameException.class, cause.getCause();
     }
 
     @Test
     public void testDecodeWithInvalidInput() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        assertThrows(CorruptedFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 ch.writeInbound(Unpooled.copiedBuffer("invalid XML", CharsetUtil.UTF_8));
             }
         });
+        assertInstanceOf(CorruptedFrameException.class, cause.getCause());
     }
 
     @Test
     public void testDecodeWithInvalidContentBeforeXml() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        assertThrows(CorruptedFrameException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8));
             }
         });
+        assertInstanceOf(CorruptedFrameException.class, cause.getCause());
     }
 
     @Test

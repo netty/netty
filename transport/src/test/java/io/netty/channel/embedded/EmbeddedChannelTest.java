@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Timeout;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,8 +49,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -79,12 +82,9 @@ public class EmbeddedChannelTest {
     public void testRegistered() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(true, false);
         assertTrue(channel.isRegistered());
-        try {
-            channel.register().sync();
-            fail();
-        } catch (IllegalStateException expected) {
-            // This is expected the channel is registered already on an EventLoop.
-        }
+
+        Throwable cause = assertThrows(CompletionException.class, () -> channel.register().sync());
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
         assertFalse(channel.finish());
     }
 
@@ -530,19 +530,11 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.close().syncUninterruptibly();
 
-        try {
-            channel.writeOutbound("Hello, Netty!");
-            fail("This should have failed with a ClosedChannelException");
-        } catch (Exception expected) {
-            assertTrue(expected instanceof ClosedChannelException);
-        }
+        Throwable cause = assertThrows(CompletionException.class, () -> channel.writeOutbound("Hello, Netty!"));
+        assertInstanceOf(ClosedChannelException.class, cause.getCause());
 
-        try {
-            channel.writeInbound("Hello, Netty!");
-            fail("This should have failed with a ClosedChannelException");
-        } catch (Exception expected) {
-            assertTrue(expected instanceof ClosedChannelException);
-        }
+        cause = assertThrows(CompletionException.class, () -> channel.writeInbound("Hello, Netty!"));
+        assertInstanceOf(ClosedChannelException.class, cause.getCause());
     }
 
     @Test

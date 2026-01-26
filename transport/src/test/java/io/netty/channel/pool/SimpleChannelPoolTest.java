@@ -31,12 +31,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -79,12 +81,13 @@ public class SimpleChannelPoolTest {
         pool.release(channel2).syncUninterruptibly();
 
         // Should fail on multiple release calls.
-        assertThrows(IllegalArgumentException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool.release(channel2).syncUninterruptibly();
             }
         });
+        assertInstanceOf(IllegalArgumentException.class, cause.getCause());
         assertFalse(channel.isActive());
 
         assertEquals(2, handler.acquiredCount());
@@ -136,12 +139,13 @@ public class SimpleChannelPoolTest {
         final Channel channel2 = pool.acquire().get();
 
         pool.release(channel).get();
-        assertThrows(IllegalStateException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool.release(channel2).syncUninterruptibly();
             }
         });
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
         channel2.close().sync();
 
         assertEquals(2, handler.channelCount());
@@ -387,11 +391,8 @@ public class SimpleChannelPoolTest {
             }
         });
 
-        try {
-            pool.acquire().sync();
-        } catch (NullPointerException e) {
-            assertSame(e, exception);
-        }
+        Throwable cause = assertThrows(CompletionException.class, () -> pool.acquire().sync());
+        assertSame(cause.getCause(), exception);
 
         sc.close().sync();
         pool.close();
