@@ -19,8 +19,6 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -108,16 +106,10 @@ public final class ObjectCleaner {
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    cleanupThread.setContextClassLoader(null);
-                    return null;
-                }
-            });
+            cleanupThread.setContextClassLoader(null);
             cleanupThread.setName(CLEANER_THREAD_NAME);
 
-            // Mark this as a daemon thread to ensure that we the JVM can exit if this is the only thread that is
+            // Mark this as a daemon thread to ensure that the JVM can exit if this is the only thread that is
             // running.
             cleanupThread.setDaemon(true);
             cleanupThread.start();

@@ -17,12 +17,10 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.PlatformDependent;
 
-import javax.net.ssl.SSLParameters;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import javax.net.ssl.SSLParameters;
 
 final class OpenSslParametersUtil {
 
@@ -45,15 +43,13 @@ final class OpenSslParametersUtil {
 
     private static MethodHandle obtainHandle(final MethodHandles.Lookup lookup,
                                              final String methodName, final MethodType type) {
-        return AccessController.doPrivileged((PrivilegedAction<MethodHandle>) () -> {
-            try {
-                return lookup.findVirtual(SSLParameters.class, methodName, type);
-            } catch (UnsupportedOperationException | SecurityException |
-                     NoSuchMethodException | IllegalAccessException e) {
-                // Just ignore it.
-                return null;
-            }
-        });
+        try {
+            return lookup.findVirtual(SSLParameters.class, methodName, type);
+        } catch (UnsupportedOperationException | SecurityException |
+                 NoSuchMethodException | IllegalAccessException e) {
+            // Just ignore it.
+            return null;
+        }
     }
 
     static String[] getNamesGroups(SSLParameters parameters) {

@@ -47,8 +47,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
@@ -303,36 +301,34 @@ public final class PlatformDependent {
 
     private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
         Path file = Paths.get(osReleaseFileName);
-        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            try {
-                if (Files.exists(file)) {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                            new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (line.startsWith(LINUX_ID_PREFIX)) {
-                                String id = normalizeOsReleaseVariableValue(
-                                        line.substring(LINUX_ID_PREFIX.length()));
-                                addClassifier(availableClassifiers, id);
-                            } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
-                                line = normalizeOsReleaseVariableValue(
-                                        line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                addClassifier(availableClassifiers, line.split(" "));
-                            }
+        try {
+            if (Files.exists(file)) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith(LINUX_ID_PREFIX)) {
+                            String id = normalizeOsReleaseVariableValue(
+                                    line.substring(LINUX_ID_PREFIX.length()));
+                            addClassifier(availableClassifiers, id);
+                        } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                            line = normalizeOsReleaseVariableValue(
+                                    line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                            addClassifier(availableClassifiers, line.split(" "));
                         }
-                    } catch (SecurityException e) {
-                        logger.debug("Unable to read {}", osReleaseFileName, e);
-                    } catch (IOException e) {
-                        logger.debug("Error while reading content of {}", osReleaseFileName, e);
                     }
-                    // specification states we should only fall back if /etc/os-release does not exist
-                    return true;
+                } catch (SecurityException e) {
+                    logger.debug("Unable to read {}", osReleaseFileName, e);
+                } catch (IOException e) {
+                    logger.debug("Error while reading content of {}", osReleaseFileName, e);
                 }
-            } catch (SecurityException e) {
-                logger.debug("Unable to check if {} exists", osReleaseFileName, e);
+                // specification states we should only fall back if /etc/os-release does not exist
+                return true;
             }
-            return false;
-        });
+        } catch (SecurityException e) {
+            logger.debug("Unable to check if {} exists", osReleaseFileName, e);
+        }
+        return false;
     }
 
     static boolean addPropertyOsClassifiers(Set<String> availableClassifiers) {
@@ -1239,16 +1235,8 @@ public final class PlatformDependent {
         static {
             Object unsafe = null;
             if (hasUnsafe()) {
-                // jctools goes through its own process of initializing unsafe; of
-                // course, this requires permissions which might not be granted to calling code, so we
-                // must mark this block as privileged too
-                unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        // force JCTools to initialize unsafe
-                        return UnsafeAccess.UNSAFE;
-                    }
-                });
+                // force JCTools to initialize unsafe
+                unsafe = UnsafeAccess.UNSAFE;
             }
 
             if (unsafe == null) {
@@ -1349,7 +1337,7 @@ public final class PlatformDependent {
      * Return the context {@link ClassLoader} for the current {@link Thread}.
      */
     public static ClassLoader getContextClassLoader() {
-        return PlatformDependent0.getContextClassLoader();
+        return Thread.currentThread().getContextClassLoader();
     }
 
     /**

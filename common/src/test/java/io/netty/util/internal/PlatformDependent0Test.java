@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
-import java.security.Permission;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -54,32 +53,6 @@ public class PlatformDependent0Test {
         ByteBuffer buffer = PlatformDependent0.newDirectBuffer(address, capacity);
         assertEquals(address, PlatformDependent0.directBufferAddress(buffer));
         assertEquals(capacity, buffer.capacity());
-    }
-
-    @Test
-    public void testMajorVersionFromJavaSpecificationVersion() {
-        final SecurityManager current = System.getSecurityManager();
-
-        try {
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public void checkPropertyAccess(String key) {
-                    if (key.equals("java.specification.version")) {
-                        // deny
-                        throw new SecurityException(key);
-                    }
-                }
-
-                // so we can restore the security manager
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
-
-            assertEquals(6, PlatformDependent0.majorVersionFromJavaSpecificationVersion());
-        } finally {
-            System.setSecurityManager(current);
-        }
     }
 
     @Test

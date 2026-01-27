@@ -23,17 +23,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.math.BigInteger;
-import java.security.AccessController;
 import java.security.KeyPair;
 import java.security.PrivateKey;
-import java.security.PrivilegedAction;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import static io.netty.handler.ssl.util.SelfSignedCertificate.newSelfSignedCertificate;
 import static java.lang.invoke.MethodType.methodType;
@@ -94,167 +90,67 @@ final class OpenJdkSelfSignedCertGenerator {
         MethodHandle algorithmIdGetHandle = null;
 
         try {
-            Object maybeClasses = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        List<Class<?>> classes = new ArrayList<>();
-                        classes.add(Class.forName("sun.security.x509.X509CertInfo", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.X500Name", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateIssuerName", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.X509CertImpl", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateVersion", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateSubjectName", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateSerialNumber", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateValidity", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateX509Key", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.AlgorithmId", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
-                        classes.add(Class.forName("sun.security.x509.CertificateAlgorithmId", false,
-                                PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
+            x509CertInfoClass = Class.forName("sun.security.x509.X509CertInfo", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            x500NameClass = Class.forName("sun.security.x509.X500Name", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateIssuerNameClass = Class.forName("sun.security.x509.CertificateIssuerName", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            x509CertImplClass = Class.forName("sun.security.x509.X509CertImpl", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateVersionClass = Class.forName("sun.security.x509.CertificateVersion", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateSubjectNameClass = Class.forName("sun.security.x509.CertificateSubjectName", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateSerialNumberClass = Class.forName("sun.security.x509.CertificateSerialNumber", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateValidityClass = Class.forName("sun.security.x509.CertificateValidity", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateX509KeyClass = Class.forName("sun.security.x509.CertificateX509Key", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            algorithmIdClass = Class.forName("sun.security.x509.AlgorithmId", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
+            certificateAlgorithmIdClass = Class.forName("sun.security.x509.CertificateAlgorithmId", false,
+                    PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class));
 
-                        return classes;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
-                }
-            });
-            if (maybeClasses instanceof List) {
-                @SuppressWarnings("unchecked") List<Class<?>> classes = (List<Class<?>>) maybeClasses;
-                x509CertInfoClass = classes.get(0);
-                x500NameClass = classes.get(1);
-                certificateIssuerNameClass = classes.get(2);
-                x509CertImplClass = classes.get(3);
-                certificateVersionClass = classes.get(4);
-                certificateSubjectNameClass = classes.get(5);
-                certificateSerialNumberClass = classes.get(6);
-                certificateValidityClass = classes.get(7);
-                certificateX509KeyClass = classes.get(8);
-                algorithmIdClass = classes.get(9);
-                certificateAlgorithmIdClass = classes.get(10);
-            } else {
-                throw (Throwable) maybeClasses;
-            }
+            x509CertInfoConstructor = lookup.unreflectConstructor(x509CertInfoClass.getConstructor())
+                            .asType(methodType(x509CertInfoClass));
+            issuerNameConstructor = lookup.unreflectConstructor(
+                    certificateIssuerNameClass.getConstructor(x500NameClass))
+                    .asType(methodType(certificateIssuerNameClass, x500NameClass));
+            certImplConstructor = lookup.unreflectConstructor(x509CertImplClass.getConstructor(x509CertInfoClass))
+                            .asType(methodType(x509CertImplClass, x509CertInfoClass));
+            x500NameConstructor = lookup.unreflectConstructor(x500NameClass.getConstructor(String.class))
+                            .asType(methodType(x500NameClass, String.class));
+            certificateVersionConstructor = lookup.unreflectConstructor(
+                    certificateVersionClass.getConstructor(int.class))
+                    .asType(methodType(certificateVersionClass, int.class));
+            certificateSubjectNameConstructor = lookup.unreflectConstructor(
+                    certificateSubjectNameClass.getConstructor(x500NameClass))
+                    .asType(methodType(certificateSubjectNameClass, x500NameClass));
+            certificateSerialNumberConstructor = lookup.unreflectConstructor(
+                                    certificateSerialNumberClass.getConstructor(BigInteger.class))
+                            .asType(methodType(certificateSerialNumberClass, BigInteger.class));
+            certificateValidityConstructor = lookup.unreflectConstructor(
+                                    certificateValidityClass.getConstructor(Date.class, Date.class))
+                            .asType(methodType(certificateValidityClass, Date.class, Date.class));
+            certificateX509KeyConstructor = lookup.unreflectConstructor(
+                    certificateX509KeyClass.getConstructor(PublicKey.class))
+                    .asType(methodType(certificateX509KeyClass, PublicKey.class));
 
-            Object maybeConstructors = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        List<MethodHandle> constructors = new ArrayList<>();
-                        constructors.add(
-                                lookup.unreflectConstructor(x509CertInfoClass.getConstructor())
-                                        .asType(methodType(x509CertInfoClass))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(certificateIssuerNameClass.getConstructor(x500NameClass))
-                                        .asType(methodType(certificateIssuerNameClass, x500NameClass))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(x509CertImplClass.getConstructor(x509CertInfoClass))
-                                        .asType(methodType(x509CertImplClass, x509CertInfoClass))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(x500NameClass.getConstructor(String.class))
-                                        .asType(methodType(x500NameClass, String.class))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(certificateVersionClass.getConstructor(int.class))
-                                        .asType(methodType(certificateVersionClass, int.class))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(certificateSubjectNameClass.getConstructor(x500NameClass))
-                                        .asType(methodType(certificateSubjectNameClass, x500NameClass))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(
-                                        certificateSerialNumberClass.getConstructor(BigInteger.class))
-                                        .asType(methodType(certificateSerialNumberClass, BigInteger.class))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(
-                                        certificateValidityClass.getConstructor(Date.class, Date.class))
-                                        .asType(methodType(certificateValidityClass, Date.class, Date.class))
-                        );
-                        constructors.add(
-                                lookup.unreflectConstructor(certificateX509KeyClass.getConstructor(PublicKey.class))
-                                        .asType(methodType(certificateX509KeyClass, PublicKey.class))
-                        );
+            certificateAlgorithmIdConstructor = lookup.unreflectConstructor(
+                                    certificateAlgorithmIdClass.getConstructor(algorithmIdClass))
+                            .asType(methodType(certificateAlgorithmIdClass, algorithmIdClass));
 
-                        constructors.add(
-                                lookup.unreflectConstructor(
-                                        certificateAlgorithmIdClass.getConstructor(algorithmIdClass))
-                                        .asType(methodType(certificateAlgorithmIdClass, algorithmIdClass))
-                        );
-                        return constructors;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
-                }
-            });
-            if (maybeConstructors instanceof List) {
-                @SuppressWarnings("unchecked") List<MethodHandle> constructorList =
-                        (List<MethodHandle>) maybeConstructors;
-                x509CertInfoConstructor = constructorList.get(0);
-                issuerNameConstructor = constructorList.get(1);
-                certImplConstructor = constructorList.get(2);
-                x500NameConstructor = constructorList.get(3);
-                certificateVersionConstructor = constructorList.get(4);
-                certificateSubjectNameConstructor = constructorList.get(5);
-                certificateSerialNumberConstructor = constructorList.get(6);
-                certificateValidityConstructor = constructorList.get(7);
-                certificateX509KeyConstructor = constructorList.get(8);
-                certificateAlgorithmIdConstructor = constructorList.get(9);
-            } else {
-                throw (Throwable) maybeConstructors;
-            }
+            certInfoSetHandle = lookup.findVirtual(x509CertInfoClass, "set",
+                            methodType(void.class, String.class, Object.class));
+            certImplGetHandle = lookup.findVirtual(x509CertImplClass, "get",
+                            methodType(Object.class, String.class));
+            certImplSignHandle = lookup.findVirtual(x509CertImplClass, "sign",
+                            methodType(void.class, PrivateKey.class, String.class));
+            algorithmIdGetHandle = lookup.findStatic(algorithmIdClass, "get",
+                            methodType(algorithmIdClass, String.class));
 
-            Object maybeMethodHandles = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        List<MethodHandle> methods = new ArrayList<>();
-                        methods.add(
-                                lookup.findVirtual(x509CertInfoClass, "set",
-                                        methodType(void.class, String.class, Object.class))
-                        );
-                        methods.add(
-                                lookup.findVirtual(x509CertImplClass, "get",
-                                        methodType(Object.class, String.class))
-                        );
-
-                        methods.add(
-                                lookup.findVirtual(x509CertImplClass, "sign",
-                                        methodType(void.class, PrivateKey.class, String.class))
-                        );
-                        methods.add(
-                                lookup.findStatic(algorithmIdClass, "get",
-                                        methodType(algorithmIdClass, String.class))
-                        );
-                        return methods;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
-                }
-            });
-            if (maybeMethodHandles instanceof List) {
-                @SuppressWarnings("unchecked") List<MethodHandle> methodHandles =
-                        (List<MethodHandle>) maybeMethodHandles;
-                certInfoSetHandle = methodHandles.get(0);
-                certImplGetHandle = methodHandles.get(1);
-                certImplSignHandle = methodHandles.get(2);
-                algorithmIdGetHandle = methodHandles.get(3);
-            } else {
-                throw (Throwable) maybeMethodHandles;
-            }
             supported = true;
         } catch (Throwable cause) {
             supported = false;

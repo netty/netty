@@ -21,14 +21,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Utility methods related to {@link DnsServerAddressStreamProvider}.
  */
+@SuppressWarnings("unchecked")
 public final class DnsServerAddressStreamProviders {
 
     private static final InternalLogger LOGGER =
@@ -43,29 +42,14 @@ public final class DnsServerAddressStreamProviders {
             try {
                 // As MacOSDnsServerAddressStreamProvider is contained in another jar which depends on this jar
                 // we use reflection to use it if its on the classpath.
-                Object maybeProvider = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            return Class.forName(
-                                    MACOS_PROVIDER_CLASS_NAME,
-                                    true,
-                                    DnsServerAddressStreamProviders.class.getClassLoader());
-                        } catch (Throwable cause) {
-                            return cause;
-                        }
-                    }
-                });
-                if (maybeProvider instanceof Class) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends DnsServerAddressStreamProvider> providerClass =
-                            (Class<? extends DnsServerAddressStreamProvider>) maybeProvider;
-                    constructor = providerClass.getConstructor();
-                    constructor.newInstance();  // ctor ensures availability
-                    LOGGER.debug("{}: available", MACOS_PROVIDER_CLASS_NAME);
-                } else {
-                    throw (Throwable) maybeProvider;
-                }
+                Class<? extends DnsServerAddressStreamProvider> providerClass =
+                        (Class<? extends DnsServerAddressStreamProvider>) Class.forName(
+                                MACOS_PROVIDER_CLASS_NAME,
+                                true,
+                                DnsServerAddressStreamProviders.class.getClassLoader());
+                constructor = providerClass.getConstructor();
+                constructor.newInstance();  // ctor ensures availability
+                LOGGER.debug("{}: available", MACOS_PROVIDER_CLASS_NAME);
             } catch (ClassNotFoundException cause) {
                 LOGGER.warn("Can not find {} in the classpath, fallback to system defaults. This may result in "
                         + "incorrect DNS resolutions on MacOS. Check whether you have a dependency on "

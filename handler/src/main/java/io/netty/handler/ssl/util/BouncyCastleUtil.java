@@ -19,8 +19,6 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 import javax.net.ssl.SSLEngine;
@@ -164,72 +162,69 @@ public final class BouncyCastleUtil {
 
     @SuppressWarnings("unchecked")
     private static void tryLoading() {
-        AccessController.doPrivileged((PrivilegedAction<?>) () -> {
-            try {
-                // Check for bcprov-jdk18on or bc-fips:
-                Provider provider = Security.getProvider(BC_PROVIDER_NAME);
-                if (provider == null) {
-                    provider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
-                }
-                if (provider == null) {
-                    ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
-                    Class<Provider> bcProviderClass;
+        try {
+            // Check for bcprov-jdk18on or bc-fips:
+            Provider provider = Security.getProvider(BC_PROVIDER_NAME);
+            if (provider == null) {
+                provider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
+            }
+            if (provider == null) {
+                ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
+                Class<Provider> bcProviderClass;
+                try {
+                    bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                } catch (ClassNotFoundException e) {
                     try {
-                        bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
-                    } catch (ClassNotFoundException e) {
-                        try {
-                            bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
-                        } catch (ClassNotFoundException ex) {
-                            ThrowableUtil.addSuppressed(e, ex);
-                            throw e;
-                        }
+                        bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
+                    } catch (ClassNotFoundException ex) {
+                        ThrowableUtil.addSuppressed(e, ex);
+                        throw e;
                     }
-                    provider = bcProviderClass.getConstructor().newInstance();
                 }
-                bcProviderJce = provider;
-                logger.debug("Bouncy Castle provider available");
-            } catch (Throwable e) {
-                logger.debug("Cannot load Bouncy Castle provider", e);
-                unavailabilityCauseBcProv = e;
+                provider = bcProviderClass.getConstructor().newInstance();
             }
+            bcProviderJce = provider;
+            logger.debug("Bouncy Castle provider available");
+        } catch (Throwable e) {
+            logger.debug("Cannot load Bouncy Castle provider", e);
+            unavailabilityCauseBcProv = e;
+        }
 
-            try {
-                // Check for bcpkix-jdk18on:
-                ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
-                Provider provider = bcProviderJce;
-                if (provider != null) {
-                    // Use provider class loader in case it was loaded by the system loader.
-                    classLoader = provider.getClass().getClassLoader();
-                }
-                Class.forName(BC_PEMPARSER, true, classLoader);
-                logger.debug("Bouncy Castle PKIX available");
-            } catch (Throwable e) {
-                logger.debug("Cannot load Bouncy Castle PKIX", e);
-                unavailabilityCauseBcPkix = e;
+        try {
+            // Check for bcpkix-jdk18on:
+            ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
+            Provider provider = bcProviderJce;
+            if (provider != null) {
+                // Use provider class loader in case it was loaded by the system loader.
+                classLoader = provider.getClass().getClassLoader();
             }
+            Class.forName(BC_PEMPARSER, true, classLoader);
+            logger.debug("Bouncy Castle PKIX available");
+        } catch (Throwable e) {
+            logger.debug("Cannot load Bouncy Castle PKIX", e);
+            unavailabilityCauseBcPkix = e;
+        }
 
-            try {
-                // Check for bctls-jdk18on:
-                ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
-                Provider provider = Security.getProvider(BC_JSSE_PROVIDER_NAME);
-                if (provider != null) {
-                    // Use provider class loader in case it was loaded by the system loader.
-                    classLoader = provider.getClass().getClassLoader();
-                } else {
-                    Class<?> providerClass = Class.forName(BC_JSSE_PROVIDER, true, classLoader);
-                    provider = (Provider) providerClass.getConstructor().newInstance();
-                }
-                bcSSLEngineClass = (Class<? extends SSLEngine>) Class.forName(BC_JSSE_SSLENGINE, true, classLoader);
-                Class.forName(BC_JSSE_ALPN_SELECTOR, true, classLoader);
-                bcProviderJsse = provider;
-                logger.debug("Bouncy Castle JSSE available");
-            } catch (Throwable e) {
-                logger.debug("Cannot load Bouncy Castle TLS", e);
-                unavailabilityCauseBcTls = e;
+        try {
+            // Check for bctls-jdk18on:
+            ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
+            Provider provider = Security.getProvider(BC_JSSE_PROVIDER_NAME);
+            if (provider != null) {
+                // Use provider class loader in case it was loaded by the system loader.
+                classLoader = provider.getClass().getClassLoader();
+            } else {
+                Class<?> providerClass = Class.forName(BC_JSSE_PROVIDER, true, classLoader);
+                provider = (Provider) providerClass.getConstructor().newInstance();
             }
-            attemptedLoading = true;
-            return null;
-        });
+            bcSSLEngineClass = (Class<? extends SSLEngine>) Class.forName(BC_JSSE_SSLENGINE, true, classLoader);
+            Class.forName(BC_JSSE_ALPN_SELECTOR, true, classLoader);
+            bcProviderJsse = provider;
+            logger.debug("Bouncy Castle JSSE available");
+        } catch (Throwable e) {
+            logger.debug("Cannot load Bouncy Castle TLS", e);
+            unavailabilityCauseBcTls = e;
+        }
+        attemptedLoading = true;
     }
 
     private BouncyCastleUtil() {
