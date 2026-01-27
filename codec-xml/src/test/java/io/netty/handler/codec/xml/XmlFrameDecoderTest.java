@@ -83,7 +83,7 @@ public class XmlFrameDecoderTest {
                 ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8));
             }
         });
-        assertInstanceOf(TooLongFrameException.class, cause.getCause();
+        assertInstanceOf(TooLongFrameException.class, cause.getCause());
     }
 
     @Test
