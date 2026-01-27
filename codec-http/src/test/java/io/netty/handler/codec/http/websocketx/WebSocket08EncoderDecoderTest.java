@@ -20,6 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CompletionException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -112,8 +114,8 @@ public class WebSocket08EncoderDecoderTest {
 
         try {
             testBinaryWithLen(outChannel, inChannel, testDataLength);
-        } catch (CorruptedWebSocketFrameException e) {
-            corrupted = e;
+        } catch (CompletionException e) {
+            corrupted = (CorruptedWebSocketFrameException) e.getCause();
         }
 
         BinaryWebSocketFrame exceedingFrame = inChannel.readInbound();

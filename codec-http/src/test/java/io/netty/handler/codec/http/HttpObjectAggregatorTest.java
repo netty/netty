@@ -133,12 +133,13 @@ public class HttpObjectAggregatorTest {
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
-        assertThrows(ClosedChannelException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 embedder.writeInbound(chunk3);
             }
         });
+        assertInstanceOf(ClosedChannelException.class, cause.getCause());
 
         assertFalse(embedder.finish());
     }
@@ -223,13 +224,13 @@ public class HttpObjectAggregatorTest {
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
 
-            assertThrows(ClosedChannelException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
                 }
             });
-
+            assertInstanceOf(ClosedChannelException.class, cause.getCause());
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());

@@ -742,7 +742,7 @@ public class HttpContentDecoderTest {
         assertEquals(1, content.refCnt());
 
         Throwable cause = assertThrows(CompletionException.class, channel::finishAndReleaseAll);
-        assertInstanceOf(CodecException.class, cause.getCause());
+        assertInstanceOf(CodecException.class, cause.getCause().getCause());
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());

@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpResponse;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -253,8 +254,10 @@ public class WebSocketClientExtensionHandlerTest {
         HttpResponse res = newUpgradeResponse("main, fallback");
         try {
             ch.writeInbound(res);
-        } catch (CodecException e) {
-            return;
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof CodecException) {
+                return;
+            }
         }
         fail("Expected to encounter a CodecException");
 
