@@ -702,7 +702,10 @@ public final class Unpooled {
     }
 
     private static ReadOnlyByteBuf newReadyOnlyBuffer(ByteBuf buffer) {
-        return buffer instanceof AbstractByteBuf ?
+        // We can only use ReadOnlyAbstractByteBuf if we either have nothing to unwrap or the unwrapped buffer is of
+        // type AbstractByteBuf. Otherwise we will produce a CCE later.
+        return buffer instanceof AbstractByteBuf && (
+                buffer.unwrap() == null || buffer.unwrap() instanceof AbstractByteBuf) ?
                 new ReadOnlyAbstractByteBuf((AbstractByteBuf) buffer) :
                 new ReadOnlyByteBuf(buffer);
     }
