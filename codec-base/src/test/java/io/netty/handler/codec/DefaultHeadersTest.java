@@ -878,6 +878,8 @@ public class DefaultHeadersTest {
         assertTrue(headers.containsAny(of("name1"), of("value1"), eq));
         assertTrue(headers.containsAny(of("name2"), of("value2"), eq));
         assertFalse(headers.containsAny(of("name1"), of("no"), eq));
+        assertFalse(headers.containsAny(of("name1"), of("value2"), eq));
+        assertFalse(headers.containsAny(of("name2"), of("value1"), eq));
     }
 
     @Test
