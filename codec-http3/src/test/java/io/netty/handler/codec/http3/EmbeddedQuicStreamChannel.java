@@ -34,6 +34,7 @@ import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,12 +65,22 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 }, handlers));
         pipeline().addFirst(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                     // Mimic the API.
-                    promise.addListener(f -> outputShutdown = 0);
+                    handler = handler.andThen(new CompletionHandler<>() {
+                        @Override
+                        public void success(Void result) {
+                            outputShutdown = 0;
+                        }
+
+                        @Override
+                        public void failure(Throwable cause) {
+                            outputShutdown = 0;
+                        }
+                    }, ctx.executor());
                 }
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         });
     }

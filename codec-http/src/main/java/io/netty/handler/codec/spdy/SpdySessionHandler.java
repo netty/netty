@@ -18,9 +18,9 @@ package io.netty.handler.codec.spdy;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,7 +56,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
     private boolean sentGoAwayFrame;
     private boolean receivedGoAwayFrame;
 
-    private FutureListener<Void> closeSessionFutureListener;
+    private CompletionHandler<Void> closeSessionHandler;
 
     private final boolean server;
     private final int minorVersion;
@@ -202,7 +202,10 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Close the remote side of the stream if this is the last frame
             if (spdyDataFrame.isLast()) {
-                halfCloseStream(streamId, true, ctx.newSucceededFuture(null));
+                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
+                if (closeHandler != null) {
+                    closeHandler.success(null);
+                }
             }
 
         } else if (msg instanceof SpdySynStreamFrame) {
@@ -277,7 +280,10 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Close the remote side of the stream if this is the last frame
             if (spdySynReplyFrame.isLast()) {
-                halfCloseStream(streamId, true, ctx.newSucceededFuture(null));
+                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
+                if (closeHandler != null) {
+                    closeHandler.success(null);
+                }
             }
 
         } else if (msg instanceof SpdyRstStreamFrame) {
@@ -292,7 +298,10 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
              */
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.streamId(), ctx.newSucceededFuture(null));
+            CompletionHandler<Void> removeHandler = removeStream(spdyRstStreamFrame.streamId());
+            if (removeHandler != null) {
+                removeHandler.success(null);
+            }
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -371,7 +380,10 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Close the remote side of the stream if this is the last frame
             if (spdyHeadersFrame.isLast()) {
-                halfCloseStream(streamId, true, ctx.newSucceededFuture(null));
+               CompletionHandler<Void> closeHandler = halfCloseStream(streamId, true);
+               if (closeHandler != null) {
+                   closeHandler.success(null);
+               }
             }
 
         } else if (msg instanceof SpdyWindowUpdateFrame) {
@@ -414,7 +426,10 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         for (Integer streamId: spdySession.activeStreams().keySet()) {
-            removeStream(streamId, ctx.newSucceededFuture(null));
+            CompletionHandler<Void> removeHandler = removeStream(streamId);
+            if (removeHandler != null) {
+                removeHandler.success(null);
+            }
         }
         ctx.fireChannelInactive();
     }
@@ -429,12 +444,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        sendGoAwayFrame(ctx, promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        sendGoAwayFrame(ctx, handler);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (msg instanceof SpdyDataFrame ||
             msg instanceof SpdySynStreamFrame ||
             msg instanceof SpdySynReplyFrame ||
@@ -445,13 +460,13 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             msg instanceof SpdyHeadersFrame ||
             msg instanceof SpdyWindowUpdateFrame) {
 
-            handleOutboundMessage(ctx, msg, promise);
+            handleOutboundMessage(ctx, msg, handler);
         } else {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
@@ -460,7 +475,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
                 spdyDataFrame.release();
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -484,7 +499,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             if (sendWindowSize <= 0) {
                 // Stream is stalled -- enqueue Data frame and return
-                spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, promise));
+                spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, handler));
                 return;
             } else if (sendWindowSize < dataLength) {
                 // Stream is not stalled but we cannot send the entire frame
@@ -496,7 +511,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                         streamId, spdyDataFrame.content().readRetainedSlice(sendWindowSize));
 
                 // Enqueue the remaining data (will be the first frame queued)
-                spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, promise));
+                spdySession.putPendingWrite(streamId, new SpdySession.PendingWrite(spdyDataFrame, handler));
 
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
@@ -515,16 +530,25 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 final ChannelHandlerContext context = ctx;
-                promise.addListener(future -> {
-                    if (!future.isSuccess()) {
+                handler = handler.andThen(new CompletionHandler<>() {
+                    @Override
+                    public void success(Void result) {
+                        // NOOP.
+                    }
+
+                    @Override
+                    public void failure(Throwable cause) {
                         issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                     }
-                });
+                }, ctx.executor());
             }
 
             // Close the local side of the stream if this is the last frame
             if (spdyDataFrame.isLast()) {
-                halfCloseStream(streamId, false, promise);
+                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, false);
+                if (closeHandler != null) {
+                    closeHandler.success(null);
+                }
             }
 
         } else if (msg instanceof SpdySynStreamFrame) {
@@ -533,7 +557,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             int streamId = spdySynStreamFrame.streamId();
 
             if (isRemoteInitiatedId(streamId)) {
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -541,7 +565,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -552,19 +576,24 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedId(streamId) || spdySession.isLocalSideClosed(streamId)) {
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
             // Close the local side of the stream if this is the last frame
             if (spdySynReplyFrame.isLast()) {
-                halfCloseStream(streamId, false, promise);
+                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, false);
+                if (closeHandler != null) {
+                    handler = handler.andThen(closeHandler, ctx.executor());
+                }
             }
-
         } else if (msg instanceof SpdyRstStreamFrame) {
 
             SpdyRstStreamFrame spdyRstStreamFrame = (SpdyRstStreamFrame) msg;
-            removeStream(spdyRstStreamFrame.streamId(), promise);
+            CompletionHandler<Void> removeHandler = removeStream(spdyRstStreamFrame.streamId());
+            if (removeHandler != null) {
+                handler = handler.andThen(removeHandler, ctx.executor());
+            }
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -573,7 +602,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
             int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
             if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
                 // Settings frame had the wrong minor version
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -611,7 +640,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            promise.setFailure(PROTOCOL_EXCEPTION);
+            handler.failure(PROTOCOL_EXCEPTION);
             return;
 
         } else if (msg instanceof SpdyHeadersFrame) {
@@ -621,23 +650,26 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
-                promise.setFailure(PROTOCOL_EXCEPTION);
+                handler.failure(PROTOCOL_EXCEPTION);
                 return;
             }
 
             // Close the local side of the stream if this is the last frame
             if (spdyHeadersFrame.isLast()) {
-                halfCloseStream(streamId, false, promise);
+                CompletionHandler<Void> closeHandler = halfCloseStream(streamId, false);
+                if (closeHandler != null) {
+                    handler = handler.andThen(closeHandler, ctx.executor());
+                }
             }
 
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            promise.setFailure(PROTOCOL_EXCEPTION);
+            handler.failure(PROTOCOL_EXCEPTION);
             return;
         }
 
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     /*
@@ -652,7 +684,7 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
     private void issueSessionError(
             ChannelHandlerContext ctx, SpdySessionStatus status) {
 
-        sendGoAwayFrame(ctx, status).addListener(new ClosingFutureListener(ctx, ctx.newPromise()));
+        sendGoAwayFrame(ctx, status).addListener(new ClosingFutureListener(ctx, CompletionHandler.ignore()));
     }
 
     /*
@@ -668,11 +700,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
      */
     private void issueStreamError(ChannelHandlerContext ctx, int streamId, SpdyStreamStatus status) {
         boolean fireChannelRead = !spdySession.isRemoteSideClosed(streamId);
-        Promise<Void> promise = ctx.newPromise();
-        removeStream(streamId, promise);
-
+        CompletionHandler<Void> handler = removeStream(streamId);
+        if (handler == null) {
+            handler = CompletionHandler.ignore();
+        }
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamId, status);
-        ctx.writeAndFlush(spdyRstStreamFrame, promise);
+        ctx.writeAndFlush(spdyRstStreamFrame, handler);
         if (fireChannelRead) {
             ctx.fireChannelRead(spdyRstStreamFrame);
         }
@@ -723,23 +756,25 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
         return true;
     }
 
-    private void halfCloseStream(int streamId, boolean remote, Future<Void> future) {
+    private CompletionHandler<Void> halfCloseStream(int streamId, boolean remote) {
         if (remote) {
             spdySession.closeRemoteSide(streamId, isRemoteInitiatedId(streamId));
         } else {
             spdySession.closeLocalSide(streamId, isRemoteInitiatedId(streamId));
         }
-        if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
-            future.addListener(closeSessionFutureListener);
+        if (closeSessionHandler != null && spdySession.noActiveStreams()) {
+            return closeSessionHandler;
         }
+        return null;
     }
 
-    private void removeStream(int streamId, Future<Void> future) {
+    private CompletionHandler<Void> removeStream(int streamId) {
         spdySession.removeStream(streamId, STREAM_CLOSED, isRemoteInitiatedId(streamId));
 
-        if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
-            future.addListener(closeSessionFutureListener);
+        if (closeSessionHandler != null && spdySession.noActiveStreams()) {
+            return closeSessionHandler;
         }
+        return null;
     }
 
     private void updateSendWindowSize(final ChannelHandlerContext ctx, int streamId, int deltaWindowSize) {
@@ -784,34 +819,46 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
                 spdySession.updateSendWindowSize(SPDY_SESSION_STREAM_ID, -1 * dataFrameSize);
 
                 // Close the local side of the stream if this is the last frame
-                if (spdyDataFrame.isLast()) {
-                    halfCloseStream(writeStreamId, false, pendingWrite.promise);
-                }
 
-                ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise);
+                CompletionHandler<Void> handler = pendingWrite.handler;
+
+                if (spdyDataFrame.isLast()) {
+                    CompletionHandler<Void> closStreamHandler = halfCloseStream(writeStreamId, false);
+                    if (closStreamHandler != null) {
+                        handler = handler.andThen(handler, ctx.executor());
+                    }
+                }
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
-                pendingWrite.promise.addListener(future -> {
-                    if (!future.isSuccess()) {
+                handler = handler.andThen(new CompletionHandler<>() {
+                    @Override
+                    public void success(Void result) {
+                        // NOOP
+                    }
+
+                    @Override
+                    public void failure(Throwable cause) {
                         issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                     }
-                });
+                }, ctx.executor());
+
+                ctx.writeAndFlush(spdyDataFrame, handler);
             }
         }
     }
 
-    private void sendGoAwayFrame(ChannelHandlerContext ctx, Promise<Void> future) {
+    private void sendGoAwayFrame(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
-            ctx.close(future);
+            ctx.close(handler);
             return;
         }
 
         Future<Void> f = sendGoAwayFrame(ctx, SpdySessionStatus.OK);
         if (spdySession.noActiveStreams()) {
-            f.addListener(new ClosingFutureListener(ctx, future));
+            f.addListener(new ClosingFutureListener(ctx, handler));
         } else {
-            closeSessionFutureListener = new ClosingFutureListener(ctx, future);
+            handler = new ClosingFutureListener(ctx, handler);
         }
         // FIXME: Close the connection forcibly after timeout.
     }
@@ -827,18 +874,28 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
         }
     }
 
-    private static final class ClosingFutureListener implements FutureListener<Void> {
+    private static final class ClosingFutureListener implements FutureListener<Void>, CompletionHandler<Void> {
         private final ChannelHandlerContext ctx;
-        private final Promise<Void> promise;
+        private final CompletionHandler<Void> handler;
 
-        ClosingFutureListener(ChannelHandlerContext ctx, Promise<Void> promise) {
+        ClosingFutureListener(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             this.ctx = ctx;
-            this.promise = promise;
+            this.handler = handler;
         }
 
         @Override
         public void operationComplete(Future<? extends Void> sentGoAwayFuture) {
-            ctx.close(promise);
+            ctx.close(handler);
+        }
+
+        @Override
+        public void success(Void result) {
+            ctx.close(handler);
+        }
+
+        @Override
+        public void failure(Throwable cause) {
+            ctx.close(handler);
         }
     }
 }

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -103,11 +104,13 @@ public class WriteTimeoutHandler implements ChannelOutboundHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (timeoutNanos > 0) {
+            Promise<Void> promise = handler.toPromise(ctx.executor());
             scheduleTimeout(ctx, promise);
+            handler = promise;
         }
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     @Override

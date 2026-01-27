@@ -21,9 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ObjectUtil;
 
@@ -122,9 +121,18 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     private boolean reading;
 
     // Not create a new FutureListener per write operation to reduce GC pressure.
-    private final FutureListener<Void> writeListener = future -> {
-        lastWriteTime = ticker.nanoTime();
-        firstWriterIdleEvent = firstAllIdleEvent = true;
+    private final CompletionHandler<Void> writeHandler = new CompletionHandler<>() {
+        @Override
+        public void success(Void result) {
+            lastWriteTime = ticker.nanoTime();
+            firstWriterIdleEvent = firstAllIdleEvent = true;
+        }
+
+        @Override
+        public void failure(Throwable cause) {
+            lastWriteTime = ticker.nanoTime();
+            firstWriterIdleEvent = firstAllIdleEvent = true;
+        }
     };
 
     /**
@@ -277,12 +285,12 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
-            promise.addListener(writeListener);
+            handler = handler.andThen(writeHandler, ctx.executor());
         }
+        ctx.write(msg, handler);
     }
 
     /**

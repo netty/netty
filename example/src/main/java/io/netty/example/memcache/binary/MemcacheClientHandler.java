@@ -26,7 +26,7 @@ import io.netty.handler.codec.memcache.binary.DefaultBinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.DefaultFullBinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheResponse;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
@@ -34,7 +34,7 @@ public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutb
      * Transforms basic string requests to binary memcache requests
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         String command = (String) msg;
         if (command.startsWith("get ")) {
             String keyString = command.substring("get ".length());
@@ -43,7 +43,7 @@ public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutb
             BinaryMemcacheRequest req = new DefaultBinaryMemcacheRequest(key);
             req.setOpcode(BinaryMemcacheOpcodes.GET);
 
-            ctx.write(req, promise);
+            ctx.write(req, handler);
         } else if (command.startsWith("set ")) {
             String[] parts = command.split(" ", 3);
             if (parts.length < 3) {
@@ -60,7 +60,7 @@ public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutb
             BinaryMemcacheRequest req = new DefaultFullBinaryMemcacheRequest(key, extras, content);
             req.setOpcode(BinaryMemcacheOpcodes.SET);
 
-            ctx.write(req, promise);
+            ctx.write(req, handler);
         } else {
             throw new IllegalStateException("Unknown Message: " + msg);
         }

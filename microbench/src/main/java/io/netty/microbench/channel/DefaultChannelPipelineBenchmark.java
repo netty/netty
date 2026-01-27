@@ -22,8 +22,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
@@ -94,7 +93,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             // NOOP
         }
 
@@ -253,8 +252,8 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                    ctx.write(msg, promise);
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    ctx.write(msg, handler);
                 }
             },
             new SharableOutboundHandlerAdapter() {
@@ -270,8 +269,8 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                    ctx.write(msg, promise);
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    ctx.write(msg, handler);
                 }
             },
             new SharableOutboundHandlerAdapter() {
@@ -287,8 +286,8 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                    ctx.write(msg, promise);
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    ctx.write(msg, handler);
                 }
 
                 @Override
@@ -308,7 +307,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     public int extraHandlers;
 
     private ChannelPipeline[] pipelines;
-    private Promise[] promises;
+    private CompletionHandler[] handlers;
     private int pipelineCounter;
 
     private int[] callTypes;
@@ -319,7 +318,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         SplittableRandom rng = new SplittableRandom();
         pipelineArrayMask = pipelineArrayLength - 1;
         pipelines = new ChannelPipeline[pipelineArrayLength];
-        promises = new DefaultPromise[pipelineArrayLength];
+        handlers = new CompletionHandler[pipelineArrayLength];
         for (int i = 0; i < pipelineArrayLength; i++) {
             EmbeddedChannel channel = new EmbeddedChannel();
             channel.config().setAutoRead(false);
@@ -330,7 +329,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             }
             pipeline.addLast(INBOUND_CONSUMING_HANDLER);
             pipelines[i] = pipeline;
-            promises[i] = pipeline.newPromise();
+            handlers[i] = CompletionHandler.ignore();
         }
     }
 
@@ -357,10 +356,10 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         pipeline.fireChannelActive();             // 1
         pipeline.fireChannelRead(MESSAGE);        // 2
         pipeline.fireChannelRead(MESSAGE);        // 3
-        pipeline.write(MESSAGE, promises[index]); // 4
+        pipeline.write(MESSAGE, handlers[index]); // 4
         pipeline.fireChannelRead(MESSAGE);        // 5
         pipeline.fireChannelRead(MESSAGE);        // 6
-        pipeline.write(MESSAGE, promises[index]); // 7
+        pipeline.write(MESSAGE, handlers[index]); // 7
         pipeline.fireChannelReadComplete();       // 8
         pipeline.fireUserEventTriggered(MESSAGE); // 9
         pipeline.fireChannelWritabilityChanged(); // 10

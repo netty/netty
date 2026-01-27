@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -30,21 +31,21 @@ public interface ChannelOutboundInvoker {
      * {@link Future} once the operation completes, either because the operation was successful or because of
      * an error.
      * <p>
-     * The given {@link Promise} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void register(Promise<Void> promise);
+    void register(CompletionHandler<Void> handler);
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link Future} once the operation
      * completes, either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, Promise)} method
+     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, CompletionHandler)} method
      * called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -63,7 +64,7 @@ public interface ChannelOutboundInvoker {
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -79,7 +80,7 @@ public interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -94,7 +95,7 @@ public interface ChannelOutboundInvoker {
      * either because the operation was successful or because of an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -112,7 +113,7 @@ public interface ChannelOutboundInvoker {
      * After it is closed it is not possible to reuse it again.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -128,7 +129,7 @@ public interface ChannelOutboundInvoker {
      * an error.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      *
@@ -147,7 +148,7 @@ public interface ChannelOutboundInvoker {
      * The given {@link Promise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -158,91 +159,91 @@ public interface ChannelOutboundInvoker {
     }
 
     /**
-     * Request to bind to the given {@link SocketAddress} and notify the {@link Future} once the operation
+     * Request to bind to the given {@link SocketAddress} and notify the {@link CompletionHandler} once the operation
      * completes, either because the operation was successful or because of an error.
      * <p>
-     * The given {@link Promise} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, Promise)} method
+     * {@link ChannelOutboundHandler#bind(ChannelHandlerContext, SocketAddress, CompletionHandler)} method
      * called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void bind(SocketAddress localAddress, Promise<Void> promise);
+    void bind(SocketAddress localAddress, CompletionHandler<Void> handler);
 
     /**
-     * Request to connect to the given {@link SocketAddress} and notify the {@link Future} once the operation
+     * Request to connect to the given {@link SocketAddress} and notify the {@link CompletionHandler} once the operation
      * completes, either because the operation was successful or because of an error.
      * <p>
-     * The given {@link Future} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      *
      * <p>
-     * If the connection fails because of a connection timeout, the {@link Future} will get failed with
+     * If the connection fails because of a connection timeout, the {@link CompletionHandler} will get failed with
      * a {@link ConnectTimeoutException}. If it fails because of connection refused a {@link ConnectException}
      * will be used.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void connect(SocketAddress remoteAddress, Promise<Void> promise);
+    void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler);
 
     /**
      * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
-     * {@link Future} once the operation completes, either because the operation was successful or because of
+     * {@link CompletionHandler} once the operation completes, either because the operation was successful or because of
      * an error.
      * <p>
-     * The given {@link Promise} will be notified and also returned.
+     * The given {@link CompletionHandler} will be notified and also returned.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+    void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler);
 
     /**
-     * Request to disconnect from the remote peer and notify the {@link Future} once the operation completes,
+     * Request to disconnect from the remote peer and notify the {@link CompletionHandler} once the operation completes,
      * either because the operation was successful or because of an error.
      * <p>
-     * The given {@link Promise} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#disconnect(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void disconnect(Promise<Void> promise);
+    void disconnect(CompletionHandler<Void> handler);
 
     /**
-     * Request to close the {@link Channel} and notify the {@link Future} once the operation completes,
+     * Request to close the {@link Channel} and notify the {@link CompletionHandler} once the operation completes,
      * either because the operation was successful or because of
      * an error.
      * <p>
      * After it is closed it is not possible to reuse it again.
-     * The given {@link Promise} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void close(Promise<Void> promise);
+    void close(CompletionHandler<Void> handler);
 
     /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the
-     * {@link Future} once the operation completes, either because the operation was successful or because of
+     * {@link CompletionHandler} once the operation completes, either because the operation was successful or because of
      * an error.
      * <p>
-     * The given {@link Promise} will be notified.
+     * The given {@link CompletionHandler} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, Promise)}
+     * {@link ChannelOutboundHandler#deregister(ChannelHandlerContext, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void deregister(Promise<Void> promise);
+    void deregister(CompletionHandler<Void> promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
@@ -274,7 +275,7 @@ public interface ChannelOutboundInvoker {
      * This method will not request to actual flush, so be sure to call {@link #flush()}
      * once you want to request to flush all pending data to the actual transport.
      */
-    void write(Object msg, Promise<Void> promise);
+    void write(Object msg, CompletionHandler<Void> handler);
 
     /**
      * Request to flush all pending messages via this ChannelOutboundInvoker.
@@ -282,9 +283,9 @@ public interface ChannelOutboundInvoker {
     void flush();
 
     /**
-     * Shortcut for call {@link #write(Object, Promise)} and {@link #flush()}.
+     * Shortcut for call {@link #write(Object, CompletionHandler)} and {@link #flush()}.
      */
-    void writeAndFlush(Object msg, Promise<Void> promise);
+    void writeAndFlush(Object msg, CompletionHandler<Void> promise);
 
     /**
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.
@@ -308,7 +309,7 @@ public interface ChannelOutboundInvoker {
      * that is transmitted to the remote peer that will as a result shutdown {@link ChannelShutdownDirection#Inbound}.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#shutdown(ChannelHandlerContext, ChannelShutdownType, Promise)}.
+     * {@link ChannelOutboundHandler#shutdown(ChannelHandlerContext, ChannelShutdownType, CompletionHandler)}.
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
@@ -319,7 +320,7 @@ public interface ChannelOutboundInvoker {
     }
 
     /**
-     * Request shutdown one direction of the {@link Channel} and notify the {@link Future} once the operation
+     * Request shutdown one direction of the {@link Channel} and notify the {@link CompletionHandler} once the operation
      * completes, either because the operation was successful or because of an error.
      * <p>
      * When completed, the channel will either not produce any inbound data anymore, or it will not be
@@ -331,11 +332,11 @@ public interface ChannelOutboundInvoker {
      * that is transmitted to the remote peer that will as a result shutdown {@link ChannelShutdownDirection#Inbound}.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#shutdown(ChannelHandlerContext, ChannelShutdownType, Promise)}
+     * {@link ChannelOutboundHandler#shutdown(ChannelHandlerContext, ChannelShutdownType, CompletionHandler)}
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    void shutdown(ChannelShutdownType type, Promise<Void> promise);
+    void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler);
 
     /**
      * Return a new {@link Promise}.

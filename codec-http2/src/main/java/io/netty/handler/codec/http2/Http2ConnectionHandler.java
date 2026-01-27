@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -470,35 +471,35 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         if (decoupleCloseAndGoAway) {
-            ctx.close(promise);
+            ctx.close(handler);
             return;
         }
         // Avoid NotYetConnectedException and avoid sending before connection preface
         if (!ctx.channel().isActive() || !prefaceSent()) {
-            ctx.close(promise);
+            ctx.close(handler);
             return;
         }
 
@@ -514,19 +515,19 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             goAway(ctx, null, p);
         }
         ctx.flush();
-        doGracefulShutdown(ctx, p, promise);
+        doGracefulShutdown(ctx, p, handler);
     }
 
     private FutureListener<Void> newClosingChannelFutureListener(
-            ChannelHandlerContext ctx, Promise<Void> promise) {
+            ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
         long gracefulShutdownTimeoutMillis = this.gracefulShutdownTimeoutMillis;
         return gracefulShutdownTimeoutMillis < 0 ?
-                new ClosingChannelFutureListener(ctx, promise) :
-                new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS);
+                new ClosingChannelFutureListener(ctx, handler) :
+                new ClosingChannelFutureListener(ctx, handler, gracefulShutdownTimeoutMillis, MILLISECONDS);
     }
 
-    private void doGracefulShutdown(ChannelHandlerContext ctx, Future<Void> future, final Promise<Void> promise) {
-        final FutureListener<Void> listener = newClosingChannelFutureListener(ctx, promise);
+    private void doGracefulShutdown(ChannelHandlerContext ctx, Future<Void> future, CompletionHandler<Void> handler) {
+        final FutureListener<Void> listener = newClosingChannelFutureListener(ctx, handler);
         if (isGracefulShutdownComplete()) {
             // If there are no active streams, close immediately after the GO_AWAY write completes or the timeout
             // elapsed.
@@ -538,7 +539,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // new ClosingFutureListener when the graceful close completes if the promise is not null.
             if (closeListener == null) {
                 closeListener = listener;
-            } else if (promise != null) {
+            } else if (handler != null) {
                 final FutureListener<Void> oldCloseListener = closeListener;
                 closeListener = future1 -> {
                     try {
@@ -553,13 +554,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                         Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                         CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -568,8 +569,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+        ctx.write(msg, handler);
     }
 
     @Override
@@ -704,13 +705,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             http2Ex = new Http2Exception(INTERNAL_ERROR, cause.getMessage(), cause);
         }
 
-        Promise<Void> promise = ctx.newPromise();
         Promise<Void> goawayPromise = ctx.newPromise();
         goAway(ctx, http2Ex, goawayPromise);
         if (http2Ex.shutdownHint() == Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN) {
-            doGracefulShutdown(ctx, goawayPromise, promise);
+            doGracefulShutdown(ctx, goawayPromise, CompletionHandler.ignore());
         } else {
-            goawayPromise.addListener(newClosingChannelFutureListener(ctx, promise));
+            goawayPromise.addListener(newClosingChannelFutureListener(ctx, CompletionHandler.ignore()));
         }
     }
 
@@ -964,20 +964,20 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      */
     private static final class ClosingChannelFutureListener implements FutureListener<Void> {
         private final ChannelHandlerContext ctx;
-        private final Promise<Void> promise;
+        private final CompletionHandler<Void> handler;
         private final Future<?> timeoutTask;
         private boolean closed;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx, Promise<Void> promise) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             this.ctx = ctx;
-            this.promise = promise;
+            this.handler = handler;
             timeoutTask = null;
         }
 
-        ClosingChannelFutureListener(final ChannelHandlerContext ctx, final Promise<Void> promise,
+        ClosingChannelFutureListener(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler,
                                      long timeout, TimeUnit unit) {
             this.ctx = ctx;
-            this.promise = promise;
+            this.handler = handler;
             timeoutTask = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -1003,10 +1003,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 return;
             }
             closed = true;
-            if (promise == null) {
-                ctx.close();
+            if (handler == null) {
+                ctx.close(CompletionHandler.ignore());
             } else {
-                ctx.close(promise);
+                ctx.close(handler);
             }
         }
     }

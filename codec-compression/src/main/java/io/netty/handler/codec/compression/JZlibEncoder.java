@@ -20,6 +20,7 @@ import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -319,7 +320,7 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final Promise<Void> promise) {
+            final CompletionHandler<Void> handler) {
         Promise<Void> p = ctx.newPromise();
         finishEncode(ctx, p);
 
@@ -328,8 +329,8 @@ public class JZlibEncoder extends ZlibEncoder {
             final Future<?> future = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    if (!promise.isDone()) {
-                        ctx.close(promise);
+                    if (!p.isDone()) {
+                        ctx.close(handler);
                     }
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
@@ -337,12 +338,9 @@ public class JZlibEncoder extends ZlibEncoder {
             p.addListener(f1 -> {
                 // Cancel the scheduled timeout.
                 future.cancel(true);
-                if (!promise.isDone()) {
-                    ctx.close(promise);
-                }
             });
         } else {
-            ctx.close(promise);
+            ctx.close(handler);
         }
     }
 

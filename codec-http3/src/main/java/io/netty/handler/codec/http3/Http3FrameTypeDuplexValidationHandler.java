@@ -18,6 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -33,21 +34,21 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         T frame = validateFrameWritten(frameType, msg);
         if (frame != null) {
-            write(ctx, frame, promise);
+            write(ctx, frame, handler);
         } else {
-            writeFrameDiscarded(msg, promise);
+            writeFrameDiscarded(msg, handler);
         }
     }
 
-    void write(ChannelHandlerContext ctx, T msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
+    void write(ChannelHandlerContext ctx, T msg, CompletionHandler<Void> handler) {
+        ctx.write(msg, handler);
     }
 
-    void writeFrameDiscarded(Object discardedFrame, Promise<Void> promise) {
-        frameTypeUnexpected(promise, discardedFrame);
+    void writeFrameDiscarded(Object discardedFrame, CompletionHandler<Void> handler) {
+        frameTypeUnexpected(handler, discardedFrame);
     }
 
     @Override
@@ -56,34 +57,34 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.close(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -92,7 +93,7 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
-    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 }

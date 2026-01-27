@@ -27,6 +27,7 @@ import java.net.SocketAddress;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Creates and manages {@link NameResolver}s so that each {@link EventExecutor} has its own resolver instance.
@@ -41,7 +42,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     private final Map<EventExecutor, AddressResolver<T>> resolvers =
             new IdentityHashMap<EventExecutor, AddressResolver<T>>();
 
-    private final Map<EventExecutor, FutureListener<Object>> executorTerminationListeners =
+    private final Map<EventExecutor, AtomicBoolean> executorTerminationListeners =
             new IdentityHashMap<>();
 
     protected AddressResolverGroup() { }
@@ -72,15 +73,18 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
 
                 resolvers.put(executor, newResolver);
 
+                AtomicBoolean removed = new AtomicBoolean();
                 final FutureListener<Object> terminationListener = future -> {
-                    synchronized (resolvers) {
-                        resolvers.remove(executor);
-                        executorTerminationListeners.remove(executor);
+                    if (removed.compareAndSet(false, true)) {
+                        synchronized (resolvers) {
+                            resolvers.remove(executor);
+                            executorTerminationListeners.remove(executor);
+                        }
+                        newResolver.close();
                     }
-                    newResolver.close();
                 };
 
-                executorTerminationListeners.put(executor, terminationListener);
+                executorTerminationListeners.put(executor, removed);
                 executor.terminationFuture().addListener(terminationListener);
 
                 r = newResolver;
@@ -102,7 +106,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     @SuppressWarnings({ "unchecked", "SuspiciousToArrayCall" })
     public void close() {
         final AddressResolver<T>[] rArray;
-        final Map.Entry<EventExecutor, FutureListener<Object>>[] listeners;
+        final Map.Entry<EventExecutor, AtomicBoolean>[] listeners;
 
         synchronized (resolvers) {
             rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[0]);
@@ -111,8 +115,8 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             executorTerminationListeners.clear();
         }
 
-        for (final Map.Entry<EventExecutor, FutureListener<Object>> entry : listeners) {
-            entry.getKey().terminationFuture().removeListener(entry.getValue());
+        for (final Map.Entry<EventExecutor, AtomicBoolean> entry : listeners) {
+            entry.getValue().set(true);
         }
 
         for (final AddressResolver<T> r: rArray) {

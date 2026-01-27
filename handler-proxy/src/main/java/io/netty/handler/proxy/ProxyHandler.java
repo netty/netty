@@ -22,6 +22,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -166,15 +167,15 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            Promise<Void> promise) {
+            CompletionHandler<Void> handler) {
 
         if (destinationAddress != null) {
-            promise.setFailure(new ConnectionPendingException());
+            handler.failure(new ConnectionPendingException());
             return;
         }
 
         destinationAddress = remoteAddress;
-        ctx.connect(proxyAddress, localAddress, promise);
+        ctx.connect(proxyAddress, localAddress, handler);
     }
 
     @Override
@@ -396,12 +397,12 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (finished) {
             writePendingWrites(ctx);
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         } else {
-            addPendingWrite(ctx, msg, promise);
+            addPendingWrite(ctx, msg, handler);
         }
     }
 
@@ -443,11 +444,11 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
         }
     }
 
-    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         PendingWriteQueue pendingWrites = this.pendingWrites;
         if (pendingWrites == null) {
             this.pendingWrites = pendingWrites = new PendingWriteQueue(ctx);
         }
-        pendingWrites.add(msg, promise);
+        pendingWrites.add(msg, handler);
     }
 }

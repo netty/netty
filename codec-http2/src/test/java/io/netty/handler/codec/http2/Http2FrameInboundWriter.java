@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -212,8 +213,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
-            channel.shutdown(type, promise);
+        public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
+            channel.shutdown(type, handler);
         }
 
         @Override
@@ -237,8 +238,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public void register(Promise<Void> promise) {
-            channel.register(promise);
+        public void register(CompletionHandler<Void> handler) {
+            channel.register(handler);
         }
 
         @Override
@@ -277,32 +278,32 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public void bind(SocketAddress localAddress, Promise<Void> promise) {
-            channel.bind(localAddress, promise);
+        public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+            channel.bind(localAddress, handler);
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            channel.connect(remoteAddress, promise);
+        public void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
+            channel.connect(remoteAddress, handler);
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            channel.connect(remoteAddress, localAddress, promise);
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
+            channel.connect(remoteAddress, localAddress, handler);
         }
 
         @Override
-        public void disconnect(Promise<Void> promise) {
-            channel.disconnect(promise);
+        public void disconnect(CompletionHandler<Void> handler) {
+            channel.disconnect(handler);
         }
 
         @Override
-        public void close(Promise<Void> promise) {
-            channel.close(promise);
+        public void close(CompletionHandler<Void> handler) {
+            channel.close(handler);
         }
 
         @Override
-        public void deregister(Promise<Void> promise) {
+        public void deregister(CompletionHandler<Void> promise) {
             channel.deregister(promise);
         }
 
@@ -314,18 +315,18 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public void write(Object msg, Promise<Void> promise) {
-            writeAndFlush(msg, promise);
+        public void write(Object msg, CompletionHandler<Void> handler) {
+            writeAndFlush(msg, handler);
         }
 
         @Override
-        public void writeAndFlush(Object msg, Promise<Void> promise) {
+        public void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
-                promise.setSuccess(null);
+                promise.success(null);
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                promise.failure(cause);
             }
         }
 

@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -356,45 +357,45 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
             try {
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.BIND);
-                promise.setSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                handler.failure(e);
             }
         }
 
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                            SocketAddress localAddress, Promise<Void> promise) {
+                            SocketAddress localAddress, CompletionHandler<Void> handler) {
             try {
                 assertSame(REMOTE_ADDRESS, remoteAddress);
                 assertSame(LOCAL_ADDRESS, localAddress);
                 queue.add(Event.CONNECT);
-                promise.setSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                handler.failure(e);
             }
         }
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.DISCONNECT);
-            promise.setSuccess(null);
+            handler.success(null);
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.CLOSE);
-            promise.setSuccess(null);
+            handler.success(null);
         }
 
         @Override
-        public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+        public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
             queue.add(Event.DEREGISTER);
-            promise.setSuccess(null);
+            handler.success(null);
         }
 
         @Override
@@ -403,13 +404,13 @@ public class CombinedChannelDuplexHandlerTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             try {
                 assertSame(MSG, msg);
                 queue.add(Event.WRITE);
-                promise.setSuccess(null);
+                handler.success(null);
             } catch (AssertionError e) {
-                promise.setFailure(e);
+                handler.failure(e);
             }
         }
 

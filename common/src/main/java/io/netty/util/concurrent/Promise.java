@@ -15,10 +15,12 @@
  */
 package io.netty.util.concurrent;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
- * Special {@link Future} which is writable.
+ * Special {@link Future} which is writable and so allows to set the result.
  */
-public interface Promise<V> extends Future<V> {
+public interface Promise<V> extends Future<V>, CompletionHandler<V> {
 
     /**
      * Marks this future as a success and notifies all
@@ -60,7 +62,7 @@ public interface Promise<V> extends Future<V> {
     Promise<V> addListener(FutureListener<? super V> listener);
 
     @Override
-    Promise<V> removeListener(FutureListener<? super V> listener);
+    Promise<V> addHandler(CompletionHandler<? super V> handler);
 
     @Override
     Promise<V> await() throws InterruptedException;
@@ -73,4 +75,41 @@ public interface Promise<V> extends Future<V> {
 
     @Override
     Promise<V> syncUninterruptibly();
+
+    @Override
+    default void success(@Nullable V result) {
+        setSuccess(result);
+    }
+
+    @Override
+    default void failure(Throwable cause) {
+        setFailure(cause);
+    }
+
+    @Override
+    default CompletionHandler<V> andThen(CompletionHandler<? super V> after, EventExecutor executor) {
+        if (executor() == executor) {
+            // Just add the handler and return the same instance to reduce object allocations.
+            addHandler(after);
+            return this;
+        }
+        return CompletionHandler.super.andThen(after, executor);
+    }
+
+    @Override
+    default Promise<V> toPromise(EventExecutor executor) {
+        if (executor() == executor) {
+            // Just return itself.
+            return this;
+        }
+        return CompletionHandler.super.toPromise(executor);
+    }
+
+    @Override
+    default CompletionHandler<V> onExecutor(EventExecutor executor) {
+        if (executor() == executor) {
+            return this;
+        }
+        return toPromise(executor);
+    }
 }

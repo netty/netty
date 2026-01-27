@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
@@ -131,12 +132,12 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (!queueIsEmpty() || msg instanceof ChunkedInput) {
             allocateQueue();
-            queue.add(new PendingWrite(msg, promise));
+            queue.add(new PendingWrite(msg, handler));
         } else {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 
@@ -228,7 +229,7 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
                 break;
             }
 
-            if (currentWrite.promise.isDone()) {
+            if (currentWrite.handler instanceof Promise && ((Promise<?>) currentWrite.handler).isDone()) {
                 // This might happen e.g. in the case when a write operation
                 // failed, but there are still unconsumed chunks left.
                 // Most chunked input sources would stop generating chunks
@@ -311,7 +312,7 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
                 requiresFlush = false;
             } else {
                 queue.remove();
-                ctx.write(pendingMessage, currentWrite.promise);
+                ctx.write(pendingMessage, currentWrite.handler);
                 requiresFlush = true;
             }
 
@@ -362,24 +363,20 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
 
     private static final class PendingWrite {
         final Object msg;
-        final Promise<Void> promise;
+        final CompletionHandler<Void> handler;
 
-        PendingWrite(Object msg, Promise<Void> promise) {
+        PendingWrite(Object msg, CompletionHandler<Void> handler) {
             this.msg = msg;
-            this.promise = promise;
+            this.handler = handler;
         }
 
         void fail(Throwable cause) {
             ReferenceCountUtil.release(msg);
-            promise.tryFailure(cause);
+            handler.failure(cause);
         }
 
         void success(long total) {
-            if (promise.isDone()) {
-                // No need to notify the progress or fulfill the promise because it's done already.
-                return;
-            }
-            promise.trySuccess(null);
+            handler.success(null);
         }
     }
 }

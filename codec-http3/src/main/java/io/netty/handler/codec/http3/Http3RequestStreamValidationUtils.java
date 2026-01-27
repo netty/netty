@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.StringUtil;
 
 import java.util.function.BooleanSupplier;
@@ -43,19 +43,20 @@ final class Http3RequestStreamValidationUtils {
      * for invalid frames.
      *
      * @param frame                  to validate.
-     * @param promise                for the write.
+     * @param handler                for the write.
      * @param ctx                    for the handler.
      * @param goAwayReceivedSupplier for the channel.
      * @param encodeState            for the stream.
      * @return {@code true} if the frame is valid.
      */
-    static boolean validateClientWrite(Http3RequestStreamFrame frame, Promise<Void> promise, ChannelHandlerContext ctx,
+    static boolean validateClientWrite(Http3RequestStreamFrame frame, CompletionHandler<Void> handler,
+                                       ChannelHandlerContext ctx,
                                        BooleanSupplier goAwayReceivedSupplier,
                                        Http3RequestStreamCodecState encodeState) {
         if (goAwayReceivedSupplier.getAsBoolean() && !encodeState.started()) {
             String type = StringUtil.simpleClassName(frame);
             ReferenceCountUtil.release(frame);
-            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,
                     "Frame of type " + type + " unexpected as we received a GOAWAY already."));
             ctx.close();
             return false;
@@ -63,7 +64,7 @@ final class Http3RequestStreamValidationUtils {
         if (frame instanceof Http3PushPromiseFrame) {
             // Only supported on the server.
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-4.1
-            frameTypeUnexpected(promise, frame);
+            frameTypeUnexpected(handler, frame);
             return false;
         }
         return true;

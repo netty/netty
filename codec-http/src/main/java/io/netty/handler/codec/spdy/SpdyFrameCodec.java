@@ -23,7 +23,7 @@ import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -172,34 +172,34 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.close(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -213,7 +213,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         ByteBuf frame;
 
         if (msg instanceof SpdyDataFrame) {
@@ -226,7 +226,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     spdyDataFrame.isLast(),
                     spdyDataFrame.content()
                 );
-                ctx.write(frame, promise);
+                ctx.write(frame, handler);
             } finally {
                 spdyDataFrame.release();
             }
@@ -238,7 +238,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynStreamFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdySynStreamFrame);
-                promise.setFailure(e);
+                handler.failure(e);
                 return;
             }
             try {
@@ -254,7 +254,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             } finally {
                 headerBlock.release();
             }
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdySynReplyFrame) {
             SpdySynReplyFrame spdySynReplyFrame = (SpdySynReplyFrame) msg;
@@ -263,7 +263,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdySynReplyFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdySynReplyFrame);
-                promise.setFailure(e);
+                handler.failure(e);
                 return;
             }
 
@@ -277,7 +277,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             } finally {
                 headerBlock.release();
             }
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdyRstStreamFrame) {
 
@@ -287,7 +287,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     spdyRstStreamFrame.streamId(),
                     spdyRstStreamFrame.status().code()
             );
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdySettingsFrame) {
 
@@ -296,7 +296,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     ctx.alloc(),
                     spdySettingsFrame
             );
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdyPingFrame) {
 
@@ -305,7 +305,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     ctx.alloc(),
                     spdyPingFrame.id()
             );
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdyGoAwayFrame) {
 
@@ -315,7 +315,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     spdyGoAwayFrame.lastGoodStreamId(),
                     spdyGoAwayFrame.status().code()
             );
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdyHeadersFrame) {
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
@@ -324,7 +324,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 headerBlock = spdyHeaderBlockEncoder.encode(ctx.alloc(), spdyHeadersFrame);
             } catch (Exception e) {
                 ReferenceCountUtil.release(spdyHeadersFrame);
-                promise.setFailure(e);
+                handler.failure(e);
                 return;
             }
 
@@ -338,7 +338,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             } finally {
                 headerBlock.release();
             }
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
 
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
@@ -348,7 +348,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     spdyWindowUpdateFrame.streamId(),
                     spdyWindowUpdateFrame.deltaWindowSize()
             );
-            ctx.write(frame, promise);
+            ctx.write(frame, handler);
         } else if (msg instanceof SpdyUnknownFrame) {
             SpdyUnknownFrame spdyUnknownFrame = (SpdyUnknownFrame) msg;
             try {
@@ -357,7 +357,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                         spdyUnknownFrame.frameType(),
                         spdyUnknownFrame.flags(),
                         spdyUnknownFrame.content());
-                ctx.write(frame, promise);
+                ctx.write(frame, handler);
             } finally {
                 spdyUnknownFrame.release();
             }
@@ -513,7 +513,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
 
     @Override
     public void shutdown(ChannelHandlerContext ctx,
-                         ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                         ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 }

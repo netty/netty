@@ -53,7 +53,7 @@ public class IoUringAutoReadTest {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ctx.channel().config().setAutoRead(false);
-                            ctx.writeAndFlush(msg, ctx.newPromise());
+                            ctx.writeAndFlush(msg);
                         }
 
                         @Override

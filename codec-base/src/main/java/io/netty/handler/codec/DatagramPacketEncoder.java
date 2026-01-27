@@ -20,7 +20,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -89,30 +89,30 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-        encoder.bind(ctx, localAddress, promise);
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        encoder.bind(ctx, localAddress, handler);
     }
 
     @Override
     public void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, Promise<Void> promise) {
-        encoder.connect(ctx, remoteAddress, localAddress, promise);
+            SocketAddress localAddress, CompletionHandler<Void> handler) {
+        encoder.connect(ctx, remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.disconnect(ctx, promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        encoder.disconnect(ctx, handler);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.close(ctx, promise);
+    public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        encoder.close(ctx, handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        encoder.deregister(ctx, promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        encoder.deregister(ctx, handler);
     }
 
     @Override

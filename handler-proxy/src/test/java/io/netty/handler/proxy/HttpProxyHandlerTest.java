@@ -42,8 +42,8 @@ import io.netty.util.NetUtil;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
@@ -243,17 +243,17 @@ public class HttpProxyHandlerTest {
                                            boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
         InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
 
-        Promise<Void> promise = mock(Promise.class);
-        verifyNoMoreInteractions(promise);
+        CompletionHandler<Void> completionHandler = mock(CompletionHandler.class);
+        verifyNoMoreInteractions(completionHandler);
 
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(promise));
+        ctx.connect(same(proxyAddress), isNull(InetSocketAddress.class), same(completionHandler));
 
         HttpProxyHandler handler = new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080),
                 headers,
                 ignoreDefaultPortsInConnectHostHeader);
-        handler.connect(ctx, socketAddress, null, promise);
+        handler.connect(ctx, socketAddress, null, completionHandler);
 
         FullHttpRequest request = (FullHttpRequest) handler.newInitialMessage(ctx);
         try {
@@ -271,7 +271,7 @@ public class HttpProxyHandlerTest {
         } finally {
             request.release();
         }
-        verify(ctx).connect(proxyAddress, null, promise);
+        verify(ctx).connect(proxyAddress, null, completionHandler);
     }
 
     @Test

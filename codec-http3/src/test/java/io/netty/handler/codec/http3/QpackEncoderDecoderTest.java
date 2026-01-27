@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.util.AsciiString;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -525,30 +525,30 @@ public class QpackEncoderDecoderTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             if (msg instanceof ByteBuf) {
                 if (suspendQueue != null) {
                     suspendQueue.offer(() -> {
                         try {
                             other.channelRead(ctx, msg);
                         } catch (Exception e) {
-                            promise.setFailure(e);
+                            handler.failure(e);
                             return null;
                         }
-                        promise.setSuccess(null);
+                        handler.success(null);
                         return null;
                     });
                 } else {
                     try {
                         other.channelRead(ctx, msg);
                     } catch (Exception e) {
-                        promise.setFailure(e);
+                        handler.failure(e);
                         return;
                     }
-                    promise.setSuccess(null);
+                    handler.success(null);
                 }
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         }
     }

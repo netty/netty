@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.net.SocketAddress;
 
@@ -42,72 +42,72 @@ public interface ChannelOutboundHandler extends ChannelHandler {
     /**
      * Called once a register operation is made for an {@link EventLoop}.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the close operation is made
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    default void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     /**
      * Called once a bind operation is made.
      *
-     * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
-     * @param localAddress  the {@link SocketAddress} to which it should bound
-     * @param promise       the {@link Promise} to notify once the operation completes
+     * @param ctx          the {@link ChannelHandlerContext} for which the bind operation is made
+     * @param localAddress the {@link SocketAddress} to which it should bound
+     * @param handler      the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise)  {
-        ctx.bind(localAddress, promise);
+    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler)  {
+        ctx.bind(localAddress, handler);
     }
 
     /**
      * Called once a connect operation is made.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the connect operation is made
-     * @param remoteAddress     the {@link SocketAddress} to which it should connect
-     * @param localAddress      the {@link SocketAddress} which is used as source on connect
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx           the {@link ChannelHandlerContext} for which the connect operation is made
+     * @param remoteAddress the {@link SocketAddress} to which it should connect
+     * @param localAddress  the {@link SocketAddress} which is used as source on connect
+     * @param handler       the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
     default void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+            SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     /**
      * Called once a disconnect operation is made.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the disconnect operation is made
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    default void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     /**
      * Called once a close operation is made.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the close operation is made
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.close(promise);
+    default void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.close(handler);
     }
 
     /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the deregister operation is made
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    default void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     /**
@@ -119,17 +119,17 @@ public interface ChannelOutboundHandler extends ChannelHandler {
     }
 
     /**
-    * Called once a write operation is made. The write operation will write the messages through the
+     * Called once a write operation is made. The write operation will write the messages through the
      * {@link ChannelPipeline}. Those are then ready to be flushed to the actual {@link Channel} once
      * {@link Channel#flush()} is called
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the write operation is made
-     * @param msg               the message to write
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the write operation is made
+     * @param msg     the message to write
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
-    default void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-        ctx.write(msg, promise);
+    default void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+        ctx.write(msg, handler);
     }
 
     /**
@@ -146,13 +146,13 @@ public interface ChannelOutboundHandler extends ChannelHandler {
     /**
      * Called once a shutdown operation was requested and should be executed.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the shutdown operation is made
-     * @param type              the {@link ChannelShutdownType} that is used.
-     * @param promise           the {@link Promise} to notify once the operation completes
+     * @param ctx     the {@link ChannelHandlerContext} for which the shutdown operation is made
+     * @param type    the {@link ChannelShutdownType} that is used.
+     * @param handler the {@link CompletionHandler} to notify once the operation completes
      */
     @ChannelHandlerMask.Skip
     default void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                          Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                          CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 }

@@ -17,7 +17,7 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
@@ -146,7 +146,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     long size = calculateSize(toSend.toSend);
                     trafficCounter.bytesRealWriteFlowControl(size);
                     queueSize -= size;
-                    ctx.write(toSend.toSend, toSend.promise);
+                    ctx.write(toSend.toSend, toSend.handler);
                 }
             } else {
                 for (ToSend toSend : messagesQueue) {
@@ -165,28 +165,28 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     private static final class ToSend {
         final long relativeTimeAction;
         final Object toSend;
-        final Promise<Void> promise;
+        final CompletionHandler<Void> handler;
 
-        private ToSend(final long delay, final Object toSend, final Promise<Void> promise) {
+        private ToSend(final long delay, final Object toSend, final CompletionHandler<Void> handler) {
             relativeTimeAction = delay;
             this.toSend = toSend;
-            this.promise = promise;
+            this.handler = handler;
         }
     }
 
     @Override
     void submitWrite(final ChannelHandlerContext ctx, final Object msg,
             final long size, final long delay, final long now,
-            final Promise<Void> promise) {
+            final CompletionHandler<Void> handler) {
         final ToSend newToSend;
         // write order control
         synchronized (this) {
             if (delay == 0 && messagesQueue.isEmpty()) {
                 trafficCounter.bytesRealWriteFlowControl(size);
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
                 return;
             }
-            newToSend = new ToSend(delay + now, msg, promise);
+            newToSend = new ToSend(delay + now, msg, handler);
             messagesQueue.addLast(newToSend);
             queueSize += size;
             checkWriteSuspend(ctx, delay, queueSize);
@@ -209,7 +209,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     long size = calculateSize(newToSend.toSend);
                     trafficCounter.bytesRealWriteFlowControl(size);
                     queueSize -= size;
-                    ctx.write(newToSend.toSend, newToSend.promise);
+                    ctx.write(newToSend.toSend, newToSend.handler);
                 } else {
                     messagesQueue.addFirst(newToSend);
                     break;

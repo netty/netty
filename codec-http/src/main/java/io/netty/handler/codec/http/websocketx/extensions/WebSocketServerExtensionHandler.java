@@ -30,6 +30,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.CompletionHandler;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
@@ -158,17 +160,17 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
-                onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
+                onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, handler);
             } else if (msg instanceof HttpResponse) {
-                onHttpResponseWrite(ctx, (HttpResponse) msg, promise);
+                onHttpResponseWrite(ctx, (HttpResponse) msg, handler);
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         } else {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 
@@ -199,17 +201,21 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, Promise<Void> promise) {
+    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response,
+                                       CompletionHandler<Void> handler) {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
+            Promise<Void> promise = handler.toPromise(ctx.executor());
             handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
+            ctx.write(response, promise);
+        } else {
+            ctx.write(response, handler);
         }
-        ctx.write(response, promise);
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        Promise<Void> promise, HttpResponse httpResponse,
+                                        Future<Void> future, HttpResponse httpResponse,
                                         final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 
@@ -223,8 +229,8 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener(future -> {
-                    if (future.isSuccess()) {
+                future.addListener(f -> {
+                    if (f.isSuccess()) {
                         for (WebSocketServerExtension extension : validExtensionsList) {
                             WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
                             WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
@@ -241,8 +247,8 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
                 }
             }
 
-            promise.addListener(future -> {
-                if (future.isSuccess()) {
+            future.addListener(f -> {
+                if (f.isSuccess()) {
                     ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                 }
             });

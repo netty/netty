@@ -53,6 +53,7 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -115,23 +116,23 @@ public class SslHandlerTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testNonApplicationDataFailureFailsQueuedWrites() throws NoSuchAlgorithmException, InterruptedException {
         final CountDownLatch writeLatch = new CountDownLatch(1);
-        final Queue<Promise<Void>> writesToFail = new ConcurrentLinkedQueue<>();
+        final Queue<CompletionHandler<Void>> writesToFail = new ConcurrentLinkedQueue<>();
         SSLEngine engine = newClientModeSSLEngine();
         SslHandler handler = new SslHandler(engine) {
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                super.write(ctx, msg, promise);
+            public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                super.write(ctx, msg, handler);
                 writeLatch.countDown();
             }
         };
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 if (msg instanceof ByteBuf) {
                     if (((ByteBuf) msg).isReadable()) {
-                        writesToFail.add(promise);
+                        writesToFail.add(handler);
                     } else {
-                        promise.setSuccess(null);
+                        handler.success(null);
                     }
                 }
                 ReferenceCountUtil.release(msg);
@@ -148,9 +149,9 @@ public class SslHandlerTest {
             writeLatch.await();
 
             // Simulate failing the SslHandler non-application writes after there are applications writes queued.
-            Promise<Void> promiseToFail;
-            while ((promiseToFail = writesToFail.poll()) != null) {
-                promiseToFail.setFailure(new RuntimeException("fake exception"));
+            CompletionHandler<Void> handlerToFail;
+            while ((handlerToFail = writesToFail.poll()) != null) {
+                handlerToFail.failure(new RuntimeException("fake exception"));
             }
 
             writeCauseLatch.await();

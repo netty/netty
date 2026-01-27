@@ -42,6 +42,7 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
@@ -243,7 +244,7 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
                 headers.set(SERVER_ENTITY, SERVER_NAME);
                 headers.set(DATE_ENTITY, date);
                 headers.set(CONTENT_LENGTH_ENTITY, contentLength);
-                ctx.write(response, ctx.newPromise());
+                ctx.write(response, CompletionHandler.ignore());
             }
         };
         if (websocket) {

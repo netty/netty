@@ -29,7 +29,7 @@ import io.netty.handler.codec.redis.RedisMessage;
 import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,14 +40,14 @@ import java.util.List;
 public class RedisClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         String[] commands = ((String) msg).split("\\s+");
         List<RedisMessage> children = new ArrayList<RedisMessage>(commands.length);
         for (String cmdString : commands) {
             children.add(new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), cmdString)));
         }
         RedisMessage request = new ArrayRedisMessage(children);
-        ctx.write(request, promise);
+        ctx.write(request, handler);
     }
 
     @Override

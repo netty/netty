@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
+import io.netty.util.concurrent.CompletionHandler;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
@@ -100,7 +101,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             if (closed) {
                 inputShutdown = true;
                 if (isOpen()) {
-                    close(newPromise());
+                    close(CompletionHandler.ignore());
                 }
             }
         } finally {

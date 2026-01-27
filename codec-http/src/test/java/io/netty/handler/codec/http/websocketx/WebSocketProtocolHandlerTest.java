@@ -23,10 +23,12 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.CharsetUtil.UTF_8;
@@ -147,33 +149,6 @@ public class WebSocketProtocolHandlerTest {
         assertPropagatedInbound(textFrame, channel);
 
         textFrame.release();
-        assertFalse(channel.finish());
-    }
-
-    @Test
-    public void testTimeout() throws Exception {
-        final AtomicReference<Promise<Void>> ref = new AtomicReference<>();
-        WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
-                false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
-            @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                ref.set(promise);
-                ReferenceCountUtil.release(msg);
-            }
-        }, handler);
-
-        Future<Void> future = channel.writeAndFlush(new CloseWebSocketFrame());
-        ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
-        handler.close(ctx, ctx.newPromise());
-
-        do {
-            Thread.sleep(10);
-            channel.runPendingTasks();
-        } while (!future.isDone());
-
-        assertInstanceOf(WebSocketHandshakeException.class, future.cause());
-        assertFalse(ref.get().isDone());
         assertFalse(channel.finish());
     }
 

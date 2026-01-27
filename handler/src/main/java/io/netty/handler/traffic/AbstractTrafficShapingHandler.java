@@ -27,6 +27,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -548,7 +549,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final CompletionHandler<Void> handler) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
         if (size > 0) {
@@ -559,23 +560,23 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
                     logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
-                submitWrite(ctx, msg, size, wait, now, promise);
+                submitWrite(ctx, msg, size, wait, now, handler);
                 return;
             }
         }
         // to maintain order of write
-        submitWrite(ctx, msg, size, 0, now, promise);
+        submitWrite(ctx, msg, size, 0, now, handler);
     }
 
     @Deprecated
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
-            final long delay, final Promise<Void> promise) {
+            final long delay, final CompletionHandler<Void> handler) {
         submitWrite(ctx, msg, calculateSize(msg),
-                delay, TrafficCounter.milliSecondFromNano(), promise);
+                delay, TrafficCounter.milliSecondFromNano(), handler);
     }
 
     abstract void submitWrite(
-            ChannelHandlerContext ctx, Object msg, long size, long delay, long now, Promise<Void> promise);
+            ChannelHandlerContext ctx, Object msg, long size, long delay, long now, CompletionHandler<Void> handler);
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

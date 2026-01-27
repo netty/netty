@@ -61,8 +61,8 @@ import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -753,13 +753,13 @@ public class Http3FrameToHttpObjectCodecTest {
             }
         }
 
-        List<Promise<Void>> framePromises = new ArrayList<>();
+        List<CompletionHandler<Void>> frameHandlers = new ArrayList<>();
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
                 new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                        framePromises.add(promise);
-                        ctx.write(msg, ctx.newPromise());
+                    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                        frameHandlers.add(handler);
+                        ctx.write(msg, CompletionHandler.ignore());
                     }
                 },
                 new Http3FrameToHttpObjectCodec(false)
@@ -791,8 +791,8 @@ public class Http3FrameToHttpObjectCodecTest {
         assertFalse(fullPromise.isDone());
 
         assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
-        for (Promise<Void> framePromise : framePromises) {
-            framePromise.trySuccess(null);
+        for (CompletionHandler<Void> frameHandler : frameHandlers) {
+            frameHandler.success(null);
         }
         if (last) {
             assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
@@ -977,10 +977,10 @@ public class Http3FrameToHttpObjectCodecTest {
                                     if (msg instanceof Http3HeadersFrame) {
                                         DefaultHttp3HeadersFrame responseHeaders = new DefaultHttp3HeadersFrame();
                                         responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
-                                        ctx.write(responseHeaders, ctx.newPromise());
+                                        ctx.write(responseHeaders, CompletionHandler.ignore());
                                         ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
                                                 ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
-                                                ctx.newPromise());
+                                                CompletionHandler.ignore());
                                         // send a fin, this also flushes
                                         ctx.channel().shutdown(ChannelShutdownType.newOutbound());
                                     } else {

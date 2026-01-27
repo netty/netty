@@ -36,6 +36,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -154,7 +155,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Notify the child-channel and close it.
             streamChannel.pipeline().fireExceptionCaught(cause);
-            streamChannel.close(streamChannel.newPromise());
+            streamChannel.close(CompletionHandler.ignore());
         }
     }
 
@@ -488,32 +489,32 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public void bind(SocketAddress localAddress, Promise<Void> promise) {
-        pipeline().bind(localAddress, promise);
+    public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+        pipeline().bind(localAddress, handler);
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        pipeline().connect(remoteAddress, promise);
+    public void connect(SocketAddress remoteAddress, CompletionHandler<Void> handler) {
+        pipeline().connect(remoteAddress, handler);
     }
 
     @Override
-    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        pipeline().connect(remoteAddress, localAddress, promise);
+    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, CompletionHandler<Void> handler) {
+        pipeline().connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(Promise<Void> promise) {
-        pipeline().disconnect(promise);
+    public void disconnect(CompletionHandler<Void> handler) {
+        pipeline().disconnect(handler);
     }
 
     @Override
-    public void close(Promise<Void> promise) {
-        pipeline().close(promise);
+    public void close(CompletionHandler<Void> handler) {
+        pipeline().close(handler);
     }
 
     @Override
-    public void deregister(Promise<Void> promise) {
+    public void deregister(CompletionHandler<Void> promise) {
         pipeline().deregister(promise);
     }
 
@@ -523,12 +524,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public void write(Object msg, Promise<Void> promise) {
-        pipeline().write(msg, promise);
+    public void write(Object msg, CompletionHandler<Void> handler) {
+        pipeline().write(msg, handler);
     }
 
     @Override
-    public void writeAndFlush(Object msg, Promise<Void> promise) {
+    public void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         pipeline().writeAndFlush(msg, promise);
     }
 
@@ -616,7 +617,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     final void closeWithError(Http2Error error) {
         assert executor().inEventLoop();
-        unsafe.close(newPromise(), error);
+        unsafe.close(CompletionHandler.ignore(), error);
     }
 
     private final class Http2ChannelUnsafe implements IoTransport {
@@ -627,15 +628,15 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private boolean readEOS;
 
         @Override
-        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        public void shutdown(ChannelShutdownType type, CompletionHandler<Void> handler) {
             // TODO: Can we do better ?
-            promise.setFailure(new UnsupportedOperationException());
+            handler.failure(new UnsupportedOperationException());
         }
 
         @Override
         public void connect(final SocketAddress remoteAddress,
-                            SocketAddress localAddress, final Promise<Void> promise) {
-            promise.setFailure(new UnsupportedOperationException());
+                            SocketAddress localAddress, final CompletionHandler<Void> handler) {
+            handler.failure(new UnsupportedOperationException());
         }
 
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
@@ -647,15 +648,15 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void register(Promise<Void> promise) {
+        public void register(CompletionHandler<Void> handler) {
             if (registered) {
-                promise.setFailure(new UnsupportedOperationException("Re-register is not supported"));
+                handler.failure(new UnsupportedOperationException("Re-register is not supported"));
                 return;
             }
 
             registered = true;
 
-            promise.setSuccess(null);
+            handler.success(null);
 
             pipeline().fireChannelRegistered();
             if (isActive()) {
@@ -664,28 +665,28 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void bind(SocketAddress localAddress, Promise<Void> promise) {
-            promise.setFailure(new UnsupportedOperationException());
+        public void bind(SocketAddress localAddress, CompletionHandler<Void> handler) {
+            handler.failure(new UnsupportedOperationException());
         }
 
         @Override
-        public void disconnect(Promise<Void> promise) {
-            close(promise);
+        public void disconnect(CompletionHandler<Void> handler) {
+            close(handler);
         }
 
         @Override
-        public void close(final Promise<Void> promise) {
-            close(promise, null);
+        public void close(final CompletionHandler<Void> handler) {
+            close(handler, null);
         }
 
-        private void close(final Promise<Void> promise, Http2Error error) {
+        private void close(final CompletionHandler<Void> handler, Http2Error error) {
             if (closeInitiated) {
                 if (closePromise.isDone()) {
                     // Closed already.
-                    promise.setSuccess(null);
+                    handler.success(null);
                 } else {
                     // This means close() was called before so we just register a listener and return
-                    closePromise.addListener(future -> promise.setSuccess(null));
+                    closePromise.addListener(future -> handler.success(null));
                 }
                 return;
             }
@@ -706,13 +707,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (error == null) {
                     if (!readEOS && !(receivedEndOfStream && sentEndOfStream)) {
                         Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
-                        write(resetFrame, newPromise());
+                        write(resetFrame, CompletionHandler.ignore());
                         flush();
                     }
                 } else {
                     // Close was triggered by a stream error, in this case we always want to send a RST frame.
                     Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
-                    write(resetFrame, newPromise());
+                    write(resetFrame, CompletionHandler.ignore());
                     flush();
                 }
             }
@@ -731,20 +732,20 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // The promise should be notified before we call fireChannelInactive().
             outboundClosed = true;
             closePromise.setSuccess(null);
-            promise.setSuccess(null);
+            handler.success(null);
 
-            fireChannelInactiveAndDeregister(newPromise(), wasActive);
+            fireChannelInactiveAndDeregister(CompletionHandler.ignore(), wasActive);
         }
 
         @Override
-        public void deregister(Promise<Void> promise) {
-            fireChannelInactiveAndDeregister(promise, false);
+        public void deregister(CompletionHandler<Void> handler) {
+            fireChannelInactiveAndDeregister(handler, false);
         }
 
-        private void fireChannelInactiveAndDeregister(final Promise<Void> promise,
+        private void fireChannelInactiveAndDeregister(final CompletionHandler<Void> handler,
                                                       final boolean fireChannelInactive) {
             if (!registered) {
-                promise.setSuccess(null);
+                handler.success(null);
                 return;
             }
 
@@ -767,7 +768,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         registered = false;
                         pipeline.fireChannelUnregistered();
                     }
-                    safeSetSuccess(promise);
+                    handler.success(null);
                 }
             });
         }
@@ -828,7 +829,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
                     // Double check there is nothing left to flush such as a window update frame.
                     flush();
-                    unsafe.close(newPromise());
+                    unsafe.close(CompletionHandler.ignore());
                 }
             } else {
                 do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
@@ -837,7 +838,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         // Double check there is nothing left to flush such as a window update frame.
                         flush();
                         if (readEOS) {
-                            unsafe.close(newPromise());
+                            unsafe.close(CompletionHandler.ignore());
                         }
                         break;
                     }
@@ -911,7 +912,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // rely upon flush occurring in channelReadComplete on the parent channel.
             flush();
             if (readEOS) {
-                unsafe.close(newPromise());
+                unsafe.close(CompletionHandler.ignore());
             }
         }
 
@@ -961,12 +962,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void write(Object msg, final Promise<Void> promise) {
+        public void write(Object msg, final CompletionHandler<Void> handler) {
             if (!isActive() ||
                     // Once the outbound side was closed we should not allow header / data frames
                     outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                 ReferenceCountUtil.release(msg);
-                promise.setFailure(new ClosedChannelException());
+                handler.failure(new ClosedChannelException());
                 return;
             }
 
@@ -977,7 +978,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         Http2WindowUpdateFrame updateFrame = (Http2WindowUpdateFrame) msg;
                         if (config.autoStreamFlowControl) {
                             ReferenceCountUtil.release(msg);
-                            promise.setFailure(new UnsupportedOperationException(
+                            handler.failure(new UnsupportedOperationException(
                                     Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL + " is set to false"));
                             return;
                         }
@@ -986,33 +987,33 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                                     flowControlledBytes, "windowSizeIncrement");
                         } catch (RuntimeException e) {
                             ReferenceCountUtil.release(updateFrame);
-                            promise.setFailure(e);
+                            handler.failure(e);
                             return;
                         }
                         flowControlledBytes -= updateFrame.windowSizeIncrement();
                         if (parentContext().isRemoved()) {
                             ReferenceCountUtil.release(msg);
-                            promise.setFailure(new ClosedChannelException());
+                            handler.failure(new ClosedChannelException());
                             return;
                         }
                         Future<Void> f = writeWindowUpdateFrame(updateFrame);
                         if (f.isDone()) {
-                            writeComplete(f, promise);
+                            writeComplete(f, handler);
                         } else {
-                            f.addListener(future -> writeComplete(future, promise));
+                            f.addListener(future -> writeComplete(future, handler));
                         }
                     } else {
-                        writeHttp2StreamFrame(frame, promise);
+                        writeHttp2StreamFrame(frame, handler);
                     }
                 } else {
                     String msgStr = msg.toString();
                     ReferenceCountUtil.release(msg);
-                    promise.setFailure(new IllegalArgumentException(
+                    handler.failure(new IllegalArgumentException(
                             "Message must be an " + StringUtil.simpleClassName(Http2StreamFrame.class) +
                                     ": " + msgStr));
                 }
             } catch (Throwable t) {
-                promise.tryFailure(t);
+                handler.failure(t);
             }
         }
 
@@ -1026,10 +1027,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             return false;
         }
 
-        private void writeHttp2StreamFrame(Http2StreamFrame frame, final Promise<Void> promise) {
+        private void writeHttp2StreamFrame(Http2StreamFrame frame, final CompletionHandler<Void> handler) {
             if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
                 ReferenceCountUtil.release(frame);
-                promise.setFailure(
+                handler.failure(
                     new IllegalArgumentException("The first frame must be a headers frame. Was: "
                         + frame.name()));
                 return;
@@ -1048,18 +1049,18 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             Future<Void> f = write0(parentContext(), frame);
             if (f.isDone()) {
                 if (firstWrite) {
-                    firstWriteComplete(f, promise);
+                    firstWriteComplete(f, handler);
                 } else {
-                    writeComplete(f, promise);
+                    writeComplete(f, handler);
                 }
             } else {
                 final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(frame);
                 incrementPendingOutboundBytes(bytes, false);
                 f.addListener(future -> {
                     if (firstWrite) {
-                        firstWriteComplete(future, promise);
+                        firstWriteComplete(future, handler);
                     } else {
-                        writeComplete(future, promise);
+                        writeComplete(future, handler);
                     }
                     decrementPendingOutboundBytes(bytes, false);
                 });
@@ -1067,34 +1068,34 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        private void firstWriteComplete(Future<?> future, Promise<Void> promise) {
+        private void firstWriteComplete(Future<?> future, CompletionHandler<Void> handler) {
             Throwable cause = future.cause();
             if (cause == null) {
-                promise.setSuccess(null);
+                handler.success(null);
             } else {
                 // If the first write fails there is not much we can do, just close
-                unsafe.close(newPromise());
-                promise.setFailure(wrapStreamClosedError(cause));
+                unsafe.close(CompletionHandler.ignore());
+                handler.failure(wrapStreamClosedError(cause));
             }
         }
 
-        private void writeComplete(Future<?> future, Promise<Void> promise) {
+        private void writeComplete(Future<?> future, CompletionHandler<Void> handler) {
             Throwable cause = future.cause();
             if (cause == null) {
-                promise.setSuccess(null);
+                handler.success(null);
             } else {
                 Throwable error = wrapStreamClosedError(cause);
                 // To make it more consistent with AbstractChannel we handle all IOExceptions here.
                 if (error instanceof IOException) {
                     if (config.isAutoClose()) {
                         // Close channel if needed.
-                        unsafe.close(newPromise());
+                        unsafe.close(CompletionHandler.ignore());
                     } else {
                         // TODO: Once Http2StreamChannel extends DuplexChannel we should call shutdownOutput(...)
                         outboundClosed = true;
                     }
                 }
-                promise.setFailure(error);
+                handler.failure(error);
             }
         }
 
@@ -1222,9 +1223,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     protected Future<Void> write0(ChannelHandlerContext ctx, Object msg) {
-        Promise<Void> promise = ctx.newPromise();
-        ctx.write(msg, promise);
-        return promise;
+        return ctx.write(msg);
     }
 
     protected abstract boolean isParentReadInProgress();

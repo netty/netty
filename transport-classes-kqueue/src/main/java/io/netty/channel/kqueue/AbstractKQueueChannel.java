@@ -34,6 +34,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
@@ -375,7 +376,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         @Override
         public void close() {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
         }
 
         @Override
@@ -467,12 +468,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
         if (!socket.isInputShutdown()) {
             if (isAllowHalfClosure()) {
-                ioTransport().shutdown(ChannelShutdownType.newInbound(), newPromise());
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), CompletionHandler.ignore());
                 if (shouldStopReading(config())) {
                     clearReadFilter0();
                  }
             } else {
-                close(newPromise());
+                close(CompletionHandler.ignore());
                 return;
             }
         }
@@ -515,7 +516,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     private void fireEventAndClose(Object evt) {
         pipeline().fireUserEventTriggered(evt);
-        close(newPromise());
+        close(CompletionHandler.ignore());
     }
 
     private void finishConnect() {

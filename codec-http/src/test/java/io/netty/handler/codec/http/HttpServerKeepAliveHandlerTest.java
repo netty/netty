@@ -138,7 +138,7 @@ public class HttpServerKeepAliveHandlerTest {
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);
 
-        channel.writeAndFlush(response, channel.newPromise());
+        channel.writeAndFlush(response);
         HttpResponse writtenResponse = channel.readOutbound();
 
         assertFalse(channel.isOpen());

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -365,11 +366,11 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+    public void close(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler) {
         Promise<Void> p = ctx.newPromise();
         finishEncode(ctx, p);
 
-        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, handler.toPromise(ctx.executor()));
     }
 
     private ChannelHandlerContext ctx() {

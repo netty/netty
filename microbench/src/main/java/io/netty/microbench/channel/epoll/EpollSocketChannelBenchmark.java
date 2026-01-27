@@ -29,8 +29,8 @@ import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
@@ -71,7 +71,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof ByteBuf) {
-                                ctx.writeAndFlush(msg, ctx.newPromise());
+                                ctx.writeAndFlush(msg, CompletionHandler.ignore());
                             } else {
                                 throw new AssertionError();
                             }
@@ -84,7 +84,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             .getNow();
         class ClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
-            private Promise<Void> lastWritePromise;
+            private CompletionHandler<Void> lastWriteHandler;
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -93,8 +93,8 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     ByteBuf buf = (ByteBuf) msg;
                     try {
                         if (buf.readableBytes() == 1) {
-                            lastWritePromise.trySuccess(null);
-                            lastWritePromise = null;
+                            lastWriteHandler.success(null);
+                            lastWriteHandler = null;
                         } else {
                             throw new AssertionError();
                         }
@@ -107,12 +107,12 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                if (lastWritePromise != null) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                if (lastWriteHandler != null) {
                     throw new IllegalStateException();
                 }
-                lastWritePromise = promise;
-                ctx.write(msg, ctx.newPromise());
+                lastWriteHandler = handler;
+                ctx.write(msg, CompletionHandler.ignore());
             }
         }
 

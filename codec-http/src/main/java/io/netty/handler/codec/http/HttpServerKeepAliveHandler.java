@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 
@@ -65,7 +65,7 @@ public class HttpServerKeepAliveHandler implements ChannelInboundHandler, Channe
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         // modify message on way out to add headers if needed
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
@@ -82,11 +82,19 @@ public class HttpServerKeepAliveHandler implements ChannelInboundHandler, Channe
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise.addListener(f -> {
-                ctx.close();
-            });
+            handler = handler.andThen(new CompletionHandler<>() {
+                @Override
+                public void success(Void result) {
+                    ctx.close();
+                }
+
+                @Override
+                public void failure(Throwable cause) {
+                    ctx.close();
+                }
+            }, ctx.executor());
         }
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     private void trackResponse(HttpResponse response) {

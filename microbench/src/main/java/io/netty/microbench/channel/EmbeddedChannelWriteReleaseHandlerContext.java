@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
@@ -42,31 +43,31 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
     }
 
     @Override
-    public final void write(Object msg, Promise<Void> promise) {
+    public final void write(Object msg, CompletionHandler<Void> handler) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
+                handler.success(null);
             } else {
-                channel().write(msg, promise);
+                channel().write(msg, handler);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+    public final void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         try {
             if (msg instanceof ReferenceCounted) {
                 ((ReferenceCounted) msg).release();
-                promise.setSuccess(null);
+                promise.success(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            promise.failure(e);
             handleException(e);
         }
     }

@@ -30,12 +30,12 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -151,9 +151,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 pending = -1;
-                promise.setSuccess(null);
+                handler.success(null);
             }
         });
         pipeline.channel().write(new Object());
@@ -172,10 +172,10 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 // Returning a value that will result in an overflow
                 pending = 2;
-                promise.setSuccess(null);
+                handler.success(null);
             }
         }, new ChannelOutboundHandler() {
             long pending;
@@ -185,10 +185,10 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 // Returning a value that will result in an overflow
                 pending = Long.MAX_VALUE;
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
         });
         pipeline.channel().write(new Object());
@@ -605,28 +605,28 @@ public class DefaultChannelPipelineTest {
         final BlockingQueue<String> events = new LinkedBlockingQueue<>();
         pipeline.addFirst(new ChannelOutboundHandler() {
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
                 events.add("bind");
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                                Promise<Void> promise)  {
+                                CompletionHandler<Void> handler)  {
                 events.add("connect");
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 events.add("close");
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise)  {
+            public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler)  {
                 events.add("deregister");
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -635,9 +635,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 events.add("write");
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -913,75 +913,85 @@ public class DefaultChannelPipelineTest {
         try {
             pipeline.addLast(new ChannelOutboundHandler() {
                 @Override
-                public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                public void bind(
+                        ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
 
                 @Override
                 public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                    SocketAddress localAddress, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                                    SocketAddress localAddress, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
 
                 @Override
-                public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
 
                 @Override
-                public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
 
                 @Override
-                public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                    promise.setSuccess(null);
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    handler.success(null);
                 }
             }, new ChannelOutboundHandler() {
 
-                FutureListener<Void> listener;
+                CompletionHandler<Void> executorHandler;
 
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) {
-                    listener = f -> {
-                        queue.add(ctx.executor().inEventLoop());
+                    executorHandler = new CompletionHandler<>() {
+                        @Override
+                        public void success(Void result) {
+                            queue.add(ctx.executor().inEventLoop());
+                        }
+
+                        @Override
+                        public void failure(Throwable cause) {
+                            queue.add(ctx.executor().inEventLoop());
+                        }
                     };
                 }
 
                 @Override
-                public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
-                    ctx.bind(localAddress, promise.addListener(listener));
+                public void bind(
+                        ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
+                    ctx.bind(localAddress, handler.andThen(executorHandler, ctx.executor()));
                 }
 
                 @Override
                 public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                    SocketAddress localAddress, Promise<Void> promise) {
-                    ctx.connect(remoteAddress, localAddress, promise.addListener(listener));
+                                    SocketAddress localAddress, CompletionHandler<Void> handler) {
+                    ctx.connect(remoteAddress, localAddress, handler.andThen(executorHandler, ctx.executor()));
                 }
 
                 @Override
-                public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    ctx.disconnect(promise.addListener(listener));
+                public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    ctx.disconnect(handler.andThen(executorHandler, ctx.executor()));
                 }
 
                 @Override
-                public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    ctx.close(promise.addListener(listener));
+                public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    ctx.close(handler.andThen(executorHandler, ctx.executor()));
                 }
 
                 @Override
-                public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-                    ctx.deregister(promise.addListener(listener));
+                public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+                    ctx.deregister(handler.andThen(executorHandler, ctx.executor()));
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                    ctx.write(msg, promise.addListener(listener));
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                    ctx.write(msg, handler.andThen(executorHandler, ctx.executor()));
                 }
             });
             pipeline.channel().register();
@@ -1387,45 +1397,45 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 fail();
-                ctx.register(promise);
+                ctx.register(handler);
             }
 
             @Skip
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
                 fail();
-                ctx.bind(localAddress, promise);
+                ctx.bind(localAddress, handler);
             }
 
             @Skip
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, Promise<Void> promise) {
+                                SocketAddress localAddress, CompletionHandler<Void> handler) {
                 fail();
-                ctx.connect(remoteAddress, localAddress, promise);
+                ctx.connect(remoteAddress, localAddress, handler);
             }
 
             @Skip
             @Override
-            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 fail();
-                ctx.disconnect(promise);
+                ctx.disconnect(handler);
             }
 
             @Skip
             @Override
-            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 fail();
-                ctx.close(promise);
+                ctx.close(handler);
             }
 
             @Skip
             @Override
-            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 fail();
-                ctx.deregister(promise);
+                ctx.deregister(handler);
             }
 
             @Skip
@@ -1437,9 +1447,9 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 fail();
-                ctx.write(msg, promise);
+                ctx.write(msg, handler);
             }
 
             @Skip
@@ -1451,9 +1461,9 @@ public class DefaultChannelPipelineTest {
 
             @Override
             public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                                 Promise<Void> promise) {
+                                 CompletionHandler<Void> handler) {
                 fail();
-                ctx.shutdown(type, promise);
+                ctx.shutdown(type, handler);
             }
 
             @Skip
@@ -1570,34 +1580,34 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
                 executionMask |= MASK_BIND;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, Promise<Void> promise) {
+                                SocketAddress localAddress, CompletionHandler<Void> handler) {
                 executionMask |= MASK_CONNECT;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_DISCONNECT;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void close(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_CLOSE;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
+            public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
                 executionMask |= MASK_DEREGISTER;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -1606,9 +1616,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 executionMask |= MASK_WRITE;
-                promise.setSuccess(null);
+                handler.success(null);
             }
 
             @Override
@@ -1849,11 +1859,11 @@ public class DefaultChannelPipelineTest {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                         if (msg == writeObject) {
                             doneLatch.countDown();
                         }
-                        ctx.write(msg, promise);
+                        ctx.write(msg, handler);
                     }
                 });
             }
@@ -2036,7 +2046,7 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             outboundBuffer.add(msg);
         }
 

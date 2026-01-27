@@ -17,6 +17,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -50,18 +51,14 @@ public abstract class AbstractCoalescingBufferQueue {
      * Add a buffer to the front of the queue and associate a promise with it that should be completed when
      * all the buffer's bytes have been consumed from the queue and written.
      * @param buf to add to the head of the queue
-     * @param promise to complete when all the bytes have been consumed and written, can be void.
+     * @param handler to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void addFirst(ByteBuf buf, Promise<Void> promise) {
-        addFirst(buf, toChannelFutureListener(promise));
-    }
-
-    private void addFirst(ByteBuf buf, FutureListener<Void> listener) {
+    public final void addFirst(ByteBuf buf, CompletionHandler<Void> handler) {
         // Touch the message to make it easier to debug buffer leaks.
         buf.touch();
 
-        if (listener != null) {
-            bufAndListenerPairs.addFirst(listener);
+        if (handler != null) {
+            bufAndListenerPairs.addFirst(handler);
         }
         bufAndListenerPairs.addFirst(buf);
         incrementReadableBytes(buf.readableBytes());
@@ -72,18 +69,6 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final void add(ByteBuf buf) {
         add(buf, (FutureListener<Void>) null);
-    }
-
-    /**
-     * Add a buffer to the end of the queue and associate a promise with it that should be completed when
-     * all the buffer's bytes have been consumed from the queue and written.
-     * @param buf to add to the tail of the queue
-     * @param promise to complete when all the bytes have been consumed and written, can be void.
-     */
-    public final void add(ByteBuf buf, Promise<Void> promise) {
-        // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
-        // before we complete it's promise.
-        add(buf, toChannelFutureListener(promise));
     }
 
     /**
@@ -106,6 +91,25 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
+     * Add a buffer to the end of the queue and associate a handler with it that should be completed when
+     * all the buffers  bytes have been consumed from the queue and written.
+     * @param buf to add to the tail of the queue
+     * @param handler to notify when all the bytes have been consumed and written, can be {@code null}.
+     */
+    public final void add(ByteBuf buf, CompletionHandler<Void> handler) {
+        // Touch the message to make it easier to debug buffer leaks.
+        buf.touch();
+
+        // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
+        // before we complete it's promise.
+        bufAndListenerPairs.add(buf);
+        if (handler != null) {
+            bufAndListenerPairs.add(handler);
+        }
+        incrementReadableBytes(buf.readableBytes());
+    }
+
+    /**
      * Remove the first {@link ByteBuf} from the queue.
      * @param aggregatePromise used to aggregate the promises and listeners for the returned buffer.
      * @return the first {@link ByteBuf} from the queue.
@@ -123,6 +127,9 @@ public abstract class AbstractCoalescingBufferQueue {
         entry = bufAndListenerPairs.peek();
         if (entry instanceof FutureListener) {
             aggregatePromise.addListener((FutureListener<Void>) entry);
+            bufAndListenerPairs.poll();
+        } else if (entry instanceof CompletionHandler<?>) {
+            aggregatePromise.addHandler((CompletionHandler<Void>) entry);
             bufAndListenerPairs.poll();
         }
         return result;
@@ -189,10 +196,10 @@ public abstract class AbstractCoalescingBufferQueue {
                         toReturn = compose(alloc, toReturn, entryBuffer);
                     }
                     entryBuffer = null;
-                } else if (entry instanceof DelegatingChannelPromiseNotifier) {
-                    aggregatePromise.addListener((DelegatingChannelPromiseNotifier) entry);
                 } else if (entry instanceof FutureListener<?>) {
                     aggregatePromise.addListener((FutureListener<Void>) entry);
+                } else if (entry instanceof CompletionHandler<?>) {
+                    aggregatePromise.addHandler((CompletionHandler<Void>) entry);
                 }
             }
         } catch (Throwable cause) {
@@ -205,6 +212,9 @@ public abstract class AbstractCoalescingBufferQueue {
             entry = bufAndListenerPairs.peek();
             if (entry instanceof FutureListener<?>) {
                 aggregatePromise.addListener((FutureListener<Void>) entry);
+                bufAndListenerPairs.poll();
+            } else if (entry instanceof CompletionHandler<?>) {
+                aggregatePromise.addHandler((CompletionHandler<Void>) entry);
                 bufAndListenerPairs.poll();
             }
 
@@ -260,7 +270,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.newPromise());
+                        ctx.write(previousBuf, CompletionHandler.ignore());
                     }
                     break;
                 }
@@ -268,12 +278,12 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof ByteBuf) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.newPromise());
+                        ctx.write(previousBuf, CompletionHandler.ignore());
                     }
                     previousBuf = (ByteBuf) entry;
-                } else if (entry instanceof Promise<?>) {
+                } else if (entry instanceof CompletionHandler<?>) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (Promise<Void>) entry);
+                    ctx.write(previousBuf, (CompletionHandler<Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());
@@ -390,8 +400,15 @@ public abstract class AbstractCoalescingBufferQueue {
                     ByteBuf buffer = (ByteBuf) entry;
                     decrementReadableBytes(buffer.readableBytes());
                     safeRelease(buffer);
-                } else {
+                } else if (entry instanceof FutureListener<?>) {
                     ((FutureListener<Void>) entry).operationComplete(future);
+                } else {
+                    CompletionHandler<Void> handler = (CompletionHandler<Void>) entry;
+                    if (future.isSuccess()) {
+                        handler.success(future.getNow());
+                    } else {
+                        handler.failure(future.cause());
+                    }
                 }
             } catch (Throwable t) {
                 if (pending == null) {
@@ -417,9 +434,5 @@ public abstract class AbstractCoalescingBufferQueue {
     private void decrementReadableBytes(int decrement) {
         readableBytes -= decrement;
         assert readableBytes >= 0;
-    }
-
-    private static FutureListener<Void> toChannelFutureListener(Promise<Void> promise) {
-        return new DelegatingChannelPromiseNotifier(promise);
     }
 }

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -88,29 +89,29 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+    public void close(final ChannelHandlerContext ctx, final CompletionHandler<Void> handler) {
         if (closeStatus == null || !ctx.channel().isActive()) {
-            ctx.close(promise);
+            ctx.close(handler);
         } else {
             if (closeSent == null) {
-                write(ctx, new CloseWebSocketFrame(closeStatus), ctx.newPromise());
+                write(ctx, new CloseWebSocketFrame(closeStatus), CompletionHandler.ignore());
             }
             flush(ctx);
             applyCloseSentTimeout(ctx);
-            closeSent.addListener(future -> ctx.close(promise));
+            closeSent.addListener(future -> ctx.close(handler));
         }
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
-            promise.setFailure(new ClosedChannelException());
+            handler.failure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
-            closeSent(promise);
+            closeSent(handler.toPromise(ctx.executor()));
             ctx.write(msg).addListener(new PromiseNotifier<>(false, closeSent));
         } else {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 
@@ -144,30 +145,30 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.register(promise);
+    public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.register(handler);
     }
 
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                     Promise<Void> promise) {
-        ctx.bind(localAddress, promise);
+                     CompletionHandler<Void> handler) {
+        ctx.bind(localAddress, handler);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, Promise<Void> promise) {
-        ctx.connect(remoteAddress, localAddress, promise);
+                        SocketAddress localAddress, CompletionHandler<Void> handler) {
+        ctx.connect(remoteAddress, localAddress, handler);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.disconnect(promise);
+    public void disconnect(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.disconnect(handler);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
-        ctx.deregister(promise);
+    public void deregister(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+        ctx.deregister(handler);
     }
 
     @Override
@@ -188,7 +189,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
 
     @Override
     public void shutdown(ChannelHandlerContext ctx,
-                         ChannelShutdownType type, Promise<Void> promise) {
-        ctx.shutdown(type, promise);
+                         ChannelShutdownType type, CompletionHandler<Void> handler) {
+        ctx.shutdown(type, handler);
     }
 }

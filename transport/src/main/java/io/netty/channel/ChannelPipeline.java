@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -142,14 +143,14 @@ import java.util.NoSuchElementException;
  * </li>
  * <li>Outbound event propagation methods:
  *     <ul>
- *     <li>{@link ChannelOutboundInvoker#bind(SocketAddress, io.netty.util.concurrent.Promise)}</li>
- *     <li>{@link ChannelOutboundInvoker#connect(SocketAddress, SocketAddress, io.netty.util.concurrent.Promise)}</li>
- *     <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#bind(SocketAddress, CompletionHandler)}</li>
+ *     <li>{@link ChannelOutboundInvoker#connect(SocketAddress, SocketAddress,CompletionHandler)}</li>
+ *     <li>{@link ChannelOutboundInvoker#write(Object, CompletionHandler)}</li>
  *     <li>{@link ChannelHandlerContext#flush()}</li>
  *     <li>{@link ChannelHandlerContext#read()}</li>
- *     <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.Promise)}</li>
- *     <li>{@link ChannelOutboundInvoker#close(io.netty.util.concurrent.Promise)}</li>
- *     <li>{@link ChannelOutboundInvoker#deregister(io.netty.util.concurrent.Promise)}</li>
+ *     <li>{@link ChannelOutboundInvoker#disconnect(CompletionHandler)}</li>
+ *     <li>{@link ChannelOutboundInvoker#close(CompletionHandler)}</li>
+ *     <li>{@link ChannelOutboundInvoker#deregister(CompletionHandler)}</li>
  *     </ul>
  * </li>
  * </ul>

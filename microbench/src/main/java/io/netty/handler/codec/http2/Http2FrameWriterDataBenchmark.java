@@ -145,13 +145,15 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                     // Only the last frame is not retained. Until then, the outer finally must release.
                     ByteBuf frameHeader = header.slice(frameDataBytes, framePaddingBytes, lastFrame && endStream);
                     needToReleaseHeaders = !lastFrame;
-                    ctx.write(lastFrame ? frameHeader : frameHeader.retain(), promiseAggregator.newPromise());
+                    ctx.write(lastFrame ? frameHeader : frameHeader.retain(),
+                            promiseAggregator.newPromise());
 
                     // Write the frame data.
                     ByteBuf frameData = data.readSlice(frameDataBytes);
                     // Only the last frame is not retained. Until then, the outer finally must release.
                     needToReleaseData = !lastFrame;
-                    ctx.write(lastFrame ? frameData : frameData.retain(), promiseAggregator.newPromise());
+                    ctx.write(lastFrame ? frameData : frameData.retain(),
+                            promiseAggregator.newPromise());
 
                     // Write the frame padding.
                     if (paddingBytes(framePaddingBytes) > 0) {

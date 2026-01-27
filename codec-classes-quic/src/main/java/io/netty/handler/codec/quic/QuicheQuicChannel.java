@@ -34,6 +34,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -425,7 +426,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void forceClose() {
-        ioTransport().close(newPromise());
+        ioTransport().close(CompletionHandler.ignore());
     }
 
     @Override
@@ -779,7 +780,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return true;
         }
         if (conn.isClosed()) {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
             return true;
         }
         return false;
@@ -799,7 +800,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // Make a copy to ensure we not run into a situation when we change the underlying iterator from
         // another method and so run in an assert error.
         for (QuicheQuicStreamChannel stream: streams.values().toArray(new QuicheQuicStreamChannel[0])) {
-            stream.ioTransport().close(closedChannelException, newPromise());
+            stream.ioTransport().close(closedChannelException, CompletionHandler.ignore());
         }
         streams.clear();
     }
@@ -1496,7 +1497,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         if (connectPromise != null && !f.isSuccess()) {
                             connectPromise.tryFailure(f.cause());
                             // close everything after notify about failure.
-                            ioTransport().close(newPromise());
+                            ioTransport().close(CompletionHandler.ignore());
                         }
                     });
             return;
@@ -1626,7 +1627,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             if (close) {
                 // Let's close now as there is no way to recover
-                ioTransport().close(newPromise());
+                ioTransport().close(CompletionHandler.ignore());
             }
         } finally {
             reantranceGuard &= ~IN_RECV;
@@ -1892,7 +1893,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             fireDatagramExtensionEvent(conn);
             if (!promiseSet) {
                 fireConnectCloseEventIfNeeded(conn);
-                this.close(newPromise());
+                this.close(CompletionHandler.ignore());
                 return true;
             }
         }
@@ -1978,7 +1979,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
             if (conn.isClosed()) {
                 cancel();
-                ioTransport().close(newPromise());
+                ioTransport().close(CompletionHandler.ignore());
                 return;
             }
             long nanos = Quiche.quiche_conn_timeout_as_nanos(conn.address());

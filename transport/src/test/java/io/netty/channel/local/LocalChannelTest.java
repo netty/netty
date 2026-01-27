@@ -368,9 +368,9 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Promise<Void> promise = ccCpy.newPromise();
-                        promise.addListener(future -> ccCpy.pipeline().lastContext().close());
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(f -> {
+                            ccCpy.pipeline().lastContext().close();
+                        });
                     }
                 });
 
@@ -506,10 +506,8 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Promise<Void> promise = ccCpy.newPromise();
-                        promise.addListener(future ->
-                                ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise()));
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
+                        ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future ->
+                                ccCpy.writeAndFlush(data2.retainedDuplicate()));
                     }
                 });
 
@@ -584,12 +582,10 @@ public class LocalChannelTest {
             cc.pipeline().lastContext().executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    Promise<Void> promise = ccCpy.newPromise();
-                    promise.addListener(future -> {
+                    ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future -> {
                         Channel serverChannelCpy = serverChannelRef.get();
-                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate());
                     });
-                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 }
             });
 
@@ -663,13 +659,11 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        Promise<Void> promise = ccCpy.newPromise();
-                        promise.addListener(future -> {
+                        ccCpy.writeAndFlush(data.retainedDuplicate()).addListener(future -> {
                             Channel serverChannelCpy = serverChannelRef.get();
                             serverChannelCpy.writeAndFlush(
-                                    data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                                    data2.retainedDuplicate());
                         });
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
                 });
 

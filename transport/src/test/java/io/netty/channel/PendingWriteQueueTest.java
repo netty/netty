@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -166,9 +167,9 @@ public class PendingWriteQueueTest {
     public void testRemoveAndWriteAllReentrantWrite() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
-                ctx.writeAndFlush(msg, promise);
+                ctx.writeAndFlush(msg, handler);
             }
         }, new ChannelOutboundHandler() { });
 
@@ -276,8 +277,8 @@ public class PendingWriteQueueTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-            queue.add(msg, promise);
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+            queue.add(msg, handler);
             assertFalse(queue.isEmpty());
             assertEquals(++expectedSize, queue.size());
             assertNotNull(queue.current());

@@ -29,7 +29,7 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.util.LeakPresenceDetector;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -78,10 +78,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     private void closeOnRead(ChannelPipeline pipeline) {
         if (!isShutdown(ChannelShutdownDirection.Inbound)) {
             if (isAllowHalfClosure()) {
-                Promise<Void> promise = pipeline.newPromise();
-                ioTransport().shutdown(ChannelShutdownType.newInbound(), promise);
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), CompletionHandler.ignore());
             } else {
-                close(newPromise());
+                close(CompletionHandler.ignore());
             }
         } else if (!inputClosedSeenErrorOnRead) {
             inputClosedSeenErrorOnRead = true;

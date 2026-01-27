@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
@@ -58,7 +59,7 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
     }
 
     @Override
-    public final void write(Object msg, Promise<Void> promise) {
+    public final void write(Object msg, CompletionHandler<Void> handler) {
         try {
             if (msg instanceof ByteBuf) {
                 if (cumulation == null) {
@@ -66,18 +67,18 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, (ByteBuf) msg);
                 }
-                promise.setSuccess(null);
+                handler.success(null);
             } else {
-                channel().write(msg, promise);
+                channel().write(msg, handler);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            handler.failure(e);
             handleException(e);
         }
     }
 
     @Override
-    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+    public final void writeAndFlush(Object msg, CompletionHandler<Void> promise) {
         try {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
@@ -86,12 +87,12 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                 } else {
                     cumulation = cumulator.cumulate(alloc(), cumulation, buf);
                 }
-                promise.setSuccess(null);
+                promise.success(null);
             } else {
                 channel().writeAndFlush(msg, promise);
             }
         } catch (Exception e) {
-            promise.setFailure(e);
+            promise.failure(e);
             handleException(e);
         }
     }

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -196,11 +197,11 @@ public class Http3ServerPushStreamManagerTest {
         final List<Http3PushStreamFrame> framesWritten = new ArrayList<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
             if (msg instanceof Http3PushStreamFrame) {
                 framesWritten.add((Http3PushStreamFrame) msg);
             }
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
         }
     }
 

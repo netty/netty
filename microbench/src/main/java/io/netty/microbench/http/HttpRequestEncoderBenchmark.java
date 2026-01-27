@@ -36,7 +36,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -113,37 +113,33 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public void fullMessage() throws Exception {
         fullRequest.content().setIndex(0, contentBytes);
-        encoder.write(context, fullRequest, newPromise());
+        encoder.write(context, fullRequest, CompletionHandler.ignore());
     }
 
     @Benchmark
     public void contentLength() throws Exception {
-        encoder.write(context, contentLengthRequest, newPromise());
+        encoder.write(context, contentLengthRequest, CompletionHandler.ignore());
         lastContent.content().setIndex(0, contentBytes);
-        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, lastContent, CompletionHandler.ignore());
     }
 
     @Benchmark
     public void chunked() throws Exception {
-        encoder.write(context, chunkedRequest, newPromise());
+        encoder.write(context, chunkedRequest, CompletionHandler.ignore());
         lastContent.content().setIndex(0, contentBytes);
-        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, lastContent, CompletionHandler.ignore());
     }
 
     @Benchmark
     public void differentTypes() throws Exception {
-        encoder.write(context, contentLengthRequest, newPromise());
+        encoder.write(context, contentLengthRequest, CompletionHandler.ignore());
         lastContent.content().setIndex(0, contentBytes);
-        encoder.write(context, lastContent, newPromise());
+        encoder.write(context, lastContent, CompletionHandler.ignore());
         content.setIndex(0, contentBytes);
         fullRequest.content().setIndex(0, contentBytes);
-        encoder.write(context, fullRequest, newPromise());
-        encoder.write(context, chunkedRequest, newPromise());
+        encoder.write(context, fullRequest, CompletionHandler.ignore());
+        encoder.write(context, chunkedRequest, CompletionHandler.ignore());
         lastContent.content().setIndex(0, contentBytes);
-        encoder.write(context, lastContent, newPromise());
-    }
-
-    private Promise<Void> newPromise() {
-        return context.newPromise();
+        encoder.write(context, lastContent, CompletionHandler.ignore());
     }
 }

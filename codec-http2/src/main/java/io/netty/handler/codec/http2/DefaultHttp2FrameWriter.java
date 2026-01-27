@@ -167,7 +167,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     ctx.write(frameHeader.retainedSlice(), promiseAggregator.newPromise());
 
                     // Write the payload.
-                    ctx.write(data.readRetainedSlice(maxFrameSize), promiseAggregator.newPromise());
+                    ctx.write(data.readRetainedSlice(maxFrameSize),
+                            promiseAggregator.newPromise());
 
                     remainingData -= maxFrameSize;
                     // Stop iterating if remainingData == maxFrameSize so we can take care of reference counts below.
@@ -237,7 +238,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                             data = null;
                             ctx.write(lastFrame, promiseAggregator.newPromise());
                         } else {
-                            ctx.write(data.readRetainedSlice(frameDataBytes), promiseAggregator.newPromise());
+                            ctx.write(data.readRetainedSlice(frameDataBytes),
+                                    promiseAggregator.newPromise());
                         }
                     }
                     // Write the frame padding.
@@ -394,7 +396,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Write out the padding, if any.
             if (paddingBytes(padding) > 0) {
-                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
+                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)),
+                        promiseAggregator.newPromise());
             }
 
             if (!flags.endOfHeaders()) {
@@ -541,7 +544,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Write out the padding, if any.
             if (paddingBytes(padding) > 0) {
-                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
+                ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)),
+                        promiseAggregator.newPromise());
             }
 
             if (!flags.endOfHeaders()) {

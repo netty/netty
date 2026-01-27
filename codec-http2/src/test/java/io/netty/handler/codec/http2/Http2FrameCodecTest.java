@@ -685,8 +685,10 @@ public class Http2FrameCodecTest {
         Promise<Void> promise1 = channel.newPromise();
         Promise<Void> promise2 = channel.newPromise();
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
+                promise1);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
+                promise2);
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -717,9 +719,12 @@ public class Http2FrameCodecTest {
         Promise<Void> promise2 = channel.newPromise();
         Promise<Void> promise3 = channel.newPromise();
 
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3), promise3);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1),
+                promise1);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
+                promise2);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3),
+                promise3);
 
         assertTrue(isStreamIdValid(stream1.id()));
         channel.runPendingTasks();
@@ -783,7 +788,8 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
 
         Promise<Void> writePromise = channel.newPromise();
-        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream), writePromise);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream),
+                writePromise);
 
         Http2GoAwayFrame goAwayFrame = inboundHandler.readInbound();
         assertNotNull(goAwayFrame);

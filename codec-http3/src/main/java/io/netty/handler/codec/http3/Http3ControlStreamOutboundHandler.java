@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.internal.ObjectUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -91,24 +91,24 @@ final class Http3ControlStreamOutboundHandler
     }
 
     @Override
-    void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, Promise<Void> promise) {
-        if (msg instanceof Http3MaxPushIdFrame && !handleHttp3MaxPushIdFrame(promise, (Http3MaxPushIdFrame) msg)) {
+    void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, CompletionHandler<Void> handler) {
+        if (msg instanceof Http3MaxPushIdFrame && !handleHttp3MaxPushIdFrame(handler, (Http3MaxPushIdFrame) msg)) {
             ReferenceCountUtil.release(msg);
             return;
-        } else if (msg instanceof Http3GoAwayFrame && !handleHttp3GoAwayFrame(promise, (Http3GoAwayFrame) msg)) {
+        } else if (msg instanceof Http3GoAwayFrame && !handleHttp3GoAwayFrame(handler, (Http3GoAwayFrame) msg)) {
             ReferenceCountUtil.release(msg);
             return;
         }
 
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
-    private boolean handleHttp3MaxPushIdFrame(Promise<Void> promise, Http3MaxPushIdFrame maxPushIdFrame) {
+    private boolean handleHttp3MaxPushIdFrame(CompletionHandler<Void> handler, Http3MaxPushIdFrame maxPushIdFrame) {
         long id = maxPushIdFrame.id();
 
         // See https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-32#section-7.2.7
         if (sentMaxPushId != null && id < sentMaxPushId) {
-            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR, "MAX_PUSH_ID reduced limit."));
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR, "MAX_PUSH_ID reduced limit."));
             return false;
         }
 
@@ -116,18 +116,18 @@ final class Http3ControlStreamOutboundHandler
         return true;
     }
 
-    private boolean handleHttp3GoAwayFrame(Promise<Void> promise, Http3GoAwayFrame goAwayFrame) {
+    private boolean handleHttp3GoAwayFrame(CompletionHandler<Void> handler, Http3GoAwayFrame goAwayFrame) {
         long id = goAwayFrame.id();
 
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2
         if (server && id % 4 != 0) {
-            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
                     "GOAWAY id not valid : " + id));
             return false;
         }
 
         if (sendGoAwayId != null && id > sendGoAwayId) {
-            promise.setFailure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
+            handler.failure(new Http3Exception(Http3ErrorCode.H3_ID_ERROR,
                     "GOAWAY id is bigger then the last sent: " + id + " > " + sendGoAwayId));
             return false;
         }

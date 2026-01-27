@@ -24,8 +24,8 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -250,12 +250,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
                 }
-                ctx.write(msg,  promise);
+                ctx.write(msg, handler);
             }
 
             @Override
@@ -304,9 +304,18 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
-                promise.addListener(future -> ctx.channel().close());
-                ctx.write(msg, promise);
+            public void write(final ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
+                ctx.write(msg, handler.andThen(new CompletionHandler<>() {
+                    @Override
+                    public void success(Void result) {
+                        ctx.channel().close();
+                    }
+
+                    @Override
+                    public void failure(Throwable cause) {
+                        ctx.channel().close();
+                    }
+                }, ctx.executor()));
                 ctx.channel().flush();
             }
         });

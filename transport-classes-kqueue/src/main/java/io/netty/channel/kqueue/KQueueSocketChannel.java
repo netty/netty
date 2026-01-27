@@ -35,6 +35,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.LeakPresenceDetector;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
@@ -458,7 +459,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
                         break readLoop;
                     case -1:
                         allocHandle.lastBytesRead(-1);
-                        close(newPromise());
+                        close(CompletionHandler.ignore());
                         return;
                     default:
                         allocHandle.lastBytesRead(1);

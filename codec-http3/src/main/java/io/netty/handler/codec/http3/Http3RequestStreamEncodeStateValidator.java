@@ -18,7 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http.HttpStatusClass;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.CompletionHandler;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
@@ -34,9 +34,9 @@ final class Http3RequestStreamEncodeStateValidator
     private State state = State.None;
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
         if (!(msg instanceof Http3RequestStreamFrame)) {
-            ctx.write(msg, promise);
+            ctx.write(msg, handler);
             return;
         }
         final Http3RequestStreamFrame frame = (Http3RequestStreamFrame) msg;
@@ -46,7 +46,7 @@ final class Http3RequestStreamEncodeStateValidator
             return;
         }
         state = nextState;
-        ctx.write(msg, promise);
+        ctx.write(msg, handler);
     }
 
     @Override

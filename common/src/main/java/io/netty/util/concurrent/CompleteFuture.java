@@ -35,14 +35,14 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     @Override
-    public Future<V> addListener(FutureListener<? super V> listener) {
-        DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
+    public Future<V> addHandler(CompletionHandler<? super V> handler) {
+        DefaultPromise.notifyHandler(executor(), this, ObjectUtil.checkNotNull(handler, "handler"));
         return this;
     }
 
     @Override
-    public Future<V> removeListener(FutureListener<? super V> listener) {
-        // NOOP
+    public Future<V> addListener(FutureListener<? super V> listener) {
+        DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
         return this;
     }
 

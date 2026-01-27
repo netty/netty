@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -446,7 +447,7 @@ public class Http2FrameRoundtripTest {
 
     private ByteBuf captureWrites() {
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx, atLeastOnce()).write(captor.capture(), isA(Promise.class));
+        verify(ctx, atLeastOnce()).write(captor.capture(), isA(CompletionHandler.class));
         CompositeByteBuf composite = releaseLater(Unpooled.compositeBuffer());
         for (ByteBuf buf : captor.getAllValues()) {
             buf = releaseLater(buf.retain());

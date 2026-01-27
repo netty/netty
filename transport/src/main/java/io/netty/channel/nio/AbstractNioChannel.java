@@ -28,6 +28,7 @@ import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -216,7 +217,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final class NioIoHandleImpl implements NioIoHandle {
         @Override
         public void close() {
-            ioTransport().close(newPromise());
+            ioTransport().close(CompletionHandler.ignore());
         }
 
         @Override
@@ -251,7 +252,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     readNow();
                 }
             } catch (CancelledKeyException ignored) {
-                ioTransport().close(newPromise());
+                ioTransport().close(CompletionHandler.ignore());
             }
         }
     }
