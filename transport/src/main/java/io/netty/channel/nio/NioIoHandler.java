@@ -183,20 +183,20 @@ public final class NioIoHandler implements IoHandler {
                     PlatformDependent.putObject(
                             unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
                 }
+            } else {
                 // We could not retrieve the offset, lets try reflection as last-resort.
-            }
+                Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
+                if (cause != null) {
+                    throw cause;
+                }
+                cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
+                if (cause != null) {
+                    throw cause;
+                }
 
-            Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
-            if (cause != null) {
-                throw cause;
+                selectedKeysField.set(unwrappedSelector, selectedKeySet);
+                publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
             }
-            cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
-            if (cause != null) {
-                throw cause;
-            }
-
-            selectedKeysField.set(unwrappedSelector, selectedKeySet);
-            publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
         } catch (Throwable throwable) {
             selectedKeys = null;
             logger.trace("failed to instrument a special java.util.Set into: {}", unwrappedSelector, throwable);
