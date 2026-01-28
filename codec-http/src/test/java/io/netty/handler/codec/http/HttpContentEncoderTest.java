@@ -431,7 +431,7 @@ public class HttpContentEncoderTest {
                 channel.finishAndReleaseAll();
             }
         });
-        assertInstanceOf(CodecException.class, cause.getCause());
+        assertInstanceOf(CodecException.class, cause.getCause().getCause());
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
