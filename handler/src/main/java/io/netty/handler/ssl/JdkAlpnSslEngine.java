@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
@@ -25,6 +26,7 @@ import java.util.function.BiFunction;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
@@ -102,13 +104,16 @@ class JdkAlpnSslEngine extends JdkSslEngine {
                new BiConsumer<SSLEngine, AlpnSelector>() {
                    @Override
                    public void accept(SSLEngine e, AlpnSelector s) {
-                       JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(e, s);
+                       e.setHandshakeApplicationProtocolSelector(s);
                    }
                },
                new BiConsumer<SSLEngine, List<String>>() {
                    @Override
                    public void accept(SSLEngine e, List<String> p) {
-                       JdkAlpnSslUtils.setApplicationProtocols(e, p);
+                       String[] protocolArray = p.toArray(EmptyArrays.EMPTY_STRINGS);
+                       SSLParameters parameters = e.getSSLParameters();
+                       parameters.setApplicationProtocols(protocolArray);
+                       e.setSSLParameters(parameters);
                    }
                });
     }
@@ -188,21 +193,22 @@ class JdkAlpnSslEngine extends JdkSslEngine {
     // java8 version we don't use @Override annotations here.
     @SuppressWarnings("override")
     public String getApplicationProtocol() {
-        return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
+        return getWrappedEngine().getApplicationProtocol();
     }
 
     @SuppressWarnings("override")
     public String getHandshakeApplicationProtocol() {
-        return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+        return getWrappedEngine().getHandshakeApplicationProtocol();
     }
 
     @SuppressWarnings("override")
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
-        JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+        SSLEngine engine = getWrappedEngine();
+        engine.setHandshakeApplicationProtocolSelector(selector);
     }
 
     @SuppressWarnings("override")
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
-        return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+        return getWrappedEngine().getHandshakeApplicationProtocolSelector();
     }
 }

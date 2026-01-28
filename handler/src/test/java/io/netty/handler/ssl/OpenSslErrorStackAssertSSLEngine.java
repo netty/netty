@@ -340,7 +340,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
+            return getWrappedEngine().getApplicationProtocol();
             } finally {
                 assertErrorStackEmpty();
             }
@@ -351,7 +351,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getHandshakeApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+            return getWrappedEngine().getHandshakeApplicationProtocol();
             } finally {
                 assertErrorStackEmpty();
             }
@@ -362,7 +362,8 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+            SSLEngine engine = getWrappedEngine();
+            engine.setHandshakeApplicationProtocolSelector(selector);
             } finally {
                 assertErrorStackEmpty();
             }
@@ -373,7 +374,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+            return getWrappedEngine().getHandshakeApplicationProtocolSelector();
             } finally {
                 assertErrorStackEmpty();
             }
