@@ -111,27 +111,13 @@ public final class DefaultChannelId implements ChannelId {
         MACHINE_ID = machineId;
     }
 
-    static int processHandlePid(ClassLoader loader) {
+    static int processHandlePid() {
         // pid is positive on unix, non{-1,0} on windows
-        int nilValue = -1;
-        if (PlatformDependent.javaVersion() >= 9) {
-            Long pid;
-            try {
-                Class<?> processHandleImplType = Class.forName("java.lang.ProcessHandle", true, loader);
-                Method processHandleCurrent = processHandleImplType.getMethod("current");
-                Object processHandleInstance = processHandleCurrent.invoke(null);
-                Method processHandlePid = processHandleImplType.getMethod("pid");
-                pid = (Long) processHandlePid.invoke(processHandleInstance);
-            } catch (Exception e) {
-                logger.debug("Could not invoke ProcessHandle.current().pid();", e);
-                return nilValue;
-            }
-            if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
-                throw new IllegalStateException("Current process ID exceeds int range: " + pid);
-            }
-            return pid.intValue();
+        long pid = ProcessHandle.current().pid();
+        if (pid > Integer.MAX_VALUE || pid < Integer.MIN_VALUE) {
+            throw new IllegalStateException("Current process ID exceeds int range: " + pid);
         }
-        return nilValue;
+        return (int) pid;
     }
 
     static int jmxPid(ClassLoader loader) {
@@ -181,7 +167,7 @@ public final class DefaultChannelId implements ChannelId {
 
     static int defaultProcessId() {
         ClassLoader loader = PlatformDependent.getClassLoader(DefaultChannelId.class);
-        int processId = processHandlePid(loader);
+        int processId = processHandlePid();
         if (processId != -1) {
             return processId;
         }

@@ -1159,14 +1159,6 @@ public abstract class SSLEngineTest {
             assertEquals(1, session.getPeerCertificates().length);
             assertArrayEquals(certBytes, session.getPeerCertificates()[0].getEncoded());
 
-            try {
-                assertEquals(1, session.getPeerCertificateChain().length);
-                assertArrayEquals(certBytes, session.getPeerCertificateChain()[0].getEncoded());
-            } catch (UnsupportedOperationException e) {
-                // See https://bugs.openjdk.java.net/browse/JDK-8241039
-                assertTrue(PlatformDependent.javaVersion() >= 15);
-            }
-
             assertEquals(1, session.getLocalCertificates().length);
             assertArrayEquals(certBytes, session.getLocalCertificates()[0].getEncoded());
         } finally {
@@ -1483,7 +1475,6 @@ public abstract class SSLEngineTest {
     @Timeout(30)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer(final SSLEngineTestParam param)
             throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
@@ -2033,38 +2024,15 @@ public abstract class SSLEngineTest {
                                     promise.setFailure(new NullPointerException("peerCertificates"));
                                     return;
                                 }
-                                try {
-                                    X509Certificate[] peerCertificateChain = session.getPeerCertificateChain();
-                                    if (peerCertificateChain == null) {
-                                        promise.setFailure(new NullPointerException("peerCertificateChain"));
-                                    } else if (peerCertificateChain.length + peerCertificates.length != 4) {
-                                        String excTxtFmt = "peerCertificateChain.length:%s, peerCertificates.length:%s";
-                                        promise.setFailure(new IllegalStateException(String.format(excTxtFmt,
-                                                peerCertificateChain.length,
-                                                peerCertificates.length)));
-                                    } else {
-                                        for (int i = 0; i < peerCertificateChain.length; i++) {
-                                            if (peerCertificateChain[i] == null || peerCertificates[i] == null) {
-                                                promise.setFailure(
-                                                        new IllegalStateException("Certificate in chain is null"));
-                                                return;
-                                            }
-                                        }
-                                        promise.setSuccess(null);
+                                assertEquals(2, peerCertificates.length);
+                                for (Certificate peerCertificate : peerCertificates) {
+                                    if (peerCertificate == null) {
+                                        promise.setFailure(
+                                                new IllegalStateException("Certificate in chain is null"));
+                                        return;
                                     }
-                                } catch (UnsupportedOperationException e) {
-                                    // See https://bugs.openjdk.java.net/browse/JDK-8241039
-                                    assertTrue(PlatformDependent.javaVersion() >= 15);
-                                    assertEquals(2, peerCertificates.length);
-                                    for (int i = 0; i < peerCertificates.length; i++) {
-                                        if (peerCertificates[i] == null) {
-                                            promise.setFailure(
-                                                    new IllegalStateException("Certificate in chain is null"));
-                                            return;
-                                        }
-                                    }
-                                    promise.setSuccess(null);
                                 }
+                                promise.setSuccess(null);
                             } else {
                                 promise.setFailure(cause);
                             }
@@ -3752,12 +3720,6 @@ public abstract class SSLEngineTest {
 
             assertNotNull(clientSession.getSessionContext());
 
-            // Workaround for JDK 14 regression.
-            // See https://bugs.openjdk.java.net/browse/JDK-8242008
-            if (PlatformDependent.javaVersion() != 14) {
-                assertNotNull(serverSession.getSessionContext());
-            }
-
             Object value = new Object();
             // This is broken in conscrypt.
             // TODO: Open an issue in the conscrypt project.
@@ -3808,16 +3770,6 @@ public abstract class SSLEngineTest {
                 assertArrayEquals(clientLocalCertificates[0].getEncoded(), serverPeerCertificates[0].getEncoded());
                 additionalPeerAssertions(serverSession, mutualAuth);
 
-                try {
-                    X509Certificate[] serverPeerX509Certificates = serverSession.getPeerCertificateChain();
-                    assertEquals(1, serverPeerX509Certificates.length);
-                    assertArrayEquals(clientLocalCertificates[0].getEncoded(),
-                            serverPeerX509Certificates[0].getEncoded());
-                } catch (UnsupportedOperationException e) {
-                    // See https://bugs.openjdk.java.net/browse/JDK-8241039
-                    assertTrue(PlatformDependent.javaVersion() >= 15);
-                }
-
                 Principal clientLocalPrincipial = clientSession.getLocalPrincipal();
                 assertNotNull(clientLocalPrincipial);
 
@@ -3837,16 +3789,6 @@ public abstract class SSLEngineTest {
                 additionalPeerAssertions(serverSession, mutualAuth);
 
                 try {
-                    serverSession.getPeerCertificateChain();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                } catch (UnsupportedOperationException e) {
-                    // See https://bugs.openjdk.java.net/browse/JDK-8241039
-                    assertTrue(PlatformDependent.javaVersion() >= 15);
-                }
-
-                try {
                     serverSession.getPeerPrincipal();
                     fail();
                 } catch (SSLPeerUnverifiedException expected) {
@@ -3858,14 +3800,6 @@ public abstract class SSLEngineTest {
             assertEquals(1, clientPeerCertificates.length);
             assertArrayEquals(serverLocalCertificates[0].getEncoded(), clientPeerCertificates[0].getEncoded());
 
-            try {
-                X509Certificate[] clientPeerX509Certificates = clientSession.getPeerCertificateChain();
-                assertEquals(1, clientPeerX509Certificates.length);
-                assertArrayEquals(serverLocalCertificates[0].getEncoded(), clientPeerX509Certificates[0].getEncoded());
-            } catch (UnsupportedOperationException e) {
-                // See https://bugs.openjdk.java.net/browse/JDK-8241039
-                assertTrue(PlatformDependent.javaVersion() >= 15);
-            }
             Principal clientPeerPrincipal = clientSession.getPeerPrincipal();
             assertEquals(serverLocalPrincipal, clientPeerPrincipal);
         } finally {
@@ -4528,7 +4462,7 @@ public abstract class SSLEngineTest {
          * The JDK SSL engine master key retrieval relies on being able to set field access to true.
          * That is not available in JDK9+
          */
-        assumeFalse(sslServerProvider() == SslProvider.JDK && PlatformDependent.javaVersion() > 8);
+        assumeFalse(sslServerProvider() == SslProvider.JDK);
 
         String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
         System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());

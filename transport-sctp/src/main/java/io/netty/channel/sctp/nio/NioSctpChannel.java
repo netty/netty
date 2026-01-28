@@ -289,27 +289,11 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         boolean free = true;
         try {
             ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
-            boolean useInputCopy = false;
-            int javaVersion = PlatformDependent.javaVersion();
-            if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
-                // On Java 22 through 24, we need to avoid using ByteBuffer instances that are
-                // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
-                if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
-                    inputCopy = ByteBuffer.allocateDirect(data.remaining());
-                }
-                inputCopy.clear();
-                inputCopy.limit(data.remaining());
-                useInputCopy = true;
-            }
             int pos = data.position();
 
-            MessageInfo messageInfo = ch.receive(useInputCopy ? inputCopy : data, null, notificationHandler);
+            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
             if (messageInfo == null) {
                 return 0;
-            }
-            if (useInputCopy) {
-                inputCopy.flip();
-                data.put(inputCopy);
             }
 
             allocHandle.lastBytesRead(data.position() - pos);
@@ -337,13 +321,9 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
         ByteBuffer nioData;
-        int javaVersion = PlatformDependent.javaVersion();
-        if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
-                !data.isDirect() || data.nioBufferCount() != 1) {
+        if (!data.isDirect() || data.nioBufferCount() != 1) {
             // Ensure that we only use a single, direct ByteBuffer when doing SCTP IO.
             // If the ByteBuf is composite, or is on-heap, we do a copy.
-            // On Java 22 through 24, we additionally need to avoid using ByteBuffer instances that are
-            // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
             if (outputCopy == null || outputCopy.capacity() < dataLen) {
                 outputCopy = ByteBuffer.allocateDirect(dataLen);
             }

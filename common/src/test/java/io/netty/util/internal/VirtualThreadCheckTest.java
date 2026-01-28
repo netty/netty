@@ -66,7 +66,6 @@ public class VirtualThreadCheckTest {
         subOfSubOfSubThread.join();
         assertFalse(atomicRes.get());
 
-        assumeTrue(PlatformDependent.javaVersion() >= 21);
         Method startVirtualThread = getStartVirtualThreadMethod();
         Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
             @Override
@@ -78,26 +77,21 @@ public class VirtualThreadCheckTest {
 
     @Test
     public void testGetVirtualThreadCheckMethod() throws Throwable {
-        if (PlatformDependent.javaVersion() < 19) {
-            assertNull(IS_VIRTUAL_THREAD_METHOD_HANDLE);
-        } else {
-            assumeTrue(PlatformDependent.javaVersion() >= 21);
-            assumeTrue(IS_VIRTUAL_THREAD_METHOD_HANDLE != null);
-            boolean isVirtual = (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(Thread.currentThread());
-            assertFalse(isVirtual);
+        assumeTrue(IS_VIRTUAL_THREAD_METHOD_HANDLE != null);
+        boolean isVirtual = (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(Thread.currentThread());
+        assertFalse(isVirtual);
 
-            Method startVirtualThread = getStartVirtualThreadMethod();
-            Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
-                @Override
-                public void run() {
-                }
-            });
-            isVirtual = (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(virtualThread);
-            assertTrue(isVirtual);
-        }
+        Method startVirtualThread = getStartVirtualThreadMethod();
+        Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
+            @Override
+            public void run() {
+            }
+        });
+        isVirtual = (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(virtualThread);
+        assertTrue(isVirtual);
     }
 
-    private Method getStartVirtualThreadMethod() throws NoSuchMethodException {
+    private static Method getStartVirtualThreadMethod() throws NoSuchMethodException {
         return Thread.class.getMethod("startVirtualThread", Runnable.class);
     }
 

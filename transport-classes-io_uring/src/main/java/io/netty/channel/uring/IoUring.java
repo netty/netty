@@ -89,55 +89,51 @@ public final class IoUring {
             } else {
                 kernelVersion = Native.kernelVersion();
                 Native.checkKernelVersion(kernelVersion);
-                if (PlatformDependent.javaVersion() >= 9) {
-                    RingBuffer ringBuffer = null;
-                    try {
-                        ringBuffer = Native.createRingBuffer(1, 0);
-                        if ((ringBuffer.features() & Native.IORING_FEAT_SUBMIT_STABLE) == 0) {
-                            // This should only happen on kernels < 5.4 which we don't support anyway.
-                            throw new UnsupportedOperationException("IORING_FEAT_SUBMIT_STABLE not supported!");
-                        }
-                        // IOV_MAX should be 1024 and an IOV is 16 bytes which means that by default we reserve around
-                        // 160kb.
-                        numElementsIoVec = SystemPropertyUtil.getInt(
-                                "io.netty.iouring.numElementsIoVec", 10 * Limits.IOV_MAX);
-                        Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
-                        Native.checkAllIOSupported(ioUringProbe);
-                        socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ioUringProbe);
-                        spliceSupported = Native.isSpliceSupported(ioUringProbe);
-                        recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
-                        sendZcSupported = Native.isSendZcSupported(ioUringProbe);
-                        sendmsgZcSupported =  Native.isSendmsgZcSupported(ioUringProbe);
-                        // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
-                        acceptSupportNoWait = recvsendBundleSupported;
+                RingBuffer ringBuffer = null;
+                try {
+                    ringBuffer = Native.createRingBuffer(1, 0);
+                    if ((ringBuffer.features() & Native.IORING_FEAT_SUBMIT_STABLE) == 0) {
+                        // This should only happen on kernels < 5.4 which we don't support anyway.
+                        throw new UnsupportedOperationException("IORING_FEAT_SUBMIT_STABLE not supported!");
+                    }
+                    // IOV_MAX should be 1024 and an IOV is 16 bytes which means that by default we reserve around
+                    // 160kb.
+                    numElementsIoVec = SystemPropertyUtil.getInt(
+                            "io.netty.iouring.numElementsIoVec", 10 * Limits.IOV_MAX);
+                    Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
+                    Native.checkAllIOSupported(ioUringProbe);
+                    socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ioUringProbe);
+                    spliceSupported = Native.isSpliceSupported(ioUringProbe);
+                    recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                    sendZcSupported = Native.isSendZcSupported(ioUringProbe);
+                    sendmsgZcSupported =  Native.isSendmsgZcSupported(ioUringProbe);
+                    // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
+                    acceptSupportNoWait = recvsendBundleSupported;
 
-                        acceptMultishotSupported = Native.isAcceptMultishotSupported(ioUringProbe);
-                        recvMultishotSupported = Native.isRecvMultishotSupported();
-                        pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ioUringProbe);
-                        registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
-                        submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
-                        cqeMixedSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQE_MIXED);
-                        setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
-                        singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
-                        // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
-                        // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
-                        deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
-                                Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
-                        noSqarraySupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_NO_SQARRAY);
-                        registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
-                        registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
-                                Native.IOU_PBUF_RING_INC);
-                    } finally {
-                        if (ringBuffer != null) {
-                            try {
-                                ringBuffer.close();
-                            } catch (Exception ignore) {
-                                // ignore
-                            }
+                    acceptMultishotSupported = Native.isAcceptMultishotSupported(ioUringProbe);
+                    recvMultishotSupported = Native.isRecvMultishotSupported();
+                    pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ioUringProbe);
+                    registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
+                    submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
+                    cqeMixedSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQE_MIXED);
+                    setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
+                    singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
+                    // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
+                    // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
+                    deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
+                            Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
+                    noSqarraySupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_NO_SQARRAY);
+                    registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
+                    registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
+                            Native.IOU_PBUF_RING_INC);
+                } finally {
+                    if (ringBuffer != null) {
+                        try {
+                            ringBuffer.close();
+                        } catch (Exception ignore) {
+                            // ignore
                         }
                     }
-                } else {
-                    cause = new UnsupportedOperationException("Java 9+ is required");
                 }
             }
         } catch (Throwable t) {
