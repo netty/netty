@@ -1801,6 +1801,92 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectWithActiveConnectionIdLimit(Executor executor) throws Throwable {
+        int numBytes = 8;
+
+        class ExceptionHandler extends ChannelInboundHandlerAdapter {
+
+            private final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                causeRef.compareAndSet(null, cause);
+            }
+
+            void assertNoException() throws Throwable {
+                Throwable t = causeRef.get();
+                if (t != null) {
+                    fail(t);
+                }
+            }
+        }
+
+        ExceptionHandler serverExceptionHandler = new ExceptionHandler();
+        ExceptionHandler clientExceptionHandler = new ExceptionHandler();
+
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch clientLatch = new CountDownLatch(1);
+
+        // Disable token validation
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor).activeConnectionIdLimit(4), NoQuicTokenHandler.INSTANCE,
+                serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
+        server.pipeline().addLast(serverExceptionHandler);
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(
+                QuicTestUtils.newQuicClientBuilder(executor).activeConnectionIdLimit(4));
+        channel.pipeline().addLast(clientExceptionHandler);
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            QuicConnectionAddress localAddress = (QuicConnectionAddress) quicChannel.localAddress();
+            QuicConnectionAddress remoteAddress = (QuicConnectionAddress) quicChannel.remoteAddress();
+            assertNotNull(localAddress);
+            assertNotNull(remoteAddress);
+
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new BytesCountingHandler(clientLatch, numBytes)).get();
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
+            clientLatch.await();
+
+            QuicheQuicSslEngine quicheQuicSslEngine = (QuicheQuicSslEngine) quicChannel.sslEngine();
+            assertNotNull(quicheQuicSslEngine);
+            assertEquals(QuicTestUtils.PROTOS[0],
+                    // Just do the cast as getApplicationProtocol() only exists in SSLEngine itself since Java9+ and
+                    // we may run on an earlier version
+                    quicheQuicSslEngine.getApplicationProtocol());
+            stream.close().sync();
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+
+            clientQuicChannelHandler.assertState();
+            serverQuicChannelHandler.assertState();
+
+            assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
+            assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
+
+            serverExceptionHandler.assertNoException();
+            clientExceptionHandler.assertNoException();
+        } finally {
+            serverLatch.await();
+
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
     private static final class ChannelActiveVerifyHandler extends QuicChannelValidationHandler {
         private final BlockingQueue<Integer> states = new LinkedBlockingQueue<>();
 

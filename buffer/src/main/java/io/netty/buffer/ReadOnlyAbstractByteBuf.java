@@ -23,6 +23,7 @@ final class ReadOnlyAbstractByteBuf extends ReadOnlyByteBuf {
 
     ReadOnlyAbstractByteBuf(AbstractByteBuf buffer) {
         super(buffer);
+        assert buffer.unwrap() == null || buffer.unwrap() instanceof AbstractByteBuf;
     }
 
     @Override
