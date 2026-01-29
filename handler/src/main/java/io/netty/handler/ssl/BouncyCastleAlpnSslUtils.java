@@ -24,8 +24,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -74,58 +72,28 @@ final class BouncyCastleAlpnSslUtils {
 
             final SSLParameters bcSslParameters = engine.getSSLParameters();
             final Class<?> bCSslParametersClass = bcSslParameters.getClass();
-            setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return bCSslParametersClass.getMethod("setApplicationProtocols", String[].class);
-                }
-            });
+            setApplicationProtocols = bCSslParametersClass.getMethod("setApplicationProtocols", String[].class);
             setApplicationProtocols.invoke(bcSslParameters, new Object[]{EmptyArrays.EMPTY_STRINGS});
 
-            getApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return bcEngineClass.getMethod("getApplicationProtocol");
-                }
-            });
+            getApplicationProtocol = bcEngineClass.getMethod("getApplicationProtocol");
             getApplicationProtocol.invoke(engine);
 
-            getHandshakeApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return bcEngineClass.getMethod("getHandshakeApplicationProtocol");
-                }
-            });
+            getHandshakeApplicationProtocol = bcEngineClass.getMethod("getHandshakeApplicationProtocol");
             getHandshakeApplicationProtocol.invoke(engine);
 
             final Class<?> testBCApplicationProtocolSelector = Class.forName(
                     "org.bouncycastle.jsse.BCApplicationProtocolSelector", true, engineClass.getClassLoader());
             bcApplicationProtocolSelector = testBCApplicationProtocolSelector;
 
-            bcApplicationProtocolSelectorSelect = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Method>() {
-                        @Override
-                        public Method run() throws Exception {
-                            return testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
-                        }
-                    });
+            bcApplicationProtocolSelectorSelect =
+                    testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                        @Override
-                        public Method run() throws Exception {
-                            return bcEngineClass.getMethod("setBCHandshakeApplicationProtocolSelector",
-                                    testBCApplicationProtocolSelector);
-                        }
-                    });
+                    bcEngineClass.getMethod("setBCHandshakeApplicationProtocolSelector",
+                            testBCApplicationProtocolSelector);
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                        @Override
-                        public Method run() throws Exception {
-                            return bcEngineClass.getMethod("getBCHandshakeApplicationProtocolSelector");
-                        }
-                    });
+                    bcEngineClass.getMethod("getBCHandshakeApplicationProtocolSelector");
             getHandshakeApplicationProtocolSelector.invoke(engine);
             supported = true;
         } catch (Throwable t) {

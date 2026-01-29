@@ -28,8 +28,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.net.SocketAddress;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -183,22 +181,17 @@ final class ChannelHandlerMask {
 
     private static boolean isSkippable(
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
-        return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-                Method m;
-                try {
-                    m = handlerType.getMethod(methodName, paramTypes);
-                } catch (NoSuchMethodException e) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(
-                            "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
-                    }
-                    return false;
-                }
-                return m.isAnnotationPresent(Skip.class);
+        Method m;
+        try {
+            m = handlerType.getMethod(methodName, paramTypes);
+        } catch (NoSuchMethodException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
             }
-        });
+            return false;
+        }
+        return m.isAnnotationPresent(Skip.class);
     }
 
     private ChannelHandlerMask() { }
