@@ -210,7 +210,7 @@ public final class PlatformDependent {
                     LEGACY_CLEANER = NOOP;
                 }
             } else {
-                LEGACY_CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
+                LEGACY_CLEANER = NOOP;
             }
         } else {
             LEGACY_CLEANER = NOOP;
