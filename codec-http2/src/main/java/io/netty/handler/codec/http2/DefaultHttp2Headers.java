@@ -37,7 +37,12 @@ public class DefaultHttp2Headers
             return !isUpperCase(value);
         }
     };
-    static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
+
+    /**
+     * Default {@link io.netty.handler.codec.DefaultHeaders.NameValidator} used for HTTP/2.
+     */
+    public static final NameValidator<CharSequence> DEFAULT_HTTP2_NAME_VALIDATOR =
+            new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
             if (name == null || name.length() == 0) {
@@ -82,7 +87,11 @@ public class DefaultHttp2Headers
         }
     };
 
-    private static final ValueValidator<CharSequence> VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
+    /**
+     * Default {@link io.netty.handler.codec.DefaultHeaders.ValueValidator} used for HTTP/2.
+     */
+    public static final ValueValidator<CharSequence> DEFAULT_HEADER_VALUE_VALIDATOR =
+            new ValueValidator<CharSequence>() {
         @Override
         public void validate(CharSequence value) {
             int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
@@ -116,7 +125,7 @@ public class DefaultHttp2Headers
         // headers.
         super(CASE_SENSITIVE_HASHER,
               CharSequenceValueConverter.INSTANCE,
-              validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
+              validate ? DEFAULT_HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL);
     }
 
     /**
@@ -133,7 +142,7 @@ public class DefaultHttp2Headers
         // headers.
         super(CASE_SENSITIVE_HASHER,
               CharSequenceValueConverter.INSTANCE,
-              validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL,
+              validate ? DEFAULT_HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL,
               arraySizeHint);
     }
 
@@ -154,15 +163,16 @@ public class DefaultHttp2Headers
         // headers.
         super(CASE_SENSITIVE_HASHER,
                 CharSequenceValueConverter.INSTANCE,
-                validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL,
+                validate ? DEFAULT_HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL,
                 arraySizeHint,
-                validateValues ? VALUE_VALIDATOR : (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION);
+                validateValues ? DEFAULT_HEADER_VALUE_VALIDATOR :
+                        (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION);
     }
 
     @Override
     protected void validateName(NameValidator<CharSequence> validator, boolean forAdd, CharSequence name) {
         super.validateName(validator, forAdd, name);
-        if (nameValidator() == HTTP2_NAME_VALIDATOR && forAdd && hasPseudoHeaderFormat(name)) {
+        if (nameValidator() == DEFAULT_HTTP2_NAME_VALIDATOR && forAdd && hasPseudoHeaderFormat(name)) {
             if (contains(name)) {
                 PlatformDependent.throwException(connectionError(
                         PROTOCOL_ERROR, "Duplicate HTTP/2 pseudo-header '%s' encountered.", name));
@@ -176,7 +186,7 @@ public class DefaultHttp2Headers
         super.validateValue(validator, name, value);
         // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
         // pseudo headers must not be empty
-        if (nameValidator() == HTTP2_NAME_VALIDATOR && (value == null || value.length() == 0) &&
+        if (nameValidator() == DEFAULT_HTTP2_NAME_VALIDATOR && (value == null || value.length() == 0) &&
                 hasPseudoHeaderFormat(name)) {
             PlatformDependent.throwException(connectionError(
                     PROTOCOL_ERROR, "HTTP/2 pseudo-header '%s' must not be empty.", name));
