@@ -844,7 +844,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>warn</logging.logLevel>
-    <log4j2.version>2.17.2</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.12.1</junit.version>
     <skipTests>false</skipTests>
@@ -1012,7 +1012,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.69</version>
+        <version>1.70</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1024,7 +1024,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.69</version>
+        <version>1.70</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1035,7 +1035,7 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bctls-jdk15on</artifactId>
-        <version>1.69</version>
+        <version>1.70</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1232,7 +1232,7 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.18.0</version>
+        <version>3.27.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1250,7 +1250,7 @@
       <dependency>
         <groupId>ch.qos.logback</groupId>
         <artifactId>logback-classic</artifactId>
-        <version>1.2.13</version>
+        <version>1.5.13</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1286,7 +1286,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.26.0</version>
+        <version>1.28.0</version>
         <scope>test</scope>
       </dependency>
 
