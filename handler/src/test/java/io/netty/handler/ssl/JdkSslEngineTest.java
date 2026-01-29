@@ -46,7 +46,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         ALPN_JAVA {
             @Override
             boolean isAvailable() {
-                return JdkAlpnSslUtils.supportsAlpn();
+                return true;
             }
 
             @Override

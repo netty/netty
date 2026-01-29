@@ -17,7 +17,6 @@ package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.util.BouncyCastleUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -141,9 +140,10 @@ final class BouncyCastleAlpnSslUtils {
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
-        if (PlatformDependent.javaVersion() >= 9) {
-            JdkAlpnSslUtils.setApplicationProtocols(engine, supportedProtocols);
-        }
+        String[] protocolArray1 = supportedProtocols.toArray(EmptyArrays.EMPTY_STRINGS);
+        SSLParameters parameters = engine.getSSLParameters();
+        parameters.setApplicationProtocols(protocolArray1);
+        engine.setSSLParameters(parameters);
     }
 
     static String getHandshakeApplicationProtocol(SSLEngine sslEngine) {
