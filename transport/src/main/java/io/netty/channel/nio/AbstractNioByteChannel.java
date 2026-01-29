@@ -118,7 +118,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    try {
+                        pipeline.fireChannelRead(byteBuf);
+                    } catch (Exception e) {
+                        cause.addSuppressed(e);
+                    }
                 } else {
                     byteBuf.release();
                 }
