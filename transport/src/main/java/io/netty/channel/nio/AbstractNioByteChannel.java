@@ -30,6 +30,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
@@ -115,7 +116,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    try {
+                        pipeline.fireChannelRead(byteBuf);
+                    } catch (Exception e) {
+                        ThrowableUtil.addSuppressed(cause, e);
+                    }
                 } else {
                     byteBuf.release();
                 }
