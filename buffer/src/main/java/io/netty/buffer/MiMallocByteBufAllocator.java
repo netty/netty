@@ -744,7 +744,7 @@ final class MiMallocByteBufAllocator {
         // and clears the ownerThread.
         private void segmentMarkAbandoned(Segment segment) {
             segment.ownerThread.set(null);
-            segment.ownerHeap.set(null);
+            segment.ownerHeap = null;
             segment.parent.abandonedSegmentDeque.offer(segment);
             segment.parent.abandonedSegmentCount.incrementAndGet();
         }
@@ -753,7 +753,7 @@ final class MiMallocByteBufAllocator {
         // Return `RECLAIMED_SEGMENT_FLAG` if it reclaimed a page of the right block size that was not full.
         private Object segmentReclaim(Segment segment, int requested_block_size, boolean check_right_page_reclaimed) {
             segment.ownerThread.set(Thread.currentThread());
-            segment.ownerHeap.set(this);
+            segment.ownerHeap = this;
             segment.abandonedVisits = 0;
             segment.wasReclaimed = true;
             this.segmentTld.reclaimCount++;
@@ -1029,12 +1029,12 @@ final class MiMallocByteBufAllocator {
         private Segment segmentAllocNormal() {
             int segment_slices = segmentCalculateSlices(0);
             int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
-            // Allocate the segment.
-            AbstractByteBuf buf = this.allocator.newChunk(segment_size);
-            if (buf == null) {
+            AbstractByteBuf chunk = this.allocator.newChunk(segment_size);
+            if (chunk == null) {
                 return null; // Signal OOM
             }
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf, this);
+            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL,
+                    chunk, this);
             segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free spans.
             segmentSpanFree(segment, 0, segment.sliceEntries);
@@ -1772,7 +1772,7 @@ final class MiMallocByteBufAllocator {
         private final MiMallocByteBufAllocator parent;
         private final int segmentSize;
         private final AtomicReference<Thread> ownerThread = new AtomicReference<>();
-        private final AtomicReference<LocalHeap> ownerHeap = new AtomicReference<LocalHeap>();
+        private LocalHeap ownerHeap;
         // One extra final entry for huge blocks.
         private final Span[] slices = new Span[DEFAULT_SLICE_COUNT + 1];
         private int sliceEntries; // Entries in the `slices` array, at most `DEFAULT_SLICE_COUNT`
@@ -1791,7 +1791,7 @@ final class MiMallocByteBufAllocator {
             this.delegate = delegate;
             if (kind != SEGMENT_HUGE) {
                 this.ownerThread.set(Thread.currentThread());
-                this.ownerHeap.set(heap);
+                this.ownerHeap = heap;
             }
             this.segmentSize = segmentSize;
             this.segmentSlices = segmentSlices;
@@ -1805,11 +1805,10 @@ final class MiMallocByteBufAllocator {
         }
 
         void deallocate() {
-            if (this.delegate != null) {
-                this.delegate.release();
-                this.parent.usedMemory.addAndGet(-this.segmentSize);
-            }
-            this.ownerThread.set(null);
+            AbstractByteBuf delegate = this.delegate;
+            assert delegate != null;
+            delegate.release();
+            this.parent.usedMemory.addAndGet(-this.segmentSize);
         }
     }
 
@@ -1823,15 +1822,12 @@ final class MiMallocByteBufAllocator {
 
     // Free a block.
     void free(Block block) {
-        Segment segment = block.page.segment;
-        if (segment == null) {
-            return;
-        }
-        boolean is_local = segment.ownerThread.get() == Thread.currentThread();
         Page page = block.page;
-        if (is_local) { // thread-local free.
-            LocalHeap heap = THREAD_LOCAL_HEAP.get();
-            page.freeBlockLocal(block, page.isInFull, heap);
+        assert page != null;
+        Segment segment = page.segment;
+        assert segment != null;
+        if (segment.ownerThread.get() == Thread.currentThread()) { // thread-local free.
+            page.freeBlockLocal(block, page.isInFull, segment.ownerHeap);
         } else {
             // Not thread-local, use the generic multi-threaded-free path.
             freeBlockMt(page, segment, block);
@@ -1866,7 +1862,7 @@ final class MiMallocByteBufAllocator {
             try {
                 // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
                 // (see `heapCollectAbandon`)
-                LocalHeap heap = page.segment.ownerHeap.get();
+                LocalHeap heap = page.segment.ownerHeap;
                 assert heap != null;
                 // Add to the delayed free list of this heap.
                 Block dfree;
