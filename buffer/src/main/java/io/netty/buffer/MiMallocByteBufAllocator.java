@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
@@ -743,7 +744,7 @@ final class MiMallocByteBufAllocator {
         // Mark a specific segment as abandoned,
         // and clears the ownerThread.
         private void segmentMarkAbandoned(Segment segment) {
-            segment.ownerThread.set(null);
+            segment.ownerThread = null;
             segment.ownerHeap = null;
             segment.parent.abandonedSegmentDeque.offer(segment);
             segment.parent.abandonedSegmentCount.incrementAndGet();
@@ -752,7 +753,7 @@ final class MiMallocByteBufAllocator {
         // Reclaim an abandoned segment; returns null if the segment was freed.
         // Return `RECLAIMED_SEGMENT_FLAG` if it reclaimed a page of the right block size that was not full.
         private Object segmentReclaim(Segment segment, int requested_block_size, boolean check_right_page_reclaimed) {
-            segment.ownerThread.set(Thread.currentThread());
+            segment.ownerThread = Thread.currentThread();
             segment.ownerHeap = this;
             segment.abandonedVisits = 0;
             segment.wasReclaimed = true;
@@ -829,7 +830,7 @@ final class MiMallocByteBufAllocator {
 
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
-                if (!force && this.segmentTld.normalSegmentsCount < 8) {
+                if (!force && this.segmentTld.normalSegmentsCount <= 8) {
                     return;
                 }
                 // Remove the free spans.
@@ -1191,7 +1192,7 @@ final class MiMallocByteBufAllocator {
         }
 
         private boolean isSegmentAbandoned(Segment segment) {
-            return segment.ownerThread.get() == null;
+            return segment.ownerThread == null;
         }
 
         private void spanQueueDelete(SpanQueue sq, Span span) {
@@ -1771,7 +1772,7 @@ final class MiMallocByteBufAllocator {
         private final AbstractByteBuf delegate;
         private final MiMallocByteBufAllocator parent;
         private final int segmentSize;
-        private final AtomicReference<Thread> ownerThread = new AtomicReference<>();
+        private Thread ownerThread;
         private LocalHeap ownerHeap;
         // One extra final entry for huge blocks.
         private final Span[] slices = new Span[DEFAULT_SLICE_COUNT + 1];
@@ -1784,14 +1785,18 @@ final class MiMallocByteBufAllocator {
         private int abandonedVisits;
         private boolean wasReclaimed; // True if it was reclaimed (used to limit on-free reclamation).
         private final SEGMENT_KIND kind;
+        private final AtomicBoolean hugeSegmentFlag = new AtomicBoolean();
 
         Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind,
                 AbstractByteBuf delegate, LocalHeap heap) {
             this.parent = parent;
             this.delegate = delegate;
-            if (kind != SEGMENT_HUGE) {
-                this.ownerThread.set(Thread.currentThread());
+            if (kind == SEGMENT_NORMAL) {
+                this.ownerThread = Thread.currentThread();
                 this.ownerHeap = heap;
+            }
+            if (kind == SEGMENT_HUGE) {
+                this.hugeSegmentFlag.set(true);
             }
             this.segmentSize = segmentSize;
             this.segmentSlices = segmentSlices;
@@ -1826,7 +1831,7 @@ final class MiMallocByteBufAllocator {
         assert page != null;
         Segment segment = page.segment;
         assert segment != null;
-        if (segment.ownerThread.get() == Thread.currentThread()) { // thread-local free.
+        if (segment.ownerThread == Thread.currentThread()) { // thread-local free.
             page.freeBlockLocal(block, page.isInFull, segment.ownerHeap);
         } else {
             // Not thread-local, use the generic multi-threaded-free path.
@@ -1890,7 +1895,7 @@ final class MiMallocByteBufAllocator {
         // Huge page segments are always abandoned and can be freed immediately by any thread claim it and free.
         LocalHeap heap = THREAD_LOCAL_HEAP.get();
         // If this is the last reference, the CAS should always succeed.
-        if (segment.ownerThread.compareAndSet(null, Thread.currentThread())) {
+        if (segment.hugeSegmentFlag.compareAndSet(true, false)) {
             block.nextBlock = page.freeList;
             page.freeList = block;
             page.usedBlocks--;
