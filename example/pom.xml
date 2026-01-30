@@ -32,6 +32,7 @@
   <properties>
     <japicmp.skip>true</japicmp.skip>
     <javaModuleName>io.netty.example</javaModuleName>
+    <revapi.skip>true</revapi.skip>
   </properties>
   <dependencies>
     <dependency>
