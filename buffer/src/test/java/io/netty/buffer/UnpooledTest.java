@@ -476,7 +476,7 @@ public class UnpooledTest {
         } catch (UnsupportedOperationException e) {
             // Expected
         }
-        Mockito.verifyZeroInteractions(inputStream);
+        Mockito.verifyNoInteractions(inputStream);
 
         ScatteringByteChannel scatteringByteChannel = Mockito.mock(ScatteringByteChannel.class);
         try {
@@ -485,7 +485,7 @@ public class UnpooledTest {
         } catch (UnsupportedOperationException e) {
             // Expected
         }
-        Mockito.verifyZeroInteractions(scatteringByteChannel);
+        Mockito.verifyNoInteractions(scatteringByteChannel);
         buf.release();
     }
 

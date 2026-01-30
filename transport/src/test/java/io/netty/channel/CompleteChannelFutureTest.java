@@ -44,7 +44,7 @@ public class CompleteChannelFutureTest {
         ChannelFutureListener l = Mockito.mock(ChannelFutureListener.class);
         future.removeListener(l);
         Mockito.verifyNoMoreInteractions(l);
-        Mockito.verifyZeroInteractions(channel);
+        Mockito.verifyNoInteractions(channel);
     }
 
     @Test
@@ -60,7 +60,7 @@ public class CompleteChannelFutureTest {
         assertSame(future, future.awaitUninterruptibly());
         assertTrue(future.awaitUninterruptibly(1));
         assertTrue(future.awaitUninterruptibly(1, TimeUnit.NANOSECONDS));
-        Mockito.verifyZeroInteractions(channel);
+        Mockito.verifyNoInteractions(channel);
     }
 
     private static class CompleteChannelFutureImpl extends CompleteChannelFuture {
