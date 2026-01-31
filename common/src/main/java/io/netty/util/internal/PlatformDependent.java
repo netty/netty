@@ -264,7 +264,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (UNSAFE_UNAVAILABILITY_CAUSE == null || javaVersion() < 9 ||
+        if (javaVersion() < 9 ||
                 PlatformDependent0.isNativeImage()) {
             return false;
         }
@@ -451,6 +451,13 @@ public final class PlatformDependent {
      */
     public static boolean isUnaligned() {
         return PlatformDependent0.isUnaligned();
+    }
+
+    /**
+     * {@code true} if and only if unaligned access support could be queried from the runtime.
+     */
+    public static boolean isUnalignedAvailable() {
+        return PlatformDependent0.isUnalignedAvailable();
     }
 
     /**

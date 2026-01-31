@@ -174,11 +174,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected long _getLong(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
     protected long _getLongLE(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLongLE(addr(index));
     }
 

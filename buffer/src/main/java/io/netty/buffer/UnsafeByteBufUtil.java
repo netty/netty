@@ -33,6 +33,9 @@ import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
  */
 final class UnsafeByteBufUtil {
     private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
+    private static final boolean UNALIGNED_AVAILABLE = PlatformDependent.isUnalignedAvailable();
+    private static final boolean USE_VAR_HANDLE_FOR_UNALIGNED =
+            !UNALIGNED && !UNALIGNED_AVAILABLE && PlatformDependent.hasVarHandle();
     private static final byte ZERO = 0;
     private static final int MAX_HAND_ROLLED_SET_ZERO_BYTES = 64;
 
@@ -300,6 +303,9 @@ final class UnsafeByteBufUtil {
             long v = PlatformDependent.getLong(array, index);
             return BIG_ENDIAN_NATIVE_ORDER ? v : Long.reverseBytes(v);
         }
+        if (USE_VAR_HANDLE_FOR_UNALIGNED) {
+            return VarHandleByteBufferAccess.getLongBE(array, index);
+        }
         return ((long) PlatformDependent.getByte(array, index)) << 56 |
                (PlatformDependent.getByte(array, index + 1) & 0xffL) << 48 |
                (PlatformDependent.getByte(array, index + 2) & 0xffL) << 40 |
@@ -314,6 +320,9 @@ final class UnsafeByteBufUtil {
         if (UNALIGNED) {
             long v = PlatformDependent.getLong(array, index);
             return BIG_ENDIAN_NATIVE_ORDER ? Long.reverseBytes(v) : v;
+        }
+        if (USE_VAR_HANDLE_FOR_UNALIGNED) {
+            return VarHandleByteBufferAccess.getLongLE(array, index);
         }
         return PlatformDependent.getByte(array, index)      & 0xffL        |
                (PlatformDependent.getByte(array, index + 1) & 0xffL) <<  8 |
