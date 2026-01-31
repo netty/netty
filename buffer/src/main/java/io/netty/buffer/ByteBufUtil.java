@@ -74,6 +74,10 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
+    private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
+    private static final boolean UNALIGNED_AVAILABLE = PlatformDependent.isUnalignedAvailable();
+    private static final boolean SWAR_UNALIGNED =
+            UNALIGNED || (!UNALIGNED_AVAILABLE && PlatformDependent.hasVarHandle());
 
     static {
         String allocType = SystemPropertyUtil.get(
@@ -576,10 +580,10 @@ public final class ByteBufUtil {
         }
         final int length = toIndex - fromIndex;
         buffer.checkIndex(fromIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
         }
-        assert PlatformDependent.isUnaligned();
+        assert SWAR_UNALIGNED;
         int offset = fromIndex;
         final int byteCount = length & 7;
         if (byteCount > 0) {
@@ -729,7 +733,7 @@ public final class ByteBufUtil {
         }
         final int length = fromIndex - toIndex;
         buffer.checkIndex(toIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearLastIndexOf(buffer, fromIndex, toIndex, value);
         }
         final int longCount = length >>> 3;
