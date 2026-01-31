@@ -35,9 +35,8 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -143,6 +142,8 @@ final class MiMallocByteBufAllocator {
     // Maximum slice count(31)
     private static final int  MAX_SLICE_OFFSET_COUNT = (BLOCK_ALIGNMENT_MAX / SEGMENT_SLICE_SIZE) - 1;
 
+    private static final long DEFAULT_RESERVED_SEGMENT_RETIRE_NANO = TimeUnit.SECONDS.toNanos(60);
+
     private final AtomicLong usedMemory = new AtomicLong();
 
     MiMallocByteBufAllocator(ChunkAllocator chunkAllocator) {
@@ -207,6 +208,8 @@ final class MiMallocByteBufAllocator {
 
         private static final int MAX_BLOCK_QUEUE_SIZE = 1024;
         private final ArrayDeque<Block> blockDeque;
+        private Segment reservedNormalSegment;
+        private long reservedNormalSegmentNano;
 
         LocalHeap(MiMallocByteBufAllocator allocator) {
             segmentTld = new SegmentTld();
@@ -296,7 +299,7 @@ final class MiMallocByteBufAllocator {
             if (collect == ABANDON) {
                 heapVisitPages(collect, VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE);
                 blockDeque.clear();
-                this.freeSpanSegments();
+                this.freeReservedSegment();
             }
             // Free all current thread's delayed blocks.
             // (If during abandoning, after this, there are no more thread-delayed references into the pages.)
@@ -307,6 +310,13 @@ final class MiMallocByteBufAllocator {
             heapVisitPages(collect, VISIT_WORK_TYPE_PAGE_COLLECT);
             // Collect abandoned segments.
             abandonedCollect(collect == FORCE);
+        }
+
+        private void freeReservedSegment() {
+            if (this.reservedNormalSegment != null) {
+                segmentOsFree(this.reservedNormalSegment);
+            }
+            this.reservedNormalSegment = null;
         }
 
         // Collect abandoned segments
@@ -578,9 +588,12 @@ final class MiMallocByteBufAllocator {
         }
 
         private Block getBlock(Page page, int blockBytes, int adjustment) {
-            Block block = blockDeque.pollLast();
-            if (block == null) {
+            Block block;
+            if (blockDeque.isEmpty()) {
                 block = new Block();
+            } else {
+                block = blockDeque.pollLast();
+                assert block != null;
             }
             block.page = page;
             block.blockBytes = blockBytes;
@@ -830,9 +843,6 @@ final class MiMallocByteBufAllocator {
 
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
-                if (!force && this.segmentTld.normalSegmentsCount <= 8) {
-                    return;
-                }
                 // Remove the free spans.
                 Span slice = segment.slices[0];
                 Span end = segment.slices[segment.sliceEntries];
@@ -842,32 +852,19 @@ final class MiMallocByteBufAllocator {
                     }
                     slice = segment.slices[slice.sliceIndex + slice.sliceCount];
                 }
-            }
-            // Expensive assertion: the spanQueues should not contain this segment anymore.
-            assert assertSegmentNotExistInSpanQueue(segment);
-            // Free it.
-            segmentOsFree(segment);
-        }
-
-        private void freeSpanSegments() {
-            if (this.segmentTld.normalSegmentsCount < 1) {
-                return;
-            }
-            Set<Segment> segments = new HashSet<Segment>();
-            SpanQueue[] spanQueues = this.segmentTld.spanQueues;
-            for (SpanQueue sq : spanQueues) {
-                Span span = sq.firstSpan;
-                while (span != null) {
-                    Segment segment = span.segment;
-                    if (segment != null && segment.usedPages == 0) {
-                        segments.add(segment);
+                // Expensive assertion: the spanQueues should not contain this segment anymore.
+                assert assertSegmentNotExistInSpanQueue(segment);
+                if (!force) {
+                    LocalHeap heap = segment.ownerHeap;
+                    if (heap.reservedNormalSegment == null) {
+                        heap.reservedNormalSegment = segment;
+                        heap.reservedNormalSegmentNano = System.nanoTime();
+                        return;
                     }
-                    span = span.nextSpan;
                 }
             }
-            for (Segment segment : segments) {
-                segmentFree(segment, true);
-            }
+            // Free it.
+            segmentOsFree(segment);
         }
 
         // Only used for assertion.
@@ -1028,15 +1025,20 @@ final class MiMallocByteBufAllocator {
 
         // Allocate a segment.
         private Segment segmentAllocNormal() {
-            int segment_slices = segmentCalculateSlices(0);
-            int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
-            AbstractByteBuf chunk = this.allocator.newChunk(segment_size);
-            if (chunk == null) {
-                return null; // Signal OOM
+            Segment segment;
+            if (this.reservedNormalSegment == null) {
+                int segment_slices = segmentCalculateSlices(0);
+                int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
+                AbstractByteBuf chunk = this.allocator.newChunk(segment_size);
+                if (chunk == null) {
+                    return null; // Signal OOM
+                }
+                segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, chunk, this);
+                segmentsTrackSize(segment.segmentSize);
+            } else {
+                segment = this.reservedNormalSegment;
+                this.reservedNormalSegment = null;
             }
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL,
-                    chunk, this);
-            segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free spans.
             segmentSpanFree(segment, 0, segment.sliceEntries);
             return segment;
@@ -1938,6 +1940,7 @@ final class MiMallocByteBufAllocator {
 
     private MiByteBuf allocateGeneric(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap, boolean isReAlloc) {
         // Do administrative tasks every N generic allocations.
+        boolean heapCollected = false;
         if (++heap.genericCount >= 100) {
             heap.genericCollectCount += heap.genericCount;
             heap.genericCount = 0;
@@ -1948,6 +1951,7 @@ final class MiMallocByteBufAllocator {
             if (heap.genericCollectCount >= HEAP_OPTION_GENERIC_COLLECT) {
                 heap.genericCollectCount = 0;
                 heap.heapCollect(false, false);
+                heapCollected = true;
             }
         }
         Page page = heap.findPage(size);
@@ -1968,6 +1972,11 @@ final class MiMallocByteBufAllocator {
         // Move page to the full queue.
         if (page.reservedBlocks == page.usedBlocks) {
             heap.pageToFull(page, heap.heapPageQueueOf(page));
+        }
+        if (heapCollected && heap.reservedNormalSegment != null &&
+                System.nanoTime() - heap.reservedNormalSegmentNano > DEFAULT_RESERVED_SEGMENT_RETIRE_NANO) {
+            heap.segmentOsFree(heap.reservedNormalSegment);
+            heap.reservedNormalSegment = null;
         }
         return byteBuf;
     }
