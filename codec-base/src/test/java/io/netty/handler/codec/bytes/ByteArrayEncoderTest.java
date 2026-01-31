@@ -39,12 +39,12 @@ public class ByteArrayEncoderTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(ch.finish());
     }
 
     @Test
-    public void testEncode() {
+    public void testEncode() throws Exception {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeOutbound(b);
@@ -54,13 +54,13 @@ public class ByteArrayEncoderTest {
     }
 
     @Test
-    public void testEncodeEmpty() {
+    public void testEncodeEmpty() throws Exception {
         ch.writeOutbound(EmptyArrays.EMPTY_BYTES);
         assertSame(EMPTY_BUFFER, ch.readOutbound());
     }
 
     @Test
-    public void testEncodeOtherType() {
+    public void testEncodeOtherType() throws Exception {
         String str = "Meep!";
         ch.writeOutbound(str);
         assertSame(str, ch.readOutbound());

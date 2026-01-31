@@ -84,7 +84,7 @@ public class BrotliDecoderTest {
     }
 
     @AfterEach
-    public void destroyChannel() {
+    public void destroyChannel() throws Exception {
         if (channel != null) {
             channel.finishAndReleaseAll();
             channel = null;
@@ -107,23 +107,23 @@ public class BrotliDecoderTest {
 
     @ParameterizedTest
     @MethodSource("smallData")
-    public void testDecompressionOfSmallChunkOfData(ByteBuf data) {
+    public void testDecompressionOfSmallChunkOfData(ByteBuf data) throws Exception {
         testDecompression(WRAPPED_BYTES_SMALL.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testDecompressionOfLargeChunkOfData(ByteBuf data) {
+    public void testDecompressionOfLargeChunkOfData(ByteBuf data) throws Exception {
         testDecompression(WRAPPED_BYTES_LARGE.duplicate(), data);
     }
 
     @ParameterizedTest
     @MethodSource("largeData")
-    public void testDecompressionOfBatchedFlowOfData(ByteBuf data) {
+    public void testDecompressionOfBatchedFlowOfData(ByteBuf data) throws Exception {
         testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
     }
 
-    private void testDecompression(final ByteBuf expected, final ByteBuf data) {
+    private void testDecompression(final ByteBuf expected, final ByteBuf data) throws Exception {
         assertTrue(channel.writeInbound(data));
 
         ByteBuf decompressed = readDecompressed(channel);
@@ -132,7 +132,7 @@ public class BrotliDecoderTest {
         decompressed.release();
     }
 
-    private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
+    private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) throws Exception {
         final int compressedLength = data.readableBytes();
         int written = 0, length = RANDOM.nextInt(100);
         while (written + length < compressedLength) {

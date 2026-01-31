@@ -25,14 +25,11 @@ import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.Unpooled.*;
 import java.nio.ByteOrder;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldPrependerTest {
 
@@ -88,8 +85,7 @@ public class LengthFieldPrependerTest {
     @Test
     public void testAdjustedLengthLessThanZero() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
-        Throwable cause = assertThrows(CompletionException.class, () -> ch.writeOutbound(msg));
-        assertInstanceOf(EncoderException.class, cause.getCause());
+        assertThrows(EncoderException.class, () -> ch.writeOutbound(msg));
     }
 
     @Test

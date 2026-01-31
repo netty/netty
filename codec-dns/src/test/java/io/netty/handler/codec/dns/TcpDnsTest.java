@@ -33,7 +33,7 @@ public class TcpDnsTest {
     private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
 
     @Test
-    public void testQueryDecode() {
+    public void testQueryDecode() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsQueryDecoder());
 
         int randomID = new Random().nextInt(60000 - 1000) + 1000;
@@ -49,7 +49,7 @@ public class TcpDnsTest {
     }
 
     @Test
-    public void testDecoderLeak() {
+    public void testDecoderLeak() throws Exception {
         EmbeddedChannel decoder = new EmbeddedChannel(new TcpDnsQueryDecoder());
         EmbeddedChannel encoder = new EmbeddedChannel(new TcpDnsQueryEncoder());
         int randomID = new Random().nextInt(60000 - 1000) + 1000;
@@ -71,7 +71,7 @@ public class TcpDnsTest {
     }
 
     @Test
-    public void testResponseEncode() {
+    public void testResponseEncode() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
 
         int randomID = new Random().nextInt(60000 - 1000) + 1000;

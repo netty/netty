@@ -31,7 +31,6 @@ import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -39,7 +38,6 @@ import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.util.ReferenceCountUtil.release;
@@ -53,7 +51,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpClientCodecTest {
 
@@ -67,7 +64,7 @@ public class HttpClientCodecTest {
     private static final String CHUNKED_RESPONSE = INCOMPLETE_CHUNKED_RESPONSE + "\r\n";
 
     @Test
-    public void testConnectWithResponseContent() {
+    public void testConnectWithResponseContent() throws Exception {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
@@ -76,7 +73,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testFailsNotOnRequestResponseChunked() {
+    public void testFailsNotOnRequestResponseChunked() throws Exception {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
@@ -85,7 +82,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testFailsOnMissingResponse() {
+    public void testFailsOnMissingResponse() throws Exception {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
@@ -94,12 +91,11 @@ public class HttpClientCodecTest {
         ByteBuf buffer = ch.readOutbound();
         assertNotNull(buffer);
         buffer.release();
-        Throwable cause = assertThrows(CompletionException.class, ch::finish);
-        assertInstanceOf(PrematureChannelClosureException.class, cause.getCause());
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
     }
 
     @Test
-    public void testFailsOnIncompleteChunkedResponse() {
+    public void testFailsOnIncompleteChunkedResponse() throws Exception {
         HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
@@ -114,8 +110,7 @@ public class HttpClientCodecTest {
         ((HttpContent) ch.readInbound()).release(); // Chunk 'second'
         assertNull(ch.readInbound());
 
-        Throwable cause = assertThrows(CompletionException.class, ch::finish);
-        assertInstanceOf(PrematureChannelClosureException.class, cause.getCause());
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
     }
 
     @Test
@@ -227,12 +222,13 @@ public class HttpClientCodecTest {
         assertFalse(ch.finish(), "Channel finish failed.");
     }
 
-    private static void sendRequestAndReadResponse(EmbeddedChannel ch, HttpMethod httpMethod, String response) {
+    private static void sendRequestAndReadResponse(EmbeddedChannel ch, HttpMethod httpMethod, String response)
+            throws Exception {
         sendRequestAndReadResponse(ch, httpMethod, response, new Consumer());
     }
 
     private static void sendRequestAndReadResponse(EmbeddedChannel ch, HttpMethod httpMethod, String response,
-                                                   Consumer responseConsumer) {
+                                                   Consumer responseConsumer) throws Exception {
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, httpMethod, "http://localhost/")),
                 "Channel outbound write failed.");
         assertTrue(ch.writeInbound(Unpooled.copiedBuffer(response, CharsetUtil.ISO_8859_1)),
@@ -274,7 +270,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testDecodesFinalResponseAfterSwitchingProtocols() {
+    public void testDecodesFinalResponseAfterSwitchingProtocols() throws Exception {
         String SWITCHING_PROTOCOLS_RESPONSE = "HTTP/1.1 101 Switching Protocols\r\n" +
                 "Connection: Upgrade\r\n" +
                 "Upgrade: TLS/1.2, HTTP/1.1\r\n\r\n";
@@ -304,7 +300,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testWebSocket00Response() {
+    public void testWebSocket00Response() throws Exception {
         byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
                 "Upgrade: WebSocket\r\n" +
                 "Connection: Upgrade\r\n" +
@@ -328,7 +324,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testWebDavResponse() {
+    public void testWebDavResponse() throws Exception {
         byte[] data = ("HTTP/1.1 102 Processing\r\n" +
                        "Status-URI: Status-URI:http://status.com; 404\r\n" +
                        "\r\n" +
@@ -348,7 +344,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testInformationalResponseKeepsPairsInSync() {
+    public void testInformationalResponseKeepsPairsInSync() throws Exception {
         byte[] data = ("HTTP/1.1 102 Processing\r\n" +
                 "Status-URI: Status-URI:http://status.com; 404\r\n" +
                 "\r\n").getBytes();
@@ -390,7 +386,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testMultipleResponses() {
+    public void testMultipleResponses() throws Exception {
         String response = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 0\r\n\r\n";
 
@@ -413,7 +409,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testWriteThroughAfterUpgrade() {
+    public void testWriteThroughAfterUpgrade() throws Exception {
         HttpClientCodec codec = new HttpClientCodec();
         EmbeddedChannel ch = new EmbeddedChannel(codec);
         codec.prepareUpgradeFrom(null);

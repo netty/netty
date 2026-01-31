@@ -83,7 +83,7 @@ public class BinaryMemcacheDecoderTest {
      * This tests a simple GET request with a key as the value.
      */
     @Test
-    public void shouldDecodeRequestWithSimpleValue() {
+    public void shouldDecodeRequestWithSimpleValue() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(GET_REQUEST);
         channel.writeInbound(incoming);
@@ -106,7 +106,7 @@ public class BinaryMemcacheDecoderTest {
      * This test makes sure that large content is emitted in chunks.
      */
     @Test
-    public void shouldDecodeRequestWithChunkedContent() {
+    public void shouldDecodeRequestWithChunkedContent() throws Exception {
         int smallBatchSize = 2;
         channel = new EmbeddedChannel(new BinaryMemcacheRequestDecoder(smallBatchSize));
 
@@ -145,7 +145,7 @@ public class BinaryMemcacheDecoderTest {
      * sizes in the middle of decoding, it can recover and decode all the time eventually.
      */
     @Test
-    public void shouldHandleNonUniformNetworkBatches() {
+    public void shouldHandleNonUniformNetworkBatches() throws Exception {
         ByteBuf incoming = Unpooled.copiedBuffer(SET_REQUEST_WITH_CONTENT);
         while (incoming.isReadable()) {
             channel.writeInbound(incoming.readBytes(5));
@@ -178,7 +178,7 @@ public class BinaryMemcacheDecoderTest {
      * get emitted as separate messages.
      */
     @Test
-    public void shouldHandleTwoMessagesInOneBatch() {
+    public void shouldHandleTwoMessagesInOneBatch() throws Exception {
         channel.writeInbound(Unpooled.buffer().writeBytes(GET_REQUEST).writeBytes(GET_REQUEST));
 
         BinaryMemcacheRequest request = channel.readInbound();
@@ -201,7 +201,7 @@ public class BinaryMemcacheDecoderTest {
     }
 
     @Test
-    public void shouldDecodeSeparatedValues() {
+    public void shouldDecodeSeparatedValues() throws Exception {
         String msgBody = "Not found";
         channel = new EmbeddedChannel(new BinaryMemcacheResponseDecoder());
 
@@ -252,7 +252,7 @@ public class BinaryMemcacheDecoderTest {
     }
 
     @Test
-    public void shouldRetainCurrentMessageWhenSendingItOut() {
+    public void shouldRetainCurrentMessageWhenSendingItOut() throws Exception {
         channel = new EmbeddedChannel(
                 new BinaryMemcacheRequestEncoder(),
                 new BinaryMemcacheRequestDecoder());

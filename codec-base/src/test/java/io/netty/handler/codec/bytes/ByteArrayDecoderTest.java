@@ -36,7 +36,7 @@ public class ByteArrayDecoderTest {
     }
 
     @Test
-    public void testDecode() {
+    public void testDecode() throws Exception {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeInbound(wrappedBuffer(b));
@@ -44,13 +44,13 @@ public class ByteArrayDecoderTest {
     }
 
     @Test
-    public void testDecodeEmpty() {
+    public void testDecodeEmpty() throws Exception {
         ch.writeInbound(EMPTY_BUFFER);
         assertArrayEquals(EmptyArrays.EMPTY_BYTES, ch.readInbound());
     }
 
     @Test
-    public void testDecodeOtherType() {
+    public void testDecodeOtherType() throws Exception {
         String str = "Meep!";
         ch.writeInbound(str);
         assertSame(str, ch.readInbound());

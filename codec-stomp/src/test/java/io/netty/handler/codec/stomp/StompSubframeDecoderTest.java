@@ -46,7 +46,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testSingleFrameDecoding() {
+    public void testSingleFrameDecoding() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
@@ -64,7 +64,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testSingleFrameWithBodyAndContentLength() {
+    public void testSingleFrameWithBodyAndContentLength() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
@@ -83,7 +83,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testSingleFrameWithBodyWithoutContentLength() {
+    public void testSingleFrameWithBodyWithoutContentLength() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_1.getBytes());
         channel.writeInbound(incoming);
@@ -102,7 +102,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testSingleFrameChunked() {
+    public void testSingleFrameChunked() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 5));
 
         ByteBuf incoming = Unpooled.buffer();
@@ -137,7 +137,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testMultipleFramesDecoding() {
+    public void testMultipleFramesDecoding() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
@@ -163,7 +163,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testValidateHeadersDecodingDisabled() {
+    public void testValidateHeadersDecodingDisabled() throws Exception {
         ByteBuf invalidIncoming = Unpooled.copiedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
         assertTrue(channel.writeInbound(invalidIncoming));
 
@@ -181,7 +181,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testValidateHeadersDecodingEnabled() {
+    public void testValidateHeadersDecodingEnabled() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf invalidIncoming = Unpooled.wrappedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
@@ -195,7 +195,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testNotValidFrameWithEmptyHeaderName() {
+    public void testNotValidFrameWithEmptyHeaderName() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf invalidIncoming = Unpooled.wrappedBuffer(FRAME_WITH_EMPTY_HEADER_NAME.getBytes(UTF_8));
@@ -209,7 +209,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testUtf8FrameDecoding() {
+    public void testUtf8FrameDecoding() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf incoming = Unpooled.wrappedBuffer(SEND_FRAME_UTF8.getBytes(UTF_8));
@@ -228,7 +228,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    void testFrameWithContentLengthAndWithoutNullEnding() {
+    void testFrameWithContentLengthAndWithoutNullEnding() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf incoming = Unpooled.wrappedBuffer(FRAME_WITHOUT_NULL_ENDING.getBytes(UTF_8));
@@ -246,7 +246,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    void testUnescapeHeaders() {
+    void testUnescapeHeaders() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf incoming = Unpooled.wrappedBuffer(StompTestConstants.ESCAPED_MESSAGE_FRAME.getBytes(UTF_8));
@@ -270,7 +270,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    void testNotUnescapeHeadersForConnectCommand() {
+    void testNotUnescapeHeadersForConnectCommand() throws Exception {
         String expectedStompFrame = "CONNECT\n"
                 + "headerName-\\\\:headerValue-\\\\\n"
                 + "\n" + '\0';
@@ -294,7 +294,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    void testNotUnescapeHeadersForConnectedCommand() {
+    void testNotUnescapeHeadersForConnectedCommand() throws Exception {
         String expectedStompFrame = "CONNECTED\n"
                 + "headerName-\\\\:headerValue-\\\\\n"
                 + "\n" + '\0';
@@ -318,7 +318,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    void testInvalidEscapeHeadersSequence() {
+    void testInvalidEscapeHeadersSequence() throws Exception {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 
         ByteBuf incoming = Unpooled.wrappedBuffer(INVALID_ESCAPED_MESSAGE_FRAME.getBytes(UTF_8));

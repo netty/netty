@@ -2020,12 +2020,13 @@ public class DnsNameResolverTest {
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testRRNameContainsDifferentSearchDomainNoDomains(final DnsNameResolverChannelStrategy strategy) {
-        assertThrows(UnknownHostException.class, new Executable() {
+        CompletionException e = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 testRRNameContainsDifferentSearchDomain(strategy, Collections.<String>emptyList(), "netty");
             }
         });
+        assertInstanceOf(UnknownHostException.class, e.getCause());
     }
 
     @ParameterizedTest
@@ -2724,24 +2725,18 @@ public class DnsNameResolverTest {
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testSearchDomainQueryFailureForSingleAddressTypeCompletes(
             final DnsNameResolverChannelStrategy strategy) {
-        assertThrows(UnknownHostException.class, new Executable() {
-            @Override
-            public void execute() {
-                testSearchDomainQueryFailureCompletes(strategy, ResolvedAddressTypes.IPV4_ONLY);
-            }
-        });
+        CompletionException e = assertThrows(CompletionException.class,
+                () -> testSearchDomainQueryFailureCompletes(strategy, ResolvedAddressTypes.IPV4_ONLY));
+        assertInstanceOf(UnknownHostException.class, e.getCause());
     }
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testSearchDomainQueryFailureForMultipleAddressTypeCompletes(
             final DnsNameResolverChannelStrategy strategy) {
-        assertThrows(UnknownHostException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                testSearchDomainQueryFailureCompletes(strategy, ResolvedAddressTypes.IPV4_PREFERRED);
-            }
-        });
+        CompletionException e = assertThrows(CompletionException.class,
+                () -> testSearchDomainQueryFailureCompletes(strategy, ResolvedAddressTypes.IPV4_PREFERRED));
+        assertInstanceOf(UnknownHostException.class, e.getCause());
     }
 
     private void testSearchDomainQueryFailureCompletes(
@@ -4180,13 +4175,10 @@ public class DnsNameResolverTest {
                 final DnsNameResolver resolver = newResolver(strategy)
                         .localAddress(datagramSocket.getLocalSocketAddress()).build();
                 try {
-                    Throwable cause = assertThrows(UnknownHostException.class, new Executable() {
-                        @Override
-                        public void execute() throws Throwable {
-                            resolver.resolve("netty.io").sync();
-                        }
-                    });
-                    assertInstanceOf(BindException.class, cause.getCause());
+                    Throwable cause = assertThrows(CompletionException.class,
+                            () -> resolver.resolve("netty.io").sync());
+                    assertInstanceOf(UnknownHostException.class, cause.getCause());
+                    assertInstanceOf(BindException.class, cause.getCause().getCause());
                 } finally {
                     resolver.close();
                 }

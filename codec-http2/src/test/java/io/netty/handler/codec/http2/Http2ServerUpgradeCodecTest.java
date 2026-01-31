@@ -39,27 +39,27 @@ import org.mockito.Mockito;
 public class Http2ServerUpgradeCodecTest {
 
     @Test
-    public void testUpgradeToHttp2ConnectionHandler() {
+    public void testUpgradeToHttp2ConnectionHandler() throws Exception {
         testUpgrade(new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).build(), null);
     }
 
     @Test
-    public void testUpgradeToHttp2FrameCodec() {
+    public void testUpgradeToHttp2FrameCodec() throws Exception {
         testUpgrade(new Http2FrameCodecBuilder(true).build(), null);
     }
 
     @Test
-    public void testUpgradeToHttp2MultiplexCodec() {
+    public void testUpgradeToHttp2MultiplexCodec() throws Exception {
         testUpgrade(new Http2MultiplexCodecBuilder(true, new HttpInboundHandler()).build(), null);
     }
 
     @Test
-    public void testUpgradeToHttp2FrameCodecWithMultiplexer() {
+    public void testUpgradeToHttp2FrameCodecWithMultiplexer() throws Exception {
         testUpgrade(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(new HttpInboundHandler()));
     }
 
-    private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) {
+    private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) throws Exception {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
         request.headers().set(HttpHeaderNames.HOST, "netty.io");
         request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");

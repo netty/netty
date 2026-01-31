@@ -25,13 +25,11 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
@@ -268,23 +266,8 @@ public abstract class ZlibTest {
         }
     }
 
-    private static void dispose(EmbeddedChannel ch) {
-        if (ch.finish()) {
-            for (;;) {
-                Object msg = ch.readInbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-            for (;;) {
-                Object msg = ch.readOutbound();
-                if (msg == null) {
-                    break;
-                }
-                ReferenceCountUtil.release(msg);
-            }
-        }
+    private static void dispose(EmbeddedChannel ch) throws Exception {
+        ch.finishAndReleaseAll();
     }
 
     // Test for https://github.com/netty/netty/issues/2572
@@ -350,7 +333,7 @@ public abstract class ZlibTest {
         testGZIPCompressOnly0(BYTES_LARGE);
     }
 
-    private void testGZIPCompressOnly0(byte[] data) throws IOException {
+    private void testGZIPCompressOnly0(byte[] data) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(ZlibWrapper.GZIP));
         if (data != null) {
             chEncoder.writeOutbound(Unpooled.wrappedBuffer(data));
@@ -417,13 +400,8 @@ public abstract class ZlibTest {
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
-            }
-        });
-        DecompressionException e = (DecompressionException) cause.getCause();
+        DecompressionException e = assertThrows(DecompressionException.class,
+                () -> chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE))));
         assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
         assertEquals(maxAllocation, alloc.getMaxAllocation());
         assertTrue(decoder.isClosed());

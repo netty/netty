@@ -65,7 +65,7 @@ public class CoalescingBufferQueueTest {
     }
 
     @AfterEach
-    public void finish() {
+    public void finish() throws Exception {
         assertFalse(channel.finish());
     }
 

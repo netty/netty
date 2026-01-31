@@ -25,7 +25,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
@@ -33,7 +32,6 @@ import static io.netty.handler.codec.http3.Http3TestUtils.assertFrameEquals;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
 import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -91,7 +89,7 @@ public class Http3PushStreamTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(serverLocalControlStream.finish());
         assertFalse(serverChannel.finish());
         assertFalse(clientLocalControlStream.finish());
@@ -114,9 +112,8 @@ public class Http3PushStreamTest {
         final EmbeddedQuicStreamChannel serverStream = newServerStream();
         readStreamHeader(serverStream).release();
         try {
-            Throwable cause = assertThrows(CompletionException.class,
+            assertThrows(Http3Exception.class,
                     () -> serverStream.writeOutbound(new DefaultHttp3PushPromiseFrame(1)));
-            assertInstanceOf(Http3Exception.class, cause.getCause());
         } finally {
             assertFalse(serverStream.finish());
         }
@@ -166,7 +163,8 @@ public class Http3PushStreamTest {
     }
 
     private static void writeAndReadFrame(EmbeddedQuicStreamChannel serverStream,
-                                          EmbeddedQuicStreamChannel clientStream, Http3RequestStreamFrame frame) {
+                                          EmbeddedQuicStreamChannel clientStream, Http3RequestStreamFrame frame)
+            throws Exception {
         ReferenceCountUtil.retain(frame); // retain so that we can compare later
         assertTrue(serverStream.writeOutbound(frame));
         final ByteBuf encodedFrame = serverStream.readOutbound();
@@ -211,7 +209,7 @@ public class Http3PushStreamTest {
                         }, () -> new ChannelHandler() { }, () -> new ChannelHandler() { })).get();
     }
 
-    private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) {
+    private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) throws Exception {
         serverStream.flushOutbound(); // flush the stream header
         ByteBuf streamHeader = serverStream.readOutbound();
         assertNotNull(streamHeader);

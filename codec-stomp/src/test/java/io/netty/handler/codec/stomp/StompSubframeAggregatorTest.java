@@ -23,13 +23,9 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -44,12 +40,12 @@ public class StompSubframeAggregatorTest {
     }
 
     @AfterEach
-    public void teardown() {
+    public void teardown() throws Exception {
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testSingleFrameDecoding() {
+    public void testSingleFrameDecoding() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         channel.writeInbound(incoming);
@@ -61,7 +57,7 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
-    public void testSingleFrameWithBodyAndContentLength() {
+    public void testSingleFrameWithBodyAndContentLength() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
         channel.writeInbound(incoming);
@@ -76,7 +72,7 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
-    public void testSingleFrameWithBodyAndNoContentLength() {
+    public void testSingleFrameWithBodyAndNoContentLength() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.SEND_FRAME_4.getBytes());
         channel.writeInbound(incoming);
@@ -91,7 +87,7 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
-    public void testSingleFrameWithSplitBodyAndNoContentLength() {
+    public void testSingleFrameWithSplitBodyAndNoContentLength() throws Exception {
         for (int n = 0; n < StompTestConstants.SEND_FRAMES_3.length; ++n) {
             ByteBuf incoming = Unpooled.buffer();
             incoming.writeBytes(StompTestConstants.SEND_FRAMES_3[n].getBytes());
@@ -109,7 +105,7 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
-    public void testSingleFrameChunked() {
+    public void testSingleFrameChunked() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(
                 new StompSubframeDecoder(10000, 5), new StompSubframeAggregator(100000));
         ByteBuf incoming = Unpooled.buffer();
@@ -125,7 +121,7 @@ public class StompSubframeAggregatorTest {
     }
 
     @Test
-    public void testMultipleFramesDecoding() {
+    public void testMultipleFramesDecoding() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
         incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
@@ -151,12 +147,7 @@ public class StompSubframeAggregatorTest {
     public void testTooLongFrameException() {
         final EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(),
                 new StompSubframeAggregator(10));
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes()));
-            }
-        });
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
+        assertThrows(TooLongFrameException.class,
+                () -> channel.writeInbound(Unpooled.wrappedBuffer(StompTestConstants.SEND_FRAME_1.getBytes())));
     }
 }

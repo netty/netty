@@ -59,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class EmbeddedChannelTest {
 
     @Test
-    public void testParent() {
+    public void testParent() throws Exception {
         EmbeddedChannel parent = new EmbeddedChannel();
         EmbeddedChannel channel = new EmbeddedChannel(parent, EmbeddedChannelId.INSTANCE, true, false);
         assertSame(parent, channel.parent());
@@ -98,7 +98,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testConstructWithChannelInitializer() {
+    public void testConstructWithChannelInitializer() throws Exception {
         final Integer first = 1;
         final Integer second = 2;
 
@@ -183,7 +183,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testConstructWithOutHandler() {
+    public void testConstructWithOutHandler() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
         assertTrue(channel.writeInbound(1));
         assertTrue(channel.writeOutbound(2));
@@ -303,7 +303,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testFinishAndReleaseAll() {
+    public void testFinishAndReleaseAll() throws Exception {
         ByteBuf in = Unpooled.buffer();
         ByteBuf out = Unpooled.buffer();
         try {
@@ -326,7 +326,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testReleaseInbound() {
+    public void testReleaseInbound() throws Exception {
         ByteBuf in = Unpooled.buffer();
         ByteBuf out = Unpooled.buffer();
         try {
@@ -355,7 +355,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testReleaseOutbound() {
+    public void testReleaseOutbound() throws Exception {
         ByteBuf in = Unpooled.buffer();
         ByteBuf out = Unpooled.buffer();
         try {
@@ -384,7 +384,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testWriteLater() {
+    public void testWriteLater() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void write(
@@ -406,7 +406,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testWriteScheduled() throws InterruptedException {
+    public void testWriteScheduled() throws Exception {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
@@ -430,7 +430,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testFlushInbound() throws InterruptedException {
+    public void testFlushInbound() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
@@ -478,7 +478,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testFlushOutbound() throws InterruptedException {
+    public void testFlushOutbound() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
@@ -530,11 +530,9 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.close().syncUninterruptibly();
 
-        Throwable cause = assertThrows(CompletionException.class, () -> channel.writeOutbound("Hello, Netty!"));
-        assertInstanceOf(ClosedChannelException.class, cause.getCause());
+        assertThrows(ClosedChannelException.class, () -> channel.writeOutbound("Hello, Netty!"));
 
-        cause = assertThrows(CompletionException.class, () -> channel.writeInbound("Hello, Netty!"));
-        assertInstanceOf(ClosedChannelException.class, cause.getCause());
+        assertThrows(ClosedChannelException.class, () -> channel.writeInbound("Hello, Netty!"));
     }
 
     @Test
@@ -556,7 +554,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testHandleOutboundMessage() throws InterruptedException {
+    public void testHandleOutboundMessage() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
         EmbeddedChannel channel = new EmbeddedChannel() {
@@ -788,7 +786,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    void testReentrantClose() {
+    void testReentrantClose() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast(new ChannelInboundHandler() {
             boolean runningRead;

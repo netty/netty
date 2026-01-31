@@ -21,12 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,72 +30,72 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SmtpRequestEncoderTest {
 
     @Test
-    public void testEncodeEhlo() {
+    public void testEncodeEhlo() throws Exception {
         testEncode(SmtpRequests.ehlo("localhost"), "EHLO localhost\r\n");
     }
 
     @Test
-    public void testEncodeHelo() {
+    public void testEncodeHelo() throws Exception {
         testEncode(SmtpRequests.helo("localhost"), "HELO localhost\r\n");
     }
 
     @Test
-    public void testEncodeAuth() {
+    public void testEncodeAuth() throws Exception {
         testEncode(SmtpRequests.auth("LOGIN"), "AUTH LOGIN\r\n");
     }
 
     @Test
-    public void testEncodeAuthWithParameter() {
+    public void testEncodeAuthWithParameter() throws Exception {
         testEncode(SmtpRequests.auth("PLAIN", "dGVzdAB0ZXN0ADEyMzQ="), "AUTH PLAIN dGVzdAB0ZXN0ADEyMzQ=\r\n");
     }
 
     @Test
-    public void testEncodeEmpty() {
+    public void testEncodeEmpty() throws Exception {
         testEncode(SmtpRequests.empty("dGVzdAB0ZXN0ADEyMzQ="),  "dGVzdAB0ZXN0ADEyMzQ=\r\n");
     }
 
     @Test
-    public void testEncodeMail() {
+    public void testEncodeMail() throws Exception {
         testEncode(SmtpRequests.mail("me@netty.io"), "MAIL FROM:<me@netty.io>\r\n");
     }
 
     @Test
-    public void testEncodeMailNullSender() {
+    public void testEncodeMailNullSender() throws Exception {
         testEncode(SmtpRequests.mail(null), "MAIL FROM:<>\r\n");
     }
 
     @Test
-    public void testEncodeRcpt() {
+    public void testEncodeRcpt() throws Exception {
         testEncode(SmtpRequests.rcpt("me@netty.io"), "RCPT TO:<me@netty.io>\r\n");
     }
 
     @Test
-    public void testEncodeNoop() {
+    public void testEncodeNoop() throws Exception {
         testEncode(SmtpRequests.noop(), "NOOP\r\n");
     }
 
     @Test
-    public void testEncodeRset() {
+    public void testEncodeRset() throws Exception {
         testEncode(SmtpRequests.rset(), "RSET\r\n");
     }
 
     @Test
-    public void testEncodeHelp() {
+    public void testEncodeHelp() throws Exception {
         testEncode(SmtpRequests.help(null), "HELP\r\n");
     }
 
     @Test
-    public void testEncodeHelpWithArg() {
+    public void testEncodeHelpWithArg() throws Exception {
         testEncode(SmtpRequests.help("MAIL"), "HELP MAIL\r\n");
     }
 
     @Test
-    public void testEncodeData() {
+    public void testEncodeData() throws Exception {
         testEncode(SmtpRequests.data(), "DATA\r\n");
     }
 
     @Test
-    public void testEncodeDataAndContent() {
+    public void testEncodeDataAndContent() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         assertTrue(channel.writeOutbound(SmtpRequests.data()));
         assertTrue(channel.writeOutbound(
@@ -112,24 +108,18 @@ public class SmtpRequestEncoderTest {
     }
 
     @Test
-    public void testThrowsIfContentExpected() {
+    public void testThrowsIfContentExpected() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         try {
             assertTrue(channel.writeOutbound(SmtpRequests.data()));
-            Throwable cause = assertThrows(CompletionException.class, new Executable() {
-                @Override
-                public void execute() {
-                    channel.writeOutbound(SmtpRequests.noop());
-                }
-            });
-            assertInstanceOf(EncoderException.class, cause.getCause());
+            assertThrows(EncoderException.class, () -> channel.writeOutbound(SmtpRequests.noop()));
         } finally {
             channel.finishAndReleaseAll();
         }
     }
 
     @Test
-    public void testRsetClearsContentExpectedFlag() {
+    public void testRsetClearsContentExpectedFlag() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
 
         assertTrue(channel.writeOutbound(SmtpRequests.data()));
@@ -158,7 +148,7 @@ public class SmtpRequestEncoderTest {
         return writtenString;
     }
 
-    private static void testEncode(SmtpRequest request, String expected) {
+    private static void testEncode(SmtpRequest request, String expected) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         assertTrue(channel.writeOutbound(request));
         assertTrue(channel.finish());

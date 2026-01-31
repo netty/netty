@@ -38,17 +38,17 @@ public class AbstractCoalescingBufferQueueTest {
 
     // See https://github.com/netty/netty/issues/10286
     @Test
-    public void testDecrementAllWhenWriteAndRemoveAll() {
+    public void testDecrementAllWhenWriteAndRemoveAll() throws Exception {
         testDecrementAll(true);
     }
 
     // See https://github.com/netty/netty/issues/10286
     @Test
-    public void testDecrementAllWhenReleaseAndFailAll() {
+    public void testDecrementAllWhenReleaseAndFailAll() throws Exception {
         testDecrementAll(false);
     }
 
-    private static void testDecrementAll(boolean write) {
+    private static void testDecrementAll(boolean write) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {

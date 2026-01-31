@@ -28,11 +28,9 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -42,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class PendingWriteQueueTest {
 
     @Test
-    public void testRemoveAndWrite() {
+    public void testRemoveAndWrite() throws Exception{
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -54,7 +52,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndWriteAll() {
+    public void testRemoveAndWriteAll() throws Exception {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -66,7 +64,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFail() {
+    public void testRemoveAndFail() throws Exception {
         assertWriteFails(new TestHandler() {
 
             @Override
@@ -78,7 +76,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFailAll() {
+    public void testRemoveAndFailAll() throws Exception {
         assertWriteFails(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
@@ -88,7 +86,7 @@ public class PendingWriteQueueTest {
         }, 3);
     }
 
-    private static void assertWrite(ChannelHandler handler, int count) {
+    private static void assertWrite(ChannelHandler handler, int count) throws Exception {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
         channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(1, 3));
@@ -121,15 +119,14 @@ public class PendingWriteQueueTest {
         assertNull(queue.current());
     }
 
-    private static void assertWriteFails(ChannelHandler handler, int count) {
+    private static void assertWriteFails(ChannelHandler handler, int count) throws Exception {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
         ByteBuf[] buffers = new ByteBuf[count];
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = buffer.retainedDuplicate();
         }
-        Throwable cause = assertThrows(CompletionException.class, () -> channel.writeOutbound(buffers));
-        assertInstanceOf(TestException.class, cause.getCause());
+        assertThrows(TestException.class, () -> channel.writeOutbound(buffers));
         assertFalse(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
@@ -143,7 +140,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFailAllReentrantFailAll() {
+    public void testRemoveAndFailAllReentrantFailAll() throws Exception {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
@@ -162,7 +159,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndWriteAllReentrantWrite() {
+    public void testRemoveAndWriteAllReentrantWrite() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
@@ -194,7 +191,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndFailAllReentrantWrite() {
+    public void testRemoveAndFailAllReentrantWrite() throws Exception {
         final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<Integer>());
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
@@ -225,7 +222,7 @@ public class PendingWriteQueueTest {
     }
 
     @Test
-    public void testRemoveAndWriteAllReentrance() {
+    public void testRemoveAndWriteAllReentrance() throws Exception {
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 

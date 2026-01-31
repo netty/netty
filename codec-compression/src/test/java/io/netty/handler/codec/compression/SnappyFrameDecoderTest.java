@@ -23,11 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.util.concurrent.CompletionException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,7 +38,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(channel.finishAndReleaseAll());
     }
 
@@ -51,13 +48,7 @@ public class SnappyFrameDecoderTest {
             0x03, 0x01, 0x00, 0x00, 0x00
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
     }
 
     @Test
@@ -66,13 +57,7 @@ public class SnappyFrameDecoderTest {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
     }
 
     @Test
@@ -81,13 +66,12 @@ public class SnappyFrameDecoderTest {
             (byte) 0xff, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
+        assertThrows(DecompressionException.class, new Executable() {
             @Override
-            public void execute() {
+            public void execute() throws Exception {
                 channel.writeInbound(in);
             }
         });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
     }
 
     @Test
@@ -96,13 +80,7 @@ public class SnappyFrameDecoderTest {
             -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
     }
 
     @Test
@@ -111,13 +89,7 @@ public class SnappyFrameDecoderTest {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.writeInbound(in);
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
     }
 
     @Test
@@ -126,17 +98,11 @@ public class SnappyFrameDecoderTest {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
     }
 
     @Test
-    public void testReservedSkippableSkipsInput() {
+    public void testReservedSkippableSkipsInput() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
            -0x7f, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -149,7 +115,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testUncompressedDataAppendsToOut() {
+    public void testUncompressedDataAppendsToOut() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
             0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -166,7 +132,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testCompressedDataDecodesAndAppendsToOut() {
+    public void testCompressedDataDecodesAndAppendsToOut() throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
             0x00, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -190,7 +156,7 @@ public class SnappyFrameDecoderTest {
     // uncompressed string "netty"
 
     @Test
-    public void testInvalidChecksumThrowsException() {
+    public void testInvalidChecksumThrowsException() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
         try {
             // checksum here is presented as 0
@@ -199,20 +165,14 @@ public class SnappyFrameDecoderTest {
                     0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
             });
 
-            Throwable cause = assertThrows(CompletionException.class, new Executable() {
-                @Override
-                public void execute() {
-                    channel.writeInbound(in);
-                }
-            });
-            assertInstanceOf(DecompressionException.class, cause.getCause());
+            assertThrows(DecompressionException.class, () -> channel.writeInbound(in));
         } finally {
             channel.finishAndReleaseAll();
         }
     }
 
     @Test
-    public void testInvalidChecksumDoesNotThrowException() {
+    public void testInvalidChecksumDoesNotThrowException() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
         try {
             // checksum here is presented as a282986f (little endian)

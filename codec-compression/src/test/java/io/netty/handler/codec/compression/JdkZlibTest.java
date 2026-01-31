@@ -24,23 +24,19 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,18 +57,12 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        CompletionException cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                JdkZlibTest.super.testZLIB_OR_NONE3();
-            }
-        });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
+        assertThrows(DecompressionException.class, JdkZlibTest.super::testZLIB_OR_NONE3);
     }
 
     @Test
     // verifies backward compatibility
-    public void testConcatenatedStreamsReadFirstOnly() throws IOException {
+    public void testConcatenatedStreamsReadFirstOnly() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
@@ -92,7 +82,7 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
-    public void testConcatenatedStreamsReadFully() throws IOException {
+    public void testConcatenatedStreamsReadFully() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
@@ -114,7 +104,7 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
-    public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
+    public void testConcatenatedStreamsReadFullyWhenFragmented() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
@@ -225,10 +215,9 @@ public class JdkZlibTest extends ZlibTest {
         compressed[compressed.length - 8] ^= 0xFF;
 
         EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
-        Throwable cause = assertThrows(CompletionException.class, () -> {
+        assertThrows(DecompressionException.class, () -> {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 
@@ -245,10 +234,9 @@ public class JdkZlibTest extends ZlibTest {
         compressed[compressed.length - 4] ^= 0xFF;
 
         EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
-        Throwable cause = assertThrows(CompletionException.class, () -> {
+        assertThrows(DecompressionException.class, () -> {
             ch.writeInbound(Unpooled.wrappedBuffer(compressed));
         });
-        assertInstanceOf(DecompressionException.class, cause.getCause());
         ch.finishAndReleaseAll();
     }
 

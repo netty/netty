@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LineEncoderTest {
 
     @Test
-    public void testEncode() {
+    public void testEncode() throws Exception {
         testLineEncode(LineSeparator.DEFAULT, "abc");
         testLineEncode(LineSeparator.WINDOWS, "abc");
         testLineEncode(LineSeparator.UNIX, "abc");
     }
 
-    private static void testLineEncode(LineSeparator lineSeparator, String msg) {
+    private static void testLineEncode(LineSeparator lineSeparator, String msg) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LineEncoder(lineSeparator, CharsetUtil.UTF_8));
         assertTrue(channel.writeOutbound(msg));
         ByteBuf buf = channel.readOutbound();

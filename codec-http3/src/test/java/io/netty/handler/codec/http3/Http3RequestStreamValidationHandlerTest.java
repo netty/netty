@@ -31,7 +31,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
@@ -88,7 +87,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL, newHandler(server));
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
 
-        Throwable e = assertThrows(CompletionException.class, () -> channel.writeInbound(dataFrame)).getCause();
+        Throwable e = assertThrows(Exception.class, () -> channel.writeInbound(dataFrame));
         assertException(H3_FRAME_UNEXPECTED, e);
 
         verifyClose(H3_FRAME_UNEXPECTED, parent);
@@ -113,7 +112,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.writeInbound(dataFrame2.retainedDuplicate()));
         assertTrue(channel.writeInbound(trailersFrame));
 
-        Throwable e = assertThrows(CompletionException.class, () -> channel.writeInbound(dataFrame3)).getCause();
+        Throwable e = assertThrows(Exception.class, () -> channel.writeInbound(dataFrame3));
         assertException(H3_FRAME_UNEXPECTED, e);
 
         verifyClose(H3_FRAME_UNEXPECTED, parent);
@@ -135,7 +134,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
         Http3DataFrame dataFrame = new DefaultHttp3DataFrame(Unpooled.buffer());
 
-        Throwable e = assertThrows(CompletionException.class, () -> channel.writeOutbound(dataFrame)).getCause();
+        Throwable e = assertThrows(Exception.class, () -> channel.writeOutbound(dataFrame));
         assertException(H3_FRAME_UNEXPECTED, e);
 
         assertFalse(channel.finish());
@@ -158,7 +157,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertTrue(channel.writeOutbound(dataFrame2.retainedDuplicate()));
         assertTrue(channel.writeOutbound(trailersFrame));
 
-        Throwable e = assertThrows(CompletionException.class, () -> channel.writeOutbound(dat3Frame3)).getCause();
+        Throwable e = assertThrows(Exception.class, () -> channel.writeOutbound(dat3Frame3));
         assertException(H3_FRAME_UNEXPECTED, e);
 
         assertTrue(channel.finish());
@@ -178,7 +177,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         EmbeddedQuicStreamChannel channel = newClientStream(() -> true);
 
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        Throwable e = assertThrows(CompletionException.class, () -> channel.writeOutbound(headersFrame)).getCause();
+        Throwable e = assertThrows(Exception.class, () -> channel.writeOutbound(headersFrame));
         assertException(H3_FRAME_UNEXPECTED, e);
 
         // We should have closed the channel.

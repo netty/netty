@@ -27,7 +27,7 @@ public class Socks5PasswordAuthResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             Socks5PasswordAuthResponseDecoderTest.class);
 
-    private static void test(Socks5PasswordAuthStatus status) {
+    private static void test(Socks5PasswordAuthStatus status) throws Exception {
         logger.debug("Testing Socks5PasswordAuthResponseDecoder with status: " + status);
         Socks5PasswordAuthResponse msg = new DefaultSocks5PasswordAuthResponse(status);
         EmbeddedChannel embedder = new EmbeddedChannel(new Socks5PasswordAuthResponseDecoder());
@@ -38,7 +38,7 @@ public class Socks5PasswordAuthResponseDecoderTest {
     }
 
     @Test
-    public void testSocksCmdResponseDecoder() {
+    public void testSocksCmdResponseDecoder() throws Exception {
         test(Socks5PasswordAuthStatus.SUCCESS);
         test(Socks5PasswordAuthStatus.FAILURE);
     }

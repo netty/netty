@@ -1384,7 +1384,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testSkipHandlerMethodsIfAnnotated() {
+    public void testSkipHandlerMethodsIfAnnotated() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(true);
         ChannelPipeline pipeline = channel.pipeline();
 

@@ -18,17 +18,13 @@ package io.netty.handler.codec.frame;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletionException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LengthFieldBasedFrameDecoderTest {
@@ -39,9 +35,8 @@ public class LengthFieldBasedFrameDecoderTest {
 
         for (int i = 0; i < 2; i ++) {
             assertFalse(ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
-            Throwable cause = assertThrows(CompletionException.class,
+            assertThrows(TooLongFrameException.class,
                     () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0 })));
-            assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 1, 'A' }));
             ByteBuf buf = ch.readInbound();
@@ -56,9 +51,8 @@ public class LengthFieldBasedFrameDecoderTest {
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 
         for (int i = 0; i < 2; i ++) {
-            Throwable cause = assertThrows(CompletionException.class,
+            assertThrows(TooLongFrameException.class,
                     () -> ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 2 })));
-            assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
             ch.writeInbound(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
             ByteBuf buf = ch.readInbound();

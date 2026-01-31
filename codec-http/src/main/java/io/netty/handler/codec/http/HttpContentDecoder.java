@@ -248,7 +248,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
         super.handlerAdded(ctx);
     }
 
-    private void cleanup() {
+    private void cleanup() throws Exception {
         if (decoder != null) {
             // Clean-up the previous decoder if not cleaned up correctly.
             boolean nonEmpty = decoder.finishAndReleaseAll();

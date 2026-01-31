@@ -188,7 +188,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     }
 
     @Test
-    public void testDecoderNoClientContext() {
+    public void testDecoderNoClientContext() throws Exception {
         PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, MAX_WINDOW_SIZE, true, false, 0);
 

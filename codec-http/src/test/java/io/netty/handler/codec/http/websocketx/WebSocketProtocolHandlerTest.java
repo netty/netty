@@ -18,23 +18,13 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.CompletionHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WebSocketProtocolHandlerTest {
 
     @Test
-    public void testPingFrame() {
+    public void testPingFrame() throws Exception {
         ByteBuf pingData = Unpooled.copiedBuffer("Hello, world", UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
@@ -60,7 +50,7 @@ public class WebSocketProtocolHandlerTest {
     }
 
     @Test
-    public void testPingPongFlowControlWhenAutoReadIsDisabled() {
+    public void testPingPongFlowControlWhenAutoReadIsDisabled() throws Exception {
         String text1 = "Hello, world #1";
         String text2 = "Hello, world #2";
         String text3 = "Hello, world #3";
@@ -119,7 +109,7 @@ public class WebSocketProtocolHandlerTest {
     }
 
     @Test
-    public void testPongFrameDropFrameFalse() {
+    public void testPongFrameDropFrameFalse() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(false) { });
 
         PongWebSocketFrame pingResponse = new PongWebSocketFrame();
@@ -132,7 +122,7 @@ public class WebSocketProtocolHandlerTest {
     }
 
     @Test
-    public void testPongFrameDropFrameTrue() {
+    public void testPongFrameDropFrameTrue() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler(true) { });
 
         PongWebSocketFrame pingResponse = new PongWebSocketFrame();
@@ -140,7 +130,7 @@ public class WebSocketProtocolHandlerTest {
     }
 
     @Test
-    public void testTextFrame() {
+    public void testTextFrame() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketProtocolHandler() { });
 
         TextWebSocketFrame textFrame = new TextWebSocketFrame();

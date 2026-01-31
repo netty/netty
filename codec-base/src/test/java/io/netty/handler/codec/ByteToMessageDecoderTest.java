@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class ByteToMessageDecoderTest {
 
     @Test
-    public void testRemoveItself() {
+    public void testRemoveItself() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             private boolean removed;
 
@@ -71,7 +71,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testRemoveItselfWriteBuffer() {
+    public void testRemoveItselfWriteBuffer() throws Exception {
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b', 'c'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             private boolean removed;
@@ -102,7 +102,7 @@ public class ByteToMessageDecoderTest {
      * this case input is read fully.
      */
     @Test
-    public void testInternalBufferClearReadAll() {
+    public void testInternalBufferClearReadAll() throws Exception {
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a'});
         EmbeddedChannel channel = newInternalBufferTestChannel();
         assertFalse(channel.writeInbound(buf));
@@ -114,7 +114,7 @@ public class ByteToMessageDecoderTest {
      * this case input was not fully read.
      */
     @Test
-    public void testInternalBufferClearReadPartly() {
+    public void testInternalBufferClearReadPartly() throws Exception {
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
         EmbeddedChannel channel = newInternalBufferTestChannel();
         assertTrue(channel.writeInbound(buf));
@@ -146,7 +146,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void handlerRemovedWillNotReleaseBufferIfDecodeInProgress() {
+    public void handlerRemovedWillNotReleaseBufferIfDecodeInProgress() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -172,7 +172,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
+    public void testFireChannelReadCompleteOnInactive() throws Exception {
         final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
@@ -216,7 +216,7 @@ public class ByteToMessageDecoderTest {
 
     // See https://github.com/netty/netty/issues/4635
     @Test
-    public void testRemoveWhileInCallDecode() {
+    public void testRemoveWhileInCallDecode() throws Exception {
         final Object upgradeMessage = new Object();
         final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
             @Override
@@ -247,7 +247,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDecodeLastEmptyBuffer() {
+    public void testDecodeLastEmptyBuffer() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -267,7 +267,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDecodeLastNonEmptyBuffer() {
+    public void testDecodeLastNonEmptyBuffer() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             private boolean decodeLast;
 
@@ -309,7 +309,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testReadOnlyBuffer() {
+    public void testReadOnlyBuffer() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -448,7 +448,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDoesNotOverRead() {
+    public void testDoesNotOverRead() throws Exception {
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
 
         EmbeddedChannel channel = new EmbeddedChannel();
@@ -491,7 +491,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDoesNotOverReadOnChannelReadComplete() {
+    public void testDoesNotOverReadOnChannelReadComplete() throws Exception {
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
         EmbeddedChannel channel = new EmbeddedChannel(interceptor, new ByteToMessageDecoder() {
             @Override
@@ -522,7 +522,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDisorder() {
+    public void testDisorder() throws Exception {
         ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
             int count;
 
@@ -549,7 +549,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDecodeLast() {
+    public void testDecodeLast() throws Exception {
         final AtomicBoolean removeHandler = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
 
@@ -575,7 +575,7 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    void testUnexpectRead() {
+    void testUnexpectRead() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.config().setAutoRead(false);
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
@@ -596,46 +596,51 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testReuseInputBufferJustLargeEnoughToContainMessage_MergeCumulator() {
+    public void testReuseInputBufferJustLargeEnoughToContainMessage_MergeCumulator() throws Exception {
         testReusedBuffer(Unpooled.buffer(16), false, ByteToMessageDecoder.MERGE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferJustLargeEnoughToContainMessagePartiallyReceived2x_MergeCumulator() {
+    public void testReuseInputBufferJustLargeEnoughToContainMessagePartiallyReceived2x_MergeCumulator()
+            throws Exception {
         testReusedBuffer(Unpooled.buffer(16), true, ByteToMessageDecoder.MERGE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessage_MergeCumulator() {
+    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessage_MergeCumulator() throws Exception {
         testReusedBuffer(Unpooled.buffer(1024), false, ByteToMessageDecoder.MERGE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessagePartiallyReceived2x_MergeCumulator() {
+    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessagePartiallyReceived2x_MergeCumulator()
+            throws Exception {
         testReusedBuffer(Unpooled.buffer(1024), true, ByteToMessageDecoder.MERGE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferJustLargeEnoughToContainMessage_CompositeCumulator() {
+    public void testReuseInputBufferJustLargeEnoughToContainMessage_CompositeCumulator() throws Exception {
         testReusedBuffer(Unpooled.buffer(16), false, ByteToMessageDecoder.COMPOSITE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferJustLargeEnoughToContainMessagePartiallyReceived2x_CompositeCumulator() {
+    public void testReuseInputBufferJustLargeEnoughToContainMessagePartiallyReceived2x_CompositeCumulator()
+            throws Exception{
         testReusedBuffer(Unpooled.buffer(16), true, ByteToMessageDecoder.COMPOSITE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessage_CompositeCumulator() {
+    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessage_CompositeCumulator() throws Exception {
         testReusedBuffer(Unpooled.buffer(1024), false, ByteToMessageDecoder.COMPOSITE_CUMULATOR);
     }
 
     @Test
-    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessagePartiallyReceived2x_CompositeCumulator() {
+    public void testReuseInputBufferSufficientlyLargeToContainDuplicateMessagePartiallyReceived2x_CompositeCumulator()
+            throws Exception {
         testReusedBuffer(Unpooled.buffer(1024), true, ByteToMessageDecoder.COMPOSITE_CUMULATOR);
     }
 
-    static void testReusedBuffer(ByteBuf buffer, boolean secondPartial, ByteToMessageDecoder.Cumulator cumulator) {
+    static void testReusedBuffer(ByteBuf buffer, boolean secondPartial, ByteToMessageDecoder.Cumulator cumulator)
+            throws Exception {
         ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
             @Override
             protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {

@@ -59,7 +59,7 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
     protected abstract EmbeddedChannel createChannel();
 
     @AfterEach
-    public void destroyChannel() {
+    public void destroyChannel() throws Exception {
         if (channel != null) {
             channel.finishAndReleaseAll();
             channel = null;
@@ -135,7 +135,7 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         return decompressed;
     }
 
-    protected static void tryDecodeAndCatchBufLeaks(final EmbeddedChannel channel, final ByteBuf data) {
+    protected static void tryDecodeAndCatchBufLeaks(final EmbeddedChannel channel, final ByteBuf data) throws Exception {
         try {
             channel.writeInbound(data);
         } finally {

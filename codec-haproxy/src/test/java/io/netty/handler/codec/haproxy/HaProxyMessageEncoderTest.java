@@ -45,7 +45,7 @@ public class HaProxyMessageEncoderTest {
     private static final int IPv6_ADDRESS_BYTES_LENGTH = 36;
 
     @Test
-    public void testIPV4EncodeProxyV1() {
+    public void testIPV4EncodeProxyV1() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
@@ -63,7 +63,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testIPV6EncodeProxyV1() {
+    public void testIPV6EncodeProxyV1() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
@@ -81,7 +81,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testIPv4EncodeProxyV2() {
+    public void testIPv4EncodeProxyV2() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
@@ -130,7 +130,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testIPv6EncodeProxyV2() {
+    public void testIPv6EncodeProxyV2() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
@@ -186,7 +186,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testUnixEncodeProxyV2() {
+    public void testUnixEncodeProxyV2() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
@@ -229,7 +229,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testTLVEncodeProxy() {
+    public void testTLVEncodeProxy() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         List<HAProxyTLV> tlvs = new ArrayList<HAProxyTLV>();
@@ -272,7 +272,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testSslTLVEncodeProxy() {
+    public void testSslTLVEncodeProxy() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         List<HAProxyTLV> tlvs = new ArrayList<HAProxyTLV>();
@@ -327,7 +327,7 @@ public class HaProxyMessageEncoderTest {
     }
 
     @Test
-    public void testEncodeLocalProxyV2() {
+    public void testEncodeLocalProxyV2() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(

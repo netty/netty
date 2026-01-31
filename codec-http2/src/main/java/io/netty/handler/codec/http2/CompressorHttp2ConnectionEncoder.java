@@ -114,7 +114,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             public void onStreamRemoved(Http2Stream stream) {
                 final EmbeddedChannel compressor = stream.getProperty(propertyKey);
                 if (compressor != null) {
-                    cleanup(stream, compressor);
+                    try {
+                        cleanup(stream, compressor);
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
         });
@@ -163,7 +167,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             public void onStreamRemoved(Http2Stream stream) {
                 final EmbeddedChannel compressor = stream.getProperty(propertyKey);
                 if (compressor != null) {
-                    cleanup(stream, compressor);
+                    try {
+                        cleanup(stream, compressor);
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
         });
@@ -222,7 +230,11 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             promise.tryFailure(cause);
         } finally {
             if (endOfStream) {
-                cleanup(stream, channel);
+                try {
+                    cleanup(stream, channel);
+                } catch (Exception e) {
+                    promise.tryFailure(e);
+                }
             }
         }
     }
@@ -418,7 +430,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param stream The stream for which {@code compressor} is the compressor for
      * @param compressor The compressor for {@code stream}
      */
-    void cleanup(Http2Stream stream, EmbeddedChannel compressor) {
+    void cleanup(Http2Stream stream, EmbeddedChannel compressor) throws Exception {
         compressor.finishAndReleaseAll();
         stream.removeProperty(propertyKey);
     }

@@ -50,7 +50,7 @@ public class WebSocketClientExtensionHandlerTest {
             mock(WebSocketClientExtension.class, "fallbackExtension");
 
     @Test
-    public void testMainSuccess() {
+    public void testMainSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -99,7 +99,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testFallbackSuccess() {
+    public void testFallbackSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -151,7 +151,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testAllSuccess() {
+    public void testAllSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -223,7 +223,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testIfMainAndFallbackUseRSV1WillFail() {
+    public void testIfMainAndFallbackUseRSV1WillFail() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -254,10 +254,8 @@ public class WebSocketClientExtensionHandlerTest {
         HttpResponse res = newUpgradeResponse("main, fallback");
         try {
             ch.writeInbound(res);
-        } catch (CompletionException e) {
-            if (e.getCause() instanceof CodecException) {
-                return;
-            }
+        } catch (CodecException e) {
+            return;
         }
         fail("Expected to encounter a CodecException");
 

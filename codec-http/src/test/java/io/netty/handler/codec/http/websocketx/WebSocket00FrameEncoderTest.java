@@ -27,7 +27,7 @@ public class WebSocket00FrameEncoderTest {
 
     // Test for https://github.com/netty/netty/issues/2768
     @Test
-    public void testMultipleWebSocketCloseFrames() {
+    public void testMultipleWebSocketCloseFrames() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocket00FrameEncoder());
         assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));
         assertTrue(channel.writeOutbound(new CloseWebSocketFrame()));

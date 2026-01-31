@@ -20,10 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletionException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LengthFieldBasedFrameDecoderTest {
 
     @Test
-    public void testDiscardTooLongFrame1() {
+    public void testDiscardTooLongFrame1() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeInt(32);
         for (int i = 0; i < 32; i++) {
@@ -40,8 +37,7 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        Throwable cause = assertThrows(CompletionException.class, () -> channel.writeInbound(buf));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buf));
         assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
@@ -55,7 +51,7 @@ public class LengthFieldBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDiscardTooLongFrame2() {
+    public void testDiscardTooLongFrame2() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeInt(32);
         for (int i = 0; i < 32; i++) {
@@ -64,9 +60,8 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(TooLongFrameException.class,
                 () -> channel.writeInbound(buf.readRetainedSlice(14)));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
         assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
         assertTrue(channel.finish());

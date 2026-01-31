@@ -40,7 +40,7 @@ public class PerFrameDeflateEncoderTest {
     private static final Random random = new Random();
 
     @Test
-    public void testCompressedFrame() {
+    public void testCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerFrameDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
@@ -72,7 +72,7 @@ public class PerFrameDeflateEncoderTest {
     }
 
     @Test
-    public void testAlreadyCompressedFrame() {
+    public void testAlreadyCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerFrameDeflateEncoder(9, 15, false));
 
         // initialize
@@ -99,7 +99,7 @@ public class PerFrameDeflateEncoderTest {
     }
 
     @Test
-    public void testFramementedFrame() {
+    public void testFramementedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerFrameDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
@@ -164,7 +164,7 @@ public class PerFrameDeflateEncoderTest {
     }
 
     @Test
-    public void testCompressionSkip() {
+    public void testCompressionSkip() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerFrameDeflateEncoder(9, 15, false, ALWAYS_SKIP));
         byte[] payload = new byte[300];

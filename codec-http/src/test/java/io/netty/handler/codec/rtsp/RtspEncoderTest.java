@@ -39,7 +39,7 @@ public class RtspEncoderTest {
      * Test of a SETUP request, with no body.
      */
     @Test
-    public void testSendSetupRequest() {
+    public void testSendSetupRequest() throws Exception {
         String expected = "SETUP rtsp://172.10.20.30:554/d3abaaa7-65f2-42b4-"
                         + "8d6b-379f492fcf0f RTSP/1.0\r\n"
                         + "transport: MP2T/DVBC/UDP;unicast;client=01234567;"
@@ -69,7 +69,7 @@ public class RtspEncoderTest {
      * Test of a GET_PARAMETER request, with body.
      */
     @Test
-    public void testSendGetParameterRequest() {
+    public void testSendGetParameterRequest() throws Exception {
         String expected = "GET_PARAMETER rtsp://172.10.20.30:554 RTSP/1.0\r\n"
                         + "session: 2547019973447939919\r\n"
                         + "cseq: 3\r\n"
@@ -108,7 +108,7 @@ public class RtspEncoderTest {
      * Test of a 200 OK response, without body.
      */
     @Test
-    public void testSend200OkResponseWithoutBody() {
+    public void testSend200OkResponseWithoutBody() throws Exception {
         String expected = "RTSP/1.0 200 OK\r\n"
                         + "server: Testserver\r\n"
                         + "cseq: 1\r\n"
@@ -134,7 +134,7 @@ public class RtspEncoderTest {
      * Test of a 200 OK response, with body.
      */
     @Test
-    public void testSend200OkResponseWithBody() {
+    public void testSend200OkResponseWithBody() throws Exception {
         String expected = "RTSP/1.0 200 OK\r\n"
                         + "server: Testserver\r\n"
                         + "session: 2547019973447939919\r\n"

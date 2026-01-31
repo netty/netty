@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Socks5InitialRequestDecoderTest {
     @Test
-    public void testUnpackingCausesDecodeFail() {
+    public void testUnpackingCausesDecodeFail() throws Exception {
         EmbeddedChannel e = new EmbeddedChannel(new Socks5InitialRequestDecoder());
         assertFalse(e.writeInbound(Unpooled.wrappedBuffer(new byte[]{5, 2, 0})));
         assertTrue(e.writeInbound(Unpooled.wrappedBuffer(new byte[]{1})));

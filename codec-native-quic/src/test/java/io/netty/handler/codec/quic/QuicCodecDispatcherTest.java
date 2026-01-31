@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class QuicCodecDispatcherTest {
 
     @Test
-    public void testPacketsAreDispatchedToCorrectChannel() throws QuicException {
+    public void testPacketsAreDispatchedToCorrectChannel() throws Exception {
         short localConnectionIdLength = 16;
 
         AtomicInteger initChannelCalled = new AtomicInteger();
@@ -88,7 +88,8 @@ public class QuicCodecDispatcherTest {
         assertEquals(channels.length, initChannelCalled.get());
     }
 
-    private static void writePacket(EmbeddedChannel[] channels, boolean shortHeader, short localConnectionIdLength) {
+    private static void writePacket(EmbeddedChannel[] channels, boolean shortHeader, short localConnectionIdLength)
+            throws Exception {
         DatagramPacket packet = createQuicPacket(
                 ThreadLocalRandom.current().nextInt(channels.length),
                 shortHeader, localConnectionIdLength);

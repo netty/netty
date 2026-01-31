@@ -30,7 +30,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.handler.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
@@ -48,7 +47,6 @@ import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -157,7 +155,7 @@ public class Http3FrameCodecTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(codecChannel.finish());
         assertFalse(decoderStream.finish());
         assertFalse(encoderStream.finish());
@@ -325,9 +323,8 @@ public class Http3FrameCodecTest {
 
         final DefaultHttp3HeadersFrame trailer = new DefaultHttp3HeadersFrame();
         trailer.headers().add(":method", "GET");
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(Http3HeadersValidationException.class,
                 () -> testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams, trailer));
-        assertInstanceOf(Http3HeadersValidationException.class, cause.getCause());
     }
 
     @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
@@ -678,7 +675,7 @@ public class Http3FrameCodecTest {
         return delayQpackStreams && !qpackAttributes.encoderStreamAvailable() && isHeaderFrame;
     }
 
-    private void encodeFrame(boolean delayQpackStreams, Http3Frame frame, boolean isHeaderFrame) {
+    private void encodeFrame(boolean delayQpackStreams, Http3Frame frame, boolean isHeaderFrame) throws Exception {
         boolean wroteData = codecChannel.writeOutbound(retainAndDuplicate(frame));
         assertEquals(!isWriteBuffered(delayQpackStreams, isHeaderFrame), wroteData);
     }

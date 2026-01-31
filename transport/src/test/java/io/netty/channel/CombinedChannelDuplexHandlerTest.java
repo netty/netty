@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -130,7 +129,7 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    public void testInboundEvents() {
+    public void testInboundEvents() throws Exception {
         InboundEventHandler inboundHandler = new InboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
@@ -153,15 +152,15 @@ public class CombinedChannelDuplexHandlerTest {
         // Should have not received any more events as it was removed before via removeInboundHandler()
         assertNull(inboundHandler.pollEvent());
 
-        Throwable cause = assertThrows(CompletionException.class, channel::checkException);
-        assertSame(CAUSE, cause.getCause());
+        Throwable cause = assertThrows(Throwable.class, channel::checkException);
+        assertSame(CAUSE, cause);
 
         assertTrue(channel.finish());
         assertNull(inboundHandler.pollEvent());
     }
 
     @Test
-    public void testOutboundEvents() {
+    public void testOutboundEvents() throws Exception {
         ChannelInboundHandler inboundHandler = new ChannelInboundHandler() { };
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
@@ -240,7 +239,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testPromisesPassed() {
+    public void testPromisesPassed() throws Exception{
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(

@@ -44,7 +44,7 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
     protected abstract EmbeddedChannel createChannel();
 
     @AfterEach
-    public void destroyChannel() {
+    public void destroyChannel() throws Exception {
         if (channel != null) {
             channel.finishAndReleaseAll();
             channel = null;

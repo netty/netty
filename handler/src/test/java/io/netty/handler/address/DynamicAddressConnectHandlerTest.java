@@ -34,7 +34,7 @@ public class DynamicAddressConnectHandlerTest {
     private static final SocketAddress REMOTE = new SocketAddress() { };
     private static final SocketAddress REMOTE_NEW = new SocketAddress() { };
     @Test
-    public void testReplaceAddresses() {
+    public void testReplaceAddresses() throws Exception {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
@@ -69,16 +69,16 @@ public class DynamicAddressConnectHandlerTest {
     }
 
     @Test
-    public void testLocalAddressThrows() {
+    public void testLocalAddressThrows() throws Exception {
         testThrows0(true);
     }
 
     @Test
-    public void testRemoteAddressThrows() {
+    public void testRemoteAddressThrows() throws Exception {
         testThrows0(false);
     }
 
-    private static void testThrows0(final boolean localThrows) {
+    private static void testThrows0(final boolean localThrows) throws Exception {
         final IllegalStateException exception = new IllegalStateException();
 
         EmbeddedChannel channel = new EmbeddedChannel(new DynamicAddressConnectHandler() {

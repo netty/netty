@@ -103,7 +103,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     protected abstract ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer);
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         childChannelInitializer = new TestChannelInitializer();
         parentChannel = new ParentChannel();
         frameInboundWriter = new Http2FrameInboundWriter(parentChannel);
@@ -900,12 +900,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         inboundHandler.checkException();
 
-        assertThrows(ClosedChannelException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 future.syncUninterruptibly();
             }
         });
+        assertInstanceOf(ClosedChannelException.class, cause.getCause());
     }
 
     @Test
@@ -1237,7 +1238,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void endOfStreamDoesNotDiscardData() {
+    public void endOfStreamDoesNotDiscardData() throws Exception {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
         Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
@@ -1337,7 +1338,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopAutoRead() {
+    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopAutoRead() throws Exception {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
@@ -1400,7 +1401,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopNoAutoRead() {
+    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopNoAutoRead() throws Exception {
         final AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();

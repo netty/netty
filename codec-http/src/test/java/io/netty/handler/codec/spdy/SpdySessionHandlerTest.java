@@ -95,7 +95,7 @@ public class SpdySessionHandlerTest {
         assertTrue(spdyHeadersFrame.headers().isEmpty());
     }
 
-    private static void testSpdySessionHandler(SpdyVersion version, boolean server) {
+    private static void testSpdySessionHandler(SpdyVersion version, boolean server) throws Exception {
         EmbeddedChannel sessionHandler = new EmbeddedChannel(
                 new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
 
@@ -210,7 +210,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.finish();
     }
 
-    private static void testSpdySessionHandlerPing(SpdyVersion version, boolean server) {
+    private static void testSpdySessionHandlerPing(SpdyVersion version, boolean server) throws Exception {
         EmbeddedChannel sessionHandler = new EmbeddedChannel(
                 new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
 
@@ -236,7 +236,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.finish();
     }
 
-    private static void testSpdySessionHandlerGoAway(SpdyVersion version, boolean server) {
+    private static void testSpdySessionHandlerGoAway(SpdyVersion version, boolean server) throws Exception {
         EmbeddedChannel sessionHandler = new EmbeddedChannel(
                 new SpdySessionHandler(version, server), new EchoHandler(closeSignal, server));
 
@@ -284,37 +284,37 @@ public class SpdySessionHandlerTest {
     }
 
     @Test
-    public void testSpdyClientSessionHandler() {
+    public void testSpdyClientSessionHandler() throws Exception {
         logger.info("Running: testSpdyClientSessionHandler v3.1");
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
-    public void testSpdyClientSessionHandlerPing() {
+    public void testSpdyClientSessionHandlerPing() throws Exception {
         logger.info("Running: testSpdyClientSessionHandlerPing v3.1");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
-    public void testSpdyClientSessionHandlerGoAway() {
+    public void testSpdyClientSessionHandlerGoAway() throws Exception {
         logger.info("Running: testSpdyClientSessionHandlerGoAway v3.1");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, false);
     }
 
     @Test
-    public void testSpdyServerSessionHandler() {
+    public void testSpdyServerSessionHandler() throws Exception {
         logger.info("Running: testSpdyServerSessionHandler v3.1");
         testSpdySessionHandler(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
-    public void testSpdyServerSessionHandlerPing() {
+    public void testSpdyServerSessionHandlerPing() throws Exception {
         logger.info("Running: testSpdyServerSessionHandlerPing v3.1");
         testSpdySessionHandlerPing(SpdyVersion.SPDY_3_1, true);
     }
 
     @Test
-    public void testSpdyServerSessionHandlerGoAway() {
+    public void testSpdyServerSessionHandlerGoAway() throws Exception {
         logger.info("Running: testSpdyServerSessionHandlerGoAway v3.1");
         testSpdySessionHandlerGoAway(SpdyVersion.SPDY_3_1, true);
     }

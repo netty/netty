@@ -37,7 +37,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testTinyDecode() {
+    public void testTinyDecode() throws Exception {
         byte[] b = { 4, 1, 1, 1, 1 };
         assertFalse(ch.writeInbound(wrappedBuffer(b, 0, 1)));
         assertNull(ch.readInbound());
@@ -56,7 +56,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testRegularDecode() {
+    public void testRegularDecode() throws Exception {
         byte[] b = new byte[2048];
         for (int i = 2; i < 2048; i ++) {
             b[i] = 1;

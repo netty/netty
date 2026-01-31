@@ -37,7 +37,6 @@ import org.junit.jupiter.api.condition.DisabledIf;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -86,7 +85,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testRequestDecompression() {
+    public void testRequestDecompression() throws Exception {
         // baseline test: request decoder, content decompressor && request aggregator work as expected
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
@@ -113,7 +112,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testChunkedRequestDecompression() {
+    public void testChunkedRequestDecompression() throws Exception {
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
 
@@ -155,7 +154,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testSnappyResponseDecompression() {
+    public void testSnappyResponseDecompression() throws Exception {
         // baseline test: response decoder, content decompressor && request aggregator work as expected
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
@@ -182,7 +181,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testResponseDecompression() {
+    public void testResponseDecompression() throws Exception {
         // baseline test: response decoder, content decompressor && request aggregator work as expected
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
@@ -346,7 +345,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testExpectContinueResponse1() {
+    public void testExpectContinueResponse1() throws Exception {
         // request with header "Expect: 100-continue" must be replied with one "100 Continue" response
         // case 1: no ContentDecoder in chain at all (baseline test)
         HttpRequestDecoder decoder = new HttpRequestDecoder();
@@ -374,7 +373,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testExpectContinueResponse2() {
+    public void testExpectContinueResponse2() throws Exception {
         // request with header "Expect: 100-continue" must be replied with one "100 Continue" response
         // case 2: contentDecoder is in chain, but the content is not encoded, should be no-op
         HttpRequestDecoder decoder = new HttpRequestDecoder();
@@ -400,7 +399,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testExpectContinueResponse3() {
+    public void testExpectContinueResponse3() throws Exception {
         // request with header "Expect: 100-continue" must be replied with one "100 Continue" response
         // case 3: ContentDecoder is in chain and content is encoded
         HttpRequestDecoder decoder = new HttpRequestDecoder();
@@ -427,7 +426,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testExpectContinueResponse4() {
+    public void testExpectContinueResponse4() throws Exception {
         // request with header "Expect: 100-continue" must be replied with one "100 Continue" response
         // case 4: ObjectAggregator is up in chain
         HttpRequestDecoder decoder = new HttpRequestDecoder();
@@ -454,7 +453,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testExpectContinueResetHttpObjectDecoder() {
+    public void testExpectContinueResetHttpObjectDecoder() throws Exception {
         // request with header "Expect: 100-continue" must be replied with one "100 Continue" response
         // case 5: Test that HttpObjectDecoder correctly resets its internal state after a failed expectation.
         HttpRequestDecoder decoder = new HttpRequestDecoder();
@@ -508,7 +507,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testRequestContentLength1() {
+    public void testRequestContentLength1() throws Exception {
         // case 1: test that ContentDecompressor either sets the correct Content-Length header
         // or removes it completely (handlers down the chain must rely on LastHttpContent object)
 
@@ -538,7 +537,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testRequestContentLength2() {
+    public void testRequestContentLength2() throws Exception {
         // case 2: if HttpObjectAggregator is down the chain, then correct Content-Length header must be set
 
         // force content to be in more than one chunk (5 bytes/chunk)
@@ -569,7 +568,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testResponseContentLength1() {
+    public void testResponseContentLength1() throws Exception {
         // case 1: test that ContentDecompressor either sets the correct Content-Length header
         // or removes it completely (handlers down the chain must rely on LastHttpContent object)
 
@@ -602,7 +601,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testResponseContentLength2() {
+    public void testResponseContentLength2() throws Exception {
         // case 2: if HttpObjectAggregator is down the chain, then correct Content-Length header must be set
 
         // force content to be in more than one chunk (5 bytes/chunk)
@@ -632,7 +631,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testFullHttpRequest() {
+    public void testFullHttpRequest() throws Exception {
         // test that ContentDecoder can be used after the ObjectAggregator
         HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096, 5);
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
@@ -659,7 +658,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testFullHttpResponse() {
+    public void testFullHttpResponse() throws Exception {
         // test that ContentDecoder can be used after the ObjectAggregator
         HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
@@ -687,7 +686,7 @@ public class HttpContentDecoderTest {
 
     // See https://github.com/netty/netty/issues/5892
     @Test
-    public void testFullHttpResponseEOF() {
+    public void testFullHttpResponseEOF() throws Exception {
         // test that ContentDecoder can be used after the ObjectAggregator
         HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
@@ -714,7 +713,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testCleanupThrows() {
+    public void testCleanupThrows() throws Exception {
         HttpContentDecoder decoder = new HttpContentDecoder() {
             @Override
             protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
@@ -741,15 +740,14 @@ public class HttpContentDecoderTest {
         assertTrue(channel.writeInbound(content));
         assertEquals(1, content.refCnt());
 
-        Throwable cause = assertThrows(CompletionException.class, channel::finishAndReleaseAll);
-        assertInstanceOf(CodecException.class, cause.getCause().getCause());
+        assertThrows(CodecException.class, channel::finishAndReleaseAll);
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
     }
 
     @Test
-    public void testTransferCodingGZIP() {
+    public void testTransferCodingGZIP() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
                 "Transfer-Encoding: gzip\r\n" +
@@ -781,7 +779,7 @@ public class HttpContentDecoderTest {
     }
 
     @Test
-    public void testTransferCodingGZIPAndChunked() {
+    public void testTransferCodingGZIPAndChunked() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Content-Type: application/x-www-form-urlencoded\r\n" +
@@ -820,7 +818,7 @@ public class HttpContentDecoderTest {
         channel.releaseInbound();
     }
 
-    private static byte[] gzDecompress(byte[] input) {
+    private static byte[] gzDecompress(byte[] input) throws Exception {
         ZlibDecoder decoder = ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, 0);
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(input)));
@@ -875,7 +873,7 @@ public class HttpContentDecoderTest {
         return contentLength;
     }
 
-    private static byte[] gzCompress(byte[] input) {
+    private static byte[] gzCompress(byte[] input) throws Exception {
         ZlibEncoder encoder = ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP);
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         assertTrue(channel.writeOutbound(Unpooled.wrappedBuffer(input)));

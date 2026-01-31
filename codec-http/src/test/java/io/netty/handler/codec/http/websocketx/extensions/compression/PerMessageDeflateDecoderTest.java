@@ -50,7 +50,7 @@ public class PerMessageDeflateDecoderTest {
     private static final Random random = new Random();
 
     @Test
-    public void testCompressedFrame() {
+    public void testCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
@@ -83,7 +83,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testNormalFrame() {
+    public void testNormalFrame() throws Exception {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
@@ -110,7 +110,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testFragmentedFrame() {
+    public void testFragmentedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
@@ -160,7 +160,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testMultiCompressedPayloadWithinFrame() {
+    public void testMultiCompressedPayloadWithinFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
@@ -202,7 +202,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testDecompressionSkipForBinaryFrame() {
+    public void testDecompressionSkipForBinaryFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, ALWAYS_SKIP, 0));
@@ -228,7 +228,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testSelectivityDecompressionSkip() {
+    public void testSelectivityDecompressionSkip() throws Exception {
         WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
             @Override
             public boolean mustSkip(WebSocketFrame frame) {
@@ -273,7 +273,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testIllegalStateWhenDecompressionInProgress() {
+    public void testIllegalStateWhenDecompressionInProgress() throws Exception {
         WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
             @Override
             public boolean mustSkip(WebSocketFrame frame) {
@@ -312,13 +312,7 @@ public class PerMessageDeflateDecoderTest {
 
         //final part throwing exception
         try {
-            Throwable cause = assertThrows(CompletionException.class, new Executable() {
-                @Override
-                public void execute() {
-                    decoderChannel.writeInbound(finalPart);
-                }
-            });
-            assertInstanceOf(DecoderException.class, cause.getCause());
+            assertThrows(DecoderException.class, () -> decoderChannel.writeInbound(finalPart));
         } finally {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());
@@ -326,7 +320,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testEmptyFrameDecompression() {
+    public void testEmptyFrameDecompression() throws Exception {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
@@ -343,7 +337,7 @@ public class PerMessageDeflateDecoderTest {
     }
 
     @Test
-    public void testFragmentedFrameWithLeftOverInLastFragment() {
+    public void testFragmentedFrameWithLeftOverInLastFragment() throws Exception {
         String hexDump = "677170647a777a737574656b707a787a6f6a7561756578756f6b7868616371716c657a6d64697479766d726f6" +
                          "269746c6376777464776f6f72767a726f64667278676764687775786f6762766d776d706b76697773777a7072" +
                          "6a6a737279707a7078697a6c69616d7461656d646278626d786f66666e686e776a7a7461746d7a776668776b6" +

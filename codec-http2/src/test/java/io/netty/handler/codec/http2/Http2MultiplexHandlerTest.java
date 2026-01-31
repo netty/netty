@@ -22,8 +22,6 @@ import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLException;
 
-import java.util.concurrent.CompletionException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,13 +73,8 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
         channel.parent().pipeline().fireExceptionCaught(testExc);
 
         assertTrue(channel.isActive());
-        Throwable exc = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                inboundHandler.checkException();
-            }
-        });
-        assertEquals(testExc, exc.getCause());
+        Throwable exc = assertThrows(RuntimeException.class, inboundHandler::checkException);
+        assertEquals(testExc, exc);
     }
 
     @Test

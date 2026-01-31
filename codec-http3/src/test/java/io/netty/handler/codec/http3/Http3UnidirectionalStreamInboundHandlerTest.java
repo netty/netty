@@ -60,7 +60,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(parent.finish());
     }
 

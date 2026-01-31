@@ -37,7 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Iterator;
-import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTest {
 
@@ -62,16 +60,16 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
     }
 
     @Test
-    public void testPerformOpeningHandshake() {
+    public void testPerformOpeningHandshake() throws Exception {
         testPerformOpeningHandshake0(true);
     }
 
     @Test
-    public void testPerformOpeningHandshakeSubProtocolNotSupported() {
+    public void testPerformOpeningHandshakeSubProtocolNotSupported() throws Exception {
         testPerformOpeningHandshake0(false);
     }
 
-    private static void testPerformOpeningHandshake0(boolean subProtocol) {
+    private static void testPerformOpeningHandshake0(boolean subProtocol) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpResponseEncoder(), new HttpRequestDecoder());
 
@@ -86,12 +84,12 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
     }
 
     @Test
-    public void testCloseReasonWithEncoderAndDecoder() {
+    public void testCloseReasonWithEncoderAndDecoder() throws Exception {
         testCloseReason0(new HttpResponseEncoder(), new HttpRequestDecoder());
     }
 
     @Test
-    public void testCloseReasonWithCodec() {
+    public void testCloseReasonWithCodec() throws Exception {
         testCloseReason0(new HttpServerCodec());
     }
 
@@ -172,7 +170,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         assertTrue(request.release());
     }
 
-    private static void testCloseReason0(ChannelHandler... handlers) {
+    private static void testCloseReason0(ChannelHandler... handlers) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42));
         ch.pipeline().addLast(handlers);
@@ -181,8 +179,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
 
         ch.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(new byte[8])));
         ByteBuf buffer = ch.readOutbound();
-        Throwable cause = assertThrows(CompletionException.class, () -> ch.writeInbound(buffer));
-        assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
+        assertThrows(CorruptedWebSocketFrameException.class, () -> ch.writeInbound(buffer));
 
         ReferenceCounted closeMessage = ch.readOutbound();
         assertInstanceOf(ByteBuf.class, closeMessage);
@@ -190,7 +187,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         assertFalse(ch.finish());
     }
 
-    private static void testUpgrade0(EmbeddedChannel ch, WebSocketServerHandshaker13 handshaker) {
+    private static void testUpgrade0(EmbeddedChannel ch, WebSocketServerHandshaker13 handshaker) throws Exception {
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.headers().set(HttpHeaderNames.HOST, "server.example.com");
         req.headers().set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);

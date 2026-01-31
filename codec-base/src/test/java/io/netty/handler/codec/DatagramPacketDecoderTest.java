@@ -46,12 +46,12 @@ public class DatagramPacketDecoderTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testDecode() {
+    public void testDecode() throws Exception {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         ByteBuf content = Unpooled.wrappedBuffer("netty".getBytes(CharsetUtil.UTF_8));

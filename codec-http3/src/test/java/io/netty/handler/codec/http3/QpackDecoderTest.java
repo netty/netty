@@ -154,7 +154,7 @@ public class QpackDecoderTest {
         }
     }
 
-    private void insertLiterals(int count) throws QpackException {
+    private void insertLiterals(int count) throws Exception {
         for (int i = 1; i <= count; i++) {
             inserted++;
             decoder.insertLiteral(decoderStream, FOO + i, BAR + i);

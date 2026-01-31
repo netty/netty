@@ -36,10 +36,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class XmlFrameDecoderTest {
@@ -77,69 +75,54 @@ public class XmlFrameDecoderTest {
     public void testDecodeWithFrameExceedingMaxLength() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(3);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8));
-            }
-        });
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
+        assertThrows(TooLongFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer("<v/>", CharsetUtil.UTF_8)));
     }
 
     @Test
     public void testDecodeWithInvalidInput() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                ch.writeInbound(Unpooled.copiedBuffer("invalid XML", CharsetUtil.UTF_8));
-            }
-        });
-        assertInstanceOf(CorruptedFrameException.class, cause.getCause());
+        assertThrows(CorruptedFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer("invalid XML", CharsetUtil.UTF_8)));
     }
 
     @Test
     public void testDecodeWithInvalidContentBeforeXml() {
         XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
         final EmbeddedChannel ch = new EmbeddedChannel(decoder);
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8));
-            }
-        });
-        assertInstanceOf(CorruptedFrameException.class, cause.getCause());
+        assertThrows(CorruptedFrameException.class,
+                () -> ch.writeInbound(Unpooled.copiedBuffer("invalid XML<foo/>", CharsetUtil.UTF_8)));
     }
 
     @Test
-    public void testDecodeShortValidXml() {
+    public void testDecodeShortValidXml() throws Exception {
         testDecodeWithXml("<xxx/>", "<xxx/>");
     }
 
     @Test
-    public void testDecodeShortValidXmlWithLeadingWhitespace01() {
+    public void testDecodeShortValidXmlWithLeadingWhitespace01() throws Exception {
         testDecodeWithXml("   <xxx/>", "<xxx/>");
     }
 
     @Test
-    public void testDecodeShortValidXmlWithLeadingWhitespace02() {
+    public void testDecodeShortValidXmlWithLeadingWhitespace02() throws Exception {
         testDecodeWithXml("  \n\r \t<xxx/>\t", "<xxx/>");
     }
 
     @Test
-    public void testDecodeShortValidXmlWithLeadingWhitespace02AndTrailingGarbage() {
+    public void testDecodeShortValidXmlWithLeadingWhitespace02AndTrailingGarbage() throws Exception {
         testDecodeWithXml("  \n\r \t<xxx/>\ttrash", "<xxx/>", CorruptedFrameException.class);
     }
 
     @Test
-    public void testDecodeInvalidXml() {
+    public void testDecodeInvalidXml() throws Exception {
         testDecodeWithXml("<a></", new Object[0]);
         testDecodeWithXml("<a></a", new Object[0]);
     }
 
     @Test
-    public void testDecodeWithCDATABlock() {
+    public void testDecodeWithCDATABlock() throws Exception {
         final String xml = "<book>" +
                 "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
                 "</book>";
@@ -147,7 +130,7 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeWithCDATABlockContainingNestedUnbalancedXml() {
+    public void testDecodeWithCDATABlockContainingNestedUnbalancedXml() throws Exception {
         // <br> isn't closed, also <a> should have been </a>
         final String xml = "<info>" +
                 "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>" +
@@ -156,7 +139,7 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeWithMultipleMessages() {
+    public void testDecodeWithMultipleMessages() throws Exception {
         final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
                 "timestamp=\"1362410583776\"/>\n\n" +
                 "<root xmlns=\"http://www.acme.com/acme\" status=\"start\" time=\"0\" " +
@@ -174,18 +157,18 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
-    public void testFraming() {
+    public void testFraming() throws Exception {
         testDecodeWithXml(Arrays.asList("<abc", ">123</a", "bc>"), "<abc>123</abc>");
     }
 
     @Test
-    public void testDecodeWithSampleXml() {
+    public void testDecodeWithSampleXml() throws Exception {
         for (final String xmlSample : xmlSamples) {
             testDecodeWithXml(xmlSample, xmlSample);
         }
     }
 
-    private static void testDecodeWithXml(List<String> xmlFrames, Object... expected) {
+    private static void testDecodeWithXml(List<String> xmlFrames, Object... expected) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new XmlFrameDecoder(1048576));
         Exception cause = null;
         try {
@@ -218,7 +201,7 @@ public class XmlFrameDecoderTest {
         }
     }
 
-    private static void testDecodeWithXml(String xml, Object... expected) {
+    private static void testDecodeWithXml(String xml, Object... expected) throws Exception {
         testDecodeWithXml(Collections.singletonList(xml), expected);
     }
 

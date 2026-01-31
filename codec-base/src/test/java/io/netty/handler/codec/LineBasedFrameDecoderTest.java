@@ -21,12 +21,9 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletionException;
-
 import static io.netty.buffer.Unpooled.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,9 +72,8 @@ public class LineBasedFrameDecoderTest {
     public void testTooLongLine1() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(TooLongFrameException.class,
                 () -> ch.writeInbound(copiedBuffer("12345678901234567890\r\nfirst\nsecond", CharsetUtil.US_ASCII)));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
         ByteBuf buf = ch.readInbound();
         ByteBuf buf2 = copiedBuffer("first\n", CharsetUtil.US_ASCII);
@@ -93,9 +89,8 @@ public class LineBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
         assertFalse(ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII)));
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(TooLongFrameException.class,
                 () -> ch.writeInbound(copiedBuffer("890\r\nfirst\r\n", CharsetUtil.US_ASCII)));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
         ByteBuf buf = ch.readInbound();
         ByteBuf buf2 = copiedBuffer("first\r\n", CharsetUtil.US_ASCII);
@@ -110,9 +105,8 @@ public class LineBasedFrameDecoderTest {
     public void testTooLongLineWithFailFast() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, true));
 
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(TooLongFrameException.class,
                 () -> ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII)));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
         assertFalse(ch.writeInbound(copiedBuffer("890", CharsetUtil.US_ASCII)));
         assertTrue(ch.writeInbound(copiedBuffer("123\r\nfirst\r\n", CharsetUtil.US_ASCII)));
@@ -188,9 +182,8 @@ public class LineBasedFrameDecoderTest {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(2, false, false));
         assertFalse(ch.writeInbound(wrappedBuffer(new byte[] { 0, 1, 2 })));
         assertFalse(ch.writeInbound(wrappedBuffer(new byte[]{ 3, 4 })));
-        Throwable cause = assertThrows(CompletionException.class,
+        assertThrows(TooLongFrameException.class,
                 () -> ch.writeInbound(wrappedBuffer(new byte[] { '\n' })));
-        assertInstanceOf(TooLongFrameException.class, cause.getCause());
 
         assertFalse(ch.writeInbound(wrappedBuffer(new byte[] { '5' })));
         assertTrue(ch.writeInbound(wrappedBuffer(new byte[] { '\n' })));

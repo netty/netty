@@ -30,7 +30,7 @@ public class SocksCmdResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksCmdResponseDecoderTest.class);
 
     private static void testSocksCmdResponseDecoderWithDifferentParams(
-            SocksCmdStatus cmdStatus, SocksAddressType addressType, String host, int port) {
+            SocksCmdStatus cmdStatus, SocksAddressType addressType, String host, int port) throws Exception {
         logger.debug("Testing cmdStatus: " + cmdStatus + " addressType: " + addressType);
         SocksResponse msg = new SocksCmdResponse(cmdStatus, addressType, host, port);
         SocksCmdResponseDecoder decoder = new SocksCmdResponseDecoder();
@@ -53,7 +53,7 @@ public class SocksCmdResponseDecoderTest {
      * Verifies that sent socks messages are decoded correctly.
      */
     @Test
-    public void testSocksCmdResponseDecoder() {
+    public void testSocksCmdResponseDecoder() throws Exception {
         for (SocksCmdStatus cmdStatus : SocksCmdStatus.values()) {
             for (SocksAddressType addressType : SocksAddressType.values()) {
                 testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, addressType, null, 0);
@@ -68,7 +68,7 @@ public class SocksCmdResponseDecoderTest {
     public void testInvalidAddress() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
-            public void execute() {
+            public void execute() throws Exception {
                 testSocksCmdResponseDecoderWithDifferentParams(
                         SocksCmdStatus.SUCCESS, SocksAddressType.IPv4, "1", 80);
             }
@@ -79,7 +79,7 @@ public class SocksCmdResponseDecoderTest {
      * Verifies that send socks messages are decoded correctly when bound host and port are set.
      */
     @Test
-    public void testSocksCmdResponseDecoderIncludingHost() {
+    public void testSocksCmdResponseDecoderIncludingHost() throws Exception {
         for (SocksCmdStatus cmdStatus : SocksCmdStatus.values()) {
             testSocksCmdResponseDecoderWithDifferentParams(cmdStatus, SocksAddressType.IPv4,
                     "127.0.0.1", 80);

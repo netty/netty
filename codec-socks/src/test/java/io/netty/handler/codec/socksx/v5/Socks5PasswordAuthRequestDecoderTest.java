@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class Socks5PasswordAuthRequestDecoderTest {
 
     @Test
-    public void testAuthRequestDecoder() {
+    public void testAuthRequestDecoder() throws Exception {
         String username = "testUsername";
         String password = "testPassword";
         Socks5PasswordAuthRequest msg = new DefaultSocks5PasswordAuthRequest(username, password);

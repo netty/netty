@@ -17,15 +17,12 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,14 +80,8 @@ public class WebSocket08FrameDecoderTest {
         final ByteBuf invalidFrame = Unpooled.buffer(10).writeByte(0x81)
                                              .writeByte(0xFF).writeLong(-1L);
 
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(invalidFrame);
-            }
-        });
-
-        Throwable exception = assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
+        CorruptedWebSocketFrameException exception = assertThrows(CorruptedWebSocketFrameException.class,
+                () -> channel.writeInbound(invalidFrame));
         assertEquals("invalid data frame length (negative length)", exception.getMessage());
 
         CloseWebSocketFrame closeFrame = channel.readOutbound();

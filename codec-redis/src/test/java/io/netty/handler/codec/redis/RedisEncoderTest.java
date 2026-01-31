@@ -49,7 +49,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeInlineCommand() {
+    public void shouldEncodeInlineCommand() throws Exception {
         RedisMessage msg = new InlineCommandRedisMessage("ping");
 
         boolean result = channel.writeOutbound(msg);
@@ -61,7 +61,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeSimpleString() {
+    public void shouldEncodeSimpleString() throws Exception {
         RedisMessage msg = new SimpleStringRedisMessage("simple");
 
         boolean result = channel.writeOutbound(msg);
@@ -73,7 +73,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeError() {
+    public void shouldEncodeError() throws Exception {
         RedisMessage msg = new ErrorRedisMessage("error1");
 
         boolean result = channel.writeOutbound(msg);
@@ -85,7 +85,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeInteger() {
+    public void shouldEncodeInteger() throws Exception {
         RedisMessage msg = new IntegerRedisMessage(1234L);
 
         boolean result = channel.writeOutbound(msg);
@@ -97,7 +97,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeBulkStringContent() {
+    public void shouldEncodeBulkStringContent() throws Exception {
         RedisMessage header = new BulkStringHeaderRedisMessage(16);
         RedisMessage body1 = new DefaultBulkStringRedisContent(byteBufOf("bulk\nstr").retain());
         RedisMessage body2 = new DefaultLastBulkStringRedisContent(byteBufOf("ing\ntest").retain());
@@ -112,7 +112,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeFullBulkString() {
+    public void shouldEncodeFullBulkString() throws Exception {
         ByteBuf bulkString = byteBufOf("bulk\nstring\ntest").retain();
         int length = bulkString.readableBytes();
         RedisMessage msg = new FullBulkStringRedisMessage(bulkString);
@@ -126,7 +126,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeSimpleArray() {
+    public void shouldEncodeSimpleArray() throws Exception {
         List<RedisMessage> children = new ArrayList<RedisMessage>();
         children.add(new FullBulkStringRedisMessage(byteBufOf("foo").retain()));
         children.add(new FullBulkStringRedisMessage(byteBufOf("bar").retain()));
@@ -141,7 +141,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeNullArray() {
+    public void shouldEncodeNullArray() throws Exception {
         RedisMessage msg = ArrayRedisMessage.NULL_INSTANCE;
 
         boolean result = channel.writeOutbound(msg);
@@ -153,7 +153,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeEmptyArray() {
+    public void shouldEncodeEmptyArray() throws Exception {
         RedisMessage msg = ArrayRedisMessage.EMPTY_INSTANCE;
 
         boolean result = channel.writeOutbound(msg);
@@ -165,7 +165,7 @@ public class RedisEncoderTest {
     }
 
     @Test
-    public void shouldEncodeNestedArray() {
+    public void shouldEncodeNestedArray() throws Exception {
         List<RedisMessage> grandChildren = new ArrayList<RedisMessage>();
         grandChildren.add(new FullBulkStringRedisMessage(byteBufOf("bar")));
         grandChildren.add(new IntegerRedisMessage(-1234L));

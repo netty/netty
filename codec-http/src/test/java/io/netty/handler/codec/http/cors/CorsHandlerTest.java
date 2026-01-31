@@ -59,14 +59,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class CorsHandlerTest {
 
     @Test
-    public void nonCorsRequest() {
+    public void nonCorsRequest() throws Exception {
         final HttpResponse response = simpleRequest(forAnyOrigin().build(), null);
         assertFalse(response.headers().contains(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertTrue(ReferenceCountUtil.release(response));
     }
 
     @Test
-    public void simpleRequestWithAnyOrigin() {
+    public void simpleRequestWithAnyOrigin() throws Exception {
         final HttpResponse response = simpleRequest(forAnyOrigin().build(), "http://localhost:7777");
         assertEquals("*", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertNull(response.headers().get(ACCESS_CONTROL_ALLOW_HEADERS));
@@ -74,7 +74,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestWithNullOrigin() {
+    public void simpleRequestWithNullOrigin() throws Exception {
         final HttpResponse response = simpleRequest(forOrigin("http://test.com").allowNullOrigin()
                 .allowCredentials()
                 .build(), "null");
@@ -85,7 +85,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestWithOrigin() {
+    public void simpleRequestWithOrigin() throws Exception {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(forOrigin(origin).build(), origin);
         assertEquals(origin, response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -94,7 +94,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestWithOrigins() {
+    public void simpleRequestWithOrigins() throws Exception {
         final String origin1 = "http://localhost:8888";
         final String origin2 = "https://localhost:8888";
         final String[] origins = {origin1, origin2};
@@ -110,7 +110,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestWithNoMatchingOrigin() {
+    public void simpleRequestWithNoMatchingOrigin() throws Exception {
         final String origin = "http://localhost:8888";
         final HttpResponse response = simpleRequest(
                 forOrigins("https://localhost:8888").build(), origin);
@@ -120,7 +120,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightDeleteRequestWithCustomHeaders() {
+    public void preflightDeleteRequestWithCustomHeaders() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .allowedRequestMethods(GET, DELETE)
                 .build();
@@ -133,7 +133,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightGetRequestWithCustomHeaders() {
+    public void preflightGetRequestWithCustomHeaders() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .allowedRequestMethods(OPTIONS, GET, DELETE)
                 .allowedRequestHeaders("content-type", "xheader1")
@@ -149,7 +149,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithDefaultHeaders() {
+    public void preflightRequestWithDefaultHeaders() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertEquals("0", response.headers().get(CONTENT_LENGTH));
@@ -159,7 +159,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithCustomHeader() {
+    public void preflightRequestWithCustomHeader() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .preflightResponseHeader("CustomHeader", "somevalue")
                 .build();
@@ -171,7 +171,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithUnauthorizedOrigin() {
+    public void preflightRequestWithUnauthorizedOrigin() throws Exception {
         final String origin = "http://host";
         final CorsConfig config = forOrigin("http://localhost").build();
         final HttpResponse response = preflightRequest(config, origin, "xheader1");
@@ -180,7 +180,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithCustomHeaders() {
+    public void preflightRequestWithCustomHeaders() throws Exception {
         final String headerName = "CustomHeader";
         final String value1 = "value1";
         final String value2 = "value2";
@@ -194,7 +194,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithCustomHeadersIterable() {
+    public void preflightRequestWithCustomHeadersIterable() throws Exception {
         final String headerName = "CustomHeader";
         final String value1 = "value1";
         final String value2 = "value2";
@@ -208,7 +208,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithValueGenerator() {
+    public void preflightRequestWithValueGenerator() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .preflightResponseHeader("GenHeader", new Callable<String>() {
                     @Override
@@ -223,7 +223,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithNullOrigin() {
+    public void preflightRequestWithNullOrigin() throws Exception {
         final String origin = "null";
         final CorsConfig config = forOrigin(origin)
                 .allowNullOrigin()
@@ -236,7 +236,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestAllowCredentials() {
+    public void preflightRequestAllowCredentials() throws Exception {
         final String origin = "null";
         final CorsConfig config = forOrigin(origin).allowCredentials().build();
         final HttpResponse response = preflightRequest(config, origin, "content-type, xheader1");
@@ -245,7 +245,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestDoNotAllowCredentials() {
+    public void preflightRequestDoNotAllowCredentials() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "");
         // the only valid value for Access-Control-Allow-Credentials is true.
@@ -254,7 +254,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestCustomHeaders() {
+    public void simpleRequestCustomHeaders() throws Exception {
         final CorsConfig config = forAnyOrigin().exposeHeaders("custom1", "custom2").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertEquals("*", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -264,7 +264,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestAllowCredentials() {
+    public void simpleRequestAllowCredentials() throws Exception {
         final CorsConfig config = forAnyOrigin().allowCredentials().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertEquals("true", response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS));
@@ -272,7 +272,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestDoNotAllowCredentials() {
+    public void simpleRequestDoNotAllowCredentials() throws Exception {
         final CorsConfig config = forAnyOrigin().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertFalse(response.headers().contains(ACCESS_CONTROL_ALLOW_CREDENTIALS));
@@ -280,7 +280,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void anyOriginAndAllowCredentialsShouldEchoRequestOrigin() {
+    public void anyOriginAndAllowCredentialsShouldEchoRequestOrigin() throws Exception {
         final CorsConfig config = forAnyOrigin().allowCredentials().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertEquals("true", response.headers().get(ACCESS_CONTROL_ALLOW_CREDENTIALS));
@@ -290,7 +290,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestExposeHeaders() {
+    public void simpleRequestExposeHeaders() throws Exception {
         final CorsConfig config = forAnyOrigin().exposeHeaders("one", "two").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertThat(response.headers().get(ACCESS_CONTROL_EXPOSE_HEADERS)).contains("one");
@@ -299,7 +299,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestShortCircuit() {
+    public void simpleRequestShortCircuit() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertEquals(FORBIDDEN, response.status());
@@ -308,7 +308,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestNoShortCircuit() {
+    public void simpleRequestNoShortCircuit() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8080").build();
         final HttpResponse response = simpleRequest(config, "http://localhost:7777");
         assertEquals(OK, response.status());
@@ -317,7 +317,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCircuitNonCorsRequest() {
+    public void shortCircuitNonCorsRequest() throws Exception {
         final CorsConfig config = forOrigin("https://localhost").shortCircuit().build();
         final HttpResponse response = simpleRequest(config, null);
         assertEquals(OK, response.status());
@@ -326,7 +326,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCircuitWithConnectionKeepAliveShouldStayOpen() {
+    public void shortCircuitWithConnectionKeepAliveShouldStayOpen() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);
@@ -344,7 +344,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCircuitWithoutConnectionShouldStayOpen() {
+    public void shortCircuitWithoutConnectionShouldStayOpen() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);
@@ -361,7 +361,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void shortCircuitWithConnectionCloseShouldClose() {
+    public void shortCircuitWithConnectionCloseShouldClose() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8080").shortCircuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = createHttpRequest(GET);
@@ -379,7 +379,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestShouldReleaseRequest() {
+    public void preflightRequestShouldReleaseRequest() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .preflightResponseHeader("CustomHeader", Arrays.asList("value1", "value2"))
                 .build();
@@ -440,7 +440,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void forbiddenShouldReleaseRequest() {
+    public void forbiddenShouldReleaseRequest() throws Exception {
         final CorsConfig config = forOrigin("https://localhost").shortCircuit().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config), new EchoHandler());
         final FullHttpRequest request = createHttpRequest(GET);
@@ -452,7 +452,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void differentConfigsPerOrigin() {
+    public void differentConfigsPerOrigin() throws Exception {
         String host1 = "http://host1:80";
         String host2 = "http://host2";
         CorsConfig rule1 = forOrigin(host1).allowedRequestMethods(HttpMethod.GET).build();
@@ -471,7 +471,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void specificConfigPrecedenceOverGeneric() {
+    public void specificConfigPrecedenceOverGeneric() throws Exception {
         String host1 = "http://host1";
         String host2 = "http://host2";
 
@@ -492,7 +492,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestAllowPrivateNetwork() {
+    public void simpleRequestAllowPrivateNetwork() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888").allowPrivateNetwork().build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
@@ -505,7 +505,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void simpleRequestDoNotAllowPrivateNetwork() {
+    public void simpleRequestDoNotAllowPrivateNetwork() throws Exception {
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
         final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
@@ -518,7 +518,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightEmptyLastDiscarded() {
+    public void preflightEmptyLastDiscarded() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -541,7 +541,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightSecondEmptyLastForwardedAfterFirstDiscard() {
+    public void preflightSecondEmptyLastForwardedAfterFirstDiscard() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -564,7 +564,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightSecondNonEmptyLastDiscarded() {
+    public void preflightSecondNonEmptyLastDiscarded() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -586,7 +586,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightNonEmptyLastForwarded() {
+    public void preflightNonEmptyLastForwarded() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -608,7 +608,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void testNormalRequestForwarded() {
+    public void testNormalRequestForwarded() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -631,7 +631,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightEmptyLastDiscardedThenNewRequestForwarded() {
+    public void preflightEmptyLastDiscardedThenNewRequestForwarded() throws Exception {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
@@ -665,20 +665,20 @@ public class CorsHandlerTest {
         assertFalse(ch.finish());
     }
 
-    private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
+    private static HttpResponse simpleRequest(final CorsConfig config, final String origin) throws Exception {
         return simpleRequest(config, origin, null);
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config,
                                               final String origin,
-                                              final String requestHeaders) {
+                                              final String requestHeaders) throws Exception {
         return simpleRequest(config, origin, requestHeaders, GET);
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config,
                                               final String origin,
                                               final String requestHeaders,
-                                              final HttpMethod method) {
+                                              final HttpMethod method) throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config), new EchoHandler());
         final FullHttpRequest httpRequest = createHttpRequest(method);
         if (origin != null) {
@@ -695,14 +695,14 @@ public class CorsHandlerTest {
 
     private static HttpResponse preflightRequest(final CorsConfig config,
                                                  final String origin,
-                                                 final String requestHeaders) {
+                                                 final String requestHeaders) throws Exception {
         return preflightRequest(Collections.singletonList(config), origin, requestHeaders, config.isShortCircuit());
     }
 
     private static HttpResponse preflightRequest(final List<CorsConfig> configs,
                                                  final String origin,
                                                  final String requestHeaders,
-                                                 final boolean isSHortCircuit) {
+                                                 final boolean isSHortCircuit) throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(configs, isSHortCircuit));
         assertFalse(channel.writeInbound(optionsRequest(origin, requestHeaders, null)));
         HttpResponse response = channel.readOutbound();

@@ -18,13 +18,9 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
-
-import java.util.concurrent.CompletionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,42 +28,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WebSocketUtf8FrameValidatorTest {
 
     @Test
-    public void testCorruptedFrameExceptionInFinish() {
+    public void testCorruptedFrameExceptionInFinish() throws Exception {
         assertCorruptedFrameExceptionHandling(new byte[]{-50});
     }
 
     @Test
-    public void testCorruptedFrameExceptionInCheck() {
+    public void testCorruptedFrameExceptionInCheck() throws Exception {
         assertCorruptedFrameExceptionHandling(new byte[]{-8, -120, -128, -128, -128});
     }
 
     @Test
-    void testNotCloseOnProtocolViolation() {
+    void testNotCloseOnProtocolViolation() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
         final TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(new byte[] { -50 }));
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.writeInbound(frame);
-            }
-        }, "bytes are not UTF-8");
-        assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
+        assertThrows(CorruptedWebSocketFrameException.class,
+                () -> channel.writeInbound(frame), "bytes are not UTF-8");
 
         assertTrue(channel.isActive());
         assertFalse(channel.finish());
         assertEquals(0, frame.refCnt());
     }
 
-    private void assertCorruptedFrameExceptionHandling(byte[] data) {
+    private void assertCorruptedFrameExceptionHandling(byte[] data) throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
         final TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
-        Throwable cause = assertThrows(CompletionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.writeInbound(frame);
-            }
-        }, "bytes are not UTF-8");
-        assertInstanceOf(CorruptedWebSocketFrameException.class, cause.getCause());
+        assertThrows(CorruptedWebSocketFrameException.class,
+                () -> channel.writeInbound(frame), "bytes are not UTF-8");
         assertFalse(channel.isActive());
 
         CloseWebSocketFrame closeFrame = channel.readOutbound();
@@ -81,21 +67,21 @@ public class WebSocketUtf8FrameValidatorTest {
     }
 
     @Test
-    void testCloseWithStatusInTheMiddleOfFragmentAllowed() {
+    void testCloseWithStatusInTheMiddleOfFragmentAllowed() throws Exception {
         testControlFrameInTheMiddleOfFragmentAllowed(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
     }
 
     @Test
-    void testPingInTheMiddleOfFragmentAllowed() {
+    void testPingInTheMiddleOfFragmentAllowed() throws Exception {
         testControlFrameInTheMiddleOfFragmentAllowed(new PingWebSocketFrame(Unpooled.EMPTY_BUFFER));
     }
 
     @Test
-    void testPongInTheMiddleOfFragmentAllowed() {
+    void testPongInTheMiddleOfFragmentAllowed() throws Exception {
         testControlFrameInTheMiddleOfFragmentAllowed(new PongWebSocketFrame(Unpooled.EMPTY_BUFFER));
     }
 
-    private static void testControlFrameInTheMiddleOfFragmentAllowed(WebSocketFrame controlFrame) {
+    private static void testControlFrameInTheMiddleOfFragmentAllowed(WebSocketFrame controlFrame) throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
         final TextWebSocketFrame frame = new TextWebSocketFrame(false, 0, "text");
         assertTrue(channel.writeInbound(frame));

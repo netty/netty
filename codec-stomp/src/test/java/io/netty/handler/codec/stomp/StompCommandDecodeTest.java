@@ -43,13 +43,13 @@ public class StompCommandDecodeTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(channel.finish());
     }
 
     @ParameterizedTest(name = "{index}: testDecodeCommand({0}) = {1}")
     @MethodSource("stompCommands")
-    public void testDecodeCommand(String rawCommand, StompCommand expectedCommand, Boolean valid) {
+    public void testDecodeCommand(String rawCommand, StompCommand expectedCommand, Boolean valid) throws Exception {
         byte[] frameContent = String.format("%s\n\n\0", rawCommand).getBytes(UTF_8);
         ByteBuf incoming = Unpooled.wrappedBuffer(frameContent);
         assertTrue(channel.writeInbound(incoming));

@@ -118,7 +118,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testChunkedHeadResponse() {
+    public void testChunkedHeadResponse() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.
@@ -149,7 +149,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testChunkedHeadFullHttpResponse() {
+    public void testChunkedHeadFullHttpResponse() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Send the request headers.

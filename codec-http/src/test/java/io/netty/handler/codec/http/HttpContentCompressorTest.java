@@ -34,7 +34,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -623,11 +622,10 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
-        Throwable cause = assertThrows(CompletionException.class,
+        Throwable cause = assertThrows(EncoderException.class,
                 () -> ch.writeOutbound(new DefaultFullHttpResponse(
                         HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER)));
-        EncoderException e = assertInstanceOf(EncoderException.class, cause.getCause());
-        assertInstanceOf(IllegalStateException.class, e.getCause());
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
 
         assertTrue(ch.finish());
         for (;;) {
@@ -822,7 +820,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testMultipleAcceptEncodingHeaders() {
+    public void testMultipleAcceptEncodingHeaders() throws Exception {
         FullHttpRequest request = newRequest();
         request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "unknown; q=1.0")
                .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip; q=0.5")
@@ -855,7 +853,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testEmpty() {
+    public void testEmpty() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 

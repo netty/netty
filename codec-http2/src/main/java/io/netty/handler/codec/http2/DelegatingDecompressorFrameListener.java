@@ -123,7 +123,11 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             public void onStreamRemoved(Http2Stream stream) {
                 final Http2Decompressor decompressor = decompressor(stream);
                 if (decompressor != null) {
-                    decompressor.cleanup();
+                    try {
+                        decompressor.cleanup();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
         });
@@ -399,7 +403,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         /**
          * Release remaining content from the {@link EmbeddedChannel}.
          */
-        void cleanup() {
+        void cleanup() throws Exception {
             decompressor.finishAndReleaseAll();
         }
 

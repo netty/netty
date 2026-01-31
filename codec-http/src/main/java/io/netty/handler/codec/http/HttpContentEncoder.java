@@ -227,7 +227,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encodeFullResponse(HttpResponse newRes, HttpContent content, List<Object> out) {
+    private void encodeFullResponse(HttpResponse newRes, HttpContent content, List<Object> out) throws Exception {
         int existingMessages = out.size();
         encodeContent(content, out);
 
@@ -268,7 +268,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private boolean encodeContent(HttpContent c, List<Object> out) {
+    private boolean encodeContent(HttpContent c, List<Object> out) throws Exception {
         ByteBuf content = c.content();
 
         encode(content, out);
@@ -318,7 +318,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         super.channelInactive(ctx);
     }
 
-    private void cleanup() {
+    private void cleanup() throws Exception {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
             encoder.finishAndReleaseAll();
@@ -336,13 +336,13 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
     }
 
-    private void encode(ByteBuf in, List<Object> out) {
+    private void encode(ByteBuf in, List<Object> out) throws Exception {
         // call retain here as it will call release after its written to the channel
         encoder.writeOutbound(in.retain());
         fetchEncoderOutput(out);
     }
 
-    private void finishEncode(List<Object> out) {
+    private void finishEncode(List<Object> out) throws Exception {
         if (encoder.finish()) {
             fetchEncoderOutput(out);
         }

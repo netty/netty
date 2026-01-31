@@ -55,7 +55,7 @@ public class WebSocketServerExtensionHandlerTest {
             mock(WebSocketServerExtension.class, "main2Extension");
 
     @Test
-    public void testMainSuccess() {
+    public void testMainSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
                 thenReturn(mainExtensionMock);
@@ -110,7 +110,7 @@ public class WebSocketServerExtensionHandlerTest {
     }
 
     @Test
-    public void testCompatibleExtensionTogetherSuccess() {
+    public void testCompatibleExtensionTogetherSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
                 thenReturn(mainExtensionMock);
@@ -175,7 +175,7 @@ public class WebSocketServerExtensionHandlerTest {
     }
 
     @Test
-    public void testNoneExtensionMatchingSuccess() {
+    public void testNoneExtensionMatchingSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("unknown"))).
                 thenReturn(null);
@@ -212,7 +212,7 @@ public class WebSocketServerExtensionHandlerTest {
     }
 
     @Test
-    public void testExtensionHandlerNotRemovedByFailureWritePromise() {
+    public void testExtensionHandlerNotRemovedByFailureWritePromise() throws Exception {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
                 .thenReturn(mainExtensionMock);
@@ -239,7 +239,7 @@ public class WebSocketServerExtensionHandlerTest {
     }
 
     @Test
-    public void testExtensionMultipleRequests() {
+    public void testExtensionMultipleRequests() throws Exception {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
                 .thenReturn(mainExtensionMock);

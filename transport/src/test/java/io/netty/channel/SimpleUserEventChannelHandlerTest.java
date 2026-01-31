@@ -42,7 +42,7 @@ public class SimpleUserEventChannelHandlerTest {
     }
 
     @Test
-    public void testTypeMatch() {
+    public void testTypeMatch() throws Exception {
         FooEvent fooEvent = new FooEvent();
         channel.pipeline().fireUserEventTriggered(fooEvent);
         assertEquals(1, fooEventCatcher.caughtEvents.size());
@@ -52,7 +52,7 @@ public class SimpleUserEventChannelHandlerTest {
     }
 
     @Test
-    public void testTypeMismatch() {
+    public void testTypeMismatch() throws Exception {
         BarEvent barEvent = new BarEvent();
         channel.pipeline().fireUserEventTriggered(barEvent);
         assertEquals(0, fooEventCatcher.caughtEvents.size());

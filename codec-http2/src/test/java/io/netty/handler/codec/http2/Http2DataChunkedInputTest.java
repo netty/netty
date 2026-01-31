@@ -73,23 +73,23 @@ public class Http2DataChunkedInputTest {
     }
 
     @Test
-    public void testChunkedStream() {
+    public void testChunkedStream() throws Exception {
         check(new Http2DataChunkedInput(new ChunkedStream(new ByteArrayInputStream(BYTES)), STREAM));
     }
 
     @Test
-    public void testChunkedNioStream() {
+    public void testChunkedNioStream() throws Exception {
         check(new Http2DataChunkedInput(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
                 STREAM));
     }
 
     @Test
-    public void testChunkedFile() throws IOException {
+    public void testChunkedFile() throws Exception {
         check(new Http2DataChunkedInput(new ChunkedFile(TMP), STREAM));
     }
 
     @Test
-    public void testChunkedNioFile() throws IOException {
+    public void testChunkedNioFile() throws Exception {
         check(new Http2DataChunkedInput(new ChunkedNioFile(TMP), STREAM));
     }
 
@@ -130,7 +130,7 @@ public class Http2DataChunkedInputTest {
         assertNull(input.readChunk(ByteBufAllocator.DEFAULT));
     }
 
-    private static void check(ChunkedInput<?>... inputs) {
+    private static void check(ChunkedInput<?>... inputs) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
         for (ChunkedInput<?> input : inputs) {
