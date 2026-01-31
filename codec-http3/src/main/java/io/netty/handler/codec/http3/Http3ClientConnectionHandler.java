@@ -99,7 +99,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
-                new Http3UnidirectionalStreamInboundClientHandler(codecFactory, (id, v) -> false,
+                new Http3UnidirectionalStreamInboundClientHandler(codecFactory, nonStandardSettingsValidator,
                         localControlStreamHandler, remoteControlStreamHandler,
                         unknownInboundStreamHandlerFactory, pushStreamHandlerFactory,
                         () -> new QpackEncoderHandler(maxTableCapacity, qpackDecoder),
