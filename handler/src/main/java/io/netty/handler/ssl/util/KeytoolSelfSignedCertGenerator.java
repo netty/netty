@@ -59,9 +59,8 @@ final class KeytoolSelfSignedCertGenerator {
                 KEYTOOL = null;
             }
         }
-        // Java < 11 does not support encryption for PKCS#12: JDK-8220734
-        // For 11+, we prefer PKCS#12 for FIPS compliance
-        KEY_STORE_TYPE = PlatformDependent.javaVersion() >= 11 ? "PKCS12" : "JKS";
+        // We prefer PKCS#12 for FIPS compliance
+        KEY_STORE_TYPE = "PKCS12";
     }
 
     private KeytoolSelfSignedCertGenerator() {

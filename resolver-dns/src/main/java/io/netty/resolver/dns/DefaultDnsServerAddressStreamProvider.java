@@ -71,28 +71,6 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             }
         }
 
-        // Only try when using on Java8 and lower as otherwise it will produce:
-        // WARNING: Illegal reflective access by io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider
-        if (PlatformDependent.javaVersion() < 9 && defaultNameServers.isEmpty()) {
-            try {
-                Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
-                Method open = configClass.getMethod("open");
-                Method nameservers = configClass.getMethod("nameservers");
-                Object instance = open.invoke(null);
-
-                @SuppressWarnings("unchecked")
-                final List<String> list = (List<String>) nameservers.invoke(instance);
-                for (String a: list) {
-                    if (a != null) {
-                        defaultNameServers.add(new InetSocketAddress(SocketUtils.addressByName(a), DNS_PORT));
-                    }
-                }
-            } catch (Exception ignore) {
-                // Failed to get the system name server list via reflection.
-                // Will add the default name servers afterwards.
-            }
-        }
-
         if (!defaultNameServers.isEmpty()) {
             if (logger.isDebugEnabled()) {
                 logger.debug(

@@ -170,7 +170,7 @@ public final class NioIoHandler implements IoHandler {
             Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
             Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-            if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
+            if (PlatformDependent.hasUnsafe()) {
                 // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
                 // This allows us to also do this in Java9+ without any extra flags.
                 long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);

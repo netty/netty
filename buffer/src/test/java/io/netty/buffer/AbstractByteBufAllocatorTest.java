@@ -117,7 +117,7 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     void directBuffersMustHaveMemoryAddress() throws Exception {
         // The memory address must always be available when we either have Unsafe available,
         // or when we have memory segments available (though CleanerJava25 only enables for Java 25+).
-        assumeTrue(PlatformDependent.hasUnsafe() || PlatformDependent.javaVersion() >= 25);
+        assumeTrue(PlatformDependent.hasUnsafe());
         T allocator = newAllocator(true);
         ByteBuf buf = allocator.directBuffer();
         try {

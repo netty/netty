@@ -39,13 +39,4 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
         }
         return serverAddress;
     }
-
-    @Override
-    protected boolean disconnectMightFail(DatagramChannel channel) {
-        // See https://bugs.openjdk.org/browse/JDK-8285515
-        if (channel instanceof NioDatagramChannel && PlatformDependent.javaVersion() < 20) {
-            return true;
-        }
-        return super.disconnectMightFail(channel);
-    }
 }

@@ -299,7 +299,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int writerIndex = out.writerIndex();
-                ByteBuffer inNioBuffer = getUnwrapInputBuffer(handler, toByteBuffer(in, in.readerIndex(), len));
+                ByteBuffer inNioBuffer = toByteBuffer(in, in.readerIndex(), len);
                 int position = inNioBuffer.position();
                 final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
                     toByteBuffer(out, writerIndex, out.writableBytes()));
@@ -320,23 +320,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
                 return result;
-            }
-
-            private ByteBuffer getUnwrapInputBuffer(SslHandler handler, ByteBuffer inNioBuffer) {
-                int javaVersion = PlatformDependent.javaVersion();
-                if (javaVersion >= 22 && javaVersion < 25 && inNioBuffer.isDirect()) {
-                    // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
-                    int remaining = inNioBuffer.remaining();
-                    ByteBuffer copy = handler.unwrapInputCopy;
-                    if (copy == null || copy.capacity() < remaining) {
-                        handler.unwrapInputCopy = copy = ByteBuffer.allocate(remaining);
-                    } else {
-                        copy.clear();
-                    }
-                    copy.put(inNioBuffer).flip();
-                    return copy;
-                }
-                return inNioBuffer;
             }
 
             @Override
@@ -423,7 +406,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * creation.
      */
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
-    private ByteBuffer unwrapInputCopy;
 
     private final boolean startTls;
     private final ResumptionController resumptionController;
@@ -489,8 +471,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor,
                ResumptionController resumptionController) {
-        this.engine = ObjectUtil.checkNotNull(engine, "engine");
-        this.delegatedTaskExecutor = ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
+        this.engine = checkNotNull(engine, "engine");
+        this.delegatedTaskExecutor = checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         engineType = SslEngineType.forEngine(engine);
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);

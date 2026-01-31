@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -28,15 +26,11 @@ final class OpenSslParametersUtil {
     private static final MethodHandle SET_NAMED_GROUPS;
 
     static {
-        MethodHandle getNamedGroups = null;
-        MethodHandle setNamedGroups = null;
-        if (PlatformDependent.javaVersion() >= 20) {
-            final MethodHandles.Lookup lookup = MethodHandles.lookup();
-            getNamedGroups = obtainHandle(lookup, "getNamedGroups",
-                    MethodType.methodType(String[].class));
-            setNamedGroups = obtainHandle(lookup, "setNamedGroups",
-                    MethodType.methodType(void.class, String[].class));
-        }
+        final MethodHandles.Lookup lookup = MethodHandles.lookup();
+        MethodHandle getNamedGroups = obtainHandle(lookup, "getNamedGroups",
+                MethodType.methodType(String[].class));
+        MethodHandle setNamedGroups = obtainHandle(lookup, "setNamedGroups",
+                MethodType.methodType(void.class, String[].class));
         GET_NAMED_GROUPS = getNamedGroups;
         SET_NAMED_GROUPS = setNamedGroups;
     }

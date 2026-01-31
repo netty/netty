@@ -184,31 +184,27 @@ public final class PlatformDependent {
         }
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
         DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
-        HAS_ALLOCATE_UNINIT_ARRAY = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod();
+        HAS_ALLOCATE_UNINIT_ARRAY = PlatformDependent0.hasAllocateArrayMethod();
 
         MAYBE_SUPER_USER = maybeSuperUser0();
 
         if (!isAndroid()) {
             // only direct to method if we are not running on android.
             // See https://github.com/netty/netty/issues/2604
-            if (javaVersion() >= 9) {
+            if (CleanerJava9.isSupported()) {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
-                if (CleanerJava9.isSupported()) {
-                    LEGACY_CLEANER = new CleanerJava9();
-                } else if (CleanerJava24Linker.isSupported()) {
-                    // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
-                    // but we cannot use "shared" arenas due to JDK bugs.
-                    // If the "linker" implementation is supported, then we have native access permissions
-                    // in the "io.netty.common" module, and we can link directly to malloc() and free() from libc.
-                    LEGACY_CLEANER = new CleanerJava24Linker();
-                } else if (CleanerJava25.isSupported()) {
-                    // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
-                    // We don't have native access permissions to link malloc() and free() directly, but we can
-                    // use shared memory segment instances.
-                    LEGACY_CLEANER = new CleanerJava25();
-                } else {
-                    LEGACY_CLEANER = NOOP;
-                }
+                LEGACY_CLEANER = new CleanerJava9();
+            } else if (CleanerJava24Linker.isSupported()) {
+                // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
+                // but we cannot use "shared" arenas due to JDK bugs.
+                // If the "linker" implementation is supported, then we have native access permissions
+                // in the "io.netty.common" module, and we can link directly to malloc() and free() from libc.
+                LEGACY_CLEANER = new CleanerJava24Linker();
+            } else if (CleanerJava25.isSupported()) {
+                // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
+                // We don't have native access permissions to link malloc() and free() directly, but we can
+                // use shared memory segment instances.
+                LEGACY_CLEANER = new CleanerJava25();
             } else {
                 LEGACY_CLEANER = NOOP;
             }
@@ -262,8 +258,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (UNSAFE_UNAVAILABILITY_CAUSE == null || javaVersion() < 9 ||
-                PlatformDependent0.isNativeImage()) {
+        if (UNSAFE_UNAVAILABILITY_CAUSE == null || PlatformDependent0.isNativeImage()) {
             return false;
         }
         boolean varHandleAvailable = false;
@@ -1116,7 +1111,7 @@ public final class PlatformDependent {
      * by the caller.
      */
     public static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
-        if (javaVersion() > 8 && (startPos2 | startPos1 | (bytes1.length - length) | bytes2.length - length) == 0) {
+        if ((startPos2 | startPos1 | (bytes1.length - length) | bytes2.length - length) == 0) {
             return Arrays.equals(bytes1, bytes2);
         }
         return !hasUnsafe() || !unalignedAccess() ?

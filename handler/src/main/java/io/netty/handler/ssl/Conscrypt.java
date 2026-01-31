@@ -34,7 +34,7 @@ final class Conscrypt {
 
         // Only works on Java14 and earlier for now
         // See https://github.com/google/conscrypt/issues/838
-        if (PlatformDependent.javaVersion() < 15 || PlatformDependent.isAndroid()) {
+        if (PlatformDependent.isAndroid()) {
             try {
                 Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
                         PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
