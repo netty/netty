@@ -624,7 +624,7 @@ public class ByteToMessageDecoderTest {
 
     @Test
     public void testReuseInputBufferJustLargeEnoughToContainMessagePartiallyReceived2x_CompositeCumulator()
-            throws Exception{
+            throws Exception {
         testReusedBuffer(Unpooled.buffer(16), true, ByteToMessageDecoder.COMPOSITE_CUMULATOR);
     }
 

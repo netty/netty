@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class SctpMessageCompletionHandlerTest {
 
     @Test
-    public void testFragmentsReleased() {
+    public void testFragmentsReleased() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler());
         ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });

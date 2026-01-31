@@ -110,7 +110,7 @@ public class HttpFragmentedRequestDecoderBenchmark extends AbstractMicrobenchmar
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
-    public void testDecodeWholeRequestInMultipleStepsMixedDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsMixedDelimiters() throws Exception {
         final EmbeddedChannel channel = this.channel;
         for (ByteBuf buf : this.fragmentedRequest) {
             buf.resetReaderIndex();

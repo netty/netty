@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecSmtpTest {
 
     @Test
-    public void testEncoder() {
+    public void testEncoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SmtpRequestEncoder());
         assertTrue(channel.writeOutbound(SmtpRequests.ehlo("localhost")));
         assertTrue(channel.finish());

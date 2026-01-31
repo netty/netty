@@ -65,7 +65,7 @@ public class WebSocketFrame08DecoderBenchmark extends AbstractMicrobenchmark {
     public boolean masking;
 
     @Setup(Level.Trial)
-    public void setUp() {
+    public void setUp() throws Exception {
         byte[] bytes = new byte[contentLength];
         ThreadLocalRandom.current().nextBytes(bytes);
         ByteBufAllocator allocator = pooledAllocator? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT;

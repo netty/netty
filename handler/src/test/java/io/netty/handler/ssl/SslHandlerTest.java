@@ -79,6 +79,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -207,14 +208,16 @@ public class SslHandlerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testClientHandshakeTimeout() throws Exception {
-        assertThrows(SslHandshakeTimeoutException.class, () -> testHandshakeTimeout(true));
+    public void testClientHandshakeTimeout() {
+        CompletionException e = assertThrows(CompletionException.class, () -> testHandshakeTimeout(true));
+        assertInstanceOf(SslHandshakeTimeoutException.class, e.getCause());
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testServerHandshakeTimeout() throws Exception {
-        assertThrows(SslHandshakeTimeoutException.class, () -> testHandshakeTimeout(false));
+    public void testServerHandshakeTimeout() {
+        CompletionException e = assertThrows(CompletionException.class, () -> testHandshakeTimeout(false));
+        assertInstanceOf(SslHandshakeTimeoutException.class, e.getCause());
     }
 
     private static SSLEngine newServerModeSSLEngine() throws NoSuchAlgorithmException {

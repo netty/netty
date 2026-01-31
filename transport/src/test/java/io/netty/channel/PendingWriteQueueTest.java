@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class PendingWriteQueueTest {
 
     @Test
-    public void testRemoveAndWrite() throws Exception{
+    public void testRemoveAndWrite() throws Exception {
         assertWrite(new TestHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {

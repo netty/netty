@@ -37,7 +37,7 @@ public class CodecXmlTest {
             "<name ";
 
     @Test
-    public void testDecoder() {
+    public void testDecoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new XmlDecoder());
         try {
             assertTrue(channel.writeInbound(Unpooled.copiedBuffer(XML1, CharsetUtil.UTF_8)));

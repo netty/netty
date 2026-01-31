@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecRedisTest {
 
     @Test
-    public void testEncoder() {
+    public void testEncoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new RedisEncoder());
         assertTrue(channel.writeOutbound(new InlineCommandRedisMessage("ping")));
         assertTrue(channel.finish());

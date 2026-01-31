@@ -197,8 +197,8 @@ public class HAProxyMessageDecoderTest {
             final String headerPart3 = "end of header\r\n";
 
             int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
-            assertThrows(HAProxyProtocolException.class,
-                    () -> slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII)), "over " + discarded);
+            assertThrows(HAProxyProtocolException.class, () -> slowFailCh.writeInbound(
+                    copiedBuffer(headerPart3, CharsetUtil.US_ASCII)), "over " + discarded);
         } finally {
             assertFalse(slowFailCh.finishAndReleaseAll());
         }
@@ -210,8 +210,8 @@ public class HAProxyMessageDecoderTest {
         try {
             final String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                                  "000000000000000000000000000000000000000000000000000000000000000000000443";
-            assertThrows(HAProxyProtocolException.class,
-                    () -> fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)), "over " + headerPart1.length());
+            assertThrows(HAProxyProtocolException.class, () -> fastFailCh.writeInbound(
+                    copiedBuffer(headerPart1, CharsetUtil.US_ASCII)), "over " + headerPart1.length());
         } finally {
             assertFalse(fastFailCh.finishAndReleaseAll());
         }

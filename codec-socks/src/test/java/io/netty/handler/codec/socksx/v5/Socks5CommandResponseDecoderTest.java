@@ -78,7 +78,8 @@ public class Socks5CommandResponseDecoderTest {
      */
     @Test
     public void testInvalidAddress() {
-        assertThrows(IllegalArgumentException.class, () -> test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80));
+        assertThrows(IllegalArgumentException.class,
+                () -> test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80));
     }
 
     /**

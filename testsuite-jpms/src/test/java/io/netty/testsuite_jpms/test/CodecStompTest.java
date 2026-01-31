@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class CodecStompTest {
 
     @Test
-    public void testEncoder() {
+    public void testEncoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeEncoder());
         StompHeadersSubframe frame = new DefaultStompHeadersSubframe(StompCommand.CONNECT);
         StompHeaders headers = frame.headers();

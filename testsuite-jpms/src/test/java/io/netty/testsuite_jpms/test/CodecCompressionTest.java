@@ -31,16 +31,16 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecCompressionTest {
 
     @Test
-    public void testBrotli4j() {
+    public void testBrotli4j() throws Exception {
         testCompress(new BrotliEncoder());
     }
 
     @Test
-    public void testZstd() {
+    public void testZstd() throws Exception {
         testCompress(new ZstdEncoder());
     }
 
-    public void testCompress(MessageToByteEncoder<ByteBuf> encoder) {
+    public void testCompress(MessageToByteEncoder<ByteBuf> encoder) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         ByteBuf data = Unpooled.copiedBuffer("some-string", StandardCharsets.UTF_8);
         assertTrue(channel.writeOutbound(data));

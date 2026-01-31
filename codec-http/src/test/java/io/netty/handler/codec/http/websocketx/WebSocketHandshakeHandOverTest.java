@@ -292,7 +292,8 @@ public class WebSocketHandshakeHandOverTest {
      * @param srcChannel The source channel
      * @param dstChannel The destination channel
      */
-    private static void transferAllDataWithMerge(EmbeddedChannel srcChannel, EmbeddedChannel dstChannel) throws Exception {
+    private static void transferAllDataWithMerge(EmbeddedChannel srcChannel, EmbeddedChannel dstChannel)
+            throws Exception {
         ByteBuf mergedBuffer = null;
         for (;;) {
             Object srcData = srcChannel.readOutbound();

@@ -117,7 +117,8 @@ public class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @MethodSource("connectionCloseProvider")
     public void testConnectionCloseHeaderHandledCorrectly(
-            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength) throws Exception {
+            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength)
+            throws Exception {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);
@@ -133,7 +134,8 @@ public class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @MethodSource("connectionCloseProvider")
     public void testConnectionCloseHeaderHandledCorrectlyForVoidPromise(
-            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength) throws Exception {
+            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength)
+            throws Exception {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);

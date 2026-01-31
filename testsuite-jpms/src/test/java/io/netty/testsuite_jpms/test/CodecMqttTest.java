@@ -43,7 +43,7 @@ public class CodecMqttTest {
     private static final int KEEP_ALIVE_SECONDS = 600;
 
     @Test
-    public void testCodec() {
+    public void testCodec() throws Exception {
         MqttConnectMessage msg = MqttMessageBuilders.connect()
                 .clientId(CLIENT_ID)
                 .protocolVersion(MqttVersion.MQTT_3_1)

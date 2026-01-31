@@ -239,7 +239,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testPromisesPassed() throws Exception{
+    public void testPromisesPassed() throws Exception {
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(

@@ -89,7 +89,7 @@ public class HttpPipelinedRequestDecoderBenchmark extends AbstractMicrobenchmark
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
-    public void testDecodeWholePipelinedRequestMixedDelimiters() {
+    public void testDecodeWholePipelinedRequestMixedDelimiters() throws Exception {
         final EmbeddedChannel channel = this.channel;
         final ByteBuf batch = this.pipelinedRequest;
         final int refCnt = batch.refCnt();

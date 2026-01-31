@@ -135,7 +135,8 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         return decompressed;
     }
 
-    protected static void tryDecodeAndCatchBufLeaks(final EmbeddedChannel channel, final ByteBuf data) throws Exception {
+    protected static void tryDecodeAndCatchBufLeaks(final EmbeddedChannel channel, final ByteBuf data)
+            throws Exception {
         try {
             channel.writeInbound(data);
         } finally {
