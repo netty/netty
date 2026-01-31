@@ -313,7 +313,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         Chunk chunk = new Chunk(innerChunk, magazine, false, CHUNK_RELEASE_ALWAYS);
         chunkRegistry.add(chunk);
         try {
-            chunk.readInitInto(buf, size, size, maxCapacity);
+            boolean success = chunk.readInitInto(buf, size, size, maxCapacity);
+            assert success: "Failed to initialize ByteBuf with dedicated chunk";
         } finally {
             // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
             // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
@@ -715,9 +716,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int remainingCapacity = curr.remainingCapacity();
             int startingCapacity = chunkController.computeBufferCapacity(
                     size, maxCapacity, true /* never update stats as we don't hold the magazine lock */);
-            if (remainingCapacity >= size) {
-                curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
+            if (remainingCapacity >= size &&
+                    curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity)) {
                 allocated = true;
+                remainingCapacity = curr.remainingCapacity();
             }
             try {
                 if (remainingCapacity >= RETIRE_CAPACITY) {
