@@ -28,9 +28,10 @@ import org.junit.jupiter.api.TestInfo;
 
 import java.io.FileNotFoundException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
 
@@ -39,13 +40,10 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) {
-                try {
-                    bootstrap.handler(new ChannelInboundHandler() { })
-                             .connect(KQueueSocketTestPermutation.newSocketAddress()).get();
-                    fail("Expected FileNotFoundException");
-                } catch (Exception e) {
-                    assertTrue(e instanceof FileNotFoundException);
-                }
+                CompletionException e = assertThrows(CompletionException.class,
+                        () -> bootstrap.handler(new ChannelInboundHandler() { })
+                        .connect(KQueueSocketTestPermutation.newSocketAddress()).get());
+                assertInstanceOf(FileNotFoundException.class, e.getCause());
             }
         });
     }
@@ -54,17 +52,13 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
     void testWriteReceiverPathDoesNotExist(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
-            public void run(Bootstrap bootstrap) {
-                try {
-                    Channel ch = bootstrap.handler(new ChannelInboundHandler() { })
-                                          .bind(KQueueSocketTestPermutation.newSocketAddress()).get();
-                    ch.writeAndFlush(new DatagramPacket(
-                            Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
-                            KQueueSocketTestPermutation.newSocketAddress())).sync();
-                    fail("Expected FileNotFoundException");
-                } catch (Exception e) {
-                    assertTrue(e instanceof FileNotFoundException);
-                }
+            public void run(Bootstrap bootstrap) throws Exception {
+                Channel ch = bootstrap.handler(new ChannelInboundHandler() { })
+                        .bind(KQueueSocketTestPermutation.newSocketAddress()).get();
+                CompletionException e = assertThrows(CompletionException.class, () -> ch.writeAndFlush(
+                        new DatagramPacket(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
+                        KQueueSocketTestPermutation.newSocketAddress())).sync());
+                assertInstanceOf(FileNotFoundException.class, e.getCause());
             }
         });
     }
