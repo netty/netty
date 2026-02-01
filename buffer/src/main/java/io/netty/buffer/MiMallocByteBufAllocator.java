@@ -264,11 +264,6 @@ final class MiMallocByteBufAllocator {
             heapCollectEx(force ? FORCE : NORMAL, isMainExit);
         }
 
-        private boolean heapPageNeverDelayedFree(Page page) {
-            pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
-            return true;
-        }
-
         private void heapPageCollect(PageQueue pq, Page page, COLLECT_TYPE collect) {
             boolean isForce = isForceCollect(collect);
             page.pageFreeCollect(isForce);
@@ -433,7 +428,7 @@ final class MiMallocByteBufAllocator {
                 while (page != null) {
                     Page next = page.nextPage; // Save next in case the page gets removed from the queue.
                     if (workType == VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE) {
-                        this.heapPageNeverDelayedFree(page);
+                        pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
                     } else {
                         this.heapPageCollect(pq, page, collect);
                     }
@@ -644,11 +639,9 @@ final class MiMallocByteBufAllocator {
                 return null;
             }
             // A fresh page was found, initialize it.
+            pageInit(page, blockSize);
             assert (pq == null && page.isHuge) || (pq != null && !page.isHuge);
-            int fullBlockSize = page.isHuge ? page.blockSize : blockSize;
-            assert fullBlockSize > 0;
-            pageInit(page, fullBlockSize);
-            if (pq != null) {
+            if (!page.isHuge) {
                 pageQueuePush(pq, page);
             }
             return page;
@@ -656,11 +649,6 @@ final class MiMallocByteBufAllocator {
 
         // Initialize a fresh page.
         private void pageInit(Page page, int block_size) {
-            // Set fields.
-            page.blockSize = block_size;
-            int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
-            page.reservedBlocks = page_size / block_size;
-            page.retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE_INIT;
             assert page.capacityBlocks == 0;
             assert page.freeList == null;
             assert page.localFreeList == null;
@@ -668,7 +656,19 @@ final class MiMallocByteBufAllocator {
             assert page.threadFreeList.get() == null;
             assert page.nextPage == null;
             assert page.prevPage == null;
-            pageExtendFree(page);
+            // Set fields.
+            if (page.isHuge) {
+                page.reservedBlocks = 1;
+                page.retireExpire = 0;
+                page.freeList = getBlock(page, page.blockSize, page.adjustment);
+                page.capacityBlocks = 1;
+            } else {
+                page.blockSize = block_size;
+                int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
+                page.reservedBlocks = page_size / block_size;
+                page.retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE_INIT;
+                pageExtendFree(page);
+            }
         }
 
         private Page segmentPageAlloc(int block_size) {
@@ -1020,13 +1020,12 @@ final class MiMallocByteBufAllocator {
         private Segment segmentAllocNormal() {
             Segment segment;
             if (this.reservedNormalSegment == null) {
-                int segment_slices = segmentCalculateSlices(0);
-                int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
-                AbstractByteBuf chunk = this.allocator.newChunk(segment_size);
+                AbstractByteBuf chunk = this.allocator.newChunk(DEFAULT_SEGMENT_SIZE);
                 if (chunk == null) {
                     return null; // Signal OOM
                 }
-                segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, chunk, this);
+                segment = new Segment(this.allocator, DEFAULT_SEGMENT_SIZE, DEFAULT_SLICE_COUNT, SEGMENT_NORMAL,
+                        chunk, this);
                 segmentsTrackSize(segment.segmentSize);
             } else {
                 segment = this.reservedNormalSegment;
@@ -1039,21 +1038,24 @@ final class MiMallocByteBufAllocator {
 
         // Allocate a huge page, which also means allocate a huge segment.
         private Page segmentsHugePageAlloc(int required) {
-            int segment_slices = segmentCalculateSlices(required);
-            int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
+            // virtual_segment_slices is used only for calculate the segment/block size.
+            int virtual_segment_slices = segmentHugeCalculateSlices(required);
+            int segment_size = virtual_segment_slices * SEGMENT_SLICE_SIZE;
             // Allocate the segment.
             AbstractByteBuf buf = this.allocator.newChunk(segment_size);
             if (buf == null) {
                 return null; // Signal OOM
             }
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_HUGE, buf, this);
+            // huge segment only needs 1 slice.
+            Segment segment = new Segment(this.allocator, segment_size, 1, SEGMENT_HUGE, buf, this);
             segmentsTrackSize(segment.segmentSize);
             // Allocate a huge page which spans the entire segment.
-            return segmentSpanAllocate(segment, 0, segment_slices);
+            return segmentHugeSpanAllocate(segment, segment_size);
         }
 
-        private int segmentCalculateSlices(int required) {
-            int segment_size = required == 0 ? DEFAULT_SEGMENT_SIZE : alignUp(required, SEGMENT_SLICE_SIZE);
+        private int segmentHugeCalculateSlices(int required) {
+            assert required > 0;
+            int segment_size = alignUp(required, SEGMENT_SLICE_SIZE);
             return segment_size / SEGMENT_SLICE_SIZE;
         }
 
@@ -1073,9 +1075,6 @@ final class MiMallocByteBufAllocator {
         private Page segmentsPageFindAndAllocate(int sliceCount) {
             // Search from best fit up.
             int sqIndex = spanQueueIndex(sliceCount);
-            if (sliceCount == 0) {
-                sliceCount = 1;
-            }
             for (int i = sqIndex; i < this.segmentTld.spanQueues.length; i++) {
                 SpanQueue sq = this.segmentTld.spanQueues[i];
                 for (Span slice = sq.firstSpan; slice != null; slice = slice.nextSpan) {
@@ -1085,7 +1084,7 @@ final class MiMallocByteBufAllocator {
                         if (slice.sliceCount > sliceCount) {
                             segmentSliceSplit(segment, slice, sliceCount);
                         }
-                        return segmentSpanAllocate(segment, slice.sliceIndex, slice.sliceCount);
+                        return segmentNormalSpanAllocate(segment, slice.sliceIndex, slice.sliceCount);
                     }
                 }
             }
@@ -1093,44 +1092,42 @@ final class MiMallocByteBufAllocator {
             return null;
         }
 
-        private Page segmentSpanAllocate(Segment segment, int slice_index, int slice_count) {
+        private Page segmentNormalSpanAllocate(Segment segment, int slice_index, int slice_count) {
+            assert segment.kind == SEGMENT_NORMAL;
+            assert slice_count > 0;
             Span slice = segment.slices[slice_index];
-            // Convert the slices to a page.
+            assert slice.blockSize == 1;
             slice.sliceOffset = 0;
             slice.sliceCount = slice_count;
-            slice.blockSize = slice_count * SEGMENT_SLICE_SIZE;
-            int extra = slice_count - 1;
-            if (extra > MAX_SLICE_OFFSET_COUNT) {
-                extra = MAX_SLICE_OFFSET_COUNT;
-            }
-            if (slice_index + extra >= segment.sliceEntries) {
-                // Huge objects may have more slices than available entries in the segment.slices[].
-                extra = segment.sliceEntries - slice_index - 1;
-            }
-            Span slice_next = segment.slices[slice.sliceIndex + 1];
-            for (int i = 1; i <= extra; i++) {
-                slice_next.sliceOffset = i;
-                slice_next.sliceCount = 0;
-                slice_next.blockSize = 1;
-                slice_next = segment.slices[slice_next.sliceIndex + 1];
-            }
-            // And also for the last one (if not set already).
-            int lastIndex = slice.sliceIndex + slice_count - 1;
-            int endIndex = segment.sliceEntries;
-            if (lastIndex > endIndex) {
-                lastIndex = endIndex;
-            }
-            if (lastIndex > slice.sliceIndex) {
-                Span last = segment.slices[lastIndex];
-                last.sliceOffset = last.sliceIndex - slice.sliceIndex;
-                last.sliceCount = 0;
-                last.blockSize = 1;
+            if (slice_count > 1) {
+                for (int i = 1; i <= slice_count - 1; i++) {
+                    Span slice_next = segment.slices[slice.sliceIndex + i];
+                    slice_next.sliceOffset = i;
+                    slice_next.sliceCount = 0;
+                    slice_next.blockSize = 1;
+                }
             }
             // And initialize the page.
             segment.usedPages++;
             // Convert to Page.
             Page page = slice;
-            page.isHuge = segment.kind == SEGMENT_HUGE;
+            page.isHuge = false;
+            return page;
+        }
+
+        private Page segmentHugeSpanAllocate(Segment segment, int blockSize) {
+            assert segment.kind == SEGMENT_HUGE;
+            assert segment.slices.length == 1;
+            Span slice = segment.slices[0];
+            // Convert the slices to a page.
+            slice.sliceOffset = 0;
+            slice.sliceCount = 1;
+            slice.blockSize = blockSize;
+            // And initialize the page.
+            segment.usedPages++;
+            // Convert to Page.
+            Page page = slice;
+            page.isHuge = true;
             return page;
         }
 
@@ -1148,19 +1145,13 @@ final class MiMallocByteBufAllocator {
         private void segmentSpanFree(Segment segment, int sliceIndex, int sliceCount) {
             assert segment.kind != SEGMENT_HUGE;
             SpanQueue sq = isSegmentAbandoned(segment) ? null : getSpanQueue(sliceCount);
-            if (sliceCount == 0) {
-                sliceCount = 1;
-            }
-            // Set first and last slice (the intermediates can be undetermined).
+            // Set the first and last slice (the intermediates can be undetermined).
             Span slice = segment.slices[sliceIndex];
             slice.sliceCount = sliceCount;
             slice.sliceOffset = 0;
             if (sliceCount > 1) {
                 int lastIndex = sliceIndex + sliceCount - 1;
-                int endIndex = segment.sliceEntries;
-                if (lastIndex > endIndex) {
-                    lastIndex = endIndex;
-                }
+                assert lastIndex < segment.sliceEntries;
                 Span last = segment.slices[lastIndex];
                 last.sliceCount = 0;
                 last.sliceOffset = sliceCount - 1;
@@ -1552,14 +1543,16 @@ final class MiMallocByteBufAllocator {
         /**
          * Meaning of `blockSize`:
          * <p>
-         * blockSize > 1: Actual block size of a page, the page may exist in page queue,
-         *                or not: page has been abandoned or is a huge page.
+         * blockSize > 1:
+         *       (1).Actual block size of a page, the page may exist in page queue,
+         *           or not: page has been abandoned or is a huge page.
          * <p>
          * blockSize = 0:
-         *      (1).Slices of a newly created segment.
-         *      (2).An abandoned free span.
-         *      (3).A huge page which has been marked as free.
-         *      (4).The first and last slice of continuous slices which represents a free span in span queue,
+         *      (1).A slice whose segment has just been created.
+         *      (2).A freed span.
+         *      (3).An abandoned free span.
+         *      (4).A huge page which has been marked as free.
+         *      (5).The first and last slice of continuous slices which represents a free span in span queue,
          *          the intermediate spans can be ignored, as we use `span.sliceOffset` to skip intermediate spans.
          * <p>
          * blockSize = 1:
@@ -1765,10 +1758,8 @@ final class MiMallocByteBufAllocator {
         private final int segmentSize;
         private Thread ownerThread;
         private LocalHeap ownerHeap;
-        // One extra final entry for huge blocks.
-        private final Span[] slices = new Span[DEFAULT_SLICE_COUNT + 1];
-        private int sliceEntries; // Entries in the `slices` array, at most `DEFAULT_SLICE_COUNT`
-        private int segmentSlices; // For huge segments, this may be different from `DEFAULT_SLICE_COUNT`
+        private final Span[] slices;
+        private final int sliceEntries; // Entries in the `slices` array, at most `DEFAULT_SLICE_COUNT`
         private int usedPages; // count of pages in use
         // Abandoned pages (i.e. the original owning thread stopped) (`abandoned <= used`)
         private int abandonedPages;
@@ -1781,16 +1772,17 @@ final class MiMallocByteBufAllocator {
                 AbstractByteBuf delegate, LocalHeap heap) {
             this.parent = parent;
             this.delegate = delegate;
-            if (kind == SEGMENT_NORMAL) {
-                this.ownerThread = Thread.currentThread();
-                this.ownerHeap = heap;
-            }
             if (kind == SEGMENT_HUGE) {
                 this.hugeSegmentFlag.set(true);
+                this.slices = new Span[1];
+            } else { // normal segment
+                this.ownerThread = Thread.currentThread();
+                this.ownerHeap = heap;
+                // one more slice for loop convenient.
+                this.slices = new Span[segmentSlices + 1];
             }
+            this.sliceEntries = segmentSlices;
             this.segmentSize = segmentSize;
-            this.segmentSlices = segmentSlices;
-            this.sliceEntries = Math.min(segmentSlices, DEFAULT_SLICE_COUNT);
             this.usedPages = 0;
             this.kind = kind;
             for (int i = 0; i < slices.length; i++) {
@@ -1958,7 +1950,7 @@ final class MiMallocByteBufAllocator {
         byteBuf.init(block, size, maxCapacity, isReAlloc);
         page.usedBlocks++;
         // Move page to the full queue.
-        if (page.reservedBlocks == page.usedBlocks) {
+        if (!page.isHuge && page.reservedBlocks == page.usedBlocks) {
             heap.pageToFull(page, heap.heapPageQueueOf(page));
         }
         if (heapCollected && heap.reservedNormalSegment != null &&
