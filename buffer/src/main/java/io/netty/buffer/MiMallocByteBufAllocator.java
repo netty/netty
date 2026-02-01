@@ -168,7 +168,6 @@ final class MiMallocByteBufAllocator {
         int segmentsPeakCount;   // peak number of segments
         long segmentsCurrentSize; // current size of all segments
         long segmentsPeakSize;    // peak size of all segments
-        int reclaimCount; // number of reclaimed (abandoned) segments
         int normalSegmentsCount;
         private final SpanQueue[] spanQueues = new SpanQueue[] {
             new SpanQueue(1, 0), // placeholder, not used.
@@ -769,8 +768,6 @@ final class MiMallocByteBufAllocator {
             segment.ownerThread = Thread.currentThread();
             segment.ownerHeap = this;
             segment.abandonedVisits = 0;
-            segment.wasReclaimed = true;
-            this.segmentTld.reclaimCount++;
             segmentsTrackSize(segment.segmentSize);
             // For all slices
             Span slice = segment.slices[0];
@@ -884,10 +881,6 @@ final class MiMallocByteBufAllocator {
 
         private void segmentOsFree(Segment segment) {
             segmentsTrackSize(-segment.segmentSize);
-            if (segment.wasReclaimed) {
-                segmentTld.reclaimCount--;
-                segment.wasReclaimed = false;
-            }
             segment.deallocate();
         }
 
@@ -1296,10 +1289,6 @@ final class MiMallocByteBufAllocator {
             // All pages in the segment are abandoned; add it to the abandoned list.
             segmentsTrackSize(-segment.segmentSize);
             segment.abandonedVisits = 1;   // From 0 to 1 to signify it is abandoned.
-            if (segment.wasReclaimed) {
-                this.segmentTld.reclaimCount--;
-                segment.wasReclaimed = false;
-            }
             segmentMarkAbandoned(segment);
         }
 
@@ -1785,7 +1774,6 @@ final class MiMallocByteBufAllocator {
         private int abandonedPages;
         // Count how often this segment is visited during abandoned reclamation (to force reclaim if it takes too long).
         private int abandonedVisits;
-        private boolean wasReclaimed; // True if it was reclaimed (used to limit on-free reclamation).
         private final SEGMENT_KIND kind;
         private final AtomicBoolean hugeSegmentFlag = new AtomicBoolean();
 
