@@ -841,14 +841,7 @@ final class MiMallocByteBufAllocator {
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
                 // Remove the free spans.
-                Span slice = segment.slices[0];
-                Span end = segment.slices[segment.sliceEntries];
-                while (slice.sliceIndex < end.sliceIndex) {
-                    if (slice.blockSize == 0) {
-                        segmentSpanRemoveFromQueue(slice);
-                    }
-                    slice = segment.slices[slice.sliceIndex + slice.sliceCount];
-                }
+                segmentClearFreeSpanFromQueue(segment);
                 // Expensive assertion: the spanQueues should not contain this segment anymore.
                 assert assertSegmentNotExistInSpanQueue(segment);
                 if (!force) {
@@ -1100,12 +1093,11 @@ final class MiMallocByteBufAllocator {
             slice.sliceOffset = 0;
             slice.sliceCount = slice_count;
             if (slice_count > 1) {
-                for (int i = 1; i <= slice_count - 1; i++) {
-                    Span slice_next = segment.slices[slice.sliceIndex + i];
-                    slice_next.sliceOffset = i;
-                    slice_next.sliceCount = 0;
-                    slice_next.blockSize = 1;
-                }
+                int offset = slice_count - 1;
+                Span slice_next = segment.slices[slice.sliceIndex + offset];
+                slice_next.sliceOffset = offset;
+                slice_next.sliceCount = 0;
+                slice_next.blockSize = 1;
             }
             // And initialize the page.
             segment.usedPages++;
@@ -1268,6 +1260,14 @@ final class MiMallocByteBufAllocator {
             ----------------------------------------------------------- */
         private void segmentAbandon(Segment segment) {
             // Remove the free spans from the free span queues.
+            segmentClearFreeSpanFromQueue(segment);
+            // All pages in the segment are abandoned; add it to the abandoned list.
+            segmentsTrackSize(-segment.segmentSize);
+            segment.abandonedVisits = 1;   // From 0 to 1 to signify it is abandoned.
+            segmentMarkAbandoned(segment);
+        }
+
+        private void segmentClearFreeSpanFromQueue(Segment segment) {
             Span slice = segment.slices[0];
             Span end = segment.slices[segment.sliceEntries];
             while (slice.sliceIndex < end.sliceIndex) {
@@ -1275,12 +1275,9 @@ final class MiMallocByteBufAllocator {
                     segmentSpanRemoveFromQueue(slice);
                     slice.blockSize = 0; // but keep it free
                 }
+                assert slice.sliceCount > 0;
                 slice = segment.slices[slice.sliceIndex + slice.sliceCount];
             }
-            // All pages in the segment are abandoned; add it to the abandoned list.
-            segmentsTrackSize(-segment.segmentSize);
-            segment.abandonedVisits = 1;   // From 0 to 1 to signify it is abandoned.
-            segmentMarkAbandoned(segment);
         }
 
         private void segmentPageAbandon(Page page) {
@@ -1549,14 +1546,14 @@ final class MiMallocByteBufAllocator {
          * <p>
          * blockSize = 0:
          *      (1).A slice whose segment has just been created.
-         *      (2).A freed span.
+         *      (2).A free span in span queue.
          *      (3).An abandoned free span.
          *      (4).A huge page which has been marked as free.
          *      (5).The first and last slice of continuous slices which represents a free span in span queue,
          *          the intermediate spans can be ignored, as we use `span.sliceOffset` to skip intermediate spans.
          * <p>
          * blockSize = 1:
-         *      (1).The non-head slices of a page.
+         *      (1).The last slice of a page.
          *      (2).The span which has been removed from span queue.
          *      (3).A span which is about to be pushed into span queue or not (due to spans coalescence),
          *          or is about to be marked as free if it's a huge page.
@@ -1786,8 +1783,7 @@ final class MiMallocByteBufAllocator {
             this.usedPages = 0;
             this.kind = kind;
             for (int i = 0; i < slices.length; i++) {
-                slices[i] = new Span(this, i * SEGMENT_SLICE_SIZE, 1,
-                        null, null, i);
+                slices[i] = new Span(this, i * SEGMENT_SLICE_SIZE, 1, null, null, i);
             }
         }
 
