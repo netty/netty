@@ -126,11 +126,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected short _getShort(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected short _getShortLE(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShortLE(addr(index));
     }
 
@@ -158,11 +166,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected int _getInt(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected int _getIntLE(int index) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getIntLE(addr(index));
     }
 
@@ -227,11 +243,21 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShort(addr(index), value);
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShortLE(addr(index), value);
     }
 
@@ -261,11 +287,21 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setInt(addr(index), value);
     }
 
     @Override
     protected void _setIntLE(int index, int value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setIntLE(addr(index), value);
     }
 
@@ -278,11 +314,21 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLong(addr(index), value);
     }
 
     @Override
     protected void _setLongLE(int index, long value) {
+        if (!PlatformDependent.isUnaligned() &&
+                !PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLongLE(addr(index), value);
     }
 
