@@ -258,6 +258,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 String name = SSL.getSniHostname(ssl);
                                 requestedServerNames = (name == null || name.isEmpty()) ?
                                         Collections.emptyList() :
+                                        // Convert to bytes as we do not want to do any strict validation of the
+                                        // SNIHostName while creating it.
                                         Collections.singletonList(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
                             }
                         }
