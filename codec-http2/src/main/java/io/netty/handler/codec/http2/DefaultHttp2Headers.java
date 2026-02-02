@@ -37,7 +37,7 @@ public class DefaultHttp2Headers
             return !isUpperCase(value);
         }
     };
-    static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
+    private static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
             if (name == null || name.length() == 0) {
@@ -82,7 +82,7 @@ public class DefaultHttp2Headers
         }
     };
 
-    static final ValueValidator<CharSequence> VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
+    private static final ValueValidator<CharSequence> VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
         @Override
         public void validate(CharSequence value) {
             int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
@@ -298,5 +298,19 @@ public class DefaultHttp2Headers
             }
             super.remove();
         }
+    }
+
+    /**
+     * Default {@link io.netty.handler.codec.DefaultHeaders.NameValidator} used for HTTP/2.
+     */
+    public static NameValidator<CharSequence> defaultHtt2NameValidator() {
+        return HTTP2_NAME_VALIDATOR;
+    }
+
+    /**
+     * Default {@link io.netty.handler.codec.DefaultHeaders.ValueValidator} used for HTTP/2.
+     */
+    public static ValueValidator<CharSequence> defaultHttp2ValueValidator() {
+        return VALUE_VALIDATOR;
     }
 }
