@@ -313,7 +313,8 @@ final class MiMallocByteBufAllocator {
         private void abandonedCollect(boolean isCollectAll) {
             Segment segment;
             long abandonedSegmentCount = this.allocator.abandonedSegmentCount.get();
-            long max_tries = isCollectAll ? abandonedSegmentCount : Math.min(1024, abandonedSegmentCount); // Limit latency
+            long max_tries = isCollectAll ? abandonedSegmentCount :
+                    Math.min(1024, abandonedSegmentCount); // Limit latency
             while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentDeque.poll()) != null) {
                 this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentCheckFree(segment, 0, 0); // try to free up pages (due to concurrent frees)
