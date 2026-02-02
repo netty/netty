@@ -62,6 +62,11 @@ public class ReadOnlyByteBufTest {
     }
 
     @Test
+    public void testUnmodifiableBufferDoesNotThrowClassCastException() {
+        unmodifiableBuffer(new DuplicatedByteBuf(mock(ByteBuf.class)));
+    }
+
+    @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
         assertSame(buf, unmodifiableBuffer(buf).unwrap());
