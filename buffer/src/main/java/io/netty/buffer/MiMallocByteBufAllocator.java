@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
+import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.FINALIZE;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.FORCE;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.NORMAL;
 import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.DELAYED_FREEING;
@@ -138,10 +139,6 @@ final class MiMallocByteBufAllocator {
     // Collect heaps every N(default 10000) generic allocation calls.
     private static final int HEAP_OPTION_GENERIC_COLLECT = 10000;
 
-    private static final int  BLOCK_ALIGNMENT_MAX = DEFAULT_SEGMENT_SIZE >> 1;
-    // Maximum slice count(31)
-    private static final int  MAX_SLICE_OFFSET_COUNT = (BLOCK_ALIGNMENT_MAX / SEGMENT_SLICE_SIZE) - 1;
-
     private static final long DEFAULT_RESERVED_SEGMENT_RETIRE_NANO = TimeUnit.SECONDS.toNanos(60);
 
     private final AtomicLong usedMemory = new AtomicLong();
@@ -158,9 +155,19 @@ final class MiMallocByteBufAllocator {
             @Override
             protected void onRemoval(LocalHeap heap) {
                 // Cleanup if needed
-                heap.threadHeapDone();
+                heap.heapCollect(ABANDON);
             }
         };
+    }
+
+    @SuppressWarnings("FinalizeDeclaration")
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
+        } finally {
+            super.finalize();
+        }
     }
 
     static final class SegmentTld {
@@ -186,8 +193,9 @@ final class MiMallocByteBufAllocator {
 
     enum COLLECT_TYPE {
         NORMAL,
+        ABANDON,
         FORCE,
-        ABANDON
+        FINALIZE,
     }
 
     static final class LocalHeap {
@@ -202,8 +210,8 @@ final class MiMallocByteBufAllocator {
         final PageQueue[] pageQueues;
         final MiMallocByteBufAllocator allocator;
         final AtomicReference<Block> threadDelayedFreeList;
-        private static final byte VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE = 0;
-        private static final byte VISIT_WORK_TYPE_PAGE_COLLECT = 1;
+        private static final byte VISIT_TYPE_PAGE_MARK = 0;
+        private static final byte VISIT_TYPE_PAGE_COLLECT = 1;
 
         private static final int MAX_BLOCK_QUEUE_SIZE = 1024;
         private final ArrayDeque<Block> blockDeque;
@@ -252,58 +260,46 @@ final class MiMallocByteBufAllocator {
             };
         }
 
-        private void threadHeapDone() {
-            heapCollectAbandon();
-        }
-
-        private void heapCollectAbandon() {
-            heapCollectEx(ABANDON, false);
-        }
-
-        private void heapCollect(boolean force, boolean isMainExit) {
-            heapCollectEx(force ? FORCE : NORMAL, isMainExit);
-        }
-
-        private void heapPageCollect(PageQueue pq, Page page, COLLECT_TYPE collect) {
-            boolean isForce = isForceCollect(collect);
+        private void heapPageCollect(PageQueue pq, Page page, COLLECT_TYPE collectType) {
+            boolean isForce = isForceCollect(collectType);
             page.pageFreeCollect(isForce);
             if (page.usedBlocks == 0) {
                 // No more used blocks, free the page.
                 // Note: this will free retired pages.
-                this.pageFree(page, pq, isForceCollect(collect));
-            } else if (collect == ABANDON) {
+                this.pageFree(page, pq, isForce);
+            } else if (collectType == ABANDON) {
                 // There are still used blocks, but the thread is done, abandon the page.
                 page.pageAbandon(pq, this);
             }
         }
 
-        private boolean isForceCollect(COLLECT_TYPE collect) {
-            return collect == FORCE || collect == ABANDON;
+        private boolean isForceCollect(COLLECT_TYPE collectType) {
+            return collectType == FORCE || collectType == ABANDON;
         }
 
-        private void heapCollectEx(COLLECT_TYPE collect, boolean isMainExit) {
-            boolean force = isForceCollect(collect);
-            //TODO: handle this in finalize()?
-            if (isMainExit && force) {
-                // The main thread is abandoned (end-of-program), try to reclaim all abandoned segments.
+        private void heapCollect(COLLECT_TYPE collectType) {
+            if (collectType == FINALIZE) {
+                // Try to reclaim all abandoned segments.
                 // If all memory is freed by now, all segments should be freed.
-                abandonedReclaimAll();
+                this.abandonedReclaimAll();
+                return;
             }
             // If during abandoning, mark all pages to no longer add to the delayed-free list
-            if (collect == ABANDON) {
-                heapVisitPages(collect, VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE);
-                blockDeque.clear();
+            if (collectType == ABANDON) {
+                this.heapVisitPages(collectType, VISIT_TYPE_PAGE_MARK);
+                this.blockDeque.clear();
                 this.freeReservedSegment();
             }
             // Free all current thread's delayed blocks.
-            // (If during abandoning, after this, there are no more thread-delayed references into the pages.)
-            heapDelayedFreeAll();
+            // If during abandoning, after this, there are no more thread-delayed references into the pages.
+            this.heapDelayedFreeAll();
             // Collect retired pages.
-            heapCollectRetired(force);
+            this.heapCollectRetired(isForceCollect(collectType));
             // Collect all pages owned by this thread.
-            heapVisitPages(collect, VISIT_WORK_TYPE_PAGE_COLLECT);
+            this.heapVisitPages(collectType, VISIT_TYPE_PAGE_COLLECT);
             // Collect abandoned segments.
-            abandonedCollect(collect == FORCE);
+            boolean isCollectAllAbandoned = collectType == FORCE;
+            this.abandonedCollect(isCollectAllAbandoned);
         }
 
         private void freeReservedSegment() {
@@ -314,10 +310,10 @@ final class MiMallocByteBufAllocator {
         }
 
         // Collect abandoned segments
-        private void abandonedCollect(boolean force) {
+        private void abandonedCollect(boolean isCollectAll) {
             Segment segment;
             long abandonedSegmentCount = this.allocator.abandonedSegmentCount.get();
-            long max_tries = force ? abandonedSegmentCount : Math.min(1024, abandonedSegmentCount);  // Limit latency
+            long max_tries = isCollectAll ? abandonedSegmentCount : Math.min(1024, abandonedSegmentCount); // Limit latency
             while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentDeque.poll()) != null) {
                 this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentCheckFree(segment, 0, 0); // try to free up pages (due to concurrent frees)
@@ -333,7 +329,7 @@ final class MiMallocByteBufAllocator {
 
         // Free retired pages: we don't need to look at the entire queues,
         // since we only retire pages that are at the head position in a queue.
-        private void heapCollectRetired(boolean force) {
+        private void heapCollectRetired(boolean isForce) {
             int min = PAGE_QUEUE_BIN_FULL_INDEX;
             int max = 0;
             for (int bin = this.pageRetiredMin; bin <= this.pageRetiredMax; bin++) {
@@ -342,8 +338,8 @@ final class MiMallocByteBufAllocator {
                 if (page != null && page.retireExpire != 0) {
                     if (page.usedBlocks == 0) {
                         page.retireExpire--;
-                        if (force || page.retireExpire == 0) {
-                            pageFree(pq.firstPage, pq, force);
+                        if (isForce || page.retireExpire == 0) {
+                            pageFree(pq.firstPage, pq, isForce);
                         } else {
                             // keep retired, update min/max
                             if (bin < min) {
@@ -407,7 +403,7 @@ final class MiMallocByteBufAllocator {
             // some blocks may end up in the page `thread_free` list with no blocks in the
             // heap `thread_delayed_free` list which may cause the page to be never freed!
             // (it would only be freed if we happen to scan it in `pageQueueFindFreeEx`)
-            if (!pageTryUseDelayedFree(page, USE_DELAYED_FREE, false)) {
+            if (!this.pageTryUseDelayedFree(page, USE_DELAYED_FREE, false)) {
                 return false;
             }
             // Collect all other non-local frees (move from `thread_free` to `free`) to ensure up-to-date `used` count.
@@ -418,19 +414,20 @@ final class MiMallocByteBufAllocator {
         }
 
         // Visit all pages in a heap.
-        private void heapVisitPages(COLLECT_TYPE collect, byte workType) {
+        private void heapVisitPages(COLLECT_TYPE collectType, byte visitType) {
             if (this.pageCount == 0) {
                 return;
             }
+            boolean markPage = visitType == VISIT_TYPE_PAGE_MARK;
             for (int i = 0; i <= PAGE_QUEUE_BIN_FULL_INDEX; i++) {
                 PageQueue pq = this.pageQueues[i];
                 Page page = pq.firstPage;
                 while (page != null) {
                     Page next = page.nextPage; // Save next in case the page gets removed from the queue.
-                    if (workType == VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE) {
-                        pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
+                    if (markPage) {
+                        this.pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
                     } else {
-                        this.heapPageCollect(pq, page, collect);
+                        this.heapPageCollect(pq, page, collectType);
                     }
                     page = next;
                 }
@@ -780,7 +777,7 @@ final class MiMallocByteBufAllocator {
                     Page page = (Page) slice;
                     segment.abandonedPages--;
                     // Associate the heap with this page, and allow heap thread delayed free again.
-                    pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
+                    this.pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
                     page.pageFreeCollect(false); // Ensure `usedBlocks` count is up to date.
                     if (page.usedBlocks == 0) {
                         // If everything free by now, free the page.
@@ -812,13 +809,13 @@ final class MiMallocByteBufAllocator {
             }
         }
 
-        private static void pageUseDelayedFree(Page page, DELAYED_FLAG delay, boolean override_never) {
-            while (!pageTryUseDelayedFree(page, delay, override_never)) {
+        private void pageUseDelayedFree(Page page, DELAYED_FLAG delay, boolean override_never) {
+            while (!this.pageTryUseDelayedFree(page, delay, override_never)) {
                 Thread.yield();
             }
         }
 
-        private static boolean pageTryUseDelayedFree(Page page, DELAYED_FLAG delayedFlag, boolean override_never) {
+        private boolean pageTryUseDelayedFree(Page page, DELAYED_FLAG delayedFlag, boolean override_never) {
             DELAYED_FLAG oldDeley;
             int yield_count = 0;
             do {
@@ -1926,13 +1923,13 @@ final class MiMallocByteBufAllocator {
             // Collect every once in a while.
             if (heap.genericCollectCount >= HEAP_OPTION_GENERIC_COLLECT) {
                 heap.genericCollectCount = 0;
-                heap.heapCollect(false, false);
+                heap.heapCollect(NORMAL);
                 heapCollected = true;
             }
         }
         Page page = heap.findPage(size);
         if (page == null) { // First time out of memory, try to collect and retry the allocation once more.
-            heap.heapCollect(true, false);
+            heap.heapCollect(FORCE);
             page = heap.findPage(size);
         }
         if (page == null) { // out of memory
