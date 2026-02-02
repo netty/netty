@@ -20,9 +20,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -191,8 +189,8 @@ final class MiMallocByteBufAllocator {
 
     enum COLLECT_TYPE {
         NORMAL,
-        ABANDON,
         FORCE,
+        ABANDON,
         FINALIZE,
     }
 
