@@ -82,7 +82,7 @@ public class DefaultHttp2Headers
         }
     };
 
-    private static final ValueValidator<CharSequence> VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
+    static final ValueValidator<CharSequence> VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
         @Override
         public void validate(CharSequence value) {
             int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
