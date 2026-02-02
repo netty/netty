@@ -130,8 +130,6 @@ final class MiMallocByteBufAllocator {
     private static final int KiB = 1024;
     private static final int MiB = KiB * KiB;
 
-    private static final boolean ENABLE_PAGE_RETIRE = SystemPropertyUtil.getBoolean(
-            "io.netty.allocator.mimalloc.enablePageRetire", true);
     private static final byte DEFAULT_PAGE_RETIRE_CYCLES_HIGH = 16;
     private static final byte DEFAULT_PAGE_RETIRE_CYCLES_LOW = 4;
     private static final byte DEFAULT_PAGE_RETIRE_EXPIRE_INIT = 7;
@@ -266,7 +264,7 @@ final class MiMallocByteBufAllocator {
             if (page.usedBlocks == 0) {
                 // No more used blocks, free the page.
                 // Note: this will free retired pages.
-                this.pageFree(page, pq, isForce);
+                this.pageFree(page, pq);
             } else if (collectType == ABANDON) {
                 // There are still used blocks, but the thread is done, abandon the page.
                 page.pageAbandon(pq, this);
@@ -340,7 +338,7 @@ final class MiMallocByteBufAllocator {
                     if (page.usedBlocks == 0) {
                         page.retireExpire--;
                         if (isForce || page.retireExpire == 0) {
-                            pageFree(pq.firstPage, pq, isForce);
+                            pageFree(pq.firstPage, pq);
                         } else {
                             // keep retired, update min/max
                             if (bin < min) {
@@ -801,7 +799,7 @@ final class MiMallocByteBufAllocator {
                 slice = segment.slices[slice.sliceIndex + slice.sliceCount];
             }
             if (segment.usedPages == 0) {  // due to `segmentPageClear()`
-                segmentFree(segment, true);
+                segmentFree(segment);
                 return null;
             } else if (reclaimed) {
                 return RECLAIMED_SEGMENT_FLAG;
@@ -836,19 +834,17 @@ final class MiMallocByteBufAllocator {
             return true; // Success
         }
 
-        private void segmentFree(Segment segment, boolean force) {
+        private void segmentFree(Segment segment) {
             if (segment.kind != SEGMENT_HUGE) {
                 // Remove the free spans.
                 segmentClearFreeSpanFromQueue(segment);
                 // Expensive assertion: the spanQueues should not contain this segment anymore.
                 assert assertSegmentNotExistInSpanQueue(segment);
-                if (!force) {
-                    LocalHeap heap = segment.ownerHeap;
-                    if (heap.reservedNormalSegment == null) {
-                        heap.reservedNormalSegment = segment;
-                        heap.reservedNormalSegmentNano = System.nanoTime();
-                        return;
-                    }
+                LocalHeap heap = segment.ownerHeap;
+                if (heap.reservedNormalSegment == null) {
+                    heap.reservedNormalSegment = segment;
+                    heap.reservedNormalSegmentNano = System.nanoTime();
+                    return;
                 }
             }
             // Free it.
@@ -1197,7 +1193,7 @@ final class MiMallocByteBufAllocator {
         }
 
         // Free a page with no more used blocks.
-        private void pageFree(Page page, PageQueue pq, boolean force) {
+        private void pageFree(Page page, PageQueue pq) {
             // Remove from the page list
             // (no need to do `heapDelayedFree` first as all blocks are already free).
             pageQueueRemove(pq, page);
@@ -1207,7 +1203,7 @@ final class MiMallocByteBufAllocator {
             page.freeList = null;
             recycleBlocks(page.localFreeList);
             page.localFreeList = null;
-            segmentPageFree(page, force);
+            segmentPageFree(page);
         }
 
         private void recycleBlocks(Block firstBlock) {
@@ -1226,13 +1222,13 @@ final class MiMallocByteBufAllocator {
             }
         }
 
-        private void segmentPageFree(Page page, boolean force) {
+        private void segmentPageFree(Page page) {
             Segment segment = page.segment;
             // Mark it as free now.
             segmentPageClear(page);
             if (segment.usedPages == 0) {
                 // No more used pages; remove it from the free list and free the segment.
-                segmentFree(segment, force);
+                segmentFree(segment);
             } else if (segment.usedPages == segment.abandonedPages) {
                 assert segment.kind != SEGMENT_HUGE;
                 // Only abandoned pages, remove it from the free list and abandon.
@@ -1595,25 +1591,23 @@ final class MiMallocByteBufAllocator {
             // For now, we don't retire if it is the only page left of this size class.
             Page page = this;
             PageQueue pq = heap.heapPageQueueOf(page);
-            if (ENABLE_PAGE_RETIRE) {
-                int bSize = page.blockSize;
-                if (pq.index < PAGE_QUEUE_BIN_LARGE_INDEX) {  // not full && not huge queue
-                    if (pq.lastPage == page && pq.firstPage == page) { // the only page in the queue
-                        // Enable retirement
-                        page.retireExpire = bSize <= SMALL_BLOCK_SIZE_MAX ?
-                                DEFAULT_PAGE_RETIRE_CYCLES_HIGH : DEFAULT_PAGE_RETIRE_CYCLES_LOW;
-                        int index = pq.index;
-                        if (index < heap.pageRetiredMin) {
-                            heap.pageRetiredMin = index;
-                        }
-                        if (index > heap.pageRetiredMax) {
-                            heap.pageRetiredMax = index;
-                        }
-                        return; // don't free after all
+            int bSize = page.blockSize;
+            if (pq.index < PAGE_QUEUE_BIN_LARGE_INDEX) {  // not full && not huge queue
+                if (pq.lastPage == page && pq.firstPage == page) { // the only page in the queue
+                    // Enable retirement
+                    page.retireExpire = bSize <= SMALL_BLOCK_SIZE_MAX ?
+                            DEFAULT_PAGE_RETIRE_CYCLES_HIGH : DEFAULT_PAGE_RETIRE_CYCLES_LOW;
+                    int index = pq.index;
+                    if (index < heap.pageRetiredMin) {
+                        heap.pageRetiredMin = index;
                     }
+                    if (index > heap.pageRetiredMax) {
+                        heap.pageRetiredMax = index;
+                    }
+                    return; // don't free after all
                 }
             }
-            heap.pageFree(page, pq, false);
+            heap.pageFree(page, pq);
         }
 
         // Move a page from the full list back to a regular list.
@@ -1876,7 +1870,7 @@ final class MiMallocByteBufAllocator {
             page.freeList = block;
             page.usedBlocks--;
             assert page.usedBlocks == 0;
-            heap.segmentPageFree(page, true);
+            heap.segmentPageFree(page);
         }
     }
 
