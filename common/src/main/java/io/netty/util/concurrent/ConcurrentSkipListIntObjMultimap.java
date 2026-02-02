@@ -22,20 +22,15 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.PlatformDependent;
-
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.concurrent.atomic.LongAdder;
 
 import static java.util.Objects.requireNonNull;
 
@@ -301,7 +296,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     /** No-key sentinel value */
     private final int noKey;
     /** Lazily initialized topmost index of the skiplist. */
-    private volatile /*XXX: Volatile only required for ARFU; remove if we can use VarHandle*/ Index<V> head;
+    private Index<V> head;
     /** Element count */
     private final LongAdder adder;
 
@@ -314,8 +309,8 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
      */
     static final class Node<V> {
         final int key; // currently, never detached
-        volatile /*XXX: Volatile only required for ARFU; remove if we can use VarHandle*/ V val;
-        volatile /*XXX: Volatile only required for ARFU; remove if we can use VarHandle*/ Node<V> next;
+        V val;
+        Node<V> next;
         Node(int key, V value, Node<V> next) {
             this.key = key;
             val = value;
@@ -329,7 +324,7 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     static final class Index<V> {
         final Node<V> node;  // currently, never detached
         final Index<V> down;
-        volatile /*XXX: Volatile only required for ARFU; remove if we can use VarHandle*/ Index<V> right;
+        Index<V> right;
         Index(Node<V> node, Index<V> down, Index<V> right) {
             this.node = node;
             this.down = down;
@@ -1554,66 +1549,27 @@ public class ConcurrentSkipListIntObjMultimap<V> implements Iterable<ConcurrentS
     }
 
     // VarHandle mechanics
-    private static final MethodHandle ACQUIRE_FENCE;
-    private static final AtomicReferenceFieldUpdater<ConcurrentSkipListIntObjMultimap<?>, Index<?>> HEAD;
-    private static final AtomicReferenceFieldUpdater<Node<?>, Node<?>> NEXT;
-    private static final AtomicReferenceFieldUpdater<Node<?>, Object> VAL;
-    private static final AtomicReferenceFieldUpdater<Index<?>, Index<?>> RIGHT;
-    private static volatile int acquireFenceVariable;
+    private static final VarHandle HEAD;
+    private static final VarHandle NEXT;
+    private static final VarHandle VAL;
+    private static final VarHandle RIGHT;
     static {
         try {
             MethodHandles.Lookup lookup = MethodHandles.lookup();
 
-            Class<ConcurrentSkipListIntObjMultimap<?>> mapCls = cls(ConcurrentSkipListIntObjMultimap.class);
-            Class<Index<?>> indexCls = cls(Index.class);
-            Class<Node<?>> nodeCls = cls(Node.class);
-
-            if (PlatformDependent.hasVarHandle()) {
-                Class<VarHandle> varHandleCls = cls(Class.forName("java.lang.invoke.VarHandle"));
-                ACQUIRE_FENCE = lookup.findStatic(
-                        varHandleCls,
-                        "acquireFence",
-                        MethodType.methodType(Void.TYPE));
-            } else {
-                ACQUIRE_FENCE = lookup.findStatic(
-                        mapCls,
-                        "acquireFenceFallback",
-                        MethodType.methodType(Void.TYPE));
-            }
-
-            HEAD = AtomicReferenceFieldUpdater.newUpdater(mapCls, indexCls, "head");
-            NEXT = AtomicReferenceFieldUpdater.newUpdater(nodeCls, nodeCls, "next");
-            VAL = AtomicReferenceFieldUpdater.newUpdater(nodeCls, Object.class, "val");
-            RIGHT = AtomicReferenceFieldUpdater.newUpdater(indexCls, indexCls, "right");
+            HEAD = lookup.findVarHandle(ConcurrentSkipListIntObjMultimap.class, "head", Index.class);
+            NEXT = lookup.findVarHandle(Node.class, "next", Node.class);
+            VAL = lookup.findVarHandle(Node.class, "val", Object.class);
+            RIGHT = lookup.findVarHandle(Index.class, "right", Index.class);
         } catch (ReflectiveOperationException e) {
             throw new ExceptionInInitializerError(e);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> Class<T> cls(Class<?> cls) {
-        return (Class<T>) cls;
     }
 
     /**
      * Orders LOADS before the fence, with LOADS and STORES after the fence.
      */
     private static void acquireFence() {
-        try {
-            ACQUIRE_FENCE.invokeExact();
-        } catch (Throwable e) {
-            LinkageError error = new LinkageError();
-            error.initCause(e);
-            throw error;
-        }
-    }
-
-    private static void acquireFenceFallback() {
-        // Volatile store prevent prior loads from ordering down.
-        acquireFenceVariable = 1;
-        // Volatile load prevent following loads and stores from ordering up.
-        int ignore = acquireFenceVariable;
-        // Note: Putting the volatile store before the volatile load ensures
-        // surrounding loads and stores don't order "into" the fence.
+        VarHandle.acquireFence();
     }
 }
