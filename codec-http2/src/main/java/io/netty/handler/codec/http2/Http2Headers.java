@@ -288,18 +288,4 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
      * otherwise a case sensitive compare is run to compare values.
      */
     boolean contains(CharSequence name, CharSequence value, boolean caseInsensitive);
-
-    /**
-     * Default {@link io.netty.handler.codec.DefaultHeaders.NameValidator} used for HTTP/2.
-     */
-    static DefaultHeaders.NameValidator<CharSequence> defaultHtt2NameValidator() {
-        return DefaultHttp2Headers.HTTP2_NAME_VALIDATOR;
-    }
-
-    /**
-     * Default {@link io.netty.handler.codec.DefaultHeaders.ValueValidator} used for HTTP/2.
-     */
-    static DefaultHeaders.ValueValidator<CharSequence> defaultHttp2ValueValidator() {
-        return DefaultHttp2Headers.VALUE_VALIDATOR;
-    }
 }
