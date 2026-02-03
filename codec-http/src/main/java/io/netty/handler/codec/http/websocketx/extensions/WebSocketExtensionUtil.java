@@ -77,7 +77,7 @@ public final class WebSocketExtensionUtil {
         List<WebSocketExtensionData> userDefinedExtensions =
           userDefinedHeaderValue != null ?
             extractExtensions(userDefinedHeaderValue) :
-            Collections.<WebSocketExtensionData>emptyList();
+            Collections.emptyList();
 
         for (WebSocketExtensionData userDefined: userDefinedExtensions) {
             WebSocketExtensionData matchingExtra = null;
