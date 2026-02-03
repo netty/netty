@@ -96,12 +96,9 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             }
         });
 
-        ChannelFutureListener listener = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (!future.isSuccess()) {
-                    clientDonePromise.tryFailure(future.cause());
-                }
+        ChannelFutureListener listener = future -> {
+            if (!future.isSuccess()) {
+                clientDonePromise.tryFailure(future.cause());
             }
         };
 

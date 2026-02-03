@@ -21,6 +21,7 @@ import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -49,6 +50,8 @@ final class PlatformDependent0 {
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
     private static final MethodHandle OFFSET_SLICE;
+    private static final MethodHandle ABSOLUTE_PUT_BUFFER;
+    private static final MethodHandle ABSOLUTE_PUT_ARRAY;
     private static final boolean IS_ANDROID = isAndroid0();
     private static final int JAVA_VERSION = javaVersion0();
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
@@ -496,6 +499,40 @@ final class PlatformDependent0 {
             OFFSET_SLICE = null;
         }
 
+        if (javaVersion() >= 16) {
+            ABSOLUTE_PUT_BUFFER = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        MethodType type =
+                                methodType(ByteBuffer.class, int.class, ByteBuffer.class, int.class, int.class);
+                        return MethodHandles.publicLookup().findVirtual(ByteBuffer.class, "put", type);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            ABSOLUTE_PUT_BUFFER = null;
+        }
+
+        if (javaVersion() >= 13) {
+            ABSOLUTE_PUT_ARRAY = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        MethodType type =
+                                methodType(ByteBuffer.class, int.class, byte[].class, int.class, int.class);
+                        return MethodHandles.publicLookup().findVirtual(ByteBuffer.class, "put", type);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            ABSOLUTE_PUT_ARRAY = null;
+        }
+
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
@@ -657,6 +694,32 @@ final class PlatformDependent0 {
         } catch (Throwable e) {
             rethrowIfPossible(e);
             throw new LinkageError("ByteBuffer.slice(int, int) not available", e);
+        }
+    }
+
+    static boolean hasAbsolutePutBufferMethod() {
+        return ABSOLUTE_PUT_BUFFER != null;
+    }
+
+    static boolean hasAbsolutePutArrayMethod() {
+        return ABSOLUTE_PUT_ARRAY != null;
+    }
+
+    static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, ByteBuffer src, int srcOffset, int length) {
+        try {
+            return (ByteBuffer) ABSOLUTE_PUT_BUFFER.invokeExact(dst, dstOffset, src, srcOffset, length);
+        } catch (Throwable e) {
+            rethrowIfPossible(e);
+            throw new LinkageError("ByteBuffer.put(int, ByteBuffer, int, int) not available", e);
+        }
+    }
+
+    static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, byte[] src, int srcOffset, int length) {
+        try {
+            return (ByteBuffer) ABSOLUTE_PUT_ARRAY.invokeExact(dst, dstOffset, src, srcOffset, length);
+        } catch (Throwable e) {
+            rethrowIfPossible(e);
+            throw new LinkageError("ByteBuffer.put(int, byte[], int, int) not available", e);
         }
     }
 

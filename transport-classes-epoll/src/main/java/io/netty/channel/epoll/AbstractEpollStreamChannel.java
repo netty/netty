@@ -128,8 +128,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
      *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
-     *
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len) {
         return spliceTo(ch, len, newPromise());
     }
@@ -146,8 +147,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
      *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
-     *
+     * @deprecated will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len,
                                         final ChannelPromise promise) {
         if (ch.eventLoop() != eventLoop()) {
@@ -181,7 +183,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelFuture} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len) {
         return spliceTo(ch, offset, len, newPromise());
     }
@@ -199,7 +203,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelPromise} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
+     * @deprecated Will be removed in the future.
      */
+    @Deprecated
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
                                         final ChannelPromise promise) {
         checkPositiveOrZero(len, "len");

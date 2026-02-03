@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -120,30 +119,24 @@ public class DefaultHttp2PushPromiseFrameTest {
                 Http2PushPromiseFrame pushPromiseFrame = new DefaultHttp2PushPromiseFrame(pushRequestHeaders);
                 pushPromiseFrame.stream(receivedFrame.stream());
                 pushPromiseFrame.pushStream(newPushFrameStream);
-                ctx.writeAndFlush(pushPromiseFrame).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
+                ctx.writeAndFlush(pushPromiseFrame).addListener(future -> {
+                    contentMap.put(newPushFrameStream.id(), "Meow, I am Pushed via HTTP/2");
 
-                        // Write headers for actual request
-                        Http2Headers http2Headers = new DefaultHttp2Headers();
-                        http2Headers.status("200");
-                        http2Headers.add("push", "false");
-                        Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
-                        headersFrame.stream(receivedFrame.stream());
-                        ChannelFuture channelFuture = ctx.writeAndFlush(headersFrame);
+                    // Write headers for actual request
+                    Http2Headers http2Headers = new DefaultHttp2Headers();
+                    http2Headers.status("200");
+                    http2Headers.add("push", "false");
+                    Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
+                    headersFrame.stream(receivedFrame.stream());
+                    ChannelFuture channelFuture = ctx.writeAndFlush(headersFrame);
 
-                        // Write Data of actual request
-                        channelFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
-                                        Unpooled.wrappedBuffer("Meow".getBytes()), true);
-                                dataFrame.stream(receivedFrame.stream());
-                                ctx.writeAndFlush(dataFrame);
-                            }
-                        });
-                    }
+                    // Write Data of actual request
+                    channelFuture.addListener(f -> {
+                        Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
+                                Unpooled.wrappedBuffer("Meow".getBytes()), true);
+                        dataFrame.stream(receivedFrame.stream());
+                        ctx.writeAndFlush(dataFrame);
+                    });
                 });
             } else if (msg instanceof Http2PriorityFrame) {
                 Http2PriorityFrame priorityFrame = (Http2PriorityFrame) msg;

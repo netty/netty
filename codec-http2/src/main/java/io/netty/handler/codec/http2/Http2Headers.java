@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 

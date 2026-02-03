@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -44,6 +43,7 @@ import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.CertificateID;
@@ -57,9 +57,22 @@ import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 
 import java.net.InetAddress;
 import java.net.URL;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.cert.CertPathBuilder;
+import java.security.cert.CertPathBuilderException;
+import java.security.cert.CertStore;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CollectionCertStoreParameters;
+import java.security.cert.PKIXBuilderParameters;
+import java.security.cert.TrustAnchor;
+import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -143,17 +156,18 @@ final class OcspClient {
                             uri.getHost(), port, path, ioTransport, dnsNameResolver);
 
                     // Validate OCSP response
-                    ocspResponsePromise.addListener(new GenericFutureListener<Future<OCSPResp>>() {
-                        @Override
-                        public void operationComplete(Future<OCSPResp> future) throws Exception {
-                            // If Future was successful then we have received OCSP response
-                            // We will now validate it.
-                            if (future.isSuccess()) {
-                                BasicOCSPResp resp = (BasicOCSPResp) future.get().getResponseObject();
+                    ocspResponsePromise.addListener((GenericFutureListener<Future<OCSPResp>>) future -> {
+                        // If Future was successful then we have received OCSP response
+                        // We will now validate it.
+                        if (future.isSuccess()) {
+                            try {
+                                BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
                                 validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
-                            } else {
-                                responsePromise.tryFailure(future.cause());
+                            } catch (Throwable t) {
+                                responsePromise.tryFailure(t);
                             }
+                        } else {
+                            responsePromise.tryFailure(future.cause());
                         }
                     });
 
@@ -188,42 +202,35 @@ final class OcspClient {
                     .channelFactory(ioTransport.socketChannel())
                     .attr(OcspServerCertificateValidator.OCSP_PIPELINE_ATTRIBUTE, Boolean.TRUE)
                     .handler(new Initializer(responsePromise));
+            dnsNameResolver.resolve(host).addListener((FutureListener<InetAddress>) future -> {
 
-            dnsNameResolver.resolve(host).addListener(new FutureListener<InetAddress>() {
-                @Override
-                public void operationComplete(Future<InetAddress> future) throws Exception {
+                // If Future was successful then we have successfully resolved OCSP server address.
+                // If not, mark 'responsePromise' as failure.
+                if (future.isSuccess()) {
+                    // Get the resolved InetAddress
+                    InetAddress hostAddress = future.getNow();
+                    final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
+                    channelFuture.addListener(f -> {
+                        // If Future was successful then connection to OCSP responder was successful.
+                        // We will send a OCSP request now
+                        if (f.isSuccess()) {
+                            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, path,
+                                    ocspRequest);
+                            request.headers().add(HttpHeaderNames.HOST, host);
+                            request.headers().add(HttpHeaderNames.USER_AGENT, "Netty OCSP Client");
+                            request.headers().add(HttpHeaderNames.CONTENT_TYPE, OCSP_REQUEST_TYPE);
+                            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, OCSP_RESPONSE_TYPE);
+                            request.headers().add(HttpHeaderNames.CONTENT_LENGTH, ocspRequest.readableBytes());
 
-                    // If Future was successful then we have successfully resolved OCSP server address.
-                    // If not, mark 'responsePromise' as failure.
-                    if (future.isSuccess()) {
-                        // Get the resolved InetAddress
-                        InetAddress hostAddress = future.get();
-                        final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
-                        channelFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                // If Future was successful then connection to OCSP responder was successful.
-                                // We will send a OCSP request now
-                                if (future.isSuccess()) {
-                                    FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, path,
-                                            ocspRequest);
-                                    request.headers().add(HttpHeaderNames.HOST, host);
-                                    request.headers().add(HttpHeaderNames.USER_AGENT, "Netty OCSP Client");
-                                    request.headers().add(HttpHeaderNames.CONTENT_TYPE, OCSP_REQUEST_TYPE);
-                                    request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, OCSP_RESPONSE_TYPE);
-                                    request.headers().add(HttpHeaderNames.CONTENT_LENGTH, ocspRequest.readableBytes());
-
-                                    // Send the OCSP HTTP Request
-                                    channelFuture.channel().writeAndFlush(request);
-                                } else {
-                                    responsePromise.tryFailure(new IllegalStateException(
-                                            "Connection to OCSP Responder Failed", future.cause()));
-                                }
-                            }
-                        });
-                    } else {
-                        responsePromise.tryFailure(future.cause());
-                    }
+                            // Send the OCSP HTTP Request
+                            channelFuture.channel().writeAndFlush(request);
+                        } else {
+                            responsePromise.tryFailure(new IllegalStateException(
+                                    "Connection to OCSP Responder Failed", f.cause()));
+                        }
+                    });
+                } else {
+                    responsePromise.tryFailure(future.cause());
                 }
             });
         } catch (Exception ex) {
@@ -271,14 +278,83 @@ final class OcspClient {
     /**
      * Validate OCSP response signature
      */
-    private static void validateSignature(BasicOCSPResp resp, X509Certificate certificate) throws OCSPException {
+    static void validateSignature(BasicOCSPResp resp, X509Certificate issuerCertificate) throws OCSPException {
         try {
-            ContentVerifierProvider verifier = new JcaContentVerifierProviderBuilder().build(certificate);
-            if (!resp.isSignatureValid(verifier)) {
-                throw new OCSPException("OCSP signature is not valid");
+            X509CertificateHolder[] certs = resp.getCerts();
+            JcaContentVerifierProviderBuilder providerBuilder = new JcaContentVerifierProviderBuilder();
+
+            // If responder certificate is included, validate the chain
+            if (certs != null && certs.length > 0) {
+
+                // Use the first included certificate to verify the OCSP response signature.
+                X509CertificateHolder responderCert = certs[0];
+
+                // Verify OCSP response signature using responder cert
+                ContentVerifierProvider responderVerifier = providerBuilder.build(responderCert);
+
+                if (!resp.isSignatureValid(responderVerifier)) {
+                    throw new OCSPException("OCSP response signature is not valid");
+                }
+
+                // Build chain from responder certificate to issuer using CertPathBuilder
+                validateCertificateChain(responderCert, certs, issuerCertificate);
+            } else {
+                // Validate signature using issuer certificate
+                ContentVerifierProvider issuerVerifier = providerBuilder.build(issuerCertificate);
+
+                if (!resp.isSignatureValid(issuerVerifier)) {
+                    throw new OCSPException("OCSP response signature is not valid");
+                }
             }
         } catch (OperatorCreationException e) {
             throw new OCSPException("Error validating OCSP-Signature", e);
+        } catch (CertificateException e) {
+            throw new OCSPException("Error while processing certificates for OCSP signature validation", e);
+        }
+    }
+
+    /**
+     * Validates that a certificate chain can be built from the responder certificate to the issuer.
+     * Uses Java's CertPathBuilder to construct and validate the chain.
+     */
+    private static void validateCertificateChain(X509CertificateHolder responderCert,
+                                                   X509CertificateHolder[] allCerts,
+                                                   X509Certificate issuerCertificate) throws OCSPException {
+        try {
+            // Convert BouncyCastle certificate holders to Java X509Certificates
+            List<X509Certificate> certList = new ArrayList<>(allCerts.length);
+            for (X509CertificateHolder certHolder : allCerts) {
+                certList.add(new JcaX509CertificateConverter().getCertificate(certHolder));
+            }
+
+            // Create a CertStore with all the certificates from the OCSP response
+            CertStore certStore = CertStore.getInstance("Collection",
+                    new CollectionCertStoreParameters(certList));
+
+            // Set up the target certificate selector for the responder certificate
+            X509CertSelector targetConstraints = new X509CertSelector();
+            targetConstraints.setCertificate(new JcaX509CertificateConverter().getCertificate(responderCert));
+
+            // Set up trust anchor with the issuer certificate
+            TrustAnchor trustAnchor = new TrustAnchor(issuerCertificate, null);
+
+            // Build PKIX parameters
+            PKIXBuilderParameters pkixParams = new PKIXBuilderParameters(
+                    Collections.singleton(trustAnchor), targetConstraints);
+            pkixParams.addCertStore(certStore);
+            pkixParams.setRevocationEnabled(false); // Don't check revocation when validating OCSP response
+
+            // Build and validate the certificate path
+            CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
+            builder.build(pkixParams);
+
+            // If we reach here, the chain is valid
+        } catch (CertPathBuilderException e) {
+            throw new OCSPException("OCSP responder certificate is not trusted by issuer: " + e.getMessage(), e);
+        } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException e) {
+            throw new OCSPException("Error setting up certificate path validation", e);
+        } catch (CertificateException e) {
+            throw new OCSPException("Error converting certificates for path validation", e);
         }
     }
 

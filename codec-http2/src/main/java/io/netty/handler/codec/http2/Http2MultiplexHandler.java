@@ -99,12 +99,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  */
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
-    static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            registerDone(future);
-        }
-    };
+    static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = Http2MultiplexHandler::registerDone;
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;

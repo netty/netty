@@ -53,16 +53,13 @@ public class DnsAddressResolverGroupTest {
             AddressResolver<?> resolver = resolverGroup.getResolver(defaultEventLoopGroup.next());
             resolver.resolve(new SocketAddress() {
                 private static final long serialVersionUID = 3169703458729818468L;
-            }).addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) {
-                    try {
-                        assertInstanceOf(UnsupportedAddressTypeException.class, future.cause());
-                        assertTrue(loop.inEventLoop());
-                        promise.setSuccess(null);
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
-                    }
+            }).addListener((FutureListener<Object>) future -> {
+                try {
+                    assertInstanceOf(UnsupportedAddressTypeException.class, future.cause());
+                    assertTrue(loop.inEventLoop());
+                    promise.setSuccess(null);
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
             }).await();
             promise.sync();
@@ -104,14 +101,11 @@ public class DnsAddressResolverGroupTest {
                                 final Promise<InetSocketAddress> promise)
             throws InterruptedException, ExecutionException {
         resolver.resolve(socketAddress)
-                .addListener(new FutureListener<InetSocketAddress>() {
-                    @Override
-                    public void operationComplete(Future<InetSocketAddress> future) {
-                        try {
-                            promise.setSuccess(future.get());
-                        } catch (Throwable cause) {
-                            promise.setFailure(cause);
-                        }
+                .addListener((FutureListener<InetSocketAddress>) future -> {
+                    try {
+                        promise.setSuccess(future.get());
+                    } catch (Throwable cause) {
+                        promise.setFailure(cause);
                     }
                 }).await();
         promise.sync();

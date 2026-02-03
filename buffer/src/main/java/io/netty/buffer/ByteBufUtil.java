@@ -923,8 +923,7 @@ public final class ByteBufUtil {
             if (buffer.hasArray()) {
                 return safeArrayWriteUtf8(buffer.array(), buffer.arrayOffset() + writerIndex, seq, start, end);
             }
-            if (buffer.isDirect()) {
-                assert buffer.nioBufferCount() == 1;
+            if (buffer.isDirect() && buffer.nioBufferCount() == 1) {
                 final ByteBuffer internalDirectBuffer = buffer.internalNioBuffer(writerIndex, reservedBytes);
                 final int bufferPosition = internalDirectBuffer.position();
                 return safeDirectWriteUtf8(internalDirectBuffer, bufferPosition, seq, start, end);

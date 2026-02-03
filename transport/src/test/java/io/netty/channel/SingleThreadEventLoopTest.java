@@ -406,12 +406,7 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel();
         ChannelPromise promise = ch.newPromise();
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                latch.countDown();
-            }
-        });
+        promise.addListener(future -> latch.countDown());
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);

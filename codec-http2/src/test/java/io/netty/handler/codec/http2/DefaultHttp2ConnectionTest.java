@@ -22,8 +22,6 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -168,12 +166,9 @@ public class DefaultHttp2ConnectionTest {
         client.forEachActiveStream(new Http2StreamVisitor() {
             @Override
             public boolean visit(Http2Stream stream) {
-                client.close(promise).addListener(new FutureListener<Void>() {
-                    @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
-                        assertTrue(promise.isDone());
-                        latch.countDown();
-                    }
+                client.close(promise).addListener(future -> {
+                    assertTrue(promise.isDone());
+                    latch.countDown();
                 });
                 return true;
             }
@@ -204,12 +199,9 @@ public class DefaultHttp2ConnectionTest {
                 }
             });
         } catch (Http2Exception ignored) {
-            client.close(promise).addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(promise.isDone());
-                    latch.countDown();
-                }
+            client.close(promise).addListener(future -> {
+                assertTrue(promise.isDone());
+                latch.countDown();
             });
         }
         assertTrue(latch.await(5, TimeUnit.SECONDS));
@@ -683,12 +675,9 @@ public class DefaultHttp2ConnectionTest {
     private void testRemoveAllStreams() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = group.next().newPromise();
-        client.close(promise).addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                assertTrue(promise.isDone());
-                latch.countDown();
-            }
+        client.close(promise).addListener(future -> {
+            assertTrue(promise.isDone());
+            latch.countDown();
         });
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }

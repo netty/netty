@@ -64,6 +64,16 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     private final ConcurrentLinkedQueue<Integer> closeErrorCodes = new ConcurrentLinkedQueue<>();
     private QuicChannelConfig config;
 
+    /**
+     * TWO bits reserved for Variable-Length Integer Encoding
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9000?#name-variable-length-integer-enc">rfc9000</a>
+     * TWO LSB used for distinguish Client/Server initiated stream & Bi/unidirection
+     * these are not reserved but part of it
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9000?#name-stream-types-and-identifier">rfc9000</a>
+     * so we can max stream per stream type (bi/uni) = (2^62-1)/2
+     */
+    private static final long MAX_PEER_STREAMS_PER_STREAM_TYPE = ((1L << 62) - 1) / 2;
+
     EmbeddedQuicChannel(boolean server) {
         this(server, new ChannelHandler[0]);
     }
@@ -140,10 +150,13 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
 
     @Override
     public long peerAllowedStreams(QuicStreamType type) {
-        return peerAllowedStreams.getOrDefault(type, Long.MAX_VALUE);
+        return peerAllowedStreams.getOrDefault(type, MAX_PEER_STREAMS_PER_STREAM_TYPE);
     }
 
     public void peerAllowedStreams(QuicStreamType type, long peerAllowedStreams) {
+        if (peerAllowedStreams > MAX_PEER_STREAMS_PER_STREAM_TYPE) {
+            peerAllowedStreams = MAX_PEER_STREAMS_PER_STREAM_TYPE;
+        }
         this.peerAllowedStreams.put(type, peerAllowedStreams);
     }
 

@@ -36,6 +36,7 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedHashSet;
 import java.util.List;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
@@ -428,5 +429,27 @@ public final class X509Bundle {
         }
         kmf.init(toKeyStore(EmptyArrays.EMPTY_CHARS), EmptyArrays.EMPTY_CHARS);
         return kmf;
+    }
+
+    /**
+     * Create a new {@link X509Bundle} that has the leaf and root certificates of <em>this</em> bundle,
+     * but a certificate path that is the combination all the intermediate certificates of both this and the given
+     * bundle.
+     * <p>
+     * This is useful when building a bundle with a cross-signed certificate,
+     * or when you just want to have additional unrelated intermediate certificates in the path.
+     *
+     * @param other The other bundle.
+     * @return A new {@link X509Bundle} that has the leaf and root of this bundle,
+     * but the combined intermediates of both bundles.
+     */
+    public X509Bundle mergeIntermediates(X509Bundle other) {
+        LinkedHashSet<X509Certificate> certs = new LinkedHashSet<>(Arrays.asList(certPath));
+        X509Certificate[] otherPath = other.certPath;
+        for (int i = 1; i < otherPath.length; i++) {
+            X509Certificate intermediate = otherPath[i];
+            certs.add(intermediate);
+        }
+        return fromCertificatePath(certs.toArray(EmptyArrays.EMPTY_X509_CERTIFICATES), root, keyPair);
     }
 }

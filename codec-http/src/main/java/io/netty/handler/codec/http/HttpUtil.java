@@ -45,7 +45,7 @@ public final class HttpUtil {
 
     /**
      * Determine if a uri is in origin-form according to
-     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.1">RFC 9112, 3.2.1</a>.
      */
     public static boolean isOriginForm(URI uri) {
         return isOriginForm(uri.toString());
@@ -53,7 +53,7 @@ public final class HttpUtil {
 
     /**
      * Determine if a string uri is in origin-form according to
-     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.1">RFC 9112, 3.2.1</a>.
      */
     public static boolean isOriginForm(String uri) {
         return uri.startsWith("/");
@@ -61,7 +61,7 @@ public final class HttpUtil {
 
     /**
      * Determine if a uri is in asterisk-form according to
-     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.4">RFC 9112, 3.2.4</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
         return isAsteriskForm(uri.toString());
@@ -69,16 +69,59 @@ public final class HttpUtil {
 
     /**
      * Determine if a string uri is in asterisk-form according to
-     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.4">RFC 9112, 3.2.4</a>.
      */
     public static boolean isAsteriskForm(String uri) {
         return "*".equals(uri);
     }
 
+    static void validateRequestLineTokens(HttpMethod method, String uri) {
+        // The HttpVersion class does its own validation, and it's not possible for subclasses to circumvent it.
+        // The HttpMethod class does its own validation, but subclasses might circumvent it.
+        if (method.getClass() != HttpMethod.class) {
+            if (!isEncodingSafeStartLineToken(method.asciiName())) {
+                throw new IllegalArgumentException(
+                        "The HTTP method name contain illegal characters: " + method.asciiName());
+            }
+        }
+
+        if (!isEncodingSafeStartLineToken(uri)) {
+            throw new IllegalArgumentException("The URI contain illegal characters: " + uri);
+        }
+    }
+
+    /**
+     * Validate that the given request line token is safe for verbatim encoding to the network.
+     * This does not fully check that the token – HTTP method, version, or URI – is valid and formatted correctly.
+     * Only that the token does not contain characters that would break or
+     * desynchronize HTTP message parsing of the start line wherein the token would be included.
+     * <p>
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-request-line">RFC 9112, 3.</a>
+     *
+     * @param token The token to check.
+     * @return {@code true} if the token is safe to encode verbatim into the HTTP message output stream,
+     * otherwise {@code false}.
+     */
+    public static boolean isEncodingSafeStartLineToken(CharSequence token) {
+        int lenBytes = token.length();
+        for (int i = 0; i < lenBytes; i++) {
+            char ch = token.charAt(i);
+            // this is to help AOT compiled code which cannot profile the switch
+            if (ch <= ' ') {
+                switch (ch) {
+                    case '\n':
+                    case '\r':
+                    case ' ':
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  This methods respects the value of the.
-     *
+     * thus 'kept alive'. This method respects the value of the
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
@@ -759,7 +802,7 @@ public final class HttpUtil {
     //        .bits('-', '.', '_', '~') // Unreserved characters.
     //        .bits('!', '#', '$', '%', '&', '\'', '*', '+', '^', '`', '|'); // Token special characters.
 
-    //this constants calculated by the above code
+    // This constants calculated by the above code
     private static final long TOKEN_CHARS_HIGH = 0x57ffffffc7fffffeL;
     private static final long TOKEN_CHARS_LOW = 0x3ff6cfa00000000L;
 
@@ -772,5 +815,4 @@ public final class HttpUtil {
         }
         return 0 != (TOKEN_CHARS_HIGH & 1L << bit - 64);
     }
-
 }

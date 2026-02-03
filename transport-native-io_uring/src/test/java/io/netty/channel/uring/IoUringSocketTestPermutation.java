@@ -273,6 +273,18 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    @Override
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_GROUP).channel(IoUringDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public static DomainSocketAddress newDomainSocketAddress() {
         return UnixTestUtils.newDomainSocketAddress();
     }
