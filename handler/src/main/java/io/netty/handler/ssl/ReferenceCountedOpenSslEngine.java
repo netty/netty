@@ -2284,10 +2284,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
-    final boolean checkSniHostnameMatch(byte[] hostname) {
+    final boolean checkSniHostnameMatch(String hostname) {
         Collection<SNIMatcher> matchers = this.matchers;
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname);
+            SNIHostName name = new SNIHostName(hostname.getBytes(CharsetUtil.UTF_8));
             for (SNIMatcher matcher : matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {
