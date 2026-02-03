@@ -302,7 +302,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             ReferenceCountedOpenSslEngine engine = engines.get(ssl);
             if (engine != null) {
                 // TODO: In the next release of tcnative we should pass the byte[] directly in and not use a String.
-                return engine.checkSniHostnameMatch(hostname.getBytes(CharsetUtil.UTF_8));
+                return engine.checkSniHostnameMatch(hostname);
             }
             logger.warn("No ReferenceCountedOpenSslEngine found for SSL pointer: {}", ssl);
             return false;
