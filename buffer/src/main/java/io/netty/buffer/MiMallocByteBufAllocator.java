@@ -163,8 +163,11 @@ final class MiMallocByteBufAllocator {
     @Override
     protected void finalize() throws Throwable {
         try {
-            if (!abandonedSegmentDeque.isEmpty()) {
-                THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
+            // Create a heap and do the collection if `abandonedSegmentCount` > 0.
+            // The `abandonedSegmentCount` may not be precisely up to date,
+            // but it's ok that we might only miss very few segments.
+            if (this.abandonedSegmentCount.get() > 0) {
+                this.THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
             }
         } finally {
             super.finalize();
