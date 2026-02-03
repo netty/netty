@@ -150,10 +150,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         @Override
         protected void deallocate() {
-            destroy();
-            if (leak != null) {
-                boolean closed = leak.close(ReferenceCountedOpenSslContext.this);
-                assert closed;
+            try {
+                destroy();
+            } finally {
+                if (leak != null) {
+                    boolean closed = leak.close(ReferenceCountedOpenSslContext.this);
+                    assert closed;
+                }
             }
         }
     };
@@ -682,7 +685,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
     //            get access to an OpenSslSessionContext after this method was called to prevent the user from
     //            producing a segfault.
-    protected void destroy() {
+    private void destroy() {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {
@@ -698,10 +701,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (context != null) {
                     context.destroy();
                 }
+                onPostDestroy();
             }
         } finally {
             writerLock.unlock();
         }
+    }
+
+    protected void onPostDestroy() {
     }
 
     protected static X509Certificate[] certificates(byte[][] chain) {

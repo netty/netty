@@ -117,13 +117,14 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     }
 
     @Override
-    protected void destroy() {
+    protected void onPostDestroy() {
         // Release all credentials
-        for (OpenSslCredential credential : credentials) {
-            credential.release();
+        if (credentials != null) {
+            for (OpenSslCredential credential : credentials) {
+                credential.release();
+            }
+            credentials.clear();
         }
-        credentials.clear();
-        super.destroy();
     }
 
     @Override
