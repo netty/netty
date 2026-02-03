@@ -36,7 +36,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
@@ -1750,21 +1749,23 @@ final class MiMallocByteBufAllocator {
         // Count how often this segment is visited during abandoned reclamation (to force reclaim if it takes too long).
         private int abandonedVisits;
         private final SEGMENT_KIND kind;
-        private final AtomicBoolean hugeSegmentFlag = new AtomicBoolean();
+        // Only used for huge segment freeing.
+        private final AtomicReference<Thread> hugeSegmentOwnerThread;
 
         Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind,
                 AbstractByteBuf delegate, LocalHeap heap) {
             this.parent = parent;
             this.delegate = delegate;
             if (kind == SEGMENT_HUGE) {
-                this.hugeSegmentFlag.set(true);
                 this.slices = new Span[1];
+                hugeSegmentOwnerThread = new AtomicReference<Thread>();
             } else { // normal segment
                 this.ownerThread = Thread.currentThread();
-                this.ownerHeap = heap;
                 // one more slice for loop convenient.
                 this.slices = new Span[segmentSlices + 1];
+                this.hugeSegmentOwnerThread = null;
             }
+            this.ownerHeap = heap;
             this.sliceEntries = segmentSlices;
             this.segmentSize = segmentSize;
             this.usedPages = 0;
@@ -1855,17 +1856,27 @@ final class MiMallocByteBufAllocator {
         }
     }
 
-    // Free huge block from another thread
+    // Free huge block, either by another thread or current thread.
     private void segmentHugePageFree(Segment segment, Page page, Block block) {
-        // Huge page segments are always abandoned and can be freed immediately by any thread claim it and free.
-        LocalHeap heap = THREAD_LOCAL_HEAP.get();
+        // Huge page segments are always abandoned(`ownerThread` and `hugeSegmentOwnerThread.get()` are `null`)
+        // after creation, and can be freed immediately by any thread claim it and free.
         // If this is the last reference, the CAS should always succeed.
-        if (segment.hugeSegmentFlag.compareAndSet(true, false)) {
+        assert segment.hugeSegmentOwnerThread != null;
+        if (segment.hugeSegmentOwnerThread.compareAndSet(null, Thread.currentThread())) {
             block.nextBlock = page.freeList;
             page.freeList = block;
             page.usedBlocks--;
             assert page.usedBlocks == 0;
-            heap.segmentPageFree(page);
+            // The `segment.ownerHeap` should never be `null`,
+            // as only normal segment's `ownerHeap` is set to `null` when offered to the `abandonedSegmentDeque`.
+            // But a huge segment should never have been offered to the `abandonedSegmentDeque`.
+            assert segment.ownerHeap != null;
+            // This is safe.
+            // After the `hugeSegmentOwnerThread` CAS success,
+            // this huge segment should be accessed only by current thread.
+            segment.ownerHeap.segmentPageFree(page);
+            assert segment.usedPages == 0;
+            assert segment.delegate.refCnt() == 0;
         }
     }
 
