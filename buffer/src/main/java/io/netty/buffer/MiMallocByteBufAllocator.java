@@ -876,7 +876,6 @@ final class MiMallocByteBufAllocator {
 
         // Called from segments when reclaiming abandoned pages.
         private void pageReclaim(Page page) {
-            // TODO: push on full queue immediately if it is full?
             PageQueue pq = pageQueue(page.blockSize);
             pageQueuePush(pq, page);
         }
