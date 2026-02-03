@@ -61,13 +61,13 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.graalvm.nativeimage</groupId>
-        <artifactId>native-image-maven-plugin</artifactId>
-        <version>${graalvm.version}</version>
+        <groupId>org.graalvm.buildtools</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <version>0.11.4</version>
         <executions>
           <execution>
             <goals>
-              <goal>native-image</goal>
+              <goal>build</goal>
             </goals>
             <phase>package</phase>
           </execution>
@@ -76,7 +76,12 @@
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
           <mainClass>io.netty.testsuite.svm.client.NativeClientWithNettyInitAtRuntime</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath --no-fallback --initialize-at-run-time=io.netty.util.NetUtil</buildArgs>
+          <buildArgs>
+            <buildArg>--report-unsupported-elements-at-runtime</buildArg>
+            <buildArg>--allow-incomplete-classpath</buildArg>
+            <buildArg>--no-fallback</buildArg>
+            <buildArg>--initialize-at-run-time=io.netty.util.NetUtil</buildArg>
+          </buildArgs>
         </configuration>
       </plugin>
       <plugin>
