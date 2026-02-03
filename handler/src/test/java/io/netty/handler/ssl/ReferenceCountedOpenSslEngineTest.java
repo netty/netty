@@ -45,14 +45,14 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
         // Create RSA certificate for credential tests
         rsaCert = new CertificateBuilder()
                 .subject("cn=rsa.localhost")
-                .keyAlgorithm("RSA")
+                .rsa2048()
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 
         // Create ECDSA certificate for credential tests
         ecdsaCert = new CertificateBuilder()
                 .subject("cn=ecdsa.localhost")
-                .keyAlgorithm("EC")
+                .ecp256()
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 
