@@ -1123,7 +1123,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             SSLParameters parameters = new SSLParameters();
             Java8SslTestUtils.setSNIMatcher(parameters, name);
             engine.setSSLParameters(parameters);
-            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(CharsetUtil.UTF_8)));
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other"));
         } finally {
             cleanupServerSslEngine(engine);
         }
