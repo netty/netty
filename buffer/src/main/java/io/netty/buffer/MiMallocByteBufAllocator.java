@@ -20,6 +20,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import java.io.IOException;
 import java.io.InputStream;
@@ -102,7 +103,9 @@ final class MiMallocByteBufAllocator {
 
     private static final int SPAN_QUEUE_MAX_INDEX = 19;
 
-    // TODO: make it configurable?
+    private static final boolean PAGE_USE_BEST_FIT_SEARCH = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.mimalloc.pageUseBestFitSearch", true);
+
     private static final int MAX_PAGE_CANDIDATE_SEARCH = 4;
 
     private static final Page EMPTY_PAGE = new Page();
@@ -458,7 +461,6 @@ final class MiMallocByteBufAllocator {
         private Page largeOrHugePageAlloc(int size) {
             int block_size = getGoodOsAllocSize(size);
             boolean is_huge = block_size > LARGE_BLOCK_SIZE_MAX;
-            //TODO: handle huge page stats?
             PageQueue pq = is_huge ? null : pageQueue(block_size);
             return pageFreshAlloc(pq, block_size);
         }
@@ -489,7 +491,7 @@ final class MiMallocByteBufAllocator {
                 Page next = page.nextPage;
                 candidateCount++;
                 page.pageFreeCollect(false);
-                if (MAX_PAGE_CANDIDATE_SEARCH > 1) {
+                if (PAGE_USE_BEST_FIT_SEARCH) {
                     // Search up to N pages for the best candidate
                     boolean immediateAvailable = page.immediateAvailable();
                     // If the page is completely full, move it to the `pages_full` queue,
