@@ -1090,10 +1090,9 @@ final class MiMallocByteBufAllocator {
             }
             // And initialize the page.
             segment.usedPages++;
+            slice.isHuge = false;
             // Convert to Page.
-            Page page = slice;
-            page.isHuge = false;
-            return page;
+            return slice;
         }
 
         private Page segmentHugeSpanAllocate(Segment segment, int blockSize) {
@@ -1106,10 +1105,9 @@ final class MiMallocByteBufAllocator {
             slice.blockSize = blockSize;
             // And initialize the page.
             segment.usedPages++;
+            slice.isHuge = true;
             // Convert to Page.
-            Page page = slice;
-            page.isHuge = true;
-            return page;
+            return slice;
         }
 
         private void segmentSliceSplit(Segment segment, Span slice, int sliceCount) {
