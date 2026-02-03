@@ -19,15 +19,16 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.IntConsumer;
-import io.netty.util.IntSupplier;
 import io.netty.util.NettyRuntime;
+import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.ConcurrentSkipListIntObjMultimap;
+import io.netty.util.concurrent.ConcurrentSkipListIntObjMultimap.IntEntry;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.MpscAtomicIntegerArrayQueue;
 import io.netty.util.concurrent.MpscIntQueue;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -48,8 +49,10 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
@@ -84,6 +87,16 @@ import java.util.concurrent.locks.StampedLock;
 @SuppressJava6Requirement(reason = "Guarded by version check")
 @UnstableApi
 final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.AdaptiveAllocatorApi {
+    private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
+    private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
+
+    /**
+     * Whether the IS_LOW_MEM setting should disable thread-local magazines.
+     * This can have fairly high performance overhead.
+     */
+    private static final boolean DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.disableThreadLocalMagazinesOnLowMemory", true);
+
     /**
      * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
      * allocations. For instance, glibc will do this.
@@ -91,11 +104,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      * which is a much, much larger space. Chunks are also allocated in whole multiples of the minimum
      * chunk size, which itself is a whole multiple of popular page sizes like 4 KiB, 16 KiB, and 64 KiB.
      */
-    private static final int MIN_CHUNK_SIZE = 128 * 1024;
+    static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 1;
     private static final int RETIRE_CAPACITY = 256;
-    private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
+    private static final int MAX_STRIPES = IS_LOW_MEM ? 1 : NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
 
     /**
@@ -103,7 +116,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      * <p>
      * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8 MiB.
+    private static final int MAX_CHUNK_SIZE = IS_LOW_MEM ?
+            2 * 1024 * 1024 : // 2 MiB for systems with small heaps.
+            8 * 1024 * 1024; // 8 MiB.
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
@@ -150,20 +165,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             8704, // 8192 + 512
             16384,
             16896, // 16384 + 512
-            32768, // TODO: Remove the 32k and 64k size classes once we're smarter about choosing chunks
-            65536,
-    };
-    private static final ChunkReleasePredicate CHUNK_RELEASE_ALWAYS = new ChunkReleasePredicate() {
-        @Override
-        public boolean shouldReleaseChunk(int chunkSize) {
-            return true;
-        }
-    };
-    private static final ChunkReleasePredicate CHUNK_RELEASE_NEVER = new ChunkReleasePredicate() {
-        @Override
-        public boolean shouldReleaseChunk(int chunkSize) {
-            return false;
-        }
     };
 
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
@@ -196,8 +197,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
-                this, chunkAllocator, new BuddyChunkControllerFactory(), false);
-        threadLocalGroup = new FastThreadLocal<MagazineGroup[]>() {
+                this, chunkAllocator, new BuddyChunkManagementStrategy(), false);
+
+        boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
+        threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
                 if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
@@ -223,7 +226,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         for (int i = 0; i < SIZE_CLASSES.length; i++) {
             int segmentSize = SIZE_CLASSES[i];
             groups[i] = new MagazineGroup(allocator, allocator.chunkAllocator,
-                    new SizeClassChunkControllerFactory(segmentSize), isThreadLocal);
+                    new SizeClassChunkManagementStrategy(segmentSize), isThreadLocal);
         }
         return groups;
     }
@@ -262,13 +265,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         if (size <= MAX_POOLED_BUF_SIZE) {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
-            if (!FastThreadLocalThread.willCleanupFastThreadLocals(currentThread) ||
+            if (!FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread()) ||
+                    IS_LOW_MEM ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
                 magazineGroups =  sizeClassedMagazineGroups;
             }
             if (index < magazineGroups.length) {
                 allocated = magazineGroups[index].allocate(size, maxCapacity, currentThread, buf);
-            } else {
+            } else if (!IS_LOW_MEM) {
                 allocated = largeBufferMagazineGroup.allocate(size, maxCapacity, currentThread, buf);
             }
         }
@@ -295,8 +299,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         return SIZE_CLASSES.clone();
     }
 
-    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
-                                             AdaptiveByteBuf buf) {
+    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         // If we don't already have a buffer, obtain one from the most conveniently available magazine.
         Magazine magazine;
         if (buf != null) {
@@ -310,7 +313,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
-        Chunk chunk = new Chunk(innerChunk, magazine, false, CHUNK_RELEASE_ALWAYS);
+        Chunk chunk = new Chunk(innerChunk, magazine);
         chunkRegistry.add(chunk);
         try {
             boolean success = chunk.readInitInto(buf, size, size, maxCapacity);
@@ -363,30 +366,33 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private static final class MagazineGroup {
         private final AdaptivePoolingAllocator allocator;
         private final ChunkAllocator chunkAllocator;
-        private final ChunkControllerFactory chunkControllerFactory;
-        private final Queue<Chunk> chunkReuseQueue;
+        private final ChunkManagementStrategy chunkManagementStrategy;
+        private final ChunkCache chunkCache;
         private final StampedLock magazineExpandLock;
         private final Magazine threadLocalMagazine;
+        private Thread ownerThread;
         private volatile Magazine[] magazines;
         private volatile boolean freed;
 
         MagazineGroup(AdaptivePoolingAllocator allocator,
                       ChunkAllocator chunkAllocator,
-                      ChunkControllerFactory chunkControllerFactory,
+                      ChunkManagementStrategy chunkManagementStrategy,
                       boolean isThreadLocal) {
             this.allocator = allocator;
             this.chunkAllocator = chunkAllocator;
-            this.chunkControllerFactory = chunkControllerFactory;
-            chunkReuseQueue = createSharedChunkQueue();
+            this.chunkManagementStrategy = chunkManagementStrategy;
+            chunkCache = chunkManagementStrategy.createChunkCache(isThreadLocal);
             if (isThreadLocal) {
+                ownerThread = Thread.currentThread();
                 magazineExpandLock = null;
-                threadLocalMagazine = new Magazine(this, false, chunkReuseQueue, chunkControllerFactory.create(this));
+                threadLocalMagazine = new Magazine(this, false, chunkManagementStrategy.createController(this));
             } else {
+                ownerThread = null;
                 magazineExpandLock = new StampedLock();
                 threadLocalMagazine = null;
                 Magazine[] mags = new Magazine[INITIAL_MAGAZINES];
                 for (int i = 0; i < mags.length; i++) {
-                    mags[i] = new Magazine(this, true, chunkReuseQueue, chunkControllerFactory.create(this));
+                    mags[i] = new Magazine(this, true, chunkManagementStrategy.createController(this));
                 }
                 magazines = mags;
             }
@@ -446,12 +452,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     if (mags.length >= MAX_STRIPES || mags.length > currentLength || freed) {
                         return true;
                     }
-                    Magazine firstMagazine = mags[0];
                     Magazine[] expanded = new Magazine[mags.length * 2];
                     for (int i = 0, l = expanded.length; i < l; i++) {
-                        Magazine m = new Magazine(this, true, chunkReuseQueue, chunkControllerFactory.create(this));
-                        firstMagazine.initializeSharedStateIn(m);
-                        expanded[i] = m;
+                        expanded[i] = new Magazine(this, true, chunkManagementStrategy.createController(this));
                     }
                     magazines = expanded;
                 } finally {
@@ -464,22 +467,32 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return true;
         }
 
-        boolean offerToQueue(Chunk buffer) {
+        Chunk pollChunk(int size) {
+            return chunkCache.pollChunk(size);
+        }
+
+        boolean offerChunk(Chunk chunk) {
             if (freed) {
                 return false;
             }
 
-            boolean isAdded = chunkReuseQueue.offer(buffer);
+            if (chunk.hasUnprocessedFreelistEntries()) {
+                chunk.processFreelistEntries();
+            }
+            boolean isAdded = chunkCache.offerChunk(chunk);
+
             if (freed && isAdded) {
                 // Help to free the reuse queue.
-                freeChunkReuseQueue();
+                freeChunkReuseQueue(ownerThread);
             }
             return isAdded;
         }
 
         private void free() {
             freed = true;
+            Thread ownerThread = this.ownerThread;
             if (threadLocalMagazine != null) {
+                this.ownerThread = null;
                 threadLocalMagazine.free();
             } else {
                 long stamp = magazineExpandLock.writeLock();
@@ -492,22 +505,154 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     magazineExpandLock.unlockWrite(stamp);
                 }
             }
-            freeChunkReuseQueue();
+            freeChunkReuseQueue(ownerThread);
         }
 
-        private void freeChunkReuseQueue() {
-            for (;;) {
-                Chunk chunk = chunkReuseQueue.poll();
-                if (chunk == null) {
-                    break;
+        private void freeChunkReuseQueue(Thread ownerThread) {
+            Chunk chunk;
+            while ((chunk = chunkCache.pollChunk(0)) != null) {
+                if (ownerThread != null && chunk instanceof SizeClassedChunk) {
+                    SizeClassedChunk threadLocalChunk = (SizeClassedChunk) chunk;
+                    assert ownerThread == threadLocalChunk.ownerThread;
+                    // no release segment can ever happen from the owner Thread since it's not running anymore
+                    // This is required to let the ownerThread to be GC'ed despite there are AdaptiveByteBuf
+                    // that reference some thread local chunk
+                    threadLocalChunk.ownerThread = null;
                 }
                 chunk.release();
             }
         }
     }
 
-    private interface ChunkControllerFactory {
-        ChunkController create(MagazineGroup group);
+    private interface ChunkCache {
+        Chunk pollChunk(int size);
+        boolean offerChunk(Chunk chunk);
+    }
+
+    private static final class ConcurrentQueueChunkCache implements ChunkCache {
+        private final Queue<Chunk> queue;
+
+        private ConcurrentQueueChunkCache() {
+            queue = createSharedChunkQueue();
+        }
+
+        @Override
+        public Chunk pollChunk(int size) {
+            int attemps = queue.size();
+            for (int i = 0; i < attemps; i++) {
+                Chunk chunk = queue.poll();
+                if (chunk == null) {
+                    return null;
+                }
+                if (chunk.hasUnprocessedFreelistEntries()) {
+                    chunk.processFreelistEntries();
+                }
+                if (chunk.remainingCapacity() >= size) {
+                    return chunk;
+                }
+                queue.offer(chunk);
+            }
+            return null;
+        }
+
+        @Override
+        public boolean offerChunk(Chunk chunk) {
+            return queue.offer(chunk);
+        }
+    }
+
+    private static final class ConcurrentSkipListChunkCache implements ChunkCache {
+        private final ConcurrentSkipListIntObjMultimap<Chunk> chunks;
+
+        private ConcurrentSkipListChunkCache() {
+            chunks = new ConcurrentSkipListIntObjMultimap<Chunk>(-1);
+        }
+
+        @Override
+        public Chunk pollChunk(int size) {
+            if (chunks.isEmpty()) {
+                return null;
+            }
+            IntEntry<Chunk> entry = chunks.pollCeilingEntry(size);
+            if (entry != null) {
+                Chunk chunk = entry.getValue();
+                if (chunk.hasUnprocessedFreelistEntries()) {
+                    chunk.processFreelistEntries();
+                }
+                return chunk;
+            }
+
+            Chunk bestChunk = null;
+            int bestRemainingCapacity = 0;
+            Iterator<IntEntry<Chunk>> itr = chunks.iterator();
+            while (itr.hasNext()) {
+                entry = itr.next();
+                final Chunk chunk;
+                if (entry != null && (chunk = entry.getValue()).hasUnprocessedFreelistEntries()) {
+                    if (!chunks.remove(entry.getKey(), entry.getValue())) {
+                        continue;
+                    }
+                    chunk.processFreelistEntries();
+                    int remainingCapacity = chunk.remainingCapacity();
+                    if (remainingCapacity >= size &&
+                            (bestChunk == null || remainingCapacity > bestRemainingCapacity)) {
+                        if (bestChunk != null) {
+                            chunks.put(bestRemainingCapacity, bestChunk);
+                        }
+                        bestChunk = chunk;
+                        bestRemainingCapacity = remainingCapacity;
+                    } else {
+                        chunks.put(remainingCapacity, chunk);
+                    }
+                }
+            }
+
+            return bestChunk;
+        }
+
+        @Override
+        public boolean offerChunk(Chunk chunk) {
+            chunks.put(chunk.remainingCapacity(), chunk);
+
+            int size = chunks.size();
+            while (size > CHUNK_REUSE_QUEUE) {
+                // Deallocate the chunk with the fewest incoming references.
+                int key = -1;
+                Chunk toDeallocate = null;
+                for (IntEntry<Chunk> entry : chunks) {
+                    Chunk candidate = entry.getValue();
+                    if (candidate != null) {
+                        if (toDeallocate == null) {
+                            toDeallocate = candidate;
+                            key = entry.getKey();
+                        } else {
+                            int candidateRefCnt = candidate.refCnt();
+                            int toDeallocateRefCnt = toDeallocate.refCnt();
+                            if (candidateRefCnt < toDeallocateRefCnt ||
+                                    candidateRefCnt == toDeallocateRefCnt &&
+                                            candidate.capacity() < toDeallocate.capacity()) {
+                                toDeallocate = candidate;
+                                key = entry.getKey();
+                            }
+                        }
+                    }
+                }
+                if (toDeallocate == null) {
+                    break;
+                }
+                if (chunks.remove(key, toDeallocate)) {
+                    toDeallocate.release();
+                }
+                size = chunks.size();
+            }
+            return true;
+        }
+    }
+
+    private interface ChunkManagementStrategy {
+        ChunkController createController(MagazineGroup group);
+
+        ChunkCache createChunkCache(boolean isThreadLocal);
     }
 
     private interface ChunkController {
@@ -517,42 +662,32 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         int computeBufferCapacity(int requestedSize, int maxCapacity, boolean isReallocation);
 
         /**
-         * Initialize the given chunk factory with shared statistics state (if any) from this factory.
-         */
-        void initializeSharedStateIn(ChunkController chunkController);
-
-        /**
          * Allocate a new {@link Chunk} for the given {@link Magazine}.
          */
         Chunk newChunkAllocation(int promptingSize, Magazine magazine);
     }
 
-    private interface ChunkReleasePredicate {
-        boolean shouldReleaseChunk(int chunkSize);
-    }
-
-    private static final class SizeClassChunkControllerFactory implements ChunkControllerFactory {
+    private static final class SizeClassChunkManagementStrategy implements ChunkManagementStrategy {
         // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
         // We choose 32 because it seems neither too small nor too big.
         // For segments of 16 KiB, the chunks will be half a megabyte.
         private static final int MIN_SEGMENTS_PER_CHUNK = 32;
         private final int segmentSize;
         private final int chunkSize;
-        private final int[] segmentOffsets;
 
-        private SizeClassChunkControllerFactory(int segmentSize) {
+        private SizeClassChunkManagementStrategy(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
             chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
-            int segmentsCount = chunkSize / segmentSize;
-            segmentOffsets = new int[segmentsCount];
-            for (int i = 0; i < segmentsCount; i++) {
-                segmentOffsets[i] = i * segmentSize;
-            }
         }
 
         @Override
-        public ChunkController create(MagazineGroup group) {
-            return new SizeClassChunkController(group, segmentSize, chunkSize, segmentOffsets);
+        public ChunkController createController(MagazineGroup group) {
+            return new SizeClassChunkController(group, segmentSize, chunkSize);
+        }
+
+        @Override
+        public ChunkCache createChunkCache(boolean isThreadLocal) {
+            return new ConcurrentQueueChunkCache();
         }
     }
 
@@ -562,14 +697,39 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private final int segmentSize;
         private final int chunkSize;
         private final ChunkRegistry chunkRegistry;
-        private final int[] segmentOffsets;
 
-        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
+        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize) {
             chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
             this.chunkSize = chunkSize;
             chunkRegistry = group.allocator.chunkRegistry;
-            this.segmentOffsets = segmentOffsets;
+        }
+
+        private MpscIntQueue createEmptyFreeList() {
+            return new MpscAtomicIntegerArrayQueue(chunkSize / segmentSize, SizeClassedChunk.FREE_LIST_EMPTY);
+        }
+
+        private MpscIntQueue createFreeList() {
+            final int segmentsCount = chunkSize / segmentSize;
+            final MpscIntQueue freeList = new MpscAtomicIntegerArrayQueue(
+                    segmentsCount, SizeClassedChunk.FREE_LIST_EMPTY);
+            int segmentOffset = 0;
+            for (int i = 0; i < segmentsCount; i++) {
+                freeList.offer(segmentOffset);
+                segmentOffset += segmentSize;
+            }
+            return freeList;
+        }
+
+        private IntStack createLocalFreeList() {
+            final int segmentsCount = chunkSize / segmentSize;
+            int segmentOffset = chunkSize;
+            int[] offsets = new int[segmentsCount];
+            for (int i = 0; i < segmentsCount; i++) {
+                segmentOffset -= segmentSize;
+                offsets[i] = segmentOffset;
+            }
+            return new IntStack(offsets);
         }
 
         @Override
@@ -579,35 +739,38 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        public void initializeSharedStateIn(ChunkController chunkController) {
-            // NOOP
-        }
-
-        @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
             AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
             assert chunkBuffer.capacity() == chunkSize;
-            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, true,
-                    segmentSize, segmentOffsets, CHUNK_RELEASE_NEVER);
+            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, this);
             chunkRegistry.add(chunk);
             return chunk;
         }
     }
 
-    private static final class BuddyChunkControllerFactory implements ChunkControllerFactory {
+    private static final class BuddyChunkManagementStrategy implements ChunkManagementStrategy {
+        private final AtomicInteger maxChunkSize = new AtomicInteger();
+
         @Override
-        public ChunkController create(MagazineGroup group) {
-            return new BuddyChunkController(group);
+        public ChunkController createController(MagazineGroup group) {
+            return new BuddyChunkController(group, maxChunkSize);
+        }
+
+        @Override
+        public ChunkCache createChunkCache(boolean isThreadLocal) {
+            return new ConcurrentSkipListChunkCache();
         }
     }
 
     private static final class BuddyChunkController implements ChunkController {
         private final ChunkAllocator chunkAllocator;
         private final ChunkRegistry chunkRegistry;
+        private final AtomicInteger maxChunkSize;
 
-        BuddyChunkController(MagazineGroup group) {
+        BuddyChunkController(MagazineGroup group, AtomicInteger maxChunkSize) {
             chunkAllocator = group.chunkAllocator;
             chunkRegistry = group.allocator.chunkRegistry;
+            this.maxChunkSize = maxChunkSize;
         }
 
         @Override
@@ -616,16 +779,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        public void initializeSharedStateIn(ChunkController chunkController) {
-            // NOOP
-        }
-
-        @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            int chunkSize = Math.min(MAX_CHUNK_SIZE,
-                    MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize));
-            BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine,
-                    CHUNK_RELEASE_NEVER);
+            int maxChunkSize = this.maxChunkSize.get();
+            int proposedChunkSize = MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize);
+            int chunkSize = Math.min(MAX_CHUNK_SIZE, Math.max(maxChunkSize, proposedChunkSize));
+            if (chunkSize > maxChunkSize) {
+                // Update our stored max chunk size. It's fine that this is racy.
+                this.maxChunkSize.set(chunkSize);
+            }
+            BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -639,13 +801,31 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
         private static final Chunk MAGAZINE_FREED = new Chunk();
 
-        private static final ObjectPool<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = ObjectPool.newPool(
-                new ObjectPool.ObjectCreator<AdaptiveByteBuf>() {
-                    @Override
-                    public AdaptiveByteBuf newObject(ObjectPool.Handle<AdaptiveByteBuf> handle) {
-                        return new AdaptiveByteBuf(handle);
-                    }
-                });
+        private static final class AdaptiveRecycler extends Recycler<AdaptiveByteBuf> {
+
+            private AdaptiveRecycler() {
+            }
+
+            private AdaptiveRecycler(int maxCapacity) {
+                // doesn't use fast thread local, shared
+                super(maxCapacity);
+            }
+
+            @Override
+            protected AdaptiveByteBuf newObject(final Handle<AdaptiveByteBuf> handle) {
+                return new AdaptiveByteBuf((EnhancedHandle<AdaptiveByteBuf>) handle);
+            }
+
+            public static AdaptiveRecycler threadLocal() {
+                return new AdaptiveRecycler();
+            }
+
+            public static AdaptiveRecycler sharedWith(int maxCapacity) {
+                return new AdaptiveRecycler(maxCapacity);
+            }
+        }
+
+        private static final AdaptiveRecycler EVENT_LOOP_LOCAL_BUFFER_POOL = AdaptiveRecycler.threadLocal();
 
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
@@ -653,31 +833,20 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private final MagazineGroup group;
         private final ChunkController chunkController;
         private final StampedLock allocationLock;
-        private final Queue<AdaptiveByteBuf> bufferQueue;
-        private final ObjectPool.Handle<AdaptiveByteBuf> handle;
-        private final Queue<Chunk> sharedChunkQueue;
+        private final AdaptiveRecycler recycler;
 
-        Magazine(MagazineGroup group, boolean shareable, Queue<Chunk> sharedChunkQueue,
-                 ChunkController chunkController) {
+        Magazine(MagazineGroup group, boolean shareable, ChunkController chunkController) {
             this.group = group;
             this.chunkController = chunkController;
 
             if (shareable) {
                 // We only need the StampedLock if this Magazine will be shared across threads.
                 allocationLock = new StampedLock();
-                bufferQueue = PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
-                handle = new ObjectPool.Handle<AdaptiveByteBuf>() {
-                    @Override
-                    public void recycle(AdaptiveByteBuf self) {
-                        bufferQueue.offer(self);
-                    }
-                };
+                recycler = AdaptiveRecycler.sharedWith(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             } else {
                 allocationLock = null;
-                bufferQueue = null;
-                handle = null;
+                recycler = null;
             }
-            this.sharedChunkQueue = sharedChunkQueue;
         }
 
         public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
@@ -706,7 +875,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 return false;
             }
             if (curr == null) {
-                curr = sharedChunkQueue.poll();
+                curr = group.pollChunk(size);
                 if (curr == null) {
                     return false;
                 }
@@ -738,31 +907,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
             if (curr != null) {
-                // We have a Chunk that has some space left.
+                boolean success = curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                 int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity &&
-                        curr.readInitInto(buf, size, startingCapacity, maxCapacity)) {
-                    // We still have some bytes left that we can use for the next allocation, just early return.
-                    return true;
-                }
-
-                // At this point we know that this will be the last time current will be used, so directly set it to
-                // null and release it once we are done.
-                current = null;
-                if (remainingCapacity >= size) {
-                    if (curr.readInitInto(buf, size, remainingCapacity, maxCapacity)) {
-                        curr.releaseFromMagazine();
-                        return true;
-                    }
-                }
-
-                // Check if we either retain the chunk in the nextInLine cache or releasing it.
-                if (remainingCapacity < RETIRE_CAPACITY) {
-                    curr.releaseFromMagazine();
-                } else {
-                    // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
-                    // This method will release curr if this is not the case
+                if (!success && remainingCapacity > 0) {
+                    current = null;
                     transferToNextInLineOrRelease(curr);
+                } else if (remainingCapacity == 0) {
+                    current = null;
+                    curr.releaseFromMagazine();
+                }
+                if (success) {
+                    return true;
                 }
             }
 
@@ -791,24 +946,21 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     return true;
                 }
 
-                if (remainingCapacity >= size) {
-                    // At this point we know that this will be the last time curr will be used, so directly set it to
-                    // null and release it once we are done.
-                    try {
+                try {
+                    if (remainingCapacity >= size) {
+                        // At this point we know that this will be the last time curr will be used, so directly set it
+                        // to null and release it once we are done.
                         return curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
-                    } finally {
-                        // Release in a finally block so even if readInitInto(...) would throw we would still correctly
-                        // release the current chunk before null it out.
-                        curr.releaseFromMagazine();
                     }
-                } else {
-                    // Release it as it's too small.
+                } finally {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
                     curr.releaseFromMagazine();
                 }
             }
 
             // Now try to poll from the central queue first
-            curr = sharedChunkQueue.poll();
+            curr = group.pollChunk(size);
             if (curr == null) {
                 curr = chunkController.newChunkAllocation(size, this);
             } else {
@@ -878,10 +1030,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             chunk.releaseFromMagazine();
         }
 
-        boolean trySetNextInLine(Chunk chunk) {
-            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
-        }
-
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
             restoreMagazineFreed();
@@ -899,26 +1047,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         public AdaptiveByteBuf newBuffer() {
-            AdaptiveByteBuf buf;
-            if (handle == null) {
-                buf = EVENT_LOOP_LOCAL_BUFFER_POOL.get();
-            } else {
-                buf = bufferQueue.poll();
-                if (buf == null) {
-                    buf = new AdaptiveByteBuf(handle);
-                }
-            }
+            AdaptiveRecycler recycler = this.recycler;
+            AdaptiveByteBuf buf = recycler == null? EVENT_LOOP_LOCAL_BUFFER_POOL.get() : recycler.get();
             buf.resetRefCnt();
             buf.discardMarks();
             return buf;
         }
 
         boolean offerToQueue(Chunk chunk) {
-            return group.offerToQueue(chunk);
-        }
-
-        public void initializeSharedStateIn(Magazine other) {
-            chunkController.initializeSharedStateIn(other.chunkController);
+            return group.offerChunk(chunk);
         }
     }
 
@@ -948,9 +1085,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
-        private final ChunkReleasePredicate chunkReleasePredicate;
         private final int capacity;
-        private final boolean pooled;
         protected int allocatedBytes;
 
         private static final ReferenceCountUpdater<Chunk> updater =
@@ -976,23 +1111,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             delegate = null;
             magazine = null;
             allocator = null;
-            chunkReleasePredicate = null;
             capacity = 0;
-            pooled = false;
         }
 
-        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled,
-              ChunkReleasePredicate chunkReleasePredicate) {
+        Chunk(AbstractByteBuf delegate, Magazine magazine) {
             this.delegate = delegate;
-            this.pooled = pooled;
             capacity = delegate.capacity();
             updater.setInitialValue(this);
             attachToMagazine(magazine);
 
             // We need the top-level allocator so ByteBuf.capacity(int) can call reallocate()
             allocator = magazine.group.allocator;
-
-            this.chunkReleasePredicate = chunkReleasePredicate;
         }
 
         Magazine currentMagazine()  {
@@ -1057,41 +1186,26 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
         boolean releaseFromMagazine() {
-            return release();
+            // Chunks can be reused before they become empty.
+            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
+            Magazine mag = magazine;
+            detachFromMagazine();
+            if (!mag.offerToQueue(this)) {
+                return release();
+            }
+            return false;
         }
 
         /**
          * Called when a ByteBuf is done using its allocation in this chunk.
          */
-        boolean releaseSegment(int ignoredSegmentId, int size) {
-            return release();
+        void releaseSegment(int ignoredSegmentId, int size) {
+            release();
         }
 
-        private void deallocate() {
-            Magazine mag = magazine;
-            int chunkSize = delegate.capacity();
-            if (!pooled || chunkReleasePredicate.shouldReleaseChunk(chunkSize) || mag == null) {
-                // Drop the chunk if the parent allocator is closed,
-                // or if the chunk deviates too much from the preferred chunk size.
-                detachFromMagazine();
-                allocator.chunkRegistry.remove(this);
-                delegate.release();
-            } else {
-                updater.resetRefCnt(this);
-                delegate.setIndex(0, 0);
-                if (!mag.trySetNextInLine(this)) {
-                    // As this Chunk does not belong to the mag anymore we need to decrease the used memory .
-                    detachFromMagazine();
-                    if (!mag.offerToQueue(this)) {
-                        // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
-                        // which did increase the reference count by 1.
-                        boolean released = updater.release(this);
-                        allocator.chunkRegistry.remove(this);
-                        delegate.release();
-                        assert released;
-                    }
-                }
-            }
+        protected void deallocate() {
+            allocator.chunkRegistry.remove(this);
+            delegate.release();
         }
 
         public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
@@ -1118,36 +1232,72 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return capacity - allocatedBytes;
         }
 
+        public boolean hasUnprocessedFreelistEntries() {
+            return false;
+        }
+
+        public void processFreelistEntries() {
+        }
+
         public int capacity() {
             return capacity;
+        }
+    }
+
+    private static final class IntStack {
+
+        private final int[] stack;
+        private int top;
+
+        IntStack(int[] initialValues) {
+            stack = initialValues;
+            top = initialValues.length - 1;
+        }
+
+        public boolean isEmpty() {
+            return top == -1;
+        }
+
+        public int pop() {
+            final int last = stack[top];
+            top--;
+            return last;
+        }
+
+        public void push(int value) {
+            stack[top + 1] = value;
+            top++;
+        }
+
+        public int size() {
+            return top + 1;
         }
     }
 
     private static final class SizeClassedChunk extends Chunk {
         private static final int FREE_LIST_EMPTY = -1;
         private final int segmentSize;
-        private final MpscIntQueue freeList;
+        private final MpscIntQueue externalFreeList;
+        private final IntStack localFreeList;
+        private Thread ownerThread;
 
-        SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled, int segmentSize,
-                         final int[] segmentOffsets, ChunkReleasePredicate shouldReleaseChunk) {
-            super(delegate, magazine, pooled, shouldReleaseChunk);
-            this.segmentSize = segmentSize;
-            int segmentCount = segmentOffsets.length;
-            assert delegate.capacity() / segmentSize == segmentCount;
-            assert segmentCount > 0: "Chunk must have a positive number of segments";
-            freeList = new MpscAtomicIntegerArrayQueue(segmentCount, FREE_LIST_EMPTY);
-            freeList.fill(segmentCount, new IntSupplier() {
-                int counter;
-                @Override
-                public int get() {
-                    return segmentOffsets[counter++];
-                }
-            });
+        SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
+                         SizeClassChunkController controller) {
+            super(delegate, magazine);
+            segmentSize = controller.segmentSize;
+            ownerThread = magazine.group.ownerThread;
+            if (ownerThread == null) {
+                externalFreeList = controller.createFreeList();
+                localFreeList = null;
+            } else {
+                externalFreeList = controller.createEmptyFreeList();
+                localFreeList = controller.createLocalFreeList();
+            }
         }
 
         @Override
         public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
-            int startIndex = freeList.poll();
+            final int startIndex = nextAvailableSegmentOffset();
             if (startIndex == FREE_LIST_EMPTY) {
                 return false;
             }
@@ -1169,13 +1319,40 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return true;
         }
 
+        private int nextAvailableSegmentOffset() {
+            final int startIndex;
+            IntStack localFreeList = this.localFreeList;
+            if (localFreeList != null) {
+                assert Thread.currentThread() == ownerThread;
+                if (localFreeList.isEmpty()) {
+                    startIndex = externalFreeList.poll();
+                } else {
+                    startIndex = localFreeList.pop();
+                }
+            } else {
+                startIndex = externalFreeList.poll();
+            }
+            return startIndex;
+        }
+
+        private int remainingCapacityOnFreeList() {
+            final int segmentSize = this.segmentSize;
+            int remainingCapacity = externalFreeList.size() * segmentSize;
+            IntStack localFreeList = this.localFreeList;
+            if (localFreeList != null) {
+                assert Thread.currentThread() == ownerThread;
+                remainingCapacity += localFreeList.size() * segmentSize;
+            }
+            return remainingCapacity;
+        }
+
         @Override
         public int remainingCapacity() {
             int remainingCapacity = super.remainingCapacity();
             if (remainingCapacity > segmentSize) {
                 return remainingCapacity;
             }
-            int updatedRemainingCapacity = freeList.size() * segmentSize;
+            int updatedRemainingCapacity = remainingCapacityOnFreeList();
             if (updatedRemainingCapacity == remainingCapacity) {
                 return remainingCapacity;
             }
@@ -1184,24 +1361,20 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return updatedRemainingCapacity;
         }
 
-        @Override
-        boolean releaseFromMagazine() {
-            // Size-classed chunks can be reused before they become empty.
-            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
-            Magazine mag = magazine;
-            detachFromMagazine();
-            if (!mag.offerToQueue(this)) {
-                return super.releaseFromMagazine();
+        private void releaseSegmentOffsetIntoFreeList(int startIndex) {
+            IntStack localFreeList = this.localFreeList;
+            if (localFreeList != null && Thread.currentThread() == ownerThread) {
+                localFreeList.push(startIndex);
+            } else {
+                boolean segmentReturned = externalFreeList.offer(startIndex);
+                assert segmentReturned : "Unable to return segment " + startIndex + " to free list";
             }
-            return false;
         }
 
         @Override
-        boolean releaseSegment(int startIndex, int size) {
-            boolean released = release();
-            boolean segmentReturned = freeList.offer(startIndex);
-            assert segmentReturned: "Unable to return segment " + startIndex + " to free list";
-            return released;
+        void releaseSegment(int startIndex, int size) {
+            release();
+            releaseSegmentOffsetIntoFreeList(startIndex);
         }
     }
 
@@ -1218,8 +1391,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private final byte[] buddies;
         private final int freeListCapacity;
 
-        BuddyChunk(AbstractByteBuf delegate, Magazine magazine, ChunkReleasePredicate chunkReleasePredicate) {
-            super(delegate, magazine, true, chunkReleasePredicate);
+        BuddyChunk(AbstractByteBuf delegate, Magazine magazine) {
+            super(delegate, magazine);
             int capacity = delegate.capacity();
             int capFactor = capacity / MIN_BUDDY_SIZE;
             int tree = (capFactor << 1) - 1;
@@ -1278,12 +1451,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        boolean releaseSegment(int startingIndex, int size) {
+        void releaseSegment(int startingIndex, int size) {
             int packedOffset = startingIndex / MIN_BUDDY_SIZE;
             int packedSize = Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << PACK_SIZE_SHIFT;
             int packed = packedOffset | packedSize;
             freeList.offer(packed);
-            return release();
+            release();
         }
 
         @Override
@@ -1295,15 +1468,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        boolean releaseFromMagazine() {
-            // Buddy chunks can be reused before they become empty.
-            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
-            Magazine mag = magazine;
-            detachFromMagazine();
-            if (!mag.offerToQueue(this)) {
-                return super.releaseFromMagazine();
-            }
-            return false;
+        public boolean hasUnprocessedFreelistEntries() {
+            return !freeList.isEmpty();
+        }
+
+        @Override
+        public void processFreelistEntries() {
+            freeList.drain(freeListCapacity, this);
         }
 
         /**
@@ -1376,11 +1547,20 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
             return true;
         }
+
+        @Override
+        public String toString() {
+            int capacity = delegate.capacity();
+            int remaining = capacity - allocatedBytes;
+            return "BuddyChunk[capacity: " + capacity +
+                    ", remaining: " + remaining +
+                    ", free list: " + freeList.size() + ']';
+        }
     }
 
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {
 
-        private final ObjectPool.Handle<AdaptiveByteBuf> handle;
+        private final EnhancedHandle<AdaptiveByteBuf> handle;
 
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
@@ -1392,7 +1572,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private boolean hasArray;
         private boolean hasMemoryAddress;
 
-        AdaptiveByteBuf(ObjectPool.Handle<AdaptiveByteBuf> recyclerHandle) {
+        AdaptiveByteBuf(EnhancedHandle<AdaptiveByteBuf> recyclerHandle) {
             super(0);
             handle = ObjectUtil.checkNotNull(recyclerHandle, "recyclerHandle");
         }
@@ -1455,6 +1635,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             allocator.reallocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldLength);
             chunk.releaseSegment(baseOldRootIndex, oldCapacity);
+            assert oldCapacity < maxFastCapacity && newCapacity <= maxFastCapacity:
+                    "Capacity increase failed";
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
             return this;
@@ -1465,6 +1647,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return rootParent().alloc();
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         public ByteOrder order() {
             return rootParent().order();
@@ -1836,12 +2019,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
-            if (handle instanceof EnhancedHandle) {
-                EnhancedHandle<AdaptiveByteBuf>  enhancedHandle = (EnhancedHandle<AdaptiveByteBuf>) handle;
-                enhancedHandle.unguardedRecycle(this);
-            } else {
-                handle.recycle(this);
-            }
+            handle.unguardedRecycle(this);
         }
     }
 
