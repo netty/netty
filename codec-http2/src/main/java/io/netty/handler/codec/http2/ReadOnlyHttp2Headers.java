@@ -140,7 +140,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         final int otherHeadersEnd = otherHeaders.length - 1;
         for (int i = 0; i < otherHeadersEnd; i += 2) {
             AsciiString name = otherHeaders[i];
-            HTTP2_NAME_VALIDATOR.validateName(name);
+            defaultHtt2NameValidator().validateName(name);
             if (!seenNonPseudoHeader && !name.isEmpty() && name.byteAt(0) != PSEUDO_HEADER_TOKEN) {
                 seenNonPseudoHeader = true;
             } else if (seenNonPseudoHeader && !name.isEmpty() && name.byteAt(0) == PSEUDO_HEADER_TOKEN) {
