@@ -1026,9 +1026,7 @@ final class MiMallocByteBufAllocator {
 
         // Allocate a huge page, which also means allocate a huge segment.
         private Page segmentsHugePageAlloc(int required) {
-            // virtual_segment_slices is used only for calculate the segment/block size.
-            int virtual_segment_slices = segmentHugeCalculateSlices(required);
-            int segment_size = virtual_segment_slices * SEGMENT_SLICE_SIZE;
+            int segment_size = alignUp(required, SEGMENT_SLICE_SIZE);
             // Allocate the segment.
             AbstractByteBuf buf = this.allocator.newChunk(segment_size);
             if (buf == null) {
@@ -1039,12 +1037,6 @@ final class MiMallocByteBufAllocator {
             segmentsTrackSize(segment.segmentSize);
             // Allocate a huge page which spans the entire segment.
             return segmentHugeSpanAllocate(segment, segment_size);
-        }
-
-        private int segmentHugeCalculateSlices(int required) {
-            assert required > 0;
-            int segment_size = alignUp(required, SEGMENT_SLICE_SIZE);
-            return segment_size / SEGMENT_SLICE_SIZE;
         }
 
         private void segmentsTrackSize(long segment_size) {
@@ -2020,7 +2012,7 @@ final class MiMallocByteBufAllocator {
         } else if (size < 8 * MiB) {
             align_size = 256 * KiB;
         } else if (size < 32 * MiB) {
-            align_size = 1 * MiB;
+            align_size = MiB;
         } else {
             align_size = 4 * MiB;
         }
