@@ -31,6 +31,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -154,6 +156,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
     public static final boolean DEFAULT_STRICT_LINE_PARSING =
             SystemPropertyUtil.getBoolean("io.netty.handler.codec.http.defaultStrictLineParsing", true);
+    private static final short CRLF_SHORT = (short) ((CR << 8) | LF);
 
     private static final Runnable THROW_INVALID_CHUNK_EXTENSION = new Runnable() {
         @Override
@@ -513,8 +516,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case READ_CHUNK_DELIMITER: {
             if (buffer.readableBytes() >= 2) {
                 int rIdx = buffer.readerIndex();
-                if (buffer.getByte(rIdx) == HttpConstants.CR &&
-                        buffer.getByte(rIdx + 1) == HttpConstants.LF) {
+                if (buffer.getShort(rIdx) == CRLF_SHORT) {
                     buffer.skipBytes(2);
                     currentState = State.READ_CHUNK_SIZE;
                 } else {
