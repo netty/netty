@@ -160,7 +160,9 @@ final class MiMallocByteBufAllocator {
     @Override
     protected void finalize() throws Throwable {
         try {
-            THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
+            if (!abandonedSegmentDeque.isEmpty()) {
+                THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
+            }
         } finally {
             super.finalize();
         }
@@ -262,7 +264,7 @@ final class MiMallocByteBufAllocator {
             if (page.usedBlocks == 0) {
                 // No more used blocks, free the page.
                 // Note: this will free retired pages.
-                this.pageFree(page, pq);
+                pageFree(page, pq);
             } else if (collectType == ABANDON) {
                 // There are still used blocks, but the thread is done, abandon the page.
                 page.pageAbandon(pq, this);
@@ -277,25 +279,26 @@ final class MiMallocByteBufAllocator {
             if (collectType == FINALIZE) {
                 // Try to reclaim all abandoned segments.
                 // If all memory is freed by now, all segments should be freed.
-                this.abandonedReclaimAll();
+                abandonedReclaimAll();
                 return;
             }
             // If during abandoning, mark all pages to no longer add to the delayed-free list
             if (collectType == ABANDON) {
-                this.heapVisitPages(collectType, VISIT_TYPE_PAGE_MARK);
+                heapVisitPages(collectType, VISIT_TYPE_PAGE_MARK);
                 this.blockDeque.clear();
-                this.freeReservedSegment();
+                freeReservedSegment();
             }
             // Free all current thread's delayed blocks.
             // If during abandoning, after this, there are no more thread-delayed references into the pages.
-            this.heapDelayedFreeAll();
+            heapDelayedFreeAll();
             // Collect retired pages.
-            this.heapCollectRetired(isForceCollect(collectType));
+            // This will update `pageRetiredMin` & `pageRetiredMax`, which helps `heapCollectRetired()` efficiency.
+            heapCollectRetired(isForceCollect(collectType));
             // Collect all pages owned by this thread.
-            this.heapVisitPages(collectType, VISIT_TYPE_PAGE_COLLECT);
+            heapVisitPages(collectType, VISIT_TYPE_PAGE_COLLECT);
             // Collect abandoned segments.
             boolean isCollectAllAbandoned = collectType == FORCE;
-            this.abandonedCollect(isCollectAllAbandoned);
+            abandonedCollect(isCollectAllAbandoned);
         }
 
         private void freeReservedSegment() {
@@ -400,7 +403,7 @@ final class MiMallocByteBufAllocator {
             // some blocks may end up in the page `thread_free` list with no blocks in the
             // heap `thread_delayed_free` list which may cause the page to be never freed!
             // (it would only be freed if we happen to scan it in `pageQueueFindFreeEx`)
-            if (!this.pageTryUseDelayedFree(page, USE_DELAYED_FREE, false)) {
+            if (!pageTryUseDelayedFree(page, USE_DELAYED_FREE, false)) {
                 return false;
             }
             // Collect all other non-local frees (move from `thread_free` to `free`) to ensure up-to-date `used` count.
@@ -422,9 +425,9 @@ final class MiMallocByteBufAllocator {
                 while (page != null) {
                     Page next = page.nextPage; // Save next in case the page gets removed from the queue.
                     if (markPage) {
-                        this.pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
+                        pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
                     } else {
-                        this.heapPageCollect(pq, page, collectType);
+                        heapPageCollect(pq, page, collectType);
                     }
                     page = next;
                 }
@@ -774,7 +777,7 @@ final class MiMallocByteBufAllocator {
                     Page page = (Page) slice;
                     segment.abandonedPages--;
                     // Associate the heap with this page, and allow heap thread delayed free again.
-                    this.pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
+                    pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
                     page.pageFreeCollect(false); // Ensure `usedBlocks` count is up to date.
                     if (page.usedBlocks == 0) {
                         // If everything free by now, free the page.
@@ -807,7 +810,7 @@ final class MiMallocByteBufAllocator {
         }
 
         private void pageUseDelayedFree(Page page, DELAYED_FLAG delay, boolean override_never) {
-            while (!this.pageTryUseDelayedFree(page, delay, override_never)) {
+            while (!pageTryUseDelayedFree(page, delay, override_never)) {
                 Thread.yield();
             }
         }
@@ -1294,7 +1297,7 @@ final class MiMallocByteBufAllocator {
             if (page == pq.firstPage) {
                 pq.firstPage = page.nextPage;
                 // Update first.
-                this.heapQueueFirstUpdate(pq);
+                heapQueueFirstUpdate(pq);
             }
             this.pageCount--;
             page.nextPage = null;
@@ -1313,7 +1316,7 @@ final class MiMallocByteBufAllocator {
                 pq.firstPage = pq.lastPage = page;
             }
             // Update direct.
-            this.heapQueueFirstUpdate(pq);
+            heapQueueFirstUpdate(pq);
             this.pageCount++;
         }
 
@@ -1575,9 +1578,9 @@ final class MiMallocByteBufAllocator {
             block.nextBlock = this.localFreeList;
             this.localFreeList = block;
             if (--this.usedBlocks == 0) {
-                this.pageRetire(heap);
+                pageRetire(heap);
             } else if (check_full && this.isInFull) {
-                this.pageUnfull(heap);
+                pageUnfull(heap);
             }
         }
 
@@ -1624,7 +1627,7 @@ final class MiMallocByteBufAllocator {
         private void pageFreeCollect(boolean force) {
             // Collect the thread-free list.
             if (force || this.threadFreeList.get() != null) {
-                this.pageThreadFreeCollect();
+                pageThreadFreeCollect();
             }
             if (this.localFreeList != null) {
                 if (this.freeList == null) {
@@ -2055,8 +2058,8 @@ final class MiMallocByteBufAllocator {
             assert block != null;
             block.nextBlock = null;
             if (!isReAlloc) {
-                this.resetRefCnt();
-                this.discardMarks();
+                resetRefCnt();
+                discardMarks();
                 setIndex0(0, 0);
             }
             this.block = block;
