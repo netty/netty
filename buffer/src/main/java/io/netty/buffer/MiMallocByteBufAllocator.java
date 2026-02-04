@@ -2081,9 +2081,9 @@ final class MiMallocByteBufAllocator {
         @Override
         protected void deallocate() {
             assert this.block != null;
-            this.length = 0;
-            this.maxFastCapacity = 0;
-            this.adjustment = 0;
+            this.length = -1;
+            this.maxFastCapacity = -1;
+            this.adjustment = -1;
             this.rootParent = null;
             this.tmpNioBuf = null;
             this.hasArray = false;
