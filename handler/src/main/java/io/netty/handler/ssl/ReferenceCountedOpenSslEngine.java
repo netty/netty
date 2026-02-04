@@ -256,16 +256,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 requestedServerNames = Collections.emptyList();
                             } else {
                                 String name = SSL.getSniHostname(ssl);
-                                if (name == null) {
-                                    requestedServerNames = Collections.emptyList();
-                                } else {
-                                    // Convert to bytes as we do not want to do any strict validation of the
-                                    // SNIHostName while creating it.
-                                    byte[] hostname = SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8);
-                                    requestedServerNames = hostname.length == 0 ?
-                                            Collections.emptyList() :
-                                            Collections.singletonList(new SNIHostName(hostname));
-                                }
+                                requestedServerNames = (name == null || name.isEmpty()) ?
+                                        Collections.emptyList() :
+                                        // Convert to bytes as we do not want to do any strict validation of the
+                                        // SNIHostName while creating it.
+                                        Collections.singletonList(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
                             }
                         }
                         return requestedServerNames;
@@ -2284,10 +2279,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
-    final boolean checkSniHostnameMatch(byte[] hostname) {
+    final boolean checkSniHostnameMatch(String hostname) {
         Collection<SNIMatcher> matchers = this.matchers;
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname);
+            SNIHostName name = new SNIHostName(hostname.getBytes(CharsetUtil.UTF_8));
             for (SNIMatcher matcher : matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {
