@@ -56,8 +56,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
-    private final Queue<List<WebSocketServerExtension>> validExtensions =
-            new ArrayDeque<List<WebSocketServerExtension>>(4);
+    private final Queue<List<WebSocketServerExtension>> validExtensions = new ArrayDeque<>(4);
 
     /**
      * Constructor
@@ -223,7 +222,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
             if (validExtensionsList != null && !validExtensionsList.isEmpty()) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
                 List<WebSocketExtensionData> extraExtensions =
-                  new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
+                  new ArrayList<>(extensionHandshakers.size());
                 for (WebSocketServerExtension extension : validExtensionsList) {
                     extraExtensions.add(extension.newReponseData());
                 }
@@ -242,9 +241,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
                     }
                 });
 
-                if (newHeaderValue != null) {
-                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
-                }
+                headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
             }
 
             future.addListener(f -> {
