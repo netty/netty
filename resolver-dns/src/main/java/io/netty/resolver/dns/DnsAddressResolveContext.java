@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,7 +19,6 @@ import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.util.Collections.emptyList;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,8 +66,6 @@ final class DnsAddressResolveContext extends DnsResolveContext<DnsResolveResult>
                 additionals,
                 nameServerAddrs, allowedQueries, resolveCache, authoritativeDnsServerCache,
                 completeEarlyIfPossible, trackCnames);
-        // TODO: is this really necessary? It seems like branching takes a path through the parent DnsNameResolver
-        //  and thus would get it's own context.
         // To be safe, when deriving a context we need to make a copy of the cname chain since the new context may
         // modify it.
         if (cnameChain != null) {
@@ -90,16 +87,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<DnsResolveResult>
 
     @Override
     List<DnsResolveResult> filterResults(List<DnsResolveResult> unfiltered) {
-        // Sort by address type preference, maintaining CNAME chain information
-        Collections.sort(unfiltered, new Comparator<DnsResolveResult>() {
-            private final Comparator<InetAddress> addressComparator =
-                PreferredAddressTypeComparator.comparator(parent.preferredAddressType());
-
-            @Override
-            public int compare(DnsResolveResult o1, DnsResolveResult o2) {
-                return addressComparator.compare(o1.address(), o2.address());
-            }
-        });
+        Collections.sort(unfiltered, PreferredAddressTypeComparator.comparator(parent.preferredAddressType()));
         return unfiltered;
     }
 
