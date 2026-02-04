@@ -756,6 +756,68 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
+     * Resolves the specified name into an address with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @return the resolve result containing address and CNAME chain
+     * @since 4.2.0
+     */
+    public final Future<DnsResolveResult> resolveWithCnames(String inetHost) {
+        return resolveWithCnames(inetHost, Collections.<DnsRecord>emptyList(),
+                executor().<DnsResolveResult>newPromise());
+    }
+
+    /**
+     * Resolves the specified name into an address with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @param additionals additional records ({@code OPT})
+     * @return the resolve result containing address and CNAME chain
+     * @since 4.2.0
+     */
+    public final Future<DnsResolveResult> resolveWithCnames(String inetHost, Iterable<DnsRecord> additionals) {
+        return resolveWithCnames(inetHost, additionals, executor().<DnsResolveResult>newPromise());
+    }
+
+    /**
+     * Resolves the specified name into an address with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @param additionals additional records ({@code OPT})
+     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
+     * @return the resolve result containing address and CNAME chain
+     * @since 4.2.0
+     */
+    public final Future<DnsResolveResult> resolveWithCnames(String inetHost, Iterable<DnsRecord> additionals,
+                                                           Promise<DnsResolveResult> promise) {
+        checkNotNull(promise, "promise");
+        DnsRecord[] additionalsArray = toArray(additionals, true);
+        try {
+            // Convert single result promise to list promise and extract first result
+            final Promise<List<DnsResolveResult>> listPromise = executor().newPromise();
+            doResolveAllWithCnamesInternal(inetHost, additionalsArray, listPromise, resolveCache,
+                    true); // trackCnames=true
+
+            listPromise.addListener((FutureListener<List<DnsResolveResult>>) future -> {
+                if (future.isSuccess()) {
+                    List<DnsResolveResult> results = future.getNow();
+                    if (results.isEmpty()) {
+                        promise.setFailure(new UnknownHostException("No address resolved for: " + inetHost));
+                    } else {
+                        promise.setSuccess(results.get(0));
+                    }
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            });
+
+            return promise;
+        } catch (Exception e) {
+            return promise.setFailure(e);
+        }
+    }
+
+    /**
      * Resolves the specified name into an address.
      *
      * @param inetHost the name to resolve
@@ -786,6 +848,51 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals) {
         return resolveAll(inetHost, additionals, executor().<List<InetAddress>>newPromise());
+    }
+
+    /**
+     * Resolves the specified name into a list of addresses with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @return the list of resolve results containing addresses and CNAME chains
+     * @since 4.2.0
+     */
+    public final Future<List<DnsResolveResult>> resolveAllWithCnames(String inetHost) {
+        return resolveAllWithCnames(inetHost, Collections.<DnsRecord>emptyList(),
+                executor().<List<DnsResolveResult>>newPromise());
+    }
+
+    /**
+     * Resolves the specified name into a list of addresses with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @param additionals additional records ({@code OPT})
+     * @return the list of resolve results containing addresses and CNAME chains
+     * @since 4.2.0
+     */
+    public final Future<List<DnsResolveResult>> resolveAllWithCnames(String inetHost, Iterable<DnsRecord> additionals) {
+        return resolveAllWithCnames(inetHost, additionals, executor().<List<DnsResolveResult>>newPromise());
+    }
+
+    /**
+     * Resolves the specified name into a list of addresses with CNAME chain tracking.
+     *
+     * @param inetHost the name to resolve
+     * @param additionals additional records ({@code OPT})
+     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
+     * @return the list of resolve results containing addresses and CNAME chains
+     * @since 4.2.0
+     */
+    public final Future<List<DnsResolveResult>> resolveAllWithCnames(String inetHost, Iterable<DnsRecord> additionals,
+                                                                    Promise<List<DnsResolveResult>> promise) {
+        checkNotNull(promise, "promise");
+        DnsRecord[] additionalsArray = toArray(additionals, true);
+        try {
+            doResolveAllWithCnames(inetHost, additionalsArray, promise, resolveCache);
+            return promise;
+        } catch (Exception e) {
+            return promise.setFailure(e);
+        }
     }
 
     /**
@@ -996,76 +1103,28 @@ public class DnsNameResolver extends InetNameResolver {
                              final DnsRecord[] additionals,
                              final Promise<InetAddress> promise,
                              final DnsCache resolveCache) throws Exception {
-        if (inetHost == null || inetHost.isEmpty()) {
-            // If an empty hostname is used we should use "localhost", just like InetAddress.getByName(...) does.
-            promise.setSuccess(loopbackAddress());
-            return;
-        }
-        final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
-        if (address != null) {
-            // The inetHost is actually an ipaddress.
-            promise.setSuccess(address);
-            return;
-        }
+        // Always use the CNAME-tracking path internally, then extract InetAddress result
+        final Promise<List<DnsResolveResult>> cnamePromise = executor().newPromise();
+        doResolveAllWithCnames(inetHost, additionals, cnamePromise, resolveCache);
 
-        final String hostname = hostname(inetHost);
-
-        InetAddress hostsFileEntry = resolveHostsFileEntry(hostname);
-        if (hostsFileEntry != null) {
-            promise.setSuccess(hostsFileEntry);
-            return;
-        }
-
-        if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
-            ChannelFuture f = resolveChannelProvider.nextResolveChannel(promise);
-            if (f.isDone()) {
-                doResolveNow(f, hostname, additionals, promise, resolveCache);
-            } else {
-                f.addListener((ChannelFutureListener) f1 ->
-                        doResolveNow(f1, hostname, additionals, promise, resolveCache));
-            }
-        }
-    }
-
-    private void doResolveNow(ChannelFuture f, final String hostname, final DnsRecord[] additionals,
-                              final Promise<InetAddress> promise,
-                              final DnsCache resolveCache) {
-        if (f.isSuccess()) {
-            doResolveUncached(f.channel(), hostname, additionals, promise,
-                    resolveCache, completeOncePreferredResolved);
-        } else {
-            UnknownHostException e = toException(f, hostname, null, additionals);
-            promise.setFailure(e);
-        }
-    }
-
-    private boolean doResolveCached(String hostname,
-                                    DnsRecord[] additionals,
-                                    Promise<InetAddress> promise,
-                                    DnsCache resolveCache) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
-            return false;
-        }
-
-        Throwable cause = cachedEntries.get(0).cause();
-        if (cause == null) {
-            final int numEntries = cachedEntries.size();
-            // Find the first entry with the preferred address type.
-            for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
-                for (int i = 0; i < numEntries; i++) {
-                    final DnsCacheEntry e = cachedEntries.get(i);
-                    final Class<? extends InetAddress> addressType = addressType(f);
-                    if (addressType != null && addressType.isInstance(e.address())) {
-                        trySuccess(promise, e.address());
-                        return true;
-                    }
+        FutureListener<List<DnsResolveResult>> listener = future -> {
+            if (future.isSuccess()) {
+                List<DnsResolveResult> result = future.getNow();
+                if (result.isEmpty()) {
+                    promise.setFailure(new UnknownHostException("No address resolved for: " + inetHost));
+                } else {
+                    promise.setSuccess(result.get(0).address());
                 }
+            } else {
+                promise.setFailure(future.cause());
             }
-            return false;
+        };
+
+        // Check if the promise completed synchronously (e.g., for IP addresses)
+        if (cnamePromise.isDone()) {
+            listener.operationComplete(cnamePromise);
         } else {
-            tryFailure(promise, cause);
-            return true;
+            cnamePromise.addListener(listener);
         }
     }
 
@@ -1100,23 +1159,6 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private void doResolveUncached(Channel channel,
-                                   String hostname,
-                                   DnsRecord[] additionals,
-                                   final Promise<InetAddress> promise,
-                                   DnsCache resolveCache, boolean completeEarlyIfPossible) {
-        final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(channel, hostname, additionals, promise, allPromise,
-                resolveCache, completeEarlyIfPossible);
-        allPromise.addListener((FutureListener<List<InetAddress>>) future -> {
-            if (future.isSuccess()) {
-                trySuccess(promise, future.getNow().get(0));
-            } else {
-                tryFailure(promise, future.cause());
-            }
-        });
-    }
-
     @Override
     protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
         doResolveAll(inetHost, EMPTY_ADDITIONALS, promise, resolveCache);
@@ -1130,15 +1172,62 @@ public class DnsNameResolver extends InetNameResolver {
                                 final DnsRecord[] additionals,
                                 final Promise<List<InetAddress>> promise,
                                 final DnsCache resolveCache) throws Exception {
+        doResolveAllInternal(inetHost, additionals, promise, resolveCache);
+    }
+
+    private void doResolveAllInternal(String inetHost,
+                                     final DnsRecord[] additionals,
+                                     final Promise<List<InetAddress>> promise,
+                                     final DnsCache resolveCache) throws Exception {
+        // Always use the CNAME-tracking path internally, then extract InetAddress results
+        final Promise<List<DnsResolveResult>> cnamePromise = executor().newPromise();
+        doResolveAllWithCnamesInternal(inetHost, additionals, cnamePromise, resolveCache,
+                false); // trackCnames=false for standard resolution
+
+        FutureListener<List<DnsResolveResult>> listener = future -> {
+            if (future.isSuccess()) {
+                List<DnsResolveResult> cnameResults = future.getNow();
+                List<InetAddress> addresses = new ArrayList<InetAddress>(cnameResults.size());
+                for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
+                    Class<? extends InetAddress> addressType = addressType(f);
+                    for (DnsResolveResult result : cnameResults) {
+                        InetAddress address = result.address();
+                        if (addressType != null && addressType.isInstance(address)) {
+                            addresses.add(address);
+                        }
+                    }
+                }
+                promise.setSuccess(addresses);
+            } else {
+                promise.setFailure(future.cause());
+            }
+        };
+
+        // Check if the promise completed synchronously (e.g., for IP addresses)
+        if (cnamePromise.isDone()) {
+            listener.operationComplete(cnamePromise);
+        } else {
+            cnamePromise.addListener(listener);
+        }
+    }
+
+    private void doResolveAllWithCnamesInternal(String inetHost,
+                                               final DnsRecord[] additionals,
+                                               final Promise<List<DnsResolveResult>> promise,
+                                                DnsCache resolveCache, boolean trackCnames) {
         if (inetHost == null || inetHost.isEmpty()) {
             // If an empty hostname is used we should use "localhost", just like InetAddress.getAllByName(...) does.
-            promise.setSuccess(Collections.singletonList(loopbackAddress()));
+            promise.setSuccess(Collections.singletonList(
+                new DnsResolveResult(loopbackAddress(),
+                                   Collections.emptyList())));
             return;
         }
         final InetAddress address = NetUtil.createInetAddressFromIpAddressString(inetHost);
         if (address != null) {
             // The unresolvedAddress was created via a String that contains an ipaddress.
-            promise.setSuccess(Collections.singletonList(address));
+            promise.setSuccess(Collections.singletonList(
+                new DnsResolveResult(address,
+                                   Collections.emptyList())));
             return;
         }
 
@@ -1146,31 +1235,23 @@ public class DnsNameResolver extends InetNameResolver {
 
         List<InetAddress> hostsFileEntries = resolveHostsFileEntries(hostname);
         if (hostsFileEntries != null) {
-            promise.setSuccess(hostsFileEntries);
+            List<DnsResolveResult> results = new ArrayList<>(hostsFileEntries.size());
+            for (InetAddress addr : hostsFileEntries) {
+                results.add(new DnsResolveResult(addr,
+                                               Collections.emptyList()));
+            }
+            promise.setSuccess(results);
             return;
         }
 
-        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, this.searchDomains(),
-                ndots(), resolvedInternetProtocolFamilies)) {
+        if (!doResolveAllWithCnamesCached(hostname, additionals, promise, resolveCache)) {
             ChannelFuture f = resolveChannelProvider.nextResolveChannel(promise);
             if (f.isDone()) {
-                doResolveAllNow(f, hostname, additionals, promise, resolveCache);
+                doResolveAllWithCnamesNow(f, hostname, additionals, promise, resolveCache, trackCnames);
             } else {
                 f.addListener((ChannelFutureListener) f1 ->
-                        doResolveAllNow(f1, hostname, additionals, promise, resolveCache));
+                        doResolveAllWithCnamesNow(f1, hostname, additionals, promise, resolveCache, trackCnames));
             }
-        }
-    }
-
-    private void doResolveAllNow(ChannelFuture f, final String hostname, final DnsRecord[] additionals,
-                              final Promise<List<InetAddress>> promise,
-                              final DnsCache resolveCache) {
-        if (f.isSuccess()) {
-            doResolveAllUncached(f.channel(), hostname, additionals, promise, promise,
-                    resolveCache, completeOncePreferredResolved);
-        } else {
-            UnknownHostException e = toException(f, hostname, null, additionals);
-            promise.setFailure(e);
         }
     }
 
@@ -1205,9 +1286,9 @@ public class DnsNameResolver extends InetNameResolver {
             List<InetAddress> result = null;
             final int numEntries = cachedEntries.size();
             for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
+                Class<? extends InetAddress> addressType = addressType(f);
                 for (int i = 0; i < numEntries; i++) {
                     final DnsCacheEntry e = cachedEntries.get(i);
-                    Class<? extends InetAddress> addressType = addressType(f);
                     if (addressType != null && addressType.isInstance(e.address())) {
                         if (result == null) {
                             result = new ArrayList<InetAddress>(numEntries);
@@ -1227,44 +1308,102 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private void doResolveAllUncached(final Channel channel,
-                                      final String hostname,
-                                      final DnsRecord[] additionals,
-                                      final Promise<?> originalPromise,
-                                      final Promise<List<InetAddress>> promise,
-                                      final DnsCache resolveCache,
-                                      final boolean completeEarlyIfPossible) {
-        // Call doResolveUncached0(...) in the EventLoop as we may need to submit multiple queries which would need
-        // to submit multiple Runnable at the end if we are not already on the EventLoop.
+    /**
+     * Hook designed for extensibility so one can pass a different cache on each resolution attempt
+     * instead of using the global one. This method provides CNAME tracking.
+     */
+    protected void doResolveAllWithCnames(String inetHost, final DnsRecord[] additionals,
+                                         final Promise<List<DnsResolveResult>> promise,
+                                          final DnsCache resolveCache) throws Exception {
+        doResolveAllWithCnamesInternal(inetHost, additionals, promise, resolveCache,
+                true); // trackCnames=true for CNAME tracking APIs
+    }
+
+    private boolean doResolveAllWithCnamesCached(String hostname,
+                                                DnsRecord[] additionals,
+                                                Promise<List<DnsResolveResult>> promise,
+                                                DnsCache resolveCache) {
+        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
+            return false;
+        }
+
+        Throwable cause = cachedEntries.get(0).cause();
+        if (cause == null) {
+            List<DnsResolveResult> result = null;
+            final int numEntries = cachedEntries.size();
+            for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
+                Class<? extends InetAddress> addressType = addressType(f);
+                for (int i = 0; i < numEntries; i++) {
+                    final DnsCacheEntry e = cachedEntries.get(i);
+                    if (addressType != null && addressType.isInstance(e.address())) {
+                        if (result == null) {
+                            result = new ArrayList<>(numEntries);
+                        }
+                        result.add(new DnsResolveResult(e.address(), e.cnameChain()));
+                    }
+                }
+            }
+            if (result != null) {
+                trySuccess(promise, result);
+                return true;
+            }
+            return false;
+        } else {
+            tryFailure(promise, cause);
+            return true;
+        }
+    }
+
+    private void doResolveAllWithCnamesNow(ChannelFuture f, final String hostname, final DnsRecord[] additionals,
+                                          final Promise<List<DnsResolveResult>> promise,
+                                          final DnsCache resolveCache, boolean trackCnames) {
+        if (f.isSuccess()) {
+            doResolveAllWithCnamesUncached(f.channel(), hostname, additionals, promise, resolveCache,
+                    promise, trackCnames);
+        } else {
+            UnknownHostException e = toException(f, hostname, null, additionals);
+            promise.setFailure(e);
+        }
+    }
+
+    private void doResolveAllWithCnamesUncached(final Channel channel,
+                                               final String hostname,
+                                               final DnsRecord[] additionals,
+                                               final Promise<?> originalPromise,
+                                               final DnsCache resolveCache,
+                                               final Promise<List<DnsResolveResult>> promise,
+                                               final boolean trackCnames) {
+        // Call doResolveAllWithCnamesUncached0(...) in the EventLoop as we may need to submit multiple queries which
+        // would need  to submit multiple Runnable at the end if we are not already on the EventLoop.
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            doResolveAllUncached0(channel, hostname, additionals, originalPromise,
-                                  promise, resolveCache, completeEarlyIfPossible);
+            doResolveAllWithCnamesUncached0(channel, hostname, additionals, originalPromise, resolveCache,
+                    promise, trackCnames);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    doResolveAllUncached0(channel, hostname, additionals, originalPromise,
-                                          promise, resolveCache, completeEarlyIfPossible);
+                    doResolveAllWithCnamesUncached0(channel, hostname, additionals, originalPromise,
+                            resolveCache, promise, trackCnames);
                 }
             });
         }
     }
 
-    private void doResolveAllUncached0(final Channel channel,
-                                       final String hostname,
-                                       final DnsRecord[] additionals,
-                                       final Promise<?> originalPromise,
-                                       final Promise<List<InetAddress>> promise,
-                                       final DnsCache resolveCache,
-                                       final boolean completeEarlyIfPossible) {
+    private void doResolveAllWithCnamesUncached0(final Channel channel,
+                                                final String hostname,
+                                                final DnsRecord[] additionals,
+                                                final Promise<?> originalPromise,
+                                                final DnsCache resolveCache,
+                                                final Promise<List<DnsResolveResult>> promise, boolean trackCnames) {
 
         assert executor().inEventLoop();
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, channel,
                 originalPromise, hostname, additionals, nameServerAddrs, maxQueriesPerResolve, resolveCache,
-                authoritativeDnsServerCache, completeEarlyIfPossible);
+                authoritativeDnsServerCache, completeOncePreferredResolved, trackCnames);
         ctx.resolve(promise);
     }
 

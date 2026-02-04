@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -51,6 +50,7 @@ import java.net.UnknownHostException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -211,11 +211,7 @@ abstract class DnsResolveContext<T> {
 
     abstract boolean isCompleteEarly(T resolved);
 
-    /**
-     * Returns {@code true} if we should allow duplicates in the result or {@code false} if no duplicates should
-     * be included.
-     */
-    abstract boolean isDuplicateAllowed();
+    abstract boolean shouldAddToResult(T value, Collection<T> entries);
 
     /**
      * Caches a successful resolution.
@@ -228,6 +224,17 @@ abstract class DnsResolveContext<T> {
      */
     abstract void cache(String hostname, DnsRecord[] additionals,
                         UnknownHostException cause);
+
+    /**
+     * Adds a CNAME to the tracking chain during resolution.
+     * <p>
+     * This method is called when a CNAME record is discovered during DNS resolution,
+     * either from DNS responses or from cache lookups. Subclasses must implement this
+     * to handle CNAME tracking appropriately for their use case.
+     *
+     * @param cname the CNAME hostname to add to the chain
+     */
+    protected abstract void addCnameToChain(String cname);
 
     void resolve(final Promise<List<T>> promise) {
         final String[] searchDomains = parent.searchDomains();
@@ -316,9 +323,73 @@ abstract class DnsResolveContext<T> {
         return name + '.';
     }
 
+    /**
+     * Removes the trailing dot from a hostname if present.
+     * This normalizes FQDN format hostnames to standard format for CNAME chain presentation.
+     */
+    private static String hostnameWithoutDot(String name) {
+        if (StringUtil.endsWith(name, '.')) {
+            return name.substring(0, name.length() - 1);
+        }
+        return name;
+    }
+
     // Resolve the final name from the CNAME cache until there is nothing to follow anymore. This also
     // guards against loops in the cache but early return once a loop is detected.
-    //
+    // This instance method properly tracks cached CNAMEs in the CNAME chain.
+    private String cnameResolveFromCache(String name) throws UnknownHostException {
+        DnsCnameCache cnameCache = cnameCache();
+        String first = cnameCache.get(hostnameWithDot(name));
+        if (first == null) {
+            // Nothing in the cache at all
+            return name;
+        }
+
+        // Track the first CNAME mapping from cache (normalize by removing trailing dot)
+        addCnameToChain(hostnameWithoutDot(first));
+
+        String second = cnameCache.get(hostnameWithDot(first));
+        if (second == null) {
+            // Nothing else to follow, return first match.
+            return first;
+        }
+
+        checkCnameLoop(name, first, second);
+        return cnameResolveFromCacheLoop(cnameCache, name, first, second);
+    }
+
+    private String cnameResolveFromCacheLoop(
+            DnsCnameCache cnameCache, String hostname, String first, String mapping) throws UnknownHostException {
+        // Detect loops by advance only every other iteration.
+        // See https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_Tortoise_and_Hare
+        boolean advance = false;
+
+        String name = mapping;
+        // Track the second CNAME mapping from cache (normalize by removing trailing dot)
+        addCnameToChain(hostnameWithoutDot(mapping));
+
+        // Resolve from cnameCache() until there is no more cname entry cached.
+        while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
+            checkCnameLoop(hostname, first, mapping);
+            // Track each subsequent CNAME mapping from cache (normalize by removing trailing dot)
+            addCnameToChain(hostnameWithoutDot(mapping));
+            name = mapping;
+            if (advance) {
+                first = cnameCache.get(hostnameWithDot(first));
+            }
+            advance = !advance;
+        }
+        return name;
+    }
+
+    private static void checkCnameLoop(String hostname, String first, String second) throws UnknownHostException {
+        if (first.equals(second)) {
+            // Follow CNAME from cache would loop. Lets throw and so fail the resolution.
+            throw new UnknownHostException("CNAME loop detected for '" + hostname + '\'');
+        }
+    }
+
+    // Legacy static method for backward compatibility and testing.
     // Visible for testing only
     static String cnameResolveFromCache(DnsCnameCache cnameCache, String name) throws UnknownHostException {
         String first = cnameCache.get(hostnameWithDot(name));
@@ -334,10 +405,10 @@ abstract class DnsResolveContext<T> {
         }
 
         checkCnameLoop(name, first, second);
-        return cnameResolveFromCacheLoop(cnameCache, name, first, second);
+        return cnameResolveFromCacheLoopStatic(cnameCache, name, first, second);
     }
 
-    private static String cnameResolveFromCacheLoop(
+    private static String cnameResolveFromCacheLoopStatic(
             DnsCnameCache cnameCache, String hostname, String first, String mapping) throws UnknownHostException {
         // Detect loops by advance only every other iteration.
         // See https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_Tortoise_and_Hare
@@ -349,23 +420,17 @@ abstract class DnsResolveContext<T> {
             checkCnameLoop(hostname, first, mapping);
             name = mapping;
             if (advance) {
-                first = cnameCache.get(first);
+                first = cnameCache.get(hostnameWithDot(first));
             }
             advance = !advance;
         }
         return name;
     }
-
-    private static void checkCnameLoop(String hostname, String first, String second) throws UnknownHostException {
-        if (first.equals(second)) {
-            // Follow CNAME from cache would loop. Lets throw and so fail the resolution.
-            throw new UnknownHostException("CNAME loop detected for '" + hostname + '\'');
-        }
-    }
     private void internalResolve(String name, Promise<List<T>> promise) {
         try {
             // Resolve from cnameCache() until there is no more cname entry cached.
-            name = cnameResolveFromCache(cnameCache(), name);
+            // Now properly tracks cached CNAMEs in the CNAME chain.
+            name = cnameResolveFromCache(name);
         } catch (Throwable cause) {
             promise.tryFailure(cause);
             return;
@@ -562,8 +627,8 @@ abstract class DnsResolveContext<T> {
                     // so we eventually fail
                     allowedQueries,
                     resolveCache,
-                    redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
-                    .resolve(resolverPromise);
+                    redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false, false)
+                    .resolveForAddresses(resolverPromise);
         }
     }
 
@@ -844,10 +909,13 @@ abstract class DnsResolveContext<T> {
                 String resolved = questionName;
                 do {
                     resolved = cnamesCopy.remove(resolved);
-                    if (recordName.equals(resolved)) {
-                        // We followed a CNAME chain that was part of the response without any extra queries.
-                        cnameNeedsFollow = false;
-                        break;
+                    if (resolved != null) {
+                        addCnameToChain(hostnameWithoutDot(resolved));
+                        if (recordName.equals(resolved)) {
+                            // We followed a CNAME chain that was part of the response without any extra queries.
+                            cnameNeedsFollow = false;
+                            break;
+                        }
                     }
                 } while (resolved != null);
 
@@ -911,7 +979,7 @@ abstract class DnsResolveContext<T> {
                 if (finalResult == null) {
                     finalResult = new ArrayList<T>(8);
                     finalResult.add(converted);
-                } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
+                } else if (shouldAddToResult(converted, finalResult)) {
                     finalResult.add(converted);
                 } else {
                     shouldRelease = true;
@@ -959,6 +1027,7 @@ abstract class DnsResolveContext<T> {
             final String next = cnames.remove(resolved);
             if (next != null) {
                 found = true;
+                addCnameToChain(hostnameWithoutDot(next)); // Track the CNAME (normalize)
                 resolved = next;
             } else {
                 break;
@@ -1170,7 +1239,8 @@ abstract class DnsResolveContext<T> {
         final DnsQuestion cnameQuestion;
         final DnsServerAddressStream stream;
         try {
-            cname = cnameResolveFromCache(cnameCache(), cname);
+            // Use instance method to properly track cached CNAMEs
+            cname = cnameResolveFromCache(cname);
             stream = getNameServers(cname);
             cnameQuestion = new DefaultDnsQuestion(cname, question.type(), dnsClass);
         } catch (Throwable cause) {

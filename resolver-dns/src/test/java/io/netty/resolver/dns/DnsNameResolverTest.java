@@ -676,7 +676,7 @@ public class DnsNameResolverTest {
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
-    public void testQueryMx(DnsNameResolverChannelStrategy strategy) {
+    public void testQueryMx(DnsNameResolverChannelStrategy strategy) throws Exception {
         DnsNameResolver resolver = newResolver(strategy).build();
         try {
             assertTrue(resolver.isRecursionDesired());
@@ -695,7 +695,7 @@ public class DnsNameResolverTest {
                 String hostname = e.getKey();
                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
 
-                DnsResponse response = f.getNow().content();
+                DnsResponse response = f.get().content();
                 assertEquals(DnsResponseCode.NOERROR, response.code());
 
                 final int answerCount = response.count(DnsSection.ANSWER);
