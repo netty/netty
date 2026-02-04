@@ -31,7 +31,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 public class SpdyFrameDecoderTest {
 
@@ -841,7 +841,7 @@ public class SpdyFrameDecoderTest {
         buf.writeLong(RANDOM.nextLong());
 
         decoder.decode(buf);
-        verifyZeroInteractions(delegate);
+        verifyNoInteractions(delegate);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -856,7 +856,7 @@ public class SpdyFrameDecoderTest {
         encodeControlFrameHeader(buf, type, flags, length);
 
         decoder.decode(buf);
-        verifyZeroInteractions(delegate);
+        verifyNoInteractions(delegate);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -878,7 +878,7 @@ public class SpdyFrameDecoderTest {
         decoder.decode(header);
         decoder.decode(segment1);
         decoder.decode(segment2);
-        verifyZeroInteractions(delegate);
+        verifyNoInteractions(delegate);
         assertFalse(header.isReadable());
         assertFalse(segment1.isReadable());
         assertFalse(segment2.isReadable());
