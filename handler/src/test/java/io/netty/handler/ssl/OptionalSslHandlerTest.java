@@ -28,7 +28,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class OptionalSslHandlerTest {
@@ -115,7 +115,7 @@ public class OptionalSslHandlerTest {
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3 });
         try {
             handler.decode(context, payload, null);
-            verifyZeroInteractions(pipeline);
+            verifyNoInteractions(pipeline);
         } finally {
             payload.release();
         }
