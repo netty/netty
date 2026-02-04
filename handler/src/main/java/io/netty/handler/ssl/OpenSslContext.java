@@ -60,7 +60,10 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     @Override
     @SuppressWarnings("FinalizeDeclaration")
     protected final void finalize() throws Throwable {
-        super.finalize();
-        OpenSsl.releaseIfNeeded(this);
+        try {
+            OpenSsl.releaseIfNeeded(this);
+        } finally {
+            super.finalize();
+        }
     }
 }

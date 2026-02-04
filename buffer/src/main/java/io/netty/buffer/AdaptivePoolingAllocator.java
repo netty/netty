@@ -345,9 +345,9 @@ final class AdaptivePoolingAllocator {
     @Override
     protected void finalize() throws Throwable {
         try {
-            super.finalize();
-        } finally {
             free();
+        } finally {
+            super.finalize();
         }
     }
 
