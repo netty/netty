@@ -471,7 +471,7 @@
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
-    <graalvm.version>19.3.6</graalvm.version>
+    <graalvm.version>25.0.2</graalvm.version>
     <brotli4j.version>1.16.0</brotli4j.version>
     <aalto.version>1.3.3</aalto.version>
     <rxtx.version>2.1.7</rxtx.version>
@@ -908,8 +908,8 @@
       </dependency>
 
       <dependency>
-        <groupId>org.graalvm.nativeimage</groupId>
-        <artifactId>svm</artifactId>
+        <groupId>org.graalvm.sdk</groupId>
+        <artifactId>nativeimage</artifactId>
         <version>${graalvm.version}</version>
         <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
         <scope>provided</scope>

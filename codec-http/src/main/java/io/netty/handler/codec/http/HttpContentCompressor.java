@@ -63,6 +63,21 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private ChannelHandlerContext ctx;
     private final Map<String, CompressionEncoderFactory> factories;
 
+    private static final CompressionOptions[] DEFAULT_COMPRESSION_OPTIONS;
+    static {
+        List<CompressionOptions> options = new ArrayList<>(5);
+        options.add(StandardCompressionOptions.gzip());
+        options.add(StandardCompressionOptions.deflate());
+        options.add(StandardCompressionOptions.snappy());
+        if (Brotli.isAvailable()) {
+            options.add(StandardCompressionOptions.brotli());
+        }
+        if (Zstd.isAvailable()) {
+            options.add(StandardCompressionOptions.zstd());
+        }
+        DEFAULT_COMPRESSION_OPTIONS = options.toArray(new CompressionOptions[0]);
+    }
+
     /**
      * Creates a new handler with {@link StandardCompressionOptions#brotli()} (if supported) ,
      * {@link StandardCompressionOptions#zstd()} (if supported), {@link StandardCompressionOptions#snappy()},
@@ -181,8 +196,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         ZstdOptions zstdOptions = null;
         SnappyOptions snappyOptions = null;
         if (compressionOptions == null || compressionOptions.length == 0) {
-            compressionOptions = defaultCompressionOptions(
-                    StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate());
+            compressionOptions = DEFAULT_COMPRESSION_OPTIONS;
         }
 
         ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
@@ -215,7 +229,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.zstdOptions = zstdOptions;
         this.snappyOptions = snappyOptions;
 
-        this.factories = new HashMap<String, CompressionEncoderFactory>();
+        this.factories = new HashMap<>();
 
         if (this.gzipOptions != null) {
             this.factories.put("gzip", new GzipEncoderFactory());
@@ -234,9 +248,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
         }
     }
 
+    @Deprecated
     private static CompressionOptions[] defaultCompressionOptions(
             GzipOptions gzipOptions, DeflateOptions deflateOptions) {
-        List<CompressionOptions> options = new ArrayList<CompressionOptions>(5);
+        List<CompressionOptions> options = new ArrayList<>(5);
         options.add(gzipOptions);
         options.add(deflateOptions);
         options.add(StandardCompressionOptions.snappy());
