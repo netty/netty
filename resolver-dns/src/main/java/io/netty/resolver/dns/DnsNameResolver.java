@@ -756,68 +756,6 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     /**
-     * Resolves the specified name into an address with CNAME chain tracking.
-     *
-     * @param inetHost the name to resolve
-     * @return the resolve result containing address and CNAME chain
-     * @since 4.2.0
-     */
-    public final Future<DnsResolveResult> resolveWithCnames(String inetHost) {
-        return resolveWithCnames(inetHost, Collections.<DnsRecord>emptyList(),
-                executor().<DnsResolveResult>newPromise());
-    }
-
-    /**
-     * Resolves the specified name into an address with CNAME chain tracking.
-     *
-     * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
-     * @return the resolve result containing address and CNAME chain
-     * @since 4.2.0
-     */
-    public final Future<DnsResolveResult> resolveWithCnames(String inetHost, Iterable<DnsRecord> additionals) {
-        return resolveWithCnames(inetHost, additionals, executor().<DnsResolveResult>newPromise());
-    }
-
-    /**
-     * Resolves the specified name into an address with CNAME chain tracking.
-     *
-     * @param inetHost the name to resolve
-     * @param additionals additional records ({@code OPT})
-     * @param promise the {@link Promise} which will be fulfilled when the name resolution is finished
-     * @return the resolve result containing address and CNAME chain
-     * @since 4.2.0
-     */
-    public final Future<DnsResolveResult> resolveWithCnames(String inetHost, Iterable<DnsRecord> additionals,
-                                                           Promise<DnsResolveResult> promise) {
-        checkNotNull(promise, "promise");
-        DnsRecord[] additionalsArray = toArray(additionals, true);
-        try {
-            // Convert single result promise to list promise and extract first result
-            final Promise<List<DnsResolveResult>> listPromise = executor().newPromise();
-            doResolveAllWithCnamesInternal(inetHost, additionalsArray, listPromise, resolveCache,
-                    true); // trackCnames=true
-
-            listPromise.addListener((FutureListener<List<DnsResolveResult>>) future -> {
-                if (future.isSuccess()) {
-                    List<DnsResolveResult> results = future.getNow();
-                    if (results.isEmpty()) {
-                        promise.setFailure(new UnknownHostException("No address resolved for: " + inetHost));
-                    } else {
-                        promise.setSuccess(results.get(0));
-                    }
-                } else {
-                    promise.setFailure(future.cause());
-                }
-            });
-
-            return promise;
-        } catch (Exception e) {
-            return promise.setFailure(e);
-        }
-    }
-
-    /**
      * Resolves the specified name into an address.
      *
      * @param inetHost the name to resolve
