@@ -32,7 +32,7 @@ import io.netty.util.ReferenceCounted;
  *   <li>Per-credential signing algorithm preferences</li>
  * </ul>
  *
- * <p>This is a BoringSSL-specific feature. Use {@link OpenSsl#isBoringSSL()} to check availability.
+ * <p>This is a BoringSSL-specific feature. Use {@link #isAvailable()} to check availability.
  *
  * <p>Instances are reference counted and must be released when no longer needed.
  *
@@ -40,6 +40,13 @@ import io.netty.util.ReferenceCounted;
  *      BoringSSL SSL_CREDENTIAL Documentation</a>
  */
 public interface OpenSslCredential extends ReferenceCounted {
+    /**
+     * Check if the credentials API is supported.
+     * @return {@code true} if the credentials API is supported, otherwise {@code false}.
+     */
+    static boolean isAvailable() {
+        return OpenSsl.isAvailable() && OpenSsl.isBoringSSL();
+    }
 
     /**
      * Returns the native {@code SSL_CREDENTIAL} pointer address.

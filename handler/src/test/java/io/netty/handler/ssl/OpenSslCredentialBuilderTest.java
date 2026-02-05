@@ -22,8 +22,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -35,8 +33,7 @@ public class OpenSslCredentialBuilderTest {
 
     @BeforeAll
     public static void setUp() throws Exception {
-        OpenSsl.ensureAvailability();
-        assumeTrue(OpenSsl.isBoringSSL(), "SSL_CREDENTIAL API is only supported with BoringSSL");
+        assumeTrue(OpenSslCredential.isAvailable());
 
         // Create RSA certificate
         cert = new CertificateBuilder()

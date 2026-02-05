@@ -42,6 +42,8 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @BeforeAll
     public static void setUpCredentialCerts() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
         // Create RSA certificate for credential tests
         rsaCert = new CertificateBuilder()
                 .subject("cn=rsa.localhost")
