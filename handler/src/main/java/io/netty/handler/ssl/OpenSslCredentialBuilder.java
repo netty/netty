@@ -15,12 +15,8 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
-import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SSLCredential;
 import io.netty.util.internal.ObjectUtil;
 
