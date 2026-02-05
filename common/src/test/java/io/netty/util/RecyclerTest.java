@@ -185,8 +185,11 @@ public class RecyclerTest {
         }) {
             @Override
             protected void finalize() throws Throwable {
-                super.finalize();
-                collected.set(true);
+                try {
+                    collected.set(true);
+                } finally {
+                    super.finalize();
+                }
             }
         };
         assertFalse(collected.get());
