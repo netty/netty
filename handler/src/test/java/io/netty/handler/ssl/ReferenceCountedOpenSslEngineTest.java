@@ -134,7 +134,7 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testHandshakeWithMultipleCredentials(SSLEngineTestParam param) throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL(), "SSL_CREDENTIAL API is only supported with BoringSSL");
+        assumeTrue(OpenSslCredential.isAvailable());
 
         // Server context with both credentials
         SslContext serverSslContext = wrapContext(param,

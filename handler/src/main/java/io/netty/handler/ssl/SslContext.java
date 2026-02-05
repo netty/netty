@@ -477,6 +477,11 @@ public abstract class SslContext {
             if (enableOcsp) {
                 throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
             }
+            if (credentials != null && !credentials.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
+                                "Use SslProvider.OPENSSL_REFCNT instead.");
+            }
             return new JdkSslServerContext(sslContextProvider,
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
@@ -847,6 +852,11 @@ public abstract class SslContext {
             case JDK:
                 if (enableOcsp) {
                     throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
+                }
+                if (credentials != null && !credentials.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
+                                    "Use SslProvider.OPENSSL_REFCNT instead.");
                 }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,

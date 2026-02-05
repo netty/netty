@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -246,6 +248,30 @@ public class SslContextBuilderTest {
             }
         } catch (SSLException expected) {
             // ok
+        }
+    }
+
+    @Test
+    void openSslCredentialApiIsNotAvailableWithJdkProvider() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        X509Bundle bundle = new CertificateBuilder()
+                .subject("cn=netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        OpenSslCredential credential = OpenSslCredentialBuilder.forX509(
+                bundle.getKeyPair().getPrivate(), bundle.getCertificatePath())
+                .build();
+        try {
+            SslContextBuilder clientBuilder = SslContextBuilder.forClient();
+            SslContextBuilder serverBuilder = SslContextBuilder.forServer(bundle.toKeyManagerFactory());
+            clientBuilder.sslProvider(SslProvider.JDK);
+            serverBuilder.sslProvider(SslProvider.JDK);
+            clientBuilder.credential(credential);
+            serverBuilder.credential(credential);
+            assertThrows(IllegalArgumentException.class, () -> clientBuilder.build());
+            assertThrows(IllegalArgumentException.class, () -> serverBuilder.build());
+        } finally {
+            credential.release();
         }
     }
 
