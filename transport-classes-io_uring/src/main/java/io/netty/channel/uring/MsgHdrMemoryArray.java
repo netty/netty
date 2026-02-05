@@ -15,6 +15,10 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.CleanableDirectBuffer;
+
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 final class MsgHdrMemoryArray {
@@ -25,14 +29,18 @@ final class MsgHdrMemoryArray {
     private final long[] ids;
     private boolean released;
     private int idx;
+    private final CleanableDirectBuffer msgHdrMemoryArrayMemoryCleanable;
 
     MsgHdrMemoryArray(short capacity) {
         assert capacity >= 0;
         this.capacity = capacity;
         hdrs = new MsgHdrMemory[capacity];
         ids = new long[capacity];
+        int total = MsgHdrMemory.MSG_HDR_SIZE * capacity;
+        this.msgHdrMemoryArrayMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(total);
+        ByteBuffer msgHdrMemoryArrayMemory = msgHdrMemoryArrayMemoryCleanable.buffer();
         for (int i = 0; i < hdrs.length; i++) {
-            hdrs[i] = new MsgHdrMemory((short) i);
+            hdrs[i] = new MsgHdrMemory((short) i, msgHdrMemoryArrayMemory);
             ids[i] = NO_ID;
         }
     }
@@ -77,9 +85,7 @@ final class MsgHdrMemoryArray {
     void release() {
         assert !released;
         released = true;
-        for (MsgHdrMemory hdr: hdrs) {
-            hdr.release();
-        }
+        this.msgHdrMemoryArrayMemoryCleanable.clean();
     }
 
     int capacity() {

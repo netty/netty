@@ -19,11 +19,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 final class MsgHdrMemory {
+    public static final int MSG_HDR_SIZE =
+            Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC + Native.CMSG_SPACE;
     private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
     // It is not possible to have a zero length buffer in sendFd,
     // so we use a 1 byte buffer here.
@@ -43,17 +47,30 @@ final class MsgHdrMemory {
     private final short idx;
     private final int cmsgDataOffset;
 
-    MsgHdrMemory(short idx) {
+    MsgHdrMemory(short idx, ByteBuffer msgHdrMemoryArray) {
         this.idx = idx;
-        msgHdrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_MSGHDR);
-        socketAddrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
-        iovMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_IOVEC);
-        cmsgDataMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE);
-
-        msgHdrMemory = msgHdrMemoryCleanable.buffer();
-        socketAddrMemory = socketAddrMemoryCleanable.buffer();
-        iovMemory = iovMemoryCleanable.buffer();
-        cmsgDataMemory = cmsgDataMemoryCleanable.buffer();
+        this.msgHdrMemoryCleanable = null;
+        this.socketAddrMemoryCleanable = null;
+        this.iovMemoryCleanable = null;
+        this.cmsgDataMemoryCleanable = null;
+        int offset = idx * MSG_HDR_SIZE;
+        // ByteBuffer.slice(int, int) / duplicate() are specified to produce BIG_ENDIAN byte buffers.
+        // Set native order explicitly so native structs written via putInt/putLong use the expected endianness.
+        this.msgHdrMemory = PlatformDependent.offsetSlice(
+                msgHdrMemoryArray, offset, Native.SIZEOF_MSGHDR
+        ).order(ByteOrder.nativeOrder());
+        offset += Native.SIZEOF_MSGHDR;
+        this.socketAddrMemory = PlatformDependent.offsetSlice(
+                msgHdrMemoryArray, offset, Native.SIZEOF_SOCKADDR_STORAGE
+        ).order(ByteOrder.nativeOrder());
+        offset += Native.SIZEOF_SOCKADDR_STORAGE;
+        this.iovMemory = PlatformDependent.offsetSlice(
+                msgHdrMemoryArray, offset, Native.SIZEOF_IOVEC
+        ).order(ByteOrder.nativeOrder());
+        offset += Native.SIZEOF_IOVEC;
+        this.cmsgDataMemory = PlatformDependent.offsetSlice(
+                msgHdrMemoryArray, offset, Native.CMSG_SPACE
+        ).order(ByteOrder.nativeOrder());
 
         msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
 
@@ -158,11 +175,17 @@ final class MsgHdrMemory {
     }
 
     void release() {
-        msgHdrMemoryCleanable.clean();
+        if (msgHdrMemoryCleanable != null) {
+            msgHdrMemoryCleanable.clean();
+        }
         if (socketAddrMemoryCleanable != null) {
             socketAddrMemoryCleanable.clean();
         }
-        iovMemoryCleanable.clean();
-        cmsgDataMemoryCleanable.clean();
+        if (iovMemoryCleanable != null) {
+            iovMemoryCleanable.clean();
+        }
+        if (cmsgDataMemoryCleanable != null) {
+            cmsgDataMemoryCleanable.clean();
+        }
     }
 }
