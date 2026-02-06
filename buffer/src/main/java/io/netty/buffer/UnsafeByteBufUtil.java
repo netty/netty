@@ -33,9 +33,10 @@ import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
  */
 final class UnsafeByteBufUtil {
     private static final boolean UNALIGNED = PlatformDependent.isUnaligned();
-    private static final boolean UNALIGNED_AVAILABLE = PlatformDependent.isUnalignedAvailable();
     private static final boolean USE_VAR_HANDLE_FOR_UNALIGNED =
-            !UNALIGNED && !UNALIGNED_AVAILABLE && PlatformDependent.hasVarHandle();
+            !UNALIGNED &&
+            !PlatformDependent.isUnalignedAvailable()
+            && PlatformDependent.hasVarHandle();
     private static final byte ZERO = 0;
     private static final int MAX_HAND_ROLLED_SET_ZERO_BYTES = 64;
 
