@@ -88,7 +88,7 @@ final class MsgHdrMemoryArray {
         for (MsgHdrMemory hdr: hdrs) {
             hdr.release();
         }
-        this.msgHdrMemoryArrayMemoryCleanable.clean();
+        msgHdrMemoryArrayMemoryCleanable.clean();
     }
 
     int capacity() {
