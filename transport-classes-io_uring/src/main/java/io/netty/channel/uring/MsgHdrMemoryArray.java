@@ -85,6 +85,9 @@ final class MsgHdrMemoryArray {
     void release() {
         assert !released;
         released = true;
+        for (MsgHdrMemory hdr: hdrs) {
+            hdr.release();
+        }
         this.msgHdrMemoryArrayMemoryCleanable.clean();
     }
 
