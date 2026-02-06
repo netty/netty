@@ -196,7 +196,9 @@ public class Http3PushStreamTest {
     private EmbeddedQuicStreamChannel newClientStreamUninitialized() throws InterruptedException, ExecutionException {
         return (EmbeddedQuicStreamChannel) clientChannel.createStream(UNIDIRECTIONAL,
                 new Http3UnidirectionalStreamInboundClientHandler(
-                        (__, encodeState, decodeState) -> clientConnectionHandler.newCodec(encodeState, decodeState),
+                        (__, encodeState, decodeState, ___) ->
+                                clientConnectionHandler.newCodec(encodeState, decodeState),
+                        (id, v) -> false,
                         clientConnectionHandler.localControlStreamHandler,
                         clientConnectionHandler.remoteControlStreamHandler, null,
                         __ -> new Http3PushStreamClientInitializer() {
