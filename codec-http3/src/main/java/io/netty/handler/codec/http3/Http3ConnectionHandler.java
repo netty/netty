@@ -42,6 +42,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     final QpackDecoder qpackDecoder;
     final QpackEncoder qpackEncoder;
+    final Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator;
     private boolean controlStreamCreationInProgress;
 
     final long maxTableCapacity;
@@ -61,9 +62,15 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      */
     Http3ConnectionHandler(boolean server, @Nullable ChannelHandler inboundControlStreamHandler,
                            @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                           @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+                           @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable,
+                           @Nullable Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator) {
         this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
         this.disableQpackDynamicTable = disableQpackDynamicTable;
+        if (nonStandardSettingsValidator != null) {
+            this.nonStandardSettingsValidator = nonStandardSettingsValidator;
+        } else {
+            this.nonStandardSettingsValidator = (id, value) -> false;
+        }
         if (localSettings == null) {
             localSettings = new DefaultHttp3SettingsFrame();
         } else {
@@ -81,7 +88,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
-                codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE));
+                codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE,
+                        this.nonStandardSettingsValidator));
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
                 qpackEncoder, remoteControlStreamHandler);
     }
@@ -121,7 +129,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      */
     final ChannelHandler newCodec(Http3RequestStreamCodecState encodeState,
                                   Http3RequestStreamCodecState decodeState) {
-        return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE, encodeState, decodeState);
+        return codecFactory.newCodec(
+                Http3RequestStreamFrameTypeValidator.INSTANCE, encodeState, decodeState, nonStandardSettingsValidator);
     }
 
     final ChannelHandler newRequestStreamValidationHandler(
