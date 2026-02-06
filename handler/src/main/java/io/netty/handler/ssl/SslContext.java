@@ -875,7 +875,7 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options);
+                        options, credentials);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();

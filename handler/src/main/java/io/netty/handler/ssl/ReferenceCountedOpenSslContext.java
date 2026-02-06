@@ -172,6 +172,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean enableOcsp;
     final ConcurrentMap<Long, ReferenceCountedOpenSslEngine> engines = new ConcurrentHashMap<>();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
+    final List<OpenSslCredential> credentials = new ArrayList<>();
 
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
@@ -226,7 +227,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                    String endpointIdentificationAlgorithm, boolean enableOcsp,
                                    boolean leakDetection, List<SNIServerName> serverNames,
                                    ResumptionController resumptionController,
-                                   Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+                                   Map.Entry<SslContextOption<?>, Object>[] ctxOptions,
+                                   List<OpenSslCredential> credentials)
             throws SSLException {
         super(startTls, resumptionController);
 
@@ -479,6 +481,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 throw new SSLException(msg);
             }
             this.groups = groups;
+
+            // Add credentials if provided
+            if (credentials != null && !credentials.isEmpty()) {
+                for (OpenSslCredential credential : credentials) {
+                    addCredential(credential);
+                }
+            }
+
             success = true;
         } finally {
             if (!success) {
@@ -495,6 +505,19 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 return SSL.SSL_SELECTOR_FAILURE_CHOOSE_MY_LAST_PROTOCOL;
             default:
                 throw new Error("Unexpected behavior: " + behavior);
+        }
+    }
+
+    private void addCredential(OpenSslCredential credential) throws SSLException {
+        try {
+            // Retain the credential for the lifetime of this context
+            credential.retain();
+            credentials.add(credential);
+            SSLContext.addCredential(ctx, credential.credentialAddress());
+        } catch (Exception e) {
+            credential.release();
+            credentials.remove(credential);
+            throw new SSLException("Failed to add credential to SSL context", e);
         }
     }
 
@@ -701,14 +724,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (context != null) {
                     context.destroy();
                 }
-                onPostDestroy();
+                for (OpenSslCredential credential : credentials) {
+                    credential.release();
+                }
+                credentials.clear();
             }
         } finally {
             writerLock.unlock();
         }
-    }
-
-    protected void onPostDestroy() {
     }
 
     protected static X509Certificate[] certificates(byte[][] chain) {

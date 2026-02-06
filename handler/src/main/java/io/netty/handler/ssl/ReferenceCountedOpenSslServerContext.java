@@ -20,14 +20,12 @@ import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
@@ -51,7 +49,6 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslServerContext.class);
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
-    private final List<OpenSslCredential> credentials = new ArrayList<>();
 
     ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -77,7 +74,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls,
                 null, // No endpoint validation for servers.
-                enableOcsp, true, null, resumptionController, options);
+                enableOcsp, true, null, resumptionController, options, credentials);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
@@ -87,43 +84,11 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
-
-            // Add credentials if provided
-            if (credentials != null && !credentials.isEmpty()) {
-                for (OpenSslCredential credential : credentials) {
-                    addCredential(credential);
-                }
-            }
-
             success = true;
         } finally {
             if (!success) {
                 release();
             }
-        }
-    }
-
-    private void addCredential(OpenSslCredential credential) throws SSLException {
-        try {
-            // Retain the credential for the lifetime of this context
-            credential.retain();
-            credentials.add(credential);
-            SSLContext.addCredential(ctx, credential.credentialAddress());
-        } catch (Exception e) {
-            credential.release();
-            credentials.remove(credential);
-            throw new SSLException("Failed to add credential to SSL context", e);
-        }
-    }
-
-    @Override
-    protected void onPostDestroy() {
-        // Release all credentials
-        if (credentials != null) {
-            for (OpenSslCredential credential : credentials) {
-                credential.release();
-            }
-            credentials.clear();
         }
     }
 

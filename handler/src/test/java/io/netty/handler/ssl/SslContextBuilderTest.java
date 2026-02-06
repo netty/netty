@@ -25,12 +25,6 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.security.Principal;
@@ -39,6 +33,12 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -266,8 +266,8 @@ public class SslContextBuilderTest {
             SslContextBuilder serverBuilder = SslContextBuilder.forServer(bundle.toKeyManagerFactory());
             clientBuilder.sslProvider(SslProvider.JDK);
             serverBuilder.sslProvider(SslProvider.JDK);
-            clientBuilder.credential(credential);
-            serverBuilder.credential(credential);
+            clientBuilder.addCredential(credential);
+            serverBuilder.addCredential(credential);
             assertThrows(IllegalArgumentException.class, () -> clientBuilder.build());
             assertThrows(IllegalArgumentException.class, () -> serverBuilder.build());
         } finally {

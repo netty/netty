@@ -37,6 +37,7 @@ import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -502,23 +503,25 @@ public final class SslContextBuilder {
     /**
      * Adds a single {@link OpenSslCredential} to this context.
      *
-     * <p>Credentials provide a more flexible alternative to traditional certificate/key configuration,
-     * supporting features like multiple credentials per context (e.g., RSA + ECDSA),
-     * OCSP stapling, SCT, and more.
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
      *
      * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
      * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
      *
      * @param credential the credential to add
      * @return this builder for chaining
      * @see OpenSslCredentialBuilder
      */
-    public SslContextBuilder credential(OpenSslCredential credential) {
+    public SslContextBuilder addCredential(OpenSslCredential credential) {
         checkNotNull(credential, "credential");
-        if (this.credentials == null) {
-            this.credentials = new ArrayList<>();
+        if (credentials == null) {
+            credentials = new ArrayList<>();
         }
-        this.credentials.add(credential);
+        credentials.add(credential);
         return this;
     }
 
@@ -528,35 +531,42 @@ public final class SslContextBuilder {
      * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
      * certificates to support different client capabilities.
      *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
+     *
      * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
      * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
      *
      * @param credentials the credentials to add
      * @return this builder for chaining
      * @see OpenSslCredentialBuilder
      */
-    public SslContextBuilder credentials(OpenSslCredential... credentials) {
+    public SslContextBuilder addCredentials(OpenSslCredential... credentials) {
         deepCheckNotNull("credentials", credentials);
         if (this.credentials == null) {
             this.credentials = new ArrayList<>(credentials.length);
         }
-        for (OpenSslCredential credential : credentials) {
-            this.credentials.add(credential);
-        }
+        Collections.addAll(this.credentials, credentials);
         return this;
     }
 
     /**
      * Adds multiple {@link OpenSslCredential}s to this context.
      *
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
+     *
      * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
      * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
      *
      * @param credentials the credentials to add
      * @return this builder for chaining
      * @see OpenSslCredentialBuilder
      */
-    public SslContextBuilder credentials(Iterable<? extends OpenSslCredential> credentials) {
+    public SslContextBuilder addCredentials(Iterable<? extends OpenSslCredential> credentials) {
         checkNotNull(credentials, "credentials");
         // Validate all credentials before adding any of them to avoid partial state
         for (OpenSslCredential credential : credentials) {

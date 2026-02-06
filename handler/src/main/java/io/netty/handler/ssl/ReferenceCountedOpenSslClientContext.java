@@ -30,7 +30,6 @@ import javax.security.auth.x500.X500Principal;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,6 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     };
 
     private final OpenSslSessionContext sessionContext;
-    private final List<OpenSslCredential> credentials = new ArrayList<>();
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
@@ -66,51 +64,21 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          List<SNIServerName> serverNames,
                                          ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>[] options,
-                                         List<OpenSslCredential> credentialList) throws SSLException {
+                                         List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
               ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
-                serverNames, resumptionController, options);
+                serverNames, resumptionController, options, credentials);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
                                                sessionCacheSize, sessionTimeout, resumptionController,
                                                isJdkSignatureFallbackEnabled(options));
-
-            // Add credentials if provided
-            if (credentialList != null && !credentialList.isEmpty()) {
-                for (OpenSslCredential credential : credentialList) {
-                    addCredential(credential);
-                }
-            }
-
             success = true;
         } finally {
             if (!success) {
                 release();
             }
-        }
-    }
-
-    private void addCredential(OpenSslCredential credential) throws SSLException {
-        try {
-            credential.retain();
-            credentials.add(credential);
-            SSLContext.addCredential(ctx, credential.credentialAddress());
-        } catch (Exception e) {
-            credential.release();
-            credentials.remove(credential);
-            throw new SSLException("Failed to add credential to SSL context", e);
-        }
-    }
-
-    @Override
-    protected void onPostDestroy() {
-        if (credentials != null) {
-            for (OpenSslCredential credential : credentials) {
-                credential.release();
-            }
-            credentials.clear();
         }
     }
 
