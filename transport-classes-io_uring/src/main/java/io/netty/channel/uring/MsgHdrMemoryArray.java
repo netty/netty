@@ -27,9 +27,9 @@ final class MsgHdrMemoryArray {
     private final MsgHdrMemory[] hdrs;
     private final int capacity;
     private final long[] ids;
+    private final CleanableDirectBuffer msgHdrMemoryArrayMemoryCleanable;
     private boolean released;
     private int idx;
-    private final CleanableDirectBuffer msgHdrMemoryArrayMemoryCleanable;
 
     MsgHdrMemoryArray(short capacity) {
         assert capacity >= 0;
