@@ -96,10 +96,10 @@ public class HttpObjectAggregator
         HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
 
     static {
-        EXPECTATION_FAILED.headers().set(CONTENT_LENGTH, 0);
-        TOO_LARGE.headers().set(CONTENT_LENGTH, 0);
+        EXPECTATION_FAILED.headers().setInt(CONTENT_LENGTH, 0);
+        TOO_LARGE.headers().setInt(CONTENT_LENGTH, 0);
 
-        TOO_LARGE_CLOSE.headers().set(CONTENT_LENGTH, 0);
+        TOO_LARGE_CLOSE.headers().setInt(CONTENT_LENGTH, 0);
         TOO_LARGE_CLOSE.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
     }
 
