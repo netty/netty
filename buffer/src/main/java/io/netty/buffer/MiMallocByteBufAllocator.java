@@ -423,13 +423,16 @@ final class MiMallocByteBufAllocator {
             if (this.pageCount == 0) {
                 return;
             }
-            boolean markPage = visitType == VISIT_TYPE_PAGE_MARK;
-            for (int i = 0; i <= PAGE_QUEUE_BIN_FULL_INDEX; i++) {
+            boolean isMarkPage = visitType == VISIT_TYPE_PAGE_MARK;
+            // No need to collect the full page queue, except for the page mark or abandoning.
+            int maxBinIndex = isMarkPage || collectType == ABANDON ?
+                    PAGE_QUEUE_BIN_FULL_INDEX : PAGE_QUEUE_BIN_FULL_INDEX - 1;
+            for (int i = 0; i <= maxBinIndex; i++) {
                 PageQueue pq = this.pageQueues[i];
                 Page page = pq.firstPage;
                 while (page != null) {
                     Page next = page.nextPage; // Save next in case the page gets removed from the queue.
-                    if (markPage) {
+                    if (isMarkPage) {
                         pageUseDelayedFree(page, NEVER_DELAYED_FREE, false);
                     } else {
                         heapPageCollect(pq, page, collectType);
