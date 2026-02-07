@@ -232,9 +232,9 @@ public class HttpObjectAggregator
         //
         // See rfc2616 14.13 Content-Length
         if (!HttpUtil.isContentLengthSet(aggregated)) {
-            aggregated.headers().set(
+            aggregated.headers().setInt(
                     CONTENT_LENGTH,
-                    String.valueOf(aggregated.content().readableBytes()));
+                    aggregated.content().readableBytes());
         }
     }
 
