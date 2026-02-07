@@ -62,7 +62,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private final QpackEncoder qpackEncoder;
     private final Http3RequestStreamCodecState encodeState;
     private final Http3RequestStreamCodecState decodeState;
-
+    private final Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator;
     private boolean firstFrame = true;
     private boolean error;
     private long type = -1;
@@ -77,19 +77,22 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         checkNotNull(qpackDecoder, "qpackDecoder");
 
         // QPACK decoder and encoder are shared between streams in a connection.
-        return (validator, encodeState, decodeState) -> new Http3FrameCodec(validator, qpackDecoder,
-                maxHeaderListSize, qpackEncoder, encodeState, decodeState);
+        return (validator, encodeState, decodeState,
+                nonStandardSettingsValidator) -> new Http3FrameCodec(validator, qpackDecoder,
+                maxHeaderListSize, qpackEncoder, encodeState, decodeState, nonStandardSettingsValidator);
     }
 
     Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
                     long maxHeaderListSize, QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
-                    Http3RequestStreamCodecState decodeState) {
+                    Http3RequestStreamCodecState decodeState,
+                    Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator) {
         this.validator = checkNotNull(validator, "validator");
         this.qpackDecoder = checkNotNull(qpackDecoder, "qpackDecoder");
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
         this.qpackEncoder = checkNotNull(qpackEncoder, "qpackEncoder");
         this.encodeState = checkNotNull(encodeState, "encodeState");
         this.decodeState = checkNotNull(decodeState, "decodeState");
+        this.nonStandardSettingsValidator = nonStandardSettingsValidator;
     }
 
     @Override
@@ -352,7 +355,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
-        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(
+                new Http3Settings(nonStandardSettingsValidator));
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long key = readVariableLengthInteger(in, keyLen);
@@ -812,6 +816,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
          * @return new codec instance for the passed {@code streamType}.
          */
         ChannelHandler newCodec(Http3FrameTypeValidator validator, Http3RequestStreamCodecState encodeState,
-                                Http3RequestStreamCodecState decodeState);
+                                Http3RequestStreamCodecState decodeState,
+                                Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator);
     }
 }
