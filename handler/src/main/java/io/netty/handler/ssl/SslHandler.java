@@ -1374,14 +1374,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
-    private void decodeNonJdkCompatible(ChannelHandlerContext ctx, ByteBuf in) {
-        try {
-            unwrap(ctx, in, in.readableBytes());
-        } catch (Throwable cause) {
-            handleUnwrapThrowable(ctx, cause);
-        }
-    }
-
     private void handleUnwrapThrowable(ChannelHandlerContext ctx, Throwable cause) {
         try {
             // We should attempt to notify the handshake failure before writing any pending data. If we are in unwrap
@@ -1416,7 +1408,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (jdkCompatibilityMode) {
             decodeJdkCompatible(ctx, in);
         } else {
-            decodeNonJdkCompatible(ctx, in);
+            try {
+                unwrap(ctx, in, in.readableBytes());
+            } catch (Throwable cause) {
+                handleUnwrapThrowable(ctx, cause);
+            }
         }
     }
 
