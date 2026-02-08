@@ -561,11 +561,22 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     private static void addEncodedLengthHex(ChannelHandlerContext ctx, long contentLength, List<Object> out) {
-        String lengthHex = Long.toHexString(contentLength);
-        ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
-        buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
+        // logic is from Long.toHexString() but we want to avoid creating a String
+        int hexLen = contentLength == 0 ? 1 : (Long.SIZE - Long.numberOfLeadingZeros(contentLength) + 3) >>> 2;
+        ByteBuf buf = ctx.alloc().buffer(hexLen + 2); // +2 for CRLF
+        writeHexAscii(buf, contentLength, hexLen);
         ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
         out.add(buf);
+    }
+
+    private static final byte[] HEX = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+    private static void writeHexAscii(ByteBuf out, long contentLength, int hexLen) {
+        for (int shift = (hexLen - 1) << 2; shift >= 0; shift -= 4) {
+            out.writeByte(HEX[(int) ((contentLength >>> shift) & 0xF)]);
+        }
     }
 
     /**
