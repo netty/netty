@@ -29,7 +29,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsTxtRecord {
 
-    private final List<String> texts;
+    private final List<byte[]> content;
 
     /**
      * Creates a new TXT record.
@@ -37,10 +37,10 @@ public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsT
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param texts the TXT strings
+     * @param content the binary content entries (each up to 255 bytes)
      */
-    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, String... texts) {
-        this(name, dnsClass, timeToLive, texts == null ? null : Arrays.asList(texts));
+    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, byte[]... content) {
+        this(name, dnsClass, timeToLive, content == null ? null : Arrays.asList(content));
     }
 
     /**
@@ -49,21 +49,21 @@ public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsT
      * @param name the domain name
      * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
-     * @param texts the TXT strings
+     * @param content the binary content entries (each up to 255 bytes)
      */
-    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, List<String> texts) {
+    public DefaultDnsTxtRecord(String name, int dnsClass, long timeToLive, List<byte[]> content) {
         super(name, DnsRecordType.TXT, dnsClass, timeToLive);
-        checkNotNull(texts, "texts");
-        List<String> copy = new ArrayList<String>(texts.size());
-        for (String text : texts) {
-            copy.add(checkNotNull(text, "text"));
+        checkNotNull(content, "content");
+        List<byte[]> copy = new ArrayList<byte[]>(content.size());
+        for (byte[] entry : content) {
+            copy.add(checkNotNull(entry, "entry").clone());
         }
-        this.texts = Collections.unmodifiableList(copy);
+        this.content = Collections.unmodifiableList(copy);
     }
 
     @Override
-    public List<String> texts() {
-        return texts;
+    public List<byte[]> content() {
+        return content;
     }
 
     @Override
@@ -78,15 +78,28 @@ public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsT
             return false;
         }
         DnsTxtRecord that = (DnsTxtRecord) obj;
-        return timeToLive() == that.timeToLive() &&
-               texts.equals(that.texts());
+        if (timeToLive() != that.timeToLive()) {
+            return false;
+        }
+        List<byte[]> thatContent = that.content();
+        if (content.size() != thatContent.size()) {
+            return false;
+        }
+        for (int i = 0; i < content.size(); i++) {
+            if (!Arrays.equals(content.get(i), thatContent.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     public int hashCode() {
         int hashCode = super.hashCode();
         hashCode = 31 * hashCode + (int) (timeToLive() ^ (timeToLive() >>> 32));
-        hashCode = 31 * hashCode + texts.hashCode();
+        for (byte[] entry : content) {
+            hashCode = 31 * hashCode + Arrays.hashCode(entry);
+        }
         return hashCode;
     }
 
@@ -101,9 +114,15 @@ public final class DefaultDnsTxtRecord extends AbstractDnsRecord implements DnsT
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                       .append(' ')
                       .append(type().name())
-                      .append(' ')
-                      .append(texts)
-                      .append(')');
+                      .append(" [");
+
+        for (int i = 0; i < content.size(); i++) {
+            if (i > 0) {
+                buf.append(", ");
+            }
+            buf.append(content.get(i).length).append(" bytes");
+        }
+        buf.append("])");
 
         return buf.toString();
     }

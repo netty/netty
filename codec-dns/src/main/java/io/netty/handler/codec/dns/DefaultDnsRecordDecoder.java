@@ -129,6 +129,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         if (type == DnsRecordType.CNAME) {
             return decodeCnameRecord(name, dnsClass, timeToLive, in, offset, length);
         }
+        if (type == DnsRecordType.SOA) {
+            return decodeSoaRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
         if (type == DnsRecordType.PTR) {
             return decodePtrRecord(name, dnsClass, timeToLive, in, offset, length);
         }
@@ -216,6 +219,28 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         return new DefaultDnsMxRecord(name, dnsClass, timeToLive, pref, exchangeName);
     }
 
+    private DnsRecord decodeSoaRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        if (length < 22) {
+            throw new CorruptedFrameException("SOA record RDATA is too short: " + length);
+        }
+        ByteBuf data = in.duplicate().setIndex(offset, offset + length);
+        String mname = decodeName(data);
+        String rname = decodeName(data);
+        if (data.readableBytes() < 20) {
+            throw new CorruptedFrameException("SOA record RDATA is truncated");
+        }
+        long serial = data.readUnsignedInt();
+        long refresh = data.readUnsignedInt();
+        long retry = data.readUnsignedInt();
+        long expire = data.readUnsignedInt();
+        long minimum = data.readUnsignedInt();
+        return new DefaultDnsSoaRecord(name, dnsClass, timeToLive,
+                mname, rname, serial, refresh, retry, expire, minimum);
+    }
+
+    //TODO come back to this and see if byte array is the right structure for ip
+    //same for v6
     private DnsRecord decodeARecord(String name, int dnsClass, long timeToLive,
                                     ByteBuf in, int offset, int length) {
         if (length != 4) {
@@ -239,15 +264,17 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     private DnsRecord decodeTxtRecord(String name, int dnsClass, long timeToLive,
                                       ByteBuf in, int offset, int length) {
         ByteBuf data = in.duplicate().setIndex(offset, offset + length);
-        List<String> texts = new ArrayList<String>();
+        List<byte[]> content = new ArrayList<byte[]>();
         while (data.isReadable()) {
             int len = data.readUnsignedByte();
             if (!data.isReadable(len)) {
                 throw new CorruptedFrameException("TXT record RDATA is too short");
             }
-            texts.add(data.readCharSequence(len, CharsetUtil.UTF_8).toString());
+            byte[] entry = new byte[len];
+            data.readBytes(entry);
+            content.add(entry);
         }
-        return new DefaultDnsTxtRecord(name, dnsClass, timeToLive, texts);
+        return new DefaultDnsTxtRecord(name, dnsClass, timeToLive, content);
     }
 
     private DnsRecord decodeCaaRecord(String name, int dnsClass, long timeToLive,
@@ -261,6 +288,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             throw new CorruptedFrameException("CAA record tag is truncated");
         }
         int tagOffset = offset + 2;
+        //RFC 6844 specifies US ASCII as does the update in RFC 8659
         String tag = in.toString(tagOffset, tagLength, CharsetUtil.US_ASCII);
         int valueOffset = tagOffset + tagLength;
         int valueLength = length - 2 - tagLength;
@@ -335,9 +363,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         ByteBuf data = in.duplicate().setIndex(offset, offset + length);
         int order = data.readUnsignedShort();
         int preference = data.readUnsignedShort();
-        String flags = decodeCharacterString(data);
-        String services = decodeCharacterString(data);
-        String regexp = decodeCharacterString(data);
+        byte[] flags = decodeCharacterString(data);
+        byte[] services = decodeCharacterString(data);
+        byte[] regexp = decodeCharacterString(data);
         String replacement = decodeName(data);
         return new DefaultDnsNaptrRecord(name, dnsClass, timeToLive,
                 order, preference, flags, services, regexp, replacement);
@@ -414,7 +442,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         int priority = in.getUnsignedShort(offset);
         int weight = in.getUnsignedShort(offset + 2);
         int targetLength = length - 4;
-        String target = in.toString(offset + 4, targetLength, CharsetUtil.UTF_8);
+        String target = in.toString(offset + 4, targetLength, CharsetUtil.US_ASCII);
         return new DefaultDnsUriRecord(name, dnsClass, timeToLive, priority, weight, target);
     }
 
@@ -446,7 +474,32 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         return new DefaultDnsHttpsRecord(name, dnsClass, timeToLive, priority, targetName, params);
     }
 
-    private static String decodeCharacterString(ByteBuf in) {
+    /**
+     * Decodes a DNS character-string as defined in RFC 1035 Section 3.3.
+     * <p>
+     * Per RFC 1035, a character-string is "a single length octet followed by that number
+     * of characters" and is "treated as binary information". The RFC does not specify a
+     * character encoding; it predates the widespread adoption of Unicode and was designed
+     * for 8-bit byte sequences.
+     * <p>
+     * Different DNS record types that use character-strings may have different expectations:
+     * <ul>
+     *   <li>TXT records (RFC 1035) - explicitly binary, no encoding specified</li>
+     *   <li>NAPTR records (RFC 3403) - fields like flags and services are defined with
+     *       ASCII-compatible values, but the regexp field could theoretically contain
+     *       any bytes</li>
+     *   <li>Other records may define their own conventions</li>
+     * </ul>
+     * <p>
+     * This method returns the raw bytes, leaving the choice of character encoding (if any)
+     * to the caller. For convenience, record interfaces may provide methods that interpret
+     * the bytes as US-ASCII strings where appropriate.
+     *
+     * @param in the buffer to read from
+     * @return the character-string data as a byte array
+     * @throws CorruptedFrameException if the data is truncated
+     */
+    private static byte[] decodeCharacterString(ByteBuf in) {
         if (!in.isReadable()) {
             throw new CorruptedFrameException("Character string is truncated");
         }
@@ -454,7 +507,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         if (!in.isReadable(length)) {
             throw new CorruptedFrameException("Character string is truncated");
         }
-        return in.readCharSequence(length, CharsetUtil.UTF_8).toString();
+        byte[] data = new byte[length];
+        in.readBytes(data);
+        return data;
     }
 
     /**

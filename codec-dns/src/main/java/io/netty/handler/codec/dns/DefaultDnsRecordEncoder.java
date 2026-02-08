@@ -46,7 +46,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     private static final Class<?>[] SUPPORTED_MESSAGES = new Class<?>[] {
             DnsQuestion.class, DnsPtrRecord.class, DnsARecord.class, DnsAaaaRecord.class,
-            DnsCnameRecord.class, DnsNsRecord.class, DnsMxRecord.class, DnsTxtRecord.class,
+            DnsCnameRecord.class, DnsNsRecord.class, DnsMxRecord.class, DnsSoaRecord.class, DnsTxtRecord.class,
             DnsCaaRecord.class, DnsCertRecord.class, DnsDnskeyRecord.class, DnsDsRecord.class,
             DnsHttpsRecord.class, DnsLocRecord.class, DnsNaptrRecord.class, DnsSmimeaRecord.class,
             DnsSrvRecord.class, DnsSshfpRecord.class, DnsSvcbRecord.class, DnsTlsaRecord.class,
@@ -68,6 +68,8 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodeNsRecord((DnsNsRecord) record, out);
         } else if (record instanceof DnsMxRecord) {
             encodeMxRecord((DnsMxRecord) record, out);
+        } else if (record instanceof DnsSoaRecord) {
+            encodeSoaRecord((DnsSoaRecord) record, out);
         } else if (record instanceof DnsTxtRecord) {
             encodeTxtRecord((DnsTxtRecord) record, out);
         } else if (record instanceof DnsCaaRecord) {
@@ -163,17 +165,31 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.setShort(writerIndex, rdLength);
     }
 
+    private void encodeSoaRecord(DnsSoaRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        int writerIndex = out.writerIndex();
+        out.writerIndex(writerIndex + 2);
+        encodeName(record.mname(), out);
+        encodeName(record.rname(), out);
+        out.writeInt((int) record.serial());
+        out.writeInt((int) record.refresh());
+        out.writeInt((int) record.retry());
+        out.writeInt((int) record.expire());
+        out.writeInt((int) record.minimum());
+        int rdLength = out.writerIndex() - (writerIndex + 2);
+        out.setShort(writerIndex, rdLength);
+    }
+
     private void encodeTxtRecord(DnsTxtRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
         int writerIndex = out.writerIndex();
         out.writerIndex(writerIndex + 2);
-        for (String text : record.texts()) {
-            byte[] bytes = text.getBytes(CharsetUtil.UTF_8);
-            if (bytes.length > 0xff) {
-                throw new IllegalArgumentException("TXT string is too long: " + bytes.length);
+        for (byte[] entry : record.content()) {
+            if (entry.length > 0xff) {
+                throw new IllegalArgumentException("TXT entry is too long: " + entry.length);
             }
-            out.writeByte(bytes.length);
-            out.writeBytes(bytes);
+            out.writeByte(entry.length);
+            out.writeBytes(entry);
         }
         int rdLength = out.writerIndex() - (writerIndex + 2);
         out.setShort(writerIndex, rdLength);
@@ -257,6 +273,28 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.setShort(writerIndex, rdLength);
     }
 
+    /**
+     * Writes a DNS character-string as defined in RFC 1035 Section 3.3.
+     * <p>
+     * A character-string is encoded as a single length octet followed by that number of bytes.
+     * Per RFC 1035, the data is "treated as binary information" with no specified character
+     * encoding. The maximum length is 255 bytes.
+     * <p>
+     * See {@link DefaultDnsRecordDecoder#decodeCharacterString} for more details on encoding
+     * considerations.
+     *
+     * @param data the character-string data as a byte array
+     * @param out the buffer to write to
+     * @throws IllegalArgumentException if the data exceeds 255 bytes
+     */
+    private static void writeCharacterString(byte[] data, ByteBuf out) {
+        if (data.length > 0xff) {
+            throw new IllegalArgumentException("Character string is too long: " + data.length);
+        }
+        out.writeByte(data.length);
+        out.writeBytes(data);
+    }
+
     private void encodeSmimeaRecord(DnsSmimeaRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
         int writerIndex = out.writerIndex();
@@ -318,7 +356,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writerIndex(writerIndex + 2);
         out.writeShort(record.priority());
         out.writeShort(record.weight());
-        byte[] targetBytes = record.target().getBytes(CharsetUtil.UTF_8);
+        byte[] targetBytes = record.target().getBytes(CharsetUtil.US_ASCII);
         out.writeBytes(targetBytes);
         int rdLength = out.writerIndex() - (writerIndex + 2);
         out.setShort(writerIndex, rdLength);
@@ -354,15 +392,6 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         }
         int rdLength = out.writerIndex() - (writerIndex + 2);
         out.setShort(writerIndex, rdLength);
-    }
-
-    private static void writeCharacterString(String text, ByteBuf out) {
-        byte[] bytes = text.getBytes(CharsetUtil.UTF_8);
-        if (bytes.length > 0xff) {
-            throw new IllegalArgumentException("Character string is too long: " + bytes.length);
-        }
-        out.writeByte(bytes.length);
-        out.writeBytes(bytes);
     }
 
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {

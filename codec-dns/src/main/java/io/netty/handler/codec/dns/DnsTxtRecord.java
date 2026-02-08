@@ -19,11 +19,16 @@ import java.util.List;
 
 /**
  * A DNS {@code TXT} record.
+ * <p>
+ * Per RFC 1035, TXT RDATA consists of one or more character-strings which are
+ * treated as binary information. Each entry in the list corresponds to one
+ * character-string (up to 255 bytes each).
  */
 public interface DnsTxtRecord extends DnsRecord {
 
     /**
-     * Returns the text entries stored in this record.
+     * Returns the binary content entries stored in this record.
+     * Each byte array represents one character-string from the TXT RDATA.
      */
-    List<String> texts();
+    List<byte[]> content();
 }

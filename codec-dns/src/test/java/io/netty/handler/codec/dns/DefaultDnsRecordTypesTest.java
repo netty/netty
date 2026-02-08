@@ -50,10 +50,29 @@ public class DefaultDnsRecordTypesTest {
 
     @Test
     public void testEncodeDecodeTxtRecord() throws Exception {
-        List<String> texts = Arrays.asList("v=spf1", "-all");
+        byte[] entry1 = "v=spf1".getBytes(CharsetUtil.UTF_8);
+        byte[] entry2 = "-all".getBytes(CharsetUtil.UTF_8);
+        List<byte[]> content = Arrays.asList(entry1, entry2);
         DnsTxtRecord decoded = encodeDecode(new DefaultDnsTxtRecord("txt.example.com.",
-                DnsRecord.CLASS_IN, 60, texts), DnsTxtRecord.class);
-        assertEquals(texts, decoded.texts());
+                DnsRecord.CLASS_IN, 60, content), DnsTxtRecord.class);
+        assertEquals(content.size(), decoded.content().size());
+        assertArrayEquals(entry1, decoded.content().get(0));
+        assertArrayEquals(entry2, decoded.content().get(1));
+    }
+
+    @Test
+    public void testEncodeDecodeSoaRecord() throws Exception {
+        DnsSoaRecord decoded = encodeDecode(new DefaultDnsSoaRecord("example.com.",
+                DnsRecord.CLASS_IN, 60,
+                "ns1.example.com.", "hostmaster.example.com.",
+                2024010101L, 7200, 3600, 1209600, 86400), DnsSoaRecord.class);
+        assertEquals("ns1.example.com.", decoded.mname());
+        assertEquals("hostmaster.example.com.", decoded.rname());
+        assertEquals(2024010101L, decoded.serial());
+        assertEquals(7200, decoded.refresh());
+        assertEquals(3600, decoded.retry());
+        assertEquals(1209600, decoded.expire());
+        assertEquals(86400, decoded.minimum());
     }
 
     @Test
@@ -131,9 +150,9 @@ public class DefaultDnsRecordTypesTest {
                 "!^.*$!sip:info@example.com!", "example.com."), DnsNaptrRecord.class);
         assertEquals(100, decoded.order());
         assertEquals(10, decoded.preference());
-        assertEquals("U", decoded.flags());
-        assertEquals("E2U+sip", decoded.services());
-        assertEquals("!^.*$!sip:info@example.com!", decoded.regexp());
+        assertEquals("U", decoded.flagsAsString());
+        assertEquals("E2U+sip", decoded.servicesAsString());
+        assertEquals("!^.*$!sip:info@example.com!", decoded.regexpAsString());
         assertEquals("example.com.", decoded.replacement());
     }
 
