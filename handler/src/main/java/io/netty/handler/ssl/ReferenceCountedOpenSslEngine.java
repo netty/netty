@@ -419,6 +419,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // object so we need to retain a reference to the parent context.
         parentContext = context;
 
+        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
+        engines.put(ssl, this);
+
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
@@ -1967,9 +1970,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
             return handshakeException();
         }
-
-        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engines.put(sslPointer(), this);
 
         if (!sessionSet) {
             if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {
