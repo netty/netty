@@ -33,6 +33,31 @@ public class EpollTest {
         assertTrue(Epoll.isAvailable());
     }
 
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testEpollWaitTimeoutAccuracy() throws Exception {
+        final int timeoutMs = 200;
+        final FileDescriptor epoll = Native.newEpollCreate();
+        final EpollEventArray eventArray = new EpollEventArray(8);
+        try {
+            long startNs = System.nanoTime();
+            // No fds registered, so this will just wait for the timeout.
+            int ready = Native.epollWait(epoll, eventArray, timeoutMs);
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+
+            assertEquals(0, ready);
+            // Should have waited at least close to the timeout
+            assertTrue(elapsedMs >= timeoutMs - 20,
+                    "Elapsed " + elapsedMs + "ms, expected at least " + (timeoutMs - 20) + "ms");
+            // Should not have waited vastly longer than the timeout
+            assertTrue(elapsedMs < timeoutMs + 200,
+                    "Elapsed " + elapsedMs + "ms, expected less than " + (timeoutMs + 200) + "ms");
+        } finally {
+            eventArray.free();
+            epoll.close();
+        }
+    }
+
     // Testcase for https://github.com/netty/netty/issues/8444
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
