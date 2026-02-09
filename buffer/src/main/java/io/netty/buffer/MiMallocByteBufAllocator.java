@@ -57,7 +57,7 @@ final class MiMallocByteBufAllocator {
 
     // 64 KiB
     private static final int SEGMENT_SLICE_SHIFT = 16;
-    // 4 Mib
+    // 4 MiB
     private static final int DEFAULT_SEGMENT_SHIFT = SEGMENT_SLICE_SHIFT + 6;
     // 4 MiB
     private static final int DEFAULT_SEGMENT_SIZE = 1 << DEFAULT_SEGMENT_SHIFT;
