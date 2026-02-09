@@ -38,15 +38,15 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
-import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.FORCE;
-import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.NORMAL;
-import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.DELAYED_FREEING;
-import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.NEVER_DELAYED_FREE;
-import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.NO_DELAYED_FREE;
-import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.USE_DELAYED_FREE;
-import static io.netty.buffer.MiMallocByteBufAllocator.SEGMENT_KIND.SEGMENT_HUGE;
-import static io.netty.buffer.MiMallocByteBufAllocator.SEGMENT_KIND.SEGMENT_NORMAL;
+import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.ABANDON;
+import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.FORCE;
+import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.NORMAL;
+import static io.netty.buffer.MiMallocByteBufAllocator.DelayedFlag.DELAYED_FREEING;
+import static io.netty.buffer.MiMallocByteBufAllocator.DelayedFlag.NEVER_DELAYED_FREE;
+import static io.netty.buffer.MiMallocByteBufAllocator.DelayedFlag.NO_DELAYED_FREE;
+import static io.netty.buffer.MiMallocByteBufAllocator.DelayedFlag.USE_DELAYED_FREE;
+import static io.netty.buffer.MiMallocByteBufAllocator.SegmentKind.SEGMENT_HUGE;
+import static io.netty.buffer.MiMallocByteBufAllocator.SegmentKind.SEGMENT_NORMAL;
 
 @UnstableApi
 final class MiMallocByteBufAllocator {
@@ -196,7 +196,7 @@ final class MiMallocByteBufAllocator {
         };
     }
 
-    enum COLLECT_TYPE {
+    enum CollectType {
         NORMAL,
         FORCE,
         ABANDON
@@ -264,7 +264,7 @@ final class MiMallocByteBufAllocator {
             };
         }
 
-        private void heapPageCollect(PageQueue pq, Page page, COLLECT_TYPE collectType) {
+        private void heapPageCollect(PageQueue pq, Page page, CollectType collectType) {
             boolean isForce = isForceCollect(collectType);
             page.pageFreeCollect(isForce);
             if (page.usedBlocks == 0) {
@@ -277,11 +277,11 @@ final class MiMallocByteBufAllocator {
             }
         }
 
-        private boolean isForceCollect(COLLECT_TYPE collectType) {
+        private boolean isForceCollect(CollectType collectType) {
             return collectType == FORCE || collectType == ABANDON;
         }
 
-        private void heapCollect(COLLECT_TYPE collectType) {
+        private void heapCollect(CollectType collectType) {
             // If during abandoning, mark all pages to no longer add to the delayed-free list
             if (collectType == ABANDON) {
                 heapVisitPages(collectType, VISIT_TYPE_PAGE_MARK);
@@ -414,7 +414,7 @@ final class MiMallocByteBufAllocator {
         }
 
         // Visit all pages in a heap.
-        private void heapVisitPages(COLLECT_TYPE collectType, byte visitType) {
+        private void heapVisitPages(CollectType collectType, byte visitType) {
             if (this.pageCount == 0) {
                 return;
             }
@@ -803,14 +803,14 @@ final class MiMallocByteBufAllocator {
             }
         }
 
-        private void pageUseDelayedFree(Page page, DELAYED_FLAG delay, boolean overrideNever) {
-            while (!pageTryUseDelayedFree(page, delay, overrideNever)) {
+        private void pageUseDelayedFree(Page page, DelayedFlag delayedFlag, boolean overrideNever) {
+            while (!pageTryUseDelayedFree(page, delayedFlag, overrideNever)) {
                 Thread.yield();
             }
         }
 
-        private boolean pageTryUseDelayedFree(Page page, DELAYED_FLAG delayedFlag, boolean overrideNever) {
-            DELAYED_FLAG oldDelay;
+        private boolean pageTryUseDelayedFree(Page page, DelayedFlag delayedFlag, boolean overrideNever) {
+            DelayedFlag oldDelay;
             int yieldCount = 0;
             do {
                 oldDelay = page.threadDelayedFreeFlag.get();
@@ -1487,16 +1487,16 @@ final class MiMallocByteBufAllocator {
      *
      *</pre>
      */
-    enum DELAYED_FLAG {
+    enum DelayedFlag {
         USE_DELAYED_FREE,
         DELAYED_FREEING,
         NO_DELAYED_FREE,
         NEVER_DELAYED_FREE
     }
 
-    enum SEGMENT_KIND {
+    enum SegmentKind {
         SEGMENT_NORMAL, // `SEGMENT_SIZE` size with pages inside.
-        SEGMENT_HUGE,   // Segment with just one huge page inside.
+        SEGMENT_HUGE   // Segment with just one huge page inside.
     }
 
     static class Page {
@@ -1537,7 +1537,7 @@ final class MiMallocByteBufAllocator {
          *          or is about to be marked as free if it's a huge page.
          */
         int blockSize;
-        final AtomicReference<DELAYED_FLAG> threadDelayedFreeFlag = new AtomicReference<>(USE_DELAYED_FREE);
+        final AtomicReference<DelayedFlag> threadDelayedFreeFlag = new AtomicReference<>(USE_DELAYED_FREE);
         boolean isHuge; // `true` if the page is in a huge segment (segment.kind == SEGMENT_HUGE)
 
         // Empty Page Constructor
@@ -1738,11 +1738,11 @@ final class MiMallocByteBufAllocator {
         private int abandonedPages;
         // Count how often this segment is visited during abandoned reclamation (to force reclaim if it takes too long).
         private int abandonedVisits;
-        private final SEGMENT_KIND kind;
+        private final SegmentKind kind;
         // Only used for huge segment freeing.
         private final AtomicReference<Thread> hugeSegmentOwnerThread;
 
-        Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind,
+        Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SegmentKind kind,
                 AbstractByteBuf delegate, LocalHeap heap) {
             this.parent = parent;
             this.delegate = delegate;
