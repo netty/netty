@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
-import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.FINALIZE;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.FORCE;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.NORMAL;
 import static io.netty.buffer.MiMallocByteBufAllocator.DELAYED_FLAG.DELAYED_FREEING;
@@ -162,14 +161,17 @@ final class MiMallocByteBufAllocator {
     @Override
     protected void finalize() throws Throwable {
         try {
-            // Create a heap and do the collection if `abandonedSegmentCount` > 0.
-            // The `abandonedSegmentCount` may not be precisely up to date,
-            // but it's ok that we might only miss very few segments.
-            if (this.abandonedSegmentCount.get() > 0) {
-                this.THREAD_LOCAL_HEAP.get().heapCollect(FINALIZE);
-            }
+            freeAllAbandonedSegments();
         } finally {
             super.finalize();
+        }
+    }
+
+    private void freeAllAbandonedSegments() {
+        Segment segment;
+        while ((segment = this.abandonedSegmentDeque.poll()) != null) {
+            this.abandonedSegmentCount.decrementAndGet();
+            segment.deallocate();
         }
     }
 
@@ -197,8 +199,7 @@ final class MiMallocByteBufAllocator {
     enum COLLECT_TYPE {
         NORMAL,
         FORCE,
-        ABANDON,
-        FINALIZE,
+        ABANDON
     }
 
     static final class LocalHeap {
@@ -281,12 +282,6 @@ final class MiMallocByteBufAllocator {
         }
 
         private void heapCollect(COLLECT_TYPE collectType) {
-            if (collectType == FINALIZE) {
-                // Try to reclaim all abandoned segments.
-                // If all memory is freed by now, all segments should be freed.
-                abandonedReclaimAll();
-                return;
-            }
             // If during abandoning, mark all pages to no longer add to the delayed-free list
             if (collectType == ABANDON) {
                 heapVisitPages(collectType, VISIT_TYPE_PAGE_MARK);
@@ -439,14 +434,6 @@ final class MiMallocByteBufAllocator {
                     }
                     page = next;
                 }
-            }
-        }
-
-        private void abandonedReclaimAll() {
-            Segment segment;
-            while ((segment = this.allocator.abandonedSegmentDeque.poll()) != null) {
-                this.allocator.abandonedSegmentCount.decrementAndGet();
-                segmentReclaim(segment, 0, false);
             }
         }
 
