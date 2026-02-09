@@ -29,12 +29,14 @@ final class Http3UnidirectionalStreamInboundClientHandler extends Http3Unidirect
 
     Http3UnidirectionalStreamInboundClientHandler(
             Http3FrameCodecFactory codecFactory,
+            Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator,
             Http3ControlStreamInboundHandler localControlStreamHandler,
             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
             @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory,
             @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
             Supplier<ChannelHandler> qpackEncoderHandlerFactory, Supplier<ChannelHandler> qpackDecoderHandlerFactory) {
-        super(codecFactory, localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,
+        super(codecFactory, nonStandardSettingsValidator,
+                localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,
                 qpackEncoderHandlerFactory, qpackDecoderHandlerFactory);
         this.pushStreamHandlerFactory = pushStreamHandlerFactory == null ? __ -> ReleaseHandler.INSTANCE :
                 pushStreamHandlerFactory;
