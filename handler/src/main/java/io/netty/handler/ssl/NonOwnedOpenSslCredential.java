@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 
 /**
@@ -27,7 +28,7 @@ import io.netty.util.IllegalReferenceCountException;
  *
  * <p>This is a BoringSSL-specific feature.
  */
-final class NonOwnedOpenSslCredential implements OpenSslCredential {
+final class NonOwnedOpenSslCredential extends AbstractReferenceCounted implements OpenSslCredential {
 
     private final long credential;
     private final CredentialType type;
@@ -61,23 +62,18 @@ final class NonOwnedOpenSslCredential implements OpenSslCredential {
     }
 
     @Override
-    public int refCnt() {
-        return released ? 0 : 1;
-    }
-
-    @Override
     public OpenSslCredential retain() {
-        return this;
+        return (OpenSslCredential) super.retain();
     }
 
     @Override
     public OpenSslCredential retain(int increment) {
-        return this;
+        return (OpenSslCredential) super.retain(increment);
     }
 
     @Override
     public OpenSslCredential touch() {
-        return this;
+        return (OpenSslCredential) super.touch();
     }
 
     @Override
@@ -86,14 +82,7 @@ final class NonOwnedOpenSslCredential implements OpenSslCredential {
     }
 
     @Override
-    public boolean release() {
+    protected void deallocate() {
         released = true;
-        return true;
-    }
-
-    @Override
-    public boolean release(int decrement) {
-        released = true;
-        return true;
     }
 }
