@@ -43,7 +43,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Math.min;
 
@@ -238,13 +237,13 @@ public class EpollIoHandler implements IoHandler {
         Cancelled
     }
 
-    private final class DefaultEpollIoRegistration extends AtomicReference<RegistrationState>
+    private final class DefaultEpollIoRegistration
             implements IoRegistration {
         private final ThreadAwareExecutor executor;
+        private RegistrationState state = RegistrationState.Pending;
         final EpollIoHandle handle;
 
         DefaultEpollIoRegistration(ThreadAwareExecutor executor, EpollIoHandle handle) {
-            super(RegistrationState.Pending);
             this.executor = executor;
             this.handle = handle;
         }
@@ -259,27 +258,13 @@ public class EpollIoHandler implements IoHandler {
         public long submit(IoOps ops) {
             EpollIoOps epollIoOps = cast(ops);
             try {
-                for (;;) {
-                    RegistrationState oldState = get();
-                    switch (oldState) {
+                synchronized (this) {
+                    switch (state) {
                         case Cancelled:
                             return -1;
-                        case ToBeAdded:
-                            // Just fetch again, another thread is about to add the fd via EPOLL_CTL_ADD
-                            break;
                         case Pending:
-                            if (compareAndSet(oldState, RegistrationState.ToBeAdded)) {
-                                Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
-                                if (compareAndSet(RegistrationState.ToBeAdded, RegistrationState.Added)) {
-                                    return epollIoOps.value;
-                                }
-                                // If this is happening someone else already cancelled, let's call cancel as well
-                                // so we are sure we not end up with a fd registered.
-                                cancel();
-                                return -1;
-                            }
-                            // Try again.
-                            break;
+                            Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                            state = RegistrationState.Added;
                         case Added:
                             Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
                             return epollIoOps.value;
@@ -288,20 +273,22 @@ public class EpollIoHandler implements IoHandler {
                     }
                 }
             } catch (IOException e) {
-                cancel();
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
-        public boolean isValid() {
-            return get() != RegistrationState.Cancelled;
+        public synchronized boolean isValid() {
+            return state != RegistrationState.Cancelled;
         }
 
         @Override
         public boolean cancel() {
-            if (getAndSet(RegistrationState.Cancelled) == RegistrationState.Cancelled) {
-                return false;
+            synchronized (this) {
+                if (state == RegistrationState.Cancelled) {
+                    return false;
+                }
+                state = RegistrationState.Cancelled;
             }
             if (executor.isExecutorThread(Thread.currentThread())) {
                 cancel0();
