@@ -269,7 +269,7 @@ static inline jint netty_epoll_wait(JNIEnv* env, jint efd, struct epoll_event *e
             netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
             return -1;
         }
-        deadline = ts.tv_sec * 1000 + ts.tv_nsec / 1000 + timeout;
+        deadline = ts.tv_sec * 1000 + ts.tv_nsec / 1000000 + timeout;
 
         while ((rc = epoll_wait(efd, ev, len, timeout)) < 0) {
             if (errno != EINTR) {
@@ -281,7 +281,7 @@ static inline jint netty_epoll_wait(JNIEnv* env, jint efd, struct epoll_event *e
                 return -1;
             }
 
-            now = ts.tv_sec * 1000 + ts.tv_nsec / 1000;
+            now = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
             if (now >= deadline) {
                 return 0;
             }
