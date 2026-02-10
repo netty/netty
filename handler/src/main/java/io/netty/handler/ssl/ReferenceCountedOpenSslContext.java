@@ -509,11 +509,22 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     private void addCredential(OpenSslCredential credential) throws SSLException {
+        if (!(credential instanceof OpenSslCredentialPointer)) {
+            IllegalArgumentException iae = new IllegalArgumentException("Unsupported credential type: " + credential);
+            try {
+                credential.release();
+            } catch (Throwable th) {
+                iae.addSuppressed(th);
+            }
+            throw iae;
+        }
+        OpenSslCredentialPointer pointer = (OpenSslCredentialPointer) credential;
+
         try {
             // Retain the credential for the lifetime of this context
             credential.retain();
             credentials.add(credential);
-            SSLContext.addCredential(ctx, credential.credentialAddress());
+            SSLContext.addCredential(ctx, pointer.credentialAddress());
         } catch (Exception e) {
             credentials.remove(credential);
             credential.release();

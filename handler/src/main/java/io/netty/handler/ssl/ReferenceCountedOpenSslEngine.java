@@ -2314,15 +2314,28 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     public void addCredential(OpenSslCredential credential) throws SSLException {
         synchronized (this) {
-            if (destroyed) {
-                throw new IllegalStateException("Engine is destroyed");
+            try {
+                if (destroyed) {
+                    throw new IllegalStateException("Engine is destroyed");
+                }
+                if (handshakeState != HandshakeState.NOT_STARTED) {
+                    throw new IllegalStateException("Handshake has already started");
+                }
+                if (!(credential instanceof OpenSslCredentialPointer)) {
+                    throw new IllegalArgumentException("Unsupported credential type: " + credential);
+                }
+            } catch (RuntimeException re) {
+                try {
+                    credential.release();
+                } catch (Throwable th) {
+                    re.addSuppressed(th);
+                }
+                throw re;
             }
-            if (handshakeState != HandshakeState.NOT_STARTED) {
-                throw new IllegalStateException("Handshake has already started");
-            }
+            OpenSslCredentialPointer pointer = (OpenSslCredentialPointer) credential;
             try {
                 credential.retain();
-                io.netty.internal.tcnative.SSL.addCredential(ssl, credential.credentialAddress());
+                SSL.addCredential(ssl, pointer.credentialAddress());
             } catch (Exception e) {
                 credential.release();
                 throw new SSLException("Failed to add credential to SSL engine", e);

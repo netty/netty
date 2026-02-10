@@ -28,7 +28,7 @@ import io.netty.util.IllegalReferenceCountException;
  *
  * <p>This is a BoringSSL-specific feature.
  */
-final class NonOwnedOpenSslCredential extends AbstractReferenceCounted implements OpenSslCredential {
+final class NonOwnedOpenSslCredential extends AbstractReferenceCounted implements OpenSslCredentialPointer {
 
     private final long credential;
     private final CredentialType type;

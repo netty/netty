@@ -27,7 +27,7 @@ import io.netty.util.ResourceLeakTracker;
  *
  * <p>This class manages the lifecycle of a native BoringSSL {@code SSL_CREDENTIAL} object.
  */
-final class DefaultOpenSslCredential extends AbstractReferenceCounted implements OpenSslCredential {
+final class DefaultOpenSslCredential extends AbstractReferenceCounted implements OpenSslCredentialPointer {
 
     private static final ResourceLeakDetector<DefaultOpenSslCredential> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(DefaultOpenSslCredential.class);

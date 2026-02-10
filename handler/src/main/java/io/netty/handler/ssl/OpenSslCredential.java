@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCounted;
 
 /**
@@ -47,14 +46,6 @@ public interface OpenSslCredential extends ReferenceCounted {
     static boolean isAvailable() {
         return OpenSsl.isAvailable() && OpenSsl.isBoringSSL();
     }
-
-    /**
-     * Returns the native {@code SSL_CREDENTIAL} pointer address.
-     *
-     * @return the native pointer address
-     * @throws IllegalReferenceCountException if the reference count is 0
-     */
-    long credentialAddress();
 
     /**
      * Returns the type of this credential.
