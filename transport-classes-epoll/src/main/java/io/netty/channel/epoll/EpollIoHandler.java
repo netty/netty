@@ -42,11 +42,10 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Math.min;
-import static java.lang.System.nanoTime;
 
 /**
  * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
@@ -228,12 +227,24 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    private final class DefaultEpollIoRegistration implements IoRegistration {
+    private enum RegistrationState {
+        // Was not added via EPOLL_CTL_ADD
+        Pending,
+        // Is about to be added via EPOLL_CTL_ADD
+        ToBeAdded,
+        // Was added via EPOLL_CTL_ADD
+        Added,
+        // Was canceled an so removed via EPOLL_CTL_DEL
+        Cancelled
+    }
+
+    private final class DefaultEpollIoRegistration extends AtomicReference<RegistrationState>
+            implements IoRegistration {
         private final ThreadAwareExecutor executor;
-        private final AtomicBoolean canceled = new AtomicBoolean();
         final EpollIoHandle handle;
 
         DefaultEpollIoRegistration(ThreadAwareExecutor executor, EpollIoHandle handle) {
+            super(RegistrationState.Pending);
             this.executor = executor;
             this.handle = handle;
         }
@@ -248,24 +259,48 @@ public class EpollIoHandler implements IoHandler {
         public long submit(IoOps ops) {
             EpollIoOps epollIoOps = cast(ops);
             try {
-                if (!isValid()) {
-                    return -1;
+                for (;;) {
+                    RegistrationState oldState = get();
+                    switch (oldState) {
+                        case Cancelled:
+                            return -1;
+                        case ToBeAdded:
+                            // Just fetch again, another thread is about to add the fd via EPOLL_CTL_ADD
+                            break;
+                        case Pending:
+                            if (compareAndSet(oldState, RegistrationState.ToBeAdded)) {
+                                Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                                if (compareAndSet(RegistrationState.ToBeAdded, RegistrationState.Added)) {
+                                    return epollIoOps.value;
+                                }
+                                // If this is happening someone else already cancelled, let's call cancel as well
+                                // so we are sure we not end up with a fd registered.
+                                cancel();
+                                return -1;
+                            }
+                            // Try again.
+                            break;
+                        case Added:
+                            Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                            return epollIoOps.value;
+                        default:
+                            throw new IllegalStateException();
+                    }
                 }
-                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
-                return epollIoOps.value;
             } catch (IOException e) {
+                cancel();
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
         public boolean isValid() {
-            return !canceled.get();
+            return get() != RegistrationState.Cancelled;
         }
 
         @Override
         public boolean cancel() {
-            if (!canceled.compareAndSet(false, true)) {
+            if (getAndSet(RegistrationState.Cancelled) == RegistrationState.Cancelled) {
                 return false;
             }
             if (executor.isExecutorThread(Thread.currentThread())) {
@@ -324,7 +359,6 @@ public class EpollIoHandler implements IoHandler {
         final EpollIoHandle epollHandle = cast(handle);
         DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(executor, epollHandle);
         int fd = epollHandle.fd().intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, EpollIoOps.EPOLLERR.value);
         DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration
