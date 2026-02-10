@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,11 +48,9 @@ public class EpollTest {
 
             assertEquals(0, ready);
             // Should have waited at least close to the timeout
-            assertTrue(elapsedMs >= timeoutMs - 20,
-                    "Elapsed " + elapsedMs + "ms, expected at least " + (timeoutMs - 20) + "ms");
+            assertThat(elapsedMs).isGreaterThanOrEqualTo(timeoutMs - 20);
             // Should not have waited vastly longer than the timeout
-            assertTrue(elapsedMs < timeoutMs + 200,
-                    "Elapsed " + elapsedMs + "ms, expected less than " + (timeoutMs + 200) + "ms");
+            assertThat(elapsedMs).isLessThan(timeoutMs + 200);
         } finally {
             eventArray.free();
             epoll.close();
