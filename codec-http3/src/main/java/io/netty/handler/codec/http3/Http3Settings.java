@@ -46,7 +46,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
     private final LongObjectMap<Long> settings;
-
+    final NonStandardHttp3SettingsValidator nonStandardSettingsValidator;
     private static final Long TRUE = 1L;
     private static final Long FALSE = 0L;
 
@@ -54,26 +54,19 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      * Creates a new instance
      */
     public Http3Settings() {
+        // Ignore non-standard settings by default.
+        this((id, v) -> false);
+    }
+
+    /**
+     * Creates a new instance
+     *
+     * @param nonStandardSettingsValidator the {@link NonStandardHttp3SettingsValidator} to use to check if a specific
+     *                                     setting that is non-standard should be supported or not.
+     */
+    public Http3Settings(NonStandardHttp3SettingsValidator nonStandardSettingsValidator) {
         this.settings = new LongObjectHashMap<>(Http3SettingIdentifier.values().length);
-    }
-
-    /**
-     * Creates a new instance with the specified initial capacity.
-     *
-     * @param initialCapacity initial capacity of the underlying map
-     */
-    Http3Settings(int initialCapacity) {
-        this.settings = new LongObjectHashMap<>(initialCapacity);
-    }
-
-    /**
-     * Creates a new instance with the specified initial capacity and load factor.
-     *
-     * @param initialCapacity initial capacity of the underlying map
-     * @param loadFactor load factor for the underlying map
-     */
-    Http3Settings(int initialCapacity, float loadFactor) {
-        this.settings = new LongObjectHashMap<>(initialCapacity, loadFactor);
+        this.nonStandardSettingsValidator = checkNotNull(nonStandardSettingsValidator, "nonStandardSettingsValidator");
     }
 
     /**
@@ -97,13 +90,15 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
         Http3SettingIdentifier identifier = Http3SettingIdentifier.fromId(key);
 
-        // When Non-Standard/Unknown settings identifier identifier present - Ignore
         if (identifier == null) {
-            return null;
+            // When Non-Standard/Unknown settings identifier present check if we should ignore it or not.
+            if (!nonStandardSettingsValidator.validate(key, value)) {
+                return null;
+            }
+        } else {
+            //Validation
+            verifyStandardSetting(identifier, value);
         }
-
-        //Validation
-        verifyStandardSetting(identifier, value);
 
         return settings.put(key, value);
     }
@@ -369,5 +364,21 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
                             + toHexString(identifier.id()) + " invalid: " + value);
                 }
         }
+    }
+
+    /**
+     * Allows to handle non-standard settings. By default non-standard settings will be ignore as defined by the
+     * RFC.
+     */
+    public interface NonStandardHttp3SettingsValidator {
+        /**
+         * Validate the setting with the given id and value.
+         *
+         * @param id        the id of the setting
+         * @param value     the value of the setting
+         * @return          {@code true} if the settings is supported, {@code false} otherwise.
+         * @throws IllegalArgumentException if the given {@code value} is not supported for the id.
+         */
+        boolean validate(long id, Long value) throws IllegalArgumentException;
     }
 }
