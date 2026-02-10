@@ -121,7 +121,7 @@ public final class OpenSslCredentialBuilder {
         OpenSsl.ensureAvailability();
 
         if (!OpenSslCredential.isAvailable()) {
-            throw new UnsupportedOperationException("SSL_CREDENTIAL API is only supported with BoringSSL");
+            throw new UnsupportedOperationException("SSL_CREDENTIAL API is not supported");
         }
 
         long credentialPtr = 0;

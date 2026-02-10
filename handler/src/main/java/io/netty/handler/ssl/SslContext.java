@@ -479,8 +479,8 @@ public abstract class SslContext {
             }
             if (credentials != null && !credentials.isEmpty()) {
                 throw new IllegalArgumentException(
-                        "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
-                                "Use SslProvider.OPENSSL_REFCNT instead.");
+                        "OpenSslCredential is not supported with SslProvider.JDK. " +
+                                "Use SslProvider.OPENSSL or SslProvider.OPENSSL_REFCNT instead.");
             }
             return new JdkSslServerContext(sslContextProvider,
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
@@ -488,11 +488,6 @@ public abstract class SslContext {
                     clientAuth, protocols, startTls, secureRandom, keyStoreType, resumptionController);
         case OPENSSL:
             verifyNullSslContextProvider(provider, sslContextProvider);
-            if (credentials != null && !credentials.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
-                        "Use SslProvider.OPENSSL_REFCNT instead.");
-            }
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
@@ -855,8 +850,8 @@ public abstract class SslContext {
                 }
                 if (credentials != null && !credentials.isEmpty()) {
                     throw new IllegalArgumentException(
-                            "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
-                                    "Use SslProvider.OPENSSL_REFCNT instead.");
+                            "OpenSslCredential is not supported with SslProvider.JDK. " +
+                                    "Use SslProvider.OPENSSL or SslProvider.OPENSSL_REFCNT instead.");
                 }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
@@ -866,11 +861,6 @@ public abstract class SslContext {
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
-                if (credentials != null && !credentials.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
-                            "Use SslProvider.OPENSSL_REFCNT instead.");
-                }
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
