@@ -229,8 +229,6 @@ public class EpollIoHandler implements IoHandler {
     private enum RegistrationState {
         // Was not added via EPOLL_CTL_ADD
         Pending,
-        // Is about to be added via EPOLL_CTL_ADD
-        ToBeAdded,
         // Was added via EPOLL_CTL_ADD
         Added,
         // Was canceled an so removed via EPOLL_CTL_DEL
