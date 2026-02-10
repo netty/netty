@@ -73,12 +73,12 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
             .build());
 
         SSLEngine engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        assertEquals(2, ReferenceCountUtil.refCnt(clientSslCtx));
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 2);
 
         cleanupClientSslContext(clientSslCtx);
-        assertEquals(1, ReferenceCountUtil.refCnt(clientSslCtx));
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 1);
 
         cleanupClientSslEngine(engine);
-        assertEquals(0, ReferenceCountUtil.refCnt(clientSslCtx));
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 0);
     }
 }
