@@ -515,8 +515,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             credentials.add(credential);
             SSLContext.addCredential(ctx, credential.credentialAddress());
         } catch (Exception e) {
-            credential.release();
             credentials.remove(credential);
+            credential.release();
             throw new SSLException("Failed to add credential to SSL context", e);
         }
     }
