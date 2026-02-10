@@ -150,13 +150,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         @Override
         protected void deallocate() {
-            try {
-                destroy();
-            } finally {
-                if (leak != null) {
-                    boolean closed = leak.close(ReferenceCountedOpenSslContext.this);
-                    assert closed;
-                }
+            destroy();
+            if (leak != null) {
+                boolean closed = leak.close(ReferenceCountedOpenSslContext.this);
+                assert closed;
             }
         }
     };
