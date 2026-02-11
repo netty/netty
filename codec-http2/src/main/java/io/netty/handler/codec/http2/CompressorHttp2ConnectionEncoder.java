@@ -37,6 +37,8 @@ import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,8 @@ import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
  * stream. The compression provided by this class will be applied to the data for the entire stream.
  */
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
+    private static final InternalLogger LOGGER =
+            InternalLoggerFactory.getInstance(CompressorHttp2ConnectionEncoder.class);
     // We cannot remove this because it'll be breaking change
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;
     public static final int DEFAULT_WINDOW_BITS = 15;
@@ -116,8 +120,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 if (compressor != null) {
                     try {
                         cleanup(stream, compressor);
-                    } catch (Exception ignore) {
-                        // ignore
+                    } catch (Exception exception) {
+                        LOGGER.debug("Exception during cleanup", exception);
                     }
                 }
             }
@@ -169,8 +173,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 if (compressor != null) {
                     try {
                         cleanup(stream, compressor);
-                    } catch (Exception ignore) {
-                        // ignore
+                    } catch (Exception exception) {
+                        LOGGER.debug("Exception during cleanup", exception);
                     }
                 }
             }

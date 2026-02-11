@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -54,11 +55,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 destroyChannel();
                 fail();
             } catch (CompletionException exception) {
-                if (exception.getCause() instanceof DecompressionException) {
-                    // expected
-                } else {
-                    throw exception;
-                }
+                assertThat(exception).hasCauseInstanceOf(DecompressionException.class);
             }
         }
     }
