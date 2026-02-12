@@ -60,8 +60,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     protected final LinuxSocket socket;
+    private final EpollIoOps inital;
     private final EpollIoHandleImpl ioHandle = new  EpollIoHandleImpl();
     private Promise<Void> connectPromise;
+
     private SocketAddress requestedRemoteAddress;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -69,7 +71,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private IoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
     private EpollIoOps ops;
-    private EpollIoOps inital;
 
     protected volatile boolean active;
 
@@ -84,6 +85,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             this.local = fd.localAddress();
             this.remote = fd.remoteAddress();
         }
+        this.inital = initialOps;
         this.ops = initialOps;
     }
 
@@ -96,6 +98,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
+        this.inital = initialOps;
         this.ops = initialOps;
     }
 
@@ -279,8 +282,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                registration.submit(ops);
-                inital = ops;
+                if (isActive()) {
+                    // The channel is active, register with current ops now as we are ready to start receiving events.
+                    submitCurrentOps();
+                }
                 promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
@@ -655,6 +660,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             requestedRemoteAddress = null;
             active = true;
 
+            // The channel is active, register with current ops now as we are ready to start receiving events.
+            submitCurrentOps();
+
             return true;
         }
         setFlag(Native.EPOLLOUT);
@@ -706,6 +714,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             remote = remoteSocketAddr == null ?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
             active = true;
+            // The channel is active, register with current ops now as we are ready to start receiving events.
+            submitCurrentOps();
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.
         //
@@ -728,6 +738,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 doClose(newPromise());
             }
         }
+    }
+
+    final void submitCurrentOps() {
+        IoRegistration registration = registration();
+        registration.submit(ops);
     }
 
     @Override
