@@ -207,10 +207,10 @@ public final class IoUringIoHandler implements IoHandler {
                         completionQueue.ringEntries);
             }
             if (p == 0) {
-                if (needSubmit(sqFlags)) {
-                    submitAndClearNow0(submissionQueue);
+                if (!needSubmit(sqFlags)) {
+                    break;
                 }
-                break;
+                submitAndClearNow0(submissionQueue);
             }
             processed += p;
         }
