@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 public class StringEncoderTest {
 
     @Test
-    public void testEncode() {
+    public void testEncode() throws Exception {
         String msg = "Test";
         EmbeddedChannel channel = new EmbeddedChannel(new StringEncoder());
         Assertions.assertTrue(channel.writeOutbound(msg));

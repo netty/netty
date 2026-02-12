@@ -39,7 +39,7 @@ public class PerFrameDeflateDecoderTest {
     private static final Random random = new Random();
 
     @Test
-    public void testCompressedFrame() {
+    public void testCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
@@ -72,7 +72,7 @@ public class PerFrameDeflateDecoderTest {
     }
 
     @Test
-    public void testNormalFrame() {
+    public void testNormalFrame() throws Exception {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
 
         // initialize
@@ -100,7 +100,7 @@ public class PerFrameDeflateDecoderTest {
 
     // See https://github.com/netty/netty/issues/4348
     @Test
-    public void testCompressedEmptyFrame() {
+    public void testCompressedEmptyFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
@@ -123,7 +123,7 @@ public class PerFrameDeflateDecoderTest {
     }
 
     @Test
-    public void testDecompressionSkip() {
+    public void testDecompressionSkip() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP, 0));

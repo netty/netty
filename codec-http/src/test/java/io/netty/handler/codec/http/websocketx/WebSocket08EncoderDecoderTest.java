@@ -59,7 +59,7 @@ public class WebSocket08EncoderDecoderTest {
     }
 
     @Test
-    public void testWebSocketProtocolViolation() {
+    public void testWebSocketProtocolViolation() throws Exception {
         // Given
         initTestData();
 
@@ -112,8 +112,8 @@ public class WebSocket08EncoderDecoderTest {
 
         try {
             testBinaryWithLen(outChannel, inChannel, testDataLength);
-        } catch (CorruptedWebSocketFrameException e) {
-            corrupted = e;
+        } catch (Exception e) {
+            corrupted = (CorruptedWebSocketFrameException) e;
         }
 
         BinaryWebSocketFrame exceedingFrame = inChannel.readInbound();
@@ -125,7 +125,7 @@ public class WebSocket08EncoderDecoderTest {
     }
 
     @Test
-    public void testWebSocketEncodingAndDecoding() {
+    public void testWebSocketEncodingAndDecoding() throws Exception {
         initTestData();
 
         // Test without masking
@@ -147,7 +147,7 @@ public class WebSocket08EncoderDecoderTest {
         binTestData.release();
     }
 
-    private void executeTests(EmbeddedChannel outChannel, EmbeddedChannel inChannel) {
+    private void executeTests(EmbeddedChannel outChannel, EmbeddedChannel inChannel) throws Exception {
         // Test at the boundaries of each message type, because this shifts the position of the mask field
         // Test min. 4 lengths to check for problems related to an uneven frame length
         executeTests(outChannel, inChannel, 0);
@@ -170,12 +170,14 @@ public class WebSocket08EncoderDecoderTest {
         executeTests(outChannel, inChannel, 65539);
     }
 
-    private void executeTests(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength) {
+    private void executeTests(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength)
+            throws Exception {
         testTextWithLen(outChannel, inChannel, testDataLength);
         testBinaryWithLen(outChannel, inChannel, testDataLength);
     }
 
-    private void testTextWithLen(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength) {
+    private void testTextWithLen(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength)
+            throws Exception {
         String testStr = strTestData.substring(0, testDataLength);
         outChannel.writeOutbound(new TextWebSocketFrame(testStr));
 
@@ -189,7 +191,8 @@ public class WebSocket08EncoderDecoderTest {
         txt.release();
     }
 
-    private void testBinaryWithLen(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength) {
+    private void testBinaryWithLen(EmbeddedChannel outChannel, EmbeddedChannel inChannel, int testDataLength)
+            throws Exception {
         binTestData.retain(); // need to retain for sending and still keeping it
         binTestData.setIndex(0, testDataLength); // Send only len bytes
         outChannel.writeOutbound(new BinaryWebSocketFrame(binTestData));
@@ -208,7 +211,7 @@ public class WebSocket08EncoderDecoderTest {
         binFrame.release();
     }
 
-    private void transfer(EmbeddedChannel outChannel, EmbeddedChannel inChannel) {
+    private void transfer(EmbeddedChannel outChannel, EmbeddedChannel inChannel) throws Exception {
         // Transfer encoded data into decoder
         // Loop because there might be multiple frames (gathering write)
         for (;;) {

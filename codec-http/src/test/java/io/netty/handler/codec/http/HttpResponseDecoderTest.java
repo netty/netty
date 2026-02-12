@@ -48,7 +48,7 @@ public class HttpResponseDecoderTest {
      * @see <a href="https://github.com/netty/netty/issues/3445">#3445</a>
      */
     @Test
-    public void testMaxHeaderSize1() {
+    public void testMaxHeaderSize1() throws Exception {
         final int maxHeaderSize = 8192;
 
         final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize, 8192));
@@ -80,7 +80,7 @@ public class HttpResponseDecoderTest {
      * Complementary test case of {@link #testMaxHeaderSize1()} When it actually exceeds the maximum, it should fail.
      */
     @Test
-    public void testMaxHeaderSize2() {
+    public void testMaxHeaderSize2() throws Exception {
         final int maxHeaderSize = 8192;
 
         final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, maxHeaderSize, 8192));
@@ -135,7 +135,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunked() {
+    public void testResponseChunked() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
                 CharsetUtil.US_ASCII));
@@ -177,7 +177,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunkedWithValidUncommonPatterns() {
+    public void testResponseChunkedWithValidUncommonPatterns() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
                                               CharsetUtil.US_ASCII));
@@ -249,7 +249,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunkedWithControlChars() {
+    public void testResponseChunkedWithControlChars() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
                                               CharsetUtil.US_ASCII));
@@ -289,7 +289,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseDisallowPartialChunks() {
+    public void testResponseDisallowPartialChunks() throws Exception {
         HttpResponseDecoder decoder = new HttpResponseDecoder(
             HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
             HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE,
@@ -341,7 +341,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseChunkedExceedMaxChunkSize() {
+    public void testResponseChunkedExceedMaxChunkSize() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(4096, 8192, 32));
         ch.writeInbound(
                 Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII));
@@ -493,7 +493,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLastResponseWithEmptyHeaderAndEmptyContent() {
+    public void testLastResponseWithEmptyHeaderAndEmptyContent() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
 
@@ -512,7 +512,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLastResponseWithoutContentLengthHeader() {
+    public void testLastResponseWithoutContentLengthHeader() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
 
@@ -536,7 +536,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLastResponseWithHeaderRemoveTrailingSpaces() {
+    public void testLastResponseWithHeaderRemoveTrailingSpaces() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 200 OK\r\nX-Header: h2=h2v2; Expires=Wed, 09-Jun-2021 10:18:14 GMT       \r\n\r\n",
@@ -563,7 +563,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResetContentResponseWithTransferEncoding() {
+    public void testResetContentResponseWithTransferEncoding() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 205 Reset Content\r\n" +
@@ -585,7 +585,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLastResponseWithTrailingHeader() {
+    public void testLastResponseWithTrailingHeader() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 200 OK\r\n" +
@@ -616,7 +616,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLastResponseWithTrailingHeaderFragmented() {
+    public void testLastResponseWithTrailingHeaderFragmented() throws Exception {
         byte[] data = ("HTTP/1.1 200 OK\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
                 "\r\n" +
@@ -630,7 +630,8 @@ public class HttpResponseDecoderTest {
         }
     }
 
-    private static void testLastResponseWithTrailingHeaderFragmented(byte[] content, int fragmentSize) {
+    private static void testLastResponseWithTrailingHeaderFragmented(byte[] content, int fragmentSize)
+            throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         int headerLength = 47;
         // split up the header
@@ -666,7 +667,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseWithContentLength() {
+    public void testResponseWithContentLength() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 200 OK\r\n" +
@@ -699,7 +700,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testResponseWithContentLengthFragmented() {
+    public void testResponseWithContentLengthFragmented() throws Exception {
         byte[] data = ("HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 10\r\n" +
                 "\r\n").getBytes(CharsetUtil.US_ASCII);
@@ -709,7 +710,7 @@ public class HttpResponseDecoderTest {
         }
     }
 
-    private static void testResponseWithContentLengthFragmented(byte[] header, int fragmentSize) {
+    private static void testResponseWithContentLengthFragmented(byte[] header, int fragmentSize) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         // split up the header
         for (int a = 0; a < header.length;) {
@@ -747,7 +748,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testOrderOfHeadersWithContentLength() {
+    public void testOrderOfHeadersWithContentLength() throws Exception {
         String requestStr = "HTTP/1.1 200 OK\r\n" +
                 "Content-Type: text/plain; charset=UTF-8\r\n" +
                 "Content-Length: 5\r\n" +
@@ -764,7 +765,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testWebSocketResponse() {
+    public void testWebSocketResponse() throws Exception {
         byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
                 "Upgrade: WebSocket\r\n" +
                 "Connection: Upgrade\r\n" +
@@ -789,7 +790,7 @@ public class HttpResponseDecoderTest {
 
     // See https://github.com/netty/netty/issues/2173
     @Test
-    public void testWebSocketResponseWithDataFollowing() {
+    public void testWebSocketResponseWithDataFollowing() throws Exception {
         byte[] data = ("HTTP/1.1 101 WebSocket Protocol Handshake\r\n" +
                 "Upgrade: WebSocket\r\n" +
                 "Connection: Upgrade\r\n" +
@@ -824,7 +825,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testGarbageHeaders() {
+    public void testGarbageHeaders() throws Exception {
         // A response without headers - from https://github.com/netty/netty/issues/2103
         byte[] data = ("<html>\r\n" +
                 "<head><title>400 Bad Request</title></head>\r\n" +
@@ -860,7 +861,7 @@ public class HttpResponseDecoderTest {
      * the connection is closed.
      */
     @Test
-    public void testGarbageChunk() {
+    public void testGarbageChunk() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -883,7 +884,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testWhiteSpaceGarbageChunk() {
+    public void testWhiteSpaceGarbageChunk() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -906,7 +907,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLeadingWhiteSpacesSemiColonGarbageChunk() {
+    public void testLeadingWhiteSpacesSemiColonGarbageChunk() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -929,7 +930,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testControlCharGarbageChunk() {
+    public void testControlCharGarbageChunk() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -952,7 +953,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testLeadingWhiteSpacesControlCharGarbageChunk() {
+    public void testLeadingWhiteSpacesControlCharGarbageChunk() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -975,7 +976,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testGarbageChunkAfterWhiteSpaces() {
+    public void testGarbageChunkAfterWhiteSpaces() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseWithIllegalChunk =
                 "HTTP/1.1 200 OK\r\n" +
@@ -1055,7 +1056,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testConnectionClosedBeforeHeadersReceived() {
+    public void testConnectionClosedBeforeHeadersReceived() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseInitialLine =
                 "HTTP/1.1 200 OK\r\n";
@@ -1068,7 +1069,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testTrailerWithEmptyLineInSeparateBuffer() {
+    public void testTrailerWithEmptyLineInSeparateBuffer() throws Exception {
         HttpResponseDecoder decoder = new HttpResponseDecoder();
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
 
@@ -1097,7 +1098,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testWhitespace() {
+    public void testWhitespace() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String requestStr = "HTTP/1.1 200 OK\r\n" +
                 "Transfer-Encoding : chunked\r\n" +
@@ -1112,7 +1113,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testHttpMessageDecoderResult() {
+    public void testHttpMessageDecoderResult() throws Exception {
         String responseStr = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 11\r\n" +
                 "Connection: close\r\n\r\n" +
@@ -1132,7 +1133,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testStatusWithoutReasonPhrase() {
+    public void testStatusWithoutReasonPhrase() throws Exception {
         String responseStr = "HTTP/1.1 200 \r\n" +
                 "Content-Length: 0\r\n\r\n";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
@@ -1146,31 +1147,31 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1c() {
+    public void testHeaderNameStartsWithControlChar1c() throws Exception {
         testHeaderNameStartsWithControlChar(0x1c);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1d() {
+    public void testHeaderNameStartsWithControlChar1d() throws Exception {
         testHeaderNameStartsWithControlChar(0x1d);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1e() {
+    public void testHeaderNameStartsWithControlChar1e() throws Exception {
         testHeaderNameStartsWithControlChar(0x1e);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1f() {
+    public void testHeaderNameStartsWithControlChar1f() throws Exception {
         testHeaderNameStartsWithControlChar(0x1f);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar0c() {
+    public void testHeaderNameStartsWithControlChar0c() throws Exception {
         testHeaderNameStartsWithControlChar(0x0c);
     }
 
-    private void testHeaderNameStartsWithControlChar(int controlChar) {
+    private void testHeaderNameStartsWithControlChar(int controlChar) throws Exception {
         ByteBuf responseBuffer = Unpooled.buffer();
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
@@ -1180,31 +1181,31 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1c() {
+    public void testHeaderNameEndsWithControlChar1c() throws Exception {
         testHeaderNameEndsWithControlChar(0x1c);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1d() {
+    public void testHeaderNameEndsWithControlChar1d() throws Exception {
         testHeaderNameEndsWithControlChar(0x1d);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1e() {
+    public void testHeaderNameEndsWithControlChar1e() throws Exception {
         testHeaderNameEndsWithControlChar(0x1e);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1f() {
+    public void testHeaderNameEndsWithControlChar1f() throws Exception {
         testHeaderNameEndsWithControlChar(0x1f);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar0c() {
+    public void testHeaderNameEndsWithControlChar0c() throws Exception {
         testHeaderNameEndsWithControlChar(0x0c);
     }
 
-    private static void testHeaderNameEndsWithControlChar(int controlChar) {
+    private static void testHeaderNameEndsWithControlChar(int controlChar) throws Exception {
         ByteBuf responseBuffer = Unpooled.buffer();
         responseBuffer.writeCharSequence("HTTP/1.1 200 OK\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
@@ -1217,12 +1218,12 @@ public class HttpResponseDecoderTest {
     @ParameterizedTest
     @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
             "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
-    public void testInvalidVersion(String version) {
+    public void testInvalidVersion(String version) throws Exception {
         testInvalidHeaders0(Unpooled.copiedBuffer(
                 version + " 200 OK\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII));
     }
 
-    private static void testInvalidHeaders0(ByteBuf responseBuffer) {
+    private static void testInvalidHeaders0(ByteBuf responseBuffer) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         assertTrue(channel.writeInbound(responseBuffer));
         HttpResponse response = channel.readInbound();

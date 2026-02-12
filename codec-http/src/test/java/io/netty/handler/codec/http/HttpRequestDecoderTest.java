@@ -73,42 +73,42 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceCRLFDelimiters() {
+    public void testDecodeWholeRequestAtOnceCRLFDelimiters() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_CRLF_DELIMITERS);
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceLFDelimiters() {
+    public void testDecodeWholeRequestAtOnceLFDelimiters() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_LF_DELIMITERS);
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceMixedDelimiters() {
+    public void testDecodeWholeRequestAtOnceMixedDelimiters() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS);
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceFailesWithLFDelimiters() {
+    public void testDecodeWholeRequestAtOnceFailesWithLFDelimiters() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_LF_DELIMITERS, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, true, true);
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceFailsWithMixedDelimiters() {
+    public void testDecodeWholeRequestAtOnceFailsWithMixedDelimiters() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, true, true);
     }
 
     @Test
-    public void testDecodeWholeRequestAtOnceMixedDelimitersWithIntegerOverflowOnMaxBodySize() {
+    public void testDecodeWholeRequestAtOnceMixedDelimitersWithIntegerOverflowOnMaxBodySize() throws Exception {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE, false, false);
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE - 1, false, false);
     }
 
-    private static void testDecodeWholeRequestAtOnce(byte[] content) {
+    private static void testDecodeWholeRequestAtOnce(byte[] content) throws Exception {
         testDecodeWholeRequestAtOnce(content, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, false, false);
     }
 
     private static void testDecodeWholeRequestAtOnce(byte[] content, int maxHeaderSize, boolean strictLineParsing,
-                                                     boolean expectFailure) {
+                                                     boolean expectFailure) throws Exception {
         HttpDecoderConfig config = new HttpDecoderConfig()
                 .setMaxHeaderSize(maxHeaderSize)
                 .setStrictLineParsing(strictLineParsing);
@@ -153,39 +153,39 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testDecodeWholeRequestInMultipleStepsCRLFDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsCRLFDelimiters() throws Exception {
         testDecodeWholeRequestInMultipleSteps(CONTENT_CRLF_DELIMITERS, true, false);
     }
 
     @Test
-    public void testDecodeWholeRequestInMultipleStepsLFDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsLFDelimiters() throws Exception {
         testDecodeWholeRequestInMultipleSteps(CONTENT_LF_DELIMITERS, false, false);
     }
 
     @Test
-    public void testDecodeWholeRequestInMultipleStepsMixedDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsMixedDelimiters() throws Exception {
         testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS, false, false);
     }
 
     @Test
-    public void testDecodeWholeRequestInMultipleStepsFailsWithLFDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsFailsWithLFDelimiters() throws Exception {
         testDecodeWholeRequestInMultipleSteps(CONTENT_LF_DELIMITERS, true, true);
     }
 
     @Test
-    public void testDecodeWholeRequestInMultipleStepsFailsWithMixedDelimiters() {
+    public void testDecodeWholeRequestInMultipleStepsFailsWithMixedDelimiters() throws Exception {
         testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS, true, true);
     }
 
     private static void testDecodeWholeRequestInMultipleSteps(
-            byte[] content, boolean strictLineParsing, boolean expectFailure) {
+            byte[] content, boolean strictLineParsing, boolean expectFailure) throws Exception {
         for (int i = 1; i < content.length; i++) {
             testDecodeWholeRequestInMultipleSteps(content, i, strictLineParsing, expectFailure);
         }
     }
 
     private static void testDecodeWholeRequestInMultipleSteps(
-            byte[] content, int fragmentSize, boolean strictLineParsing, boolean expectFailure) {
+            byte[] content, int fragmentSize, boolean strictLineParsing, boolean expectFailure) throws Exception {
         HttpDecoderConfig config = new HttpDecoderConfig()
                 .setStrictLineParsing(strictLineParsing);
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
@@ -235,7 +235,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testMultiLineHeader() {
+    public void testMultiLineHeader() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
         String request =  "GET /some/path HTTP/1.1" + crlf +
@@ -258,7 +258,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testEmptyHeaderValue() {
+    public void testEmptyHeaderValue() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
         String request =  "GET /some/path HTTP/1.1" + crlf +
@@ -270,7 +270,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void test100Continue() {
+    public void test100Continue() throws Exception {
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         String oversized =
@@ -294,7 +294,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void test100ContinueWithBadClient() {
+    public void test100ContinueWithBadClient() throws Exception {
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         String oversized =
@@ -324,7 +324,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testMessagesSplitBetweenMultipleBuffers() {
+    public void testMessagesSplitBetweenMultipleBuffers() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
         String str1 = "GET /some/path HTTP/1.1" + crlf +
@@ -355,7 +355,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testTooLargeInitialLine() {
+    public void testTooLargeInitialLine() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(10, 1024, 1024));
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Host: localhost1\r\n\r\n";
@@ -368,16 +368,16 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testTooLargeInitialLineWithWSOnly() {
+    public void testTooLargeInitialLineWithWSOnly() throws Exception {
         testTooLargeInitialLineWithControlCharsOnly("                    ");
     }
 
     @Test
-    public void testTooLargeInitialLineWithCRLFOnly() {
+    public void testTooLargeInitialLineWithCRLFOnly() throws Exception {
         testTooLargeInitialLineWithControlCharsOnly("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
     }
 
-    private static void testTooLargeInitialLineWithControlCharsOnly(String controlChars) {
+    private static void testTooLargeInitialLineWithControlCharsOnly(String controlChars) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(15, 1024, 1024));
         String requestStr = controlChars + "GET / HTTP/1.1\r\n" +
                 "Host: localhost1\r\n\r\n";
@@ -390,7 +390,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testInitialLineWithLeadingControlChars() {
+    public void testInitialLineWithLeadingControlChars() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         String crlf = "\r\n";
         String request =  crlf + "GET /some/path HTTP/1.1" + crlf +
@@ -404,7 +404,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testTooLargeHeaders() {
+    public void testTooLargeHeaders() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 10, 1024));
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Host: localhost1\r\n\r\n";
@@ -444,31 +444,31 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1c() {
+    public void testHeaderNameStartsWithControlChar1c() throws Exception {
         testHeaderNameStartsWithControlChar(0x1c);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1d() {
+    public void testHeaderNameStartsWithControlChar1d() throws Exception {
         testHeaderNameStartsWithControlChar(0x1d);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1e() {
+    public void testHeaderNameStartsWithControlChar1e() throws Exception {
         testHeaderNameStartsWithControlChar(0x1e);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar1f() {
+    public void testHeaderNameStartsWithControlChar1f() throws Exception {
         testHeaderNameStartsWithControlChar(0x1f);
     }
 
     @Test
-    public void testHeaderNameStartsWithControlChar0c() {
+    public void testHeaderNameStartsWithControlChar0c() throws Exception {
         testHeaderNameStartsWithControlChar(0x0c);
     }
 
-    private void testHeaderNameStartsWithControlChar(int controlChar) {
+    private void testHeaderNameStartsWithControlChar(int controlChar) throws Exception {
         ByteBuf requestBuffer = Unpooled.buffer();
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
@@ -478,31 +478,31 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1c() {
+    public void testHeaderNameEndsWithControlChar1c() throws Exception {
         testHeaderNameEndsWithControlChar(0x1c);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1d() {
+    public void testHeaderNameEndsWithControlChar1d() throws Exception {
         testHeaderNameEndsWithControlChar(0x1d);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1e() {
+    public void testHeaderNameEndsWithControlChar1e() throws Exception {
         testHeaderNameEndsWithControlChar(0x1e);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar1f() {
+    public void testHeaderNameEndsWithControlChar1f() throws Exception {
         testHeaderNameEndsWithControlChar(0x1f);
     }
 
     @Test
-    public void testHeaderNameEndsWithControlChar0c() {
+    public void testHeaderNameEndsWithControlChar0c() throws Exception {
         testHeaderNameEndsWithControlChar(0x0c);
     }
 
-    private void testHeaderNameEndsWithControlChar(int controlChar) {
+    private void testHeaderNameEndsWithControlChar(int controlChar) throws Exception {
         ByteBuf requestBuffer = Unpooled.buffer();
         requestBuffer.writeCharSequence("GET /some/path HTTP/1.1\r\n" +
                 "Host: netty.io\r\n", CharsetUtil.US_ASCII);
@@ -513,7 +513,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testWhitespace() {
+    public void testWhitespace() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding : chunked\r\n" +
                 "Host: netty.io\r\n\r\n";
@@ -521,7 +521,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testWhitespaceInTransferEncoding01() {
+    public void testWhitespaceInTransferEncoding01() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding : chunked\r\n" +
                 "Content-Length: 1\r\n" +
@@ -531,7 +531,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testWhitespaceInTransferEncoding02() {
+    public void testWhitespaceInTransferEncoding02() throws Exception {
         String requestStr = "POST / HTTP/1.1" +
                 "Transfer-Encoding : chunked\r\n" +
                 "Host: target.com" +
@@ -544,7 +544,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testHeaderWithNoValueAndMissingColon() {
+    public void testHeaderWithNoValueAndMissingColon() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Content-Length: 0\r\n" +
                 "Host:\r\n" +
@@ -553,7 +553,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testMultipleContentLengthHeaders() {
+    public void testMultipleContentLengthHeaders() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Content-Length: 1\r\n" +
                 "Content-Length: 0\r\n\r\n" +
@@ -562,7 +562,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testMultipleContentLengthHeaders2() {
+    public void testMultipleContentLengthHeaders2() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Content-Length: 1\r\n" +
                 "Connection: close\r\n" +
@@ -572,7 +572,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testContentLengthHeaderWithCommaValue() {
+    public void testContentLengthHeaderWithCommaValue() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Content-Length: 1,1\r\n\r\n" +
                 "b";
@@ -580,7 +580,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testMultipleContentLengthHeadersWithFolding() {
+    public void testMultipleContentLengthHeadersWithFolding() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: close\r\n" +
@@ -592,19 +592,19 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() {
+    public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() throws Exception {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, true);
     }
 
     @Test
-    public void testContentLengthAndTransferEncodingHeadersWithCR() {
+    public void testContentLengthAndTransferEncodingHeadersWithCR() throws Exception {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, false);
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, true);
     }
 
     private static void testContentLengthAndTransferEncodingHeadersWithInvalidSeparator(
-            char separator, boolean extraLine) {
+            char separator, boolean extraLine) throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: close\r\n" +
@@ -616,7 +616,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testContentLengthHeaderAndChunked() {
+    public void testContentLengthHeaderAndChunked() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: close\r\n" +
@@ -696,7 +696,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testOrderOfHeadersWithContentLength() {
+    public void testOrderOfHeadersWithContentLength() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Content-Length: 5\r\n" +
@@ -713,7 +713,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testHttpMessageDecoderResult() {
+    public void testHttpMessageDecoderResult() throws Exception {
         String requestStr = "PUT /some/path HTTP/1.1\r\n" +
                 "Content-Length: 11\r\n" +
                 "Connection: close\r\n\r\n" +
@@ -770,7 +770,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testChunkSizeOverflow() {
+    public void testChunkSizeOverflow() throws Exception {
         String requestStr = "PUT /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "8ccccccc\r\n";
@@ -786,7 +786,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testChunkSizeOverflow2() {
+    public void testChunkSizeOverflow2() throws Exception {
         String requestStr = "PUT /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "bbbbbbbe;\r\n\r\n";
@@ -804,29 +804,29 @@ public class HttpRequestDecoderTest {
     @ParameterizedTest
     @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
             "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
-    public void testInvalidVersion(String version) {
+    public void testInvalidVersion(String version) throws Exception {
         testInvalidHeaders0("GET / " + version + "\r\nHost: whatever\r\n\r\n");
     }
 
     @ParameterizedTest
     // See https://www.unicode.org/charts/nameslist/n_0000.html
     @ValueSource(strings = { "\r", "\u000b", "\u000c" })
-    public void testHeaderValueWithInvalidSuffix(String suffix) {
+    public void testHeaderValueWithInvalidSuffix(String suffix) throws Exception {
         testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
     }
 
     @Test
-    public void testLeadingWhitespaceInFirstHeaderName() {
+    public void testLeadingWhitespaceInFirstHeaderName() throws Exception {
         testInvalidHeaders0("POST / HTTP/1.1\r\n\tContent-Length: 1\r\n\r\nX");
     }
 
    @Test
-    public void testNulInInitialLine() {
+    public void testNulInInitialLine() throws Exception {
         testInvalidHeaders0("GET / HTTP/1.1\u0000\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
-    void reentrantClose() {
+    void reentrantClose() throws Exception {
         String requestStr = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Content-Length: 0\r\n" +
@@ -862,11 +862,11 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
-    private static void testInvalidHeaders0(String requestStr) {
+    private static void testInvalidHeaders0(String requestStr) throws Exception {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }
 
-    private static void testInvalidHeaders0(ByteBuf requestBuffer) {
+    private static void testInvalidHeaders0(ByteBuf requestBuffer) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(requestBuffer));
         HttpRequest request = channel.readInbound();

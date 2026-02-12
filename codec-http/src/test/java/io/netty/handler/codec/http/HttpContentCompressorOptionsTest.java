@@ -118,7 +118,7 @@ class HttpContentCompressorOptionsTest {
     }
 
     @Test
-    void testAcceptEncodingHttpRequest() {
+    void testAcceptEncodingHttpRequest() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(null));
         ch.writeInbound(newRequest());
         FullHttpRequest fullHttpRequest = ch.readInbound();

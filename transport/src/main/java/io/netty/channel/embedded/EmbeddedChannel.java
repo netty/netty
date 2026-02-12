@@ -354,7 +354,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @return {@code true} if the write operation did add something to the inbound buffer
      */
-    public boolean writeInbound(Object... msgs) {
+    public boolean writeInbound(Object... msgs) throws Exception {
         ensureOpen();
         if (msgs.length == 0) {
             return isNotEmpty(inboundMessages);
@@ -412,12 +412,12 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #flushOutbound()
      */
-    public EmbeddedChannel flushInbound() {
+    public EmbeddedChannel flushInbound() throws Exception {
         flushInbound(true);
         return this;
     }
 
-    private void flushInbound(boolean recordException) {
+    private void flushInbound(boolean recordException) throws Exception {
         executingStackCnt++;
         try {
             if (checkOpen(recordException)) {
@@ -437,7 +437,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param msgs              the messages to be written
      * @return bufferReadable   returns {@code true} if the write operation did add something to the outbound buffer
      */
-    public boolean writeOutbound(Object... msgs) {
+    public boolean writeOutbound(Object... msgs) throws Exception {
         ensureOpen();
         if (msgs.length == 0) {
             return isNotEmpty(outboundMessages);
@@ -516,7 +516,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #flushInbound()
      */
-    public EmbeddedChannel flushOutbound() {
+    public EmbeddedChannel flushOutbound() throws Exception {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
@@ -543,7 +543,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
-    public boolean finish() {
+    public boolean finish() throws Exception {
         return finish(false);
     }
 
@@ -553,7 +553,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
-    public boolean finishAndReleaseAll() {
+    public boolean finishAndReleaseAll() throws Exception {
         return finish(true);
     }
 
@@ -563,7 +563,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param releaseAll if {@code true} all pending message in the inbound and outbound buffer are released.
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
-    private boolean finish(boolean releaseAll) {
+    private boolean finish(boolean releaseAll) throws Exception {
         executingStackCnt++;
         try {
             close();
@@ -945,10 +945,13 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
-    public void checkException() {
+    public void checkException() throws Exception {
         Promise<Void> promise = newPromise();
         checkException(promise);
-        promise.syncUninterruptibly();
+        Throwable cause = promise.awaitUninterruptibly().cause();
+        if (cause != null) {
+            PlatformDependent.throwException(cause);
+        }
     }
 
     /**
@@ -973,7 +976,7 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Ensure the {@link Channel} is open and if not throw an exception.
      */
-    protected final void ensureOpen() {
+    protected final void ensureOpen() throws Exception {
         if (!checkOpen(true)) {
             checkException();
         }

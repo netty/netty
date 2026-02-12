@@ -20,7 +20,6 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,7 +33,7 @@ public class FlushConsolidationHandlerTest {
     private static final int EXPLICIT_FLUSH_AFTER_FLUSHES = 3;
 
     @Test
-    public void testFlushViaScheduledTask() {
+    public void testFlushViaScheduledTask() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount,  true);
         // Flushes should not go through immediately, as they're scheduled as an async task
@@ -50,7 +49,7 @@ public class FlushConsolidationHandlerTest {
     }
 
     @Test
-    public void testFlushViaThresholdOutsideOfReadLoop() {
+    public void testFlushViaThresholdOutsideOfReadLoop() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, true);
         // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
@@ -63,7 +62,7 @@ public class FlushConsolidationHandlerTest {
     }
 
     @Test
-    public void testImmediateFlushOutsideOfReadLoop() {
+    public void testImmediateFlushOutsideOfReadLoop() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, false);
         channel.flush();
@@ -72,7 +71,7 @@ public class FlushConsolidationHandlerTest {
     }
 
     @Test
-    public void testFlushViaReadComplete() {
+    public void testFlushViaReadComplete() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, false);
         // Flush should go through as there is no read loop in progress.
@@ -99,7 +98,7 @@ public class FlushConsolidationHandlerTest {
     }
 
     @Test
-    public void testFlushViaClose() {
+    public void testFlushViaClose() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
@@ -114,7 +113,7 @@ public class FlushConsolidationHandlerTest {
     }
 
     @Test
-    public void testFlushViaDisconnect() {
+    public void testFlushViaDisconnect() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;
@@ -140,16 +139,11 @@ public class FlushConsolidationHandlerTest {
         assertEquals(1, flushCount.get());
         assertEquals(1L, (Long) channel.readOutbound());
         assertNull(channel.readOutbound());
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.finish();
-            }
-        });
+        assertThrows(IllegalStateException.class, channel::finish);
     }
 
     @Test
-    public void testFlushViaRemoval() {
+    public void testFlushViaRemoval() throws Exception {
         final AtomicInteger flushCount = new AtomicInteger();
         EmbeddedChannel channel = newChannel(flushCount, false);
         // Simulate read loop;

@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Http3RequestStreamInboundHandlerTest {
 
     @Test
-    public void testDetectLastViaUserEvent() {
+    public void testDetectLastViaUserEvent() throws Exception {
         EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamInboundHandler());
         assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));

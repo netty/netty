@@ -39,13 +39,14 @@ import org.junit.jupiter.api.function.Executable;
 import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -65,12 +66,13 @@ public class ServerBootstrapTest {
                     .childHandler(new ChannelInboundHandler() { })
                     .register();
 
-            assertThrows(UnsupportedOperationException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     cf.syncUninterruptibly();
                 }
             });
+            assertInstanceOf(UnsupportedOperationException.class, cause.getCause());
         } finally {
             group.shutdownGracefully();
         }

@@ -43,7 +43,7 @@ public class QpackDecoderHandlerTest {
     private QpackAttributes attributes;
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(encoderStream.finish());
         assertFalse(decoderStream.finish());
     }
@@ -53,7 +53,8 @@ public class QpackDecoderHandlerTest {
         setup(128L);
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = assertThrows(Http3Exception.class,
+                () -> sendAckForStreamId(decoderStream.streamId()));
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -82,7 +83,8 @@ public class QpackDecoderHandlerTest {
     public void sectionAckUnknownStream() throws Exception {
         setup(128);
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(1));
+        Http3Exception e = assertThrows(Http3Exception.class,
+                () -> sendAckForStreamId(1));
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -98,7 +100,8 @@ public class QpackDecoderHandlerTest {
         encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
         sendAckForStreamId(decoderStream.streamId());
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = assertThrows(Http3Exception.class,
+                () -> sendAckForStreamId(decoderStream.streamId()));
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -154,7 +157,8 @@ public class QpackDecoderHandlerTest {
 
         sendStreamCancellation(decoderStream.streamId());
 
-        Http3Exception e = assertThrows(Http3Exception.class, () -> sendAckForStreamId(decoderStream.streamId()));
+        Http3Exception e = assertThrows(Http3Exception.class,
+                () -> sendAckForStreamId(decoderStream.streamId()));
         assertThat(e.getCause(), instanceOf(QpackException.class));
 
         Http3TestUtils.verifyClose(QPACK_DECODER_STREAM_ERROR, parent);
@@ -262,7 +266,7 @@ public class QpackDecoderHandlerTest {
         finishStreams();
     }
 
-    private void sendAckForStreamId(long streamId) throws Http3Exception {
+    private void sendAckForStreamId(long streamId) throws Exception {
         assertFalse(decoderStream.writeInbound(encodeSectionAck(streamId)));
     }
 
@@ -277,7 +281,7 @@ public class QpackDecoderHandlerTest {
         return ack;
     }
 
-    private void sendInsertCountIncrement(long increment) throws Http3Exception {
+    private void sendInsertCountIncrement(long increment) throws Exception {
         assertFalse(decoderStream.writeInbound(encodeInsertCountIncrement(increment)));
     }
 
@@ -292,7 +296,7 @@ public class QpackDecoderHandlerTest {
         return incr;
     }
 
-    private void sendStreamCancellation(long streamId) {
+    private void sendStreamCancellation(long streamId) throws Exception {
         assertFalse(decoderStream.writeInbound(encodeStreamCancellation(streamId)));
     }
 
@@ -336,11 +340,11 @@ public class QpackDecoderHandlerTest {
         attributes.decoderStream(decoderStream);
     }
 
-    private void finishStreams() {
+    private void finishStreams() throws Exception {
         finishStreams(true);
     }
 
-    private void finishStreams(boolean encoderPendingMessage) {
+    private void finishStreams(boolean encoderPendingMessage) throws Exception {
         assertThat("Unexpected decoder stream message", decoderStream.finishAndReleaseAll(), is(false));
         assertThat("Unexpected encoder stream message", encoderStream.finishAndReleaseAll(), is(encoderPendingMessage));
         assertThat("Unexpected parent stream message", parent.finishAndReleaseAll(), is(false));

@@ -38,7 +38,7 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
     }
 
     @Test
-    public void testRespectReadBytes() {
+    public void testRespectReadBytes() throws Exception {
         DefaultMaxMessagesRecvByteBufAllocator allocator = newAllocator(false);
         RecvByteBufAllocator.Handle handle = allocator.newHandle();
 
@@ -56,7 +56,7 @@ public class DefaultMaxMessagesRecvByteBufAllocatorTest {
     }
 
     @Test
-    public void testIgnoreReadBytes() {
+    public void testIgnoreReadBytes() throws Exception {
         DefaultMaxMessagesRecvByteBufAllocator allocator = newAllocator(true);
         RecvByteBufAllocator.Handle handle = allocator.newHandle();
 

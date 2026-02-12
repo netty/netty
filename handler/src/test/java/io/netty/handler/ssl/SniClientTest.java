@@ -40,12 +40,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -80,12 +82,13 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniSNIMatcherDoesNotMatchClient(
             final SslProvider serverProvider, final SslProvider clientProvider) {
-        assertThrows(SSLException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
             }
         });
+        assertInstanceOf(SSLException.class, cause.getCause());
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)

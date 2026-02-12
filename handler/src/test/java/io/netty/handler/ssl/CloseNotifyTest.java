@@ -183,14 +183,14 @@ public class CloseNotifyTest {
         );
     }
 
-    private static void forwardData(EmbeddedChannel from, EmbeddedChannel to) {
+    private static void forwardData(EmbeddedChannel from, EmbeddedChannel to) throws Exception {
         ByteBuf in;
         while ((in = from.readOutbound()) != null) {
             to.writeInbound(in);
         }
     }
 
-    private static void forwardAllWithCloseNotify(EmbeddedChannel from, EmbeddedChannel to) {
+    private static void forwardAllWithCloseNotify(EmbeddedChannel from, EmbeddedChannel to) throws Exception {
         ByteBuf cumulation = EMPTY_BUFFER;
         ByteBuf in, closeNotify = null;
         while ((in = from.readOutbound()) != null) {

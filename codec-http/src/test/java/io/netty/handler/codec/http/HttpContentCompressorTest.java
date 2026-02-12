@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -621,13 +622,11 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
-        try {
-            ch.writeOutbound(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
-            fail();
-        } catch (EncoderException e) {
-            assertTrue(e.getCause() instanceof IllegalStateException);
-        }
+        Throwable cause = assertThrows(EncoderException.class,
+                () -> ch.writeOutbound(new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER)));
+        assertInstanceOf(IllegalStateException.class, cause.getCause());
+
         assertTrue(ch.finish());
         for (;;) {
             Object message = ch.readOutbound();
@@ -821,7 +820,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testMultipleAcceptEncodingHeaders() {
+    public void testMultipleAcceptEncodingHeaders() throws Exception {
         FullHttpRequest request = newRequest();
         request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "unknown; q=1.0")
                .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip; q=0.5")
@@ -854,7 +853,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testEmpty() {
+    public void testEmpty() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 

@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -68,6 +69,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -101,7 +103,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     protected abstract ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer);
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         childChannelInitializer = new TestChannelInitializer();
         parentChannel = new ParentChannel();
         frameInboundWriter = new Http2FrameInboundWriter(parentChannel);
@@ -898,12 +900,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         inboundHandler.checkException();
 
-        assertThrows(ClosedChannelException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 future.syncUninterruptibly();
             }
         });
+        assertInstanceOf(ClosedChannelException.class, cause.getCause());
     }
 
     @Test
@@ -963,12 +966,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         handler.checkException();
 
-        assertThrows(Http2NoMoreStreamIdsException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() {
                 future.syncUninterruptibly();
             }
         });
+        assertInstanceOf(Http2NoMoreStreamIdsException.class, cause.getCause());
     }
 
     @Test
@@ -1234,7 +1238,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void endOfStreamDoesNotDiscardData() {
+    public void endOfStreamDoesNotDiscardData() throws Exception {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
         Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
@@ -1334,7 +1338,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopAutoRead() {
+    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopAutoRead() throws Exception {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
@@ -1397,7 +1401,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
-    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopNoAutoRead() {
+    public void childQueueIsDrainedAndNewDataIsDispatchedInParentReadLoopNoAutoRead() throws Exception {
         final AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();

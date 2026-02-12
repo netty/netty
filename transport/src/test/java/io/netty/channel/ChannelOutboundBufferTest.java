@@ -17,7 +17,6 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -244,17 +243,6 @@ public class ChannelOutboundBufferTest {
         @Override
         public <T> Promise<T> newPromise() {
             return new DefaultPromise<T>(executor());
-        }
-    }
-
-    private static void safeClose(EmbeddedChannel ch) {
-        ch.finish();
-        for (;;) {
-            ByteBuf m = ch.readOutbound();
-            if (m == null) {
-                break;
-            }
-            m.release();
         }
     }
 }

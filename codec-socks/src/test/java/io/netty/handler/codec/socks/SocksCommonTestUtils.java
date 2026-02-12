@@ -28,7 +28,7 @@ final class SocksCommonTestUtils {
     }
 
     @SuppressWarnings("deprecation")
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, SocksMessage msg) {
+    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, SocksMessage msg) throws Exception {
         ByteBuf buf = Unpooled.buffer();
         msg.encodeAsByteBuf(buf);
         embedder.writeInbound(buf);

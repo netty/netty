@@ -91,7 +91,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.newPromise()).thenReturn(new DefaultPromise(eventLoop));
+        doAnswer(m -> new DefaultPromise<>(eventLoop)).when(eventLoop).newPromise();
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) {

@@ -17,7 +17,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -81,12 +80,8 @@ public class WebSocket08FrameDecoderTest {
         final ByteBuf invalidFrame = Unpooled.buffer(10).writeByte(0x81)
                                              .writeByte(0xFF).writeLong(-1L);
 
-        Throwable exception = assertThrows(CorruptedWebSocketFrameException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(invalidFrame);
-            }
-        });
+        CorruptedWebSocketFrameException exception = assertThrows(CorruptedWebSocketFrameException.class,
+                () -> channel.writeInbound(invalidFrame));
         assertEquals("invalid data frame length (negative length)", exception.getMessage());
 
         CloseWebSocketFrame closeFrame = channel.readOutbound();

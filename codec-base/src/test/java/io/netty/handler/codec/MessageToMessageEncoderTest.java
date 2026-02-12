@@ -43,16 +43,16 @@ public class MessageToMessageEncoderTest {
                 throw new Exception();
             }
         });
-        assertThrows(EncoderException.class, new Executable() {
+         assertThrows(EncoderException.class, new Executable() {
             @Override
-            public void execute() {
+            public void execute() throws Exception {
                 channel.writeOutbound(new Object());
             }
         });
     }
 
     @Test
-    public void testIntermediateWriteFailures() {
+    public void testIntermediateWriteFailures() throws Exception {
         ChannelHandler encoder = new MessageToMessageEncoder<Object>() {
             @Override
             protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) {

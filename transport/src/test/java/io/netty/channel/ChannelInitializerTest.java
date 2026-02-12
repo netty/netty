@@ -210,16 +210,16 @@ public class ChannelInitializerTest {
     }
 
     @Test
-    public void testAddFirstChannelInitializer() {
+    public void testAddFirstChannelInitializer() throws Exception {
         testAddChannelInitializer(true);
     }
 
     @Test
-    public void testAddLastChannelInitializer() {
+    public void testAddLastChannelInitializer() throws Exception {
         testAddChannelInitializer(false);
     }
 
-    private static void testAddChannelInitializer(final boolean first) {
+    private static void testAddChannelInitializer(final boolean first) throws Exception {
         final AtomicBoolean called = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInitializer<Channel>() {
             @Override

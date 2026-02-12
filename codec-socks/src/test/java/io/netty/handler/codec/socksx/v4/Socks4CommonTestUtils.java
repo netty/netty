@@ -26,7 +26,7 @@ final class Socks4CommonTestUtils {
         //NOOP
     }
 
-    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks4Message msg) {
+    public static void writeMessageIntoEmbedder(EmbeddedChannel embedder, Socks4Message msg) throws Exception {
         EmbeddedChannel out;
         if (msg instanceof Socks4CommandRequest) {
             out = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);

@@ -72,7 +72,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         if (parent != null) {
             final QpackAttributes qpackAttributes = getQpackAttributes(parent);
             assertNotNull(qpackAttributes);
@@ -132,7 +132,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
         Http3ErrorCode errorCode = inboundErrorCodeInvalid();
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeInbound(invalid));
+            Throwable e = assertThrows(Exception.class, () -> channel.writeInbound(invalid));
             assertException(errorCode, e);
 
             assertFrameReleased(invalid);
@@ -154,7 +154,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
 
         List<Http3Frame> invalidFrames = newInvalidFrames();
         for (Http3Frame invalid : invalidFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeOutbound(invalid));
+            Throwable e = assertThrows(Exception.class, () -> channel.writeOutbound(invalid));
             Http3TestUtils.assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
 
             assertFrameReleased(invalid);

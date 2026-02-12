@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class Socks4ServerDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ServerDecoderTest.class);
 
-    private static void test(String userId, Socks4CommandType type, String dstAddr, int dstPort) {
+    private static void test(String userId, Socks4CommandType type, String dstAddr, int dstPort) throws Exception {
         logger.debug(
                 "Testing type: " + type + " dstAddr: " + dstAddr + " dstPort: " + dstPort +
                 " userId: " + userId);
@@ -46,7 +46,7 @@ public class Socks4ServerDecoderTest {
     }
 
     @Test
-    public void testCmdRequestDecoder() {
+    public void testCmdRequestDecoder() throws Exception {
         String[] hosts = { "127.0.0.1", };
         String[] userIds = { "test", };
         int[] ports = {1, 32769, 65535};

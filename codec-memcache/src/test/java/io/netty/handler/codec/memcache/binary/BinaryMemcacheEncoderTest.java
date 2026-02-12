@@ -25,7 +25,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,12 +46,12 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @AfterEach
-    public void teardown() {
+    public void teardown() throws Exception {
         channel.finishAndReleaseAll();
     }
 
     @Test
-    public void shouldEncodeDefaultHeader() {
+    public void shouldEncodeDefaultHeader() throws Exception {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
 
         boolean result = channel.writeOutbound(request);
@@ -65,7 +65,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeCustomHeader() {
+    public void shouldEncodeCustomHeader() throws Exception {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
         request.setMagic((byte) 0xAA);
         request.setOpcode(BinaryMemcacheOpcodes.GET);
@@ -81,7 +81,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeExtras() {
+    public void shouldEncodeExtras() throws Exception {
         String extrasContent = "netty<3memcache";
         ByteBuf extras = Unpooled.copiedBuffer(extrasContent, CharsetUtil.UTF_8);
         int extrasLength = extras.readableBytes();
@@ -99,7 +99,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeKey() {
+    public void shouldEncodeKey() throws Exception {
         ByteBuf key = Unpooled.copiedBuffer("netty", CharsetUtil.UTF_8);
         int keyLength = key.readableBytes();
 
@@ -116,7 +116,7 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldEncodeContent() {
+    public void shouldEncodeContent() throws Exception {
         DefaultMemcacheContent content1 =
             new DefaultMemcacheContent(Unpooled.copiedBuffer("Netty", CharsetUtil.UTF_8));
         DefaultLastMemcacheContent content2 =
@@ -153,13 +153,8 @@ public class BinaryMemcacheEncoderTest {
     }
 
     @Test
-    public void shouldFailWithoutLastContent() {
+    public void shouldFailWithoutLastContent() throws Exception {
         channel.writeOutbound(new DefaultMemcacheContent(Unpooled.EMPTY_BUFFER));
-        assertThrows(EncoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeOutbound(new DefaultBinaryMemcacheRequest());
-            }
-        });
+        assertThrows(EncoderException.class, () -> channel.writeOutbound(new DefaultBinaryMemcacheRequest()));
     }
 }

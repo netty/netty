@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.HttpResponse;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +50,7 @@ public class WebSocketClientExtensionHandlerTest {
             mock(WebSocketClientExtension.class, "fallbackExtension");
 
     @Test
-    public void testMainSuccess() {
+    public void testMainSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -98,7 +99,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testFallbackSuccess() {
+    public void testFallbackSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -150,7 +151,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testAllSuccess() {
+    public void testAllSuccess() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
@@ -222,7 +223,7 @@ public class WebSocketClientExtensionHandlerTest {
     }
 
     @Test
-    public void testIfMainAndFallbackUseRSV1WillFail() {
+    public void testIfMainAndFallbackUseRSV1WillFail() throws Exception {
         // initialize
         when(mainHandshakerMock.newRequestData()).
                 thenReturn(new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));

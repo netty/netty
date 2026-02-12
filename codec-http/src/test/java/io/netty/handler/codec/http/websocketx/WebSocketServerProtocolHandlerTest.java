@@ -63,16 +63,16 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequestFull() {
+    public void testHttpUpgradeRequestFull() throws Exception {
         testHttpUpgradeRequest0(true);
     }
 
     @Test
-    public void testHttpUpgradeRequestNonFull() {
+    public void testHttpUpgradeRequestNonFull() throws Exception {
         testHttpUpgradeRequest0(false);
     }
 
-    private void testHttpUpgradeRequest0(boolean full) {
+    private void testHttpUpgradeRequest0(boolean full) throws Exception {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch, full);
@@ -85,7 +85,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() {
+    public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() throws Exception {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         ch.pipeline().addLast(new ChannelInboundHandler() {
@@ -107,7 +107,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequestInvalidUpgradeHeader() {
+    public void testHttpUpgradeRequestInvalidUpgradeHeader() throws Exception {
         EmbeddedChannel ch = createChannel();
         FullHttpRequest httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
@@ -127,7 +127,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequestMissingWSKeyHeader() {
+    public void testHttpUpgradeRequestMissingWSKeyHeader() throws Exception {
         EmbeddedChannel ch = createChannel();
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
@@ -148,7 +148,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testCreateUTF8Validator() {
+    public void testCreateUTF8Validator() throws Exception {
         WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
                 .websocketPath("/test")
                 .withUTF8Validator(true)
@@ -169,7 +169,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testDoNotCreateUTF8Validator() {
+    public void testDoNotCreateUTF8Validator() throws Exception {
         WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
                 .websocketPath("/test")
                 .withUTF8Validator(false)
@@ -190,7 +190,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHandleTextFrame() {
+    public void testHandleTextFrame() throws Exception {
         CustomTextFrameHandler customTextFrameHandler = new CustomTextFrameHandler();
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
         writeUpgradeRequest(ch);
@@ -212,7 +212,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testCheckWebSocketPathStartWithSlash() {
+    public void testCheckWebSocketPathStartWithSlash() throws Exception {
         WebSocketRequestBuilder builder = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .key(HttpHeaderNames.SEC_WEBSOCKET_KEY)
@@ -244,7 +244,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testCheckValidWebSocketPath() {
+    public void testCheckValidWebSocketPath() throws Exception {
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/test")
@@ -272,7 +272,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testCheckInvalidWebSocketPath() {
+    public void testCheckInvalidWebSocketPath() throws Exception {
         HttpRequest httpRequest = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
                 .method(HttpMethod.GET)
                 .uri("/testabc")
@@ -432,7 +432,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @SuppressWarnings("SameParameterValue")
-    private <T> T decode(ByteBuf input, Class<T> clazz) {
+    private <T> T decode(ByteBuf input, Class<T> clazz) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocket13FrameDecoder(true, false, 65536, true));
         assertTrue(ch.writeInbound(input));
         Object decoded = ch.readInbound();
@@ -462,11 +462,11 @@ public class WebSocketServerProtocolHandlerTest {
                 handler);
     }
 
-    private static void writeUpgradeRequest(EmbeddedChannel ch) {
+    private static void writeUpgradeRequest(EmbeddedChannel ch) throws Exception {
         writeUpgradeRequest(ch, true);
     }
 
-    private static void writeUpgradeRequest(EmbeddedChannel ch, boolean full) {
+    private static void writeUpgradeRequest(EmbeddedChannel ch, boolean full) throws Exception {
         HttpRequest request = WebSocketRequestBuilder.successful();
         if (full) {
             ch.writeInbound(request);

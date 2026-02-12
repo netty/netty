@@ -89,7 +89,7 @@ public class Http3PushStreamTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(serverLocalControlStream.finish());
         assertFalse(serverChannel.finish());
         assertFalse(clientLocalControlStream.finish());
@@ -112,7 +112,8 @@ public class Http3PushStreamTest {
         final EmbeddedQuicStreamChannel serverStream = newServerStream();
         readStreamHeader(serverStream).release();
         try {
-            assertThrows(Http3Exception.class, () -> serverStream.writeOutbound(new DefaultHttp3PushPromiseFrame(1)));
+            assertThrows(Http3Exception.class,
+                    () -> serverStream.writeOutbound(new DefaultHttp3PushPromiseFrame(1)));
         } finally {
             assertFalse(serverStream.finish());
         }
@@ -162,7 +163,8 @@ public class Http3PushStreamTest {
     }
 
     private static void writeAndReadFrame(EmbeddedQuicStreamChannel serverStream,
-                                          EmbeddedQuicStreamChannel clientStream, Http3RequestStreamFrame frame) {
+                                          EmbeddedQuicStreamChannel clientStream, Http3RequestStreamFrame frame)
+            throws Exception {
         ReferenceCountUtil.retain(frame); // retain so that we can compare later
         assertTrue(serverStream.writeOutbound(frame));
         final ByteBuf encodedFrame = serverStream.readOutbound();
@@ -209,7 +211,7 @@ public class Http3PushStreamTest {
                         }, () -> new ChannelHandler() { }, () -> new ChannelHandler() { })).get();
     }
 
-    private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) {
+    private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) throws Exception {
         serverStream.flushOutbound(); // flush the stream header
         ByteBuf streamHeader = serverStream.readOutbound();
         assertNotNull(streamHeader);

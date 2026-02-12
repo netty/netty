@@ -48,7 +48,6 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -94,13 +93,8 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void encodeNonFullHttpResponse100ContinueIsRejected() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        assertThrows(EncoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                ch.writeOutbound(new DefaultHttpResponse(
-                        HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
-            }
-        });
+        assertThrows(EncoderException.class, () -> ch.writeOutbound(new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
         ch.finishAndReleaseAll();
     }
 
@@ -781,7 +775,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @ParameterizedTest()
     @ValueSource(strings = {"204", "304"})
-    public void testDecodeResponseHeadersContentAlwaysEmpty(String statusCode) {
+    public void testDecodeResponseHeadersContentAlwaysEmpty(String statusCode) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());

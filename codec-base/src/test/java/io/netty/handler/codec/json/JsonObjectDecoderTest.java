@@ -32,8 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JsonObjectDecoderTest {
+
     @Test
-    public void testJsonObjectOverMultipleWrites() {
+    public void testJsonObjectOverMultipleWrites() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String objectPart1 = "{ \"firstname\": \"John";
@@ -53,7 +54,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testMultipleJsonObjectsOverMultipleWrites() {
+    public void testMultipleJsonObjectsOverMultipleWrites() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String objectPart1 = "{\"name\":\"Jo";
@@ -74,7 +75,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testJsonArrayOverMultipleWrites() {
+    public void testJsonArrayOverMultipleWrites() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String arrayPart1 = "[{\"test";
@@ -98,7 +99,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testStreamJsonArrayOverMultipleWrites1() {
+    public void testStreamJsonArrayOverMultipleWrites1() throws Exception {
         String[] array = new String[] {
                 "   [{\"test",
                 "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
@@ -114,7 +115,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testStreamJsonArrayOverMultipleWrites2() {
+    public void testStreamJsonArrayOverMultipleWrites2() throws Exception {
         String[] array = new String[] {
                 "   [{\"test",
                 "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
@@ -130,7 +131,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testStreamJsonArrayOverMultipleWrites3() {
+    public void testStreamJsonArrayOverMultipleWrites3() throws Exception {
         String[] array = new String[] {
                 "   [{\"test",
                 "case\"  : \"\\\"}]Escaped dou\\\"ble quotes \\\" in JSON str\\\"ing\"",
@@ -146,7 +147,7 @@ public class JsonObjectDecoderTest {
     }
 
     private static void doTestStreamJsonArrayOverMultipleWrites(int indexDataAvailable,
-            String[] array, String[] result) {
+            String[] array, String[] result) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(true));
 
         boolean dataAvailable = false;
@@ -170,7 +171,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testSingleByteStream() {
+    public void testSingleByteStream() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String json = "{\"foo\" : {\"bar\" : [{},{}]}}";
@@ -186,7 +187,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testBackslashInString1() {
+    public void testBackslashInString1() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\""}
         String json = "{\"foo\" : \"bar\\\"\"}";
@@ -201,7 +202,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testBackslashInString2() {
+    public void testBackslashInString2() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\\"}
         String json = "{\"foo\" : \"bar\\\\\"}";
@@ -216,7 +217,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testBackslashInString3() {
+    public void testBackslashInString3() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         // {"foo" : "bar\\\""}
         String json = "{\"foo\" : \"bar\\\\\\\"\"}";
@@ -231,7 +232,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testMultipleJsonObjectsInOneWrite() {
+    public void testMultipleJsonObjectsInOneWrite() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String object1 = "{\"key\" : \"value1\"}",
@@ -254,12 +255,12 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testNonJsonContent1() {
+    public void testNonJsonContent1() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         try {
             assertThrows(CorruptedFrameException.class, new Executable() {
                 @Override
-                public void execute() {
+                public void execute() throws Exception {
                     ch.writeInbound(Unpooled.copiedBuffer("  b [1,2,3]", CharsetUtil.UTF_8));
                 }
             });
@@ -269,7 +270,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testNonJsonContent2() {
+    public void testNonJsonContent2() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("  [1,2,3]  ", CharsetUtil.UTF_8));
 
@@ -280,7 +281,7 @@ public class JsonObjectDecoderTest {
         try {
             assertThrows(CorruptedFrameException.class, new Executable() {
                 @Override
-                public void execute() {
+                public void execute() throws Exception {
                     ch.writeInbound(Unpooled.copiedBuffer(" a {\"key\" : 10}", CharsetUtil.UTF_8));
                 }
             });
@@ -290,7 +291,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testMaxObjectLength() {
+    public void testMaxObjectLength() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(6));
         try {
             assertThrows(TooLongFrameException.class, new Executable() {
@@ -305,7 +306,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testOneJsonObjectPerWrite() {
+    public void testOneJsonObjectPerWrite() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String object1 = "{\"key\" : \"value1\"}",
@@ -330,7 +331,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testSpecialJsonCharsInString() {
+    public void testSpecialJsonCharsInString() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder());
 
         String object = "{ \"key\" : \"[]{}}\\\"}}'}\"}";
@@ -344,7 +345,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testStreamArrayElementsSimple() {
+    public void testStreamArrayElementsSimple() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new JsonObjectDecoder(Integer.MAX_VALUE, true));
 
         String array = "[  12, \"bla\"  , 13.4   \t  ,{\"key0\" : [1,2], \"key1\" : 12, \"key2\" : {}} , " +
@@ -385,7 +386,7 @@ public class JsonObjectDecoderTest {
     }
 
     @Test
-    public void testCorruptedFrameException() {
+    public void testCorruptedFrameException() throws Exception {
         final String part1 = "{\"a\":{\"b\":{\"c\":{ \"d\":\"27301\", \"med\":\"d\", \"path\":\"27310\"} }," +
                 " \"status\":\"OK\" } }{\"";
         final String part2 = "a\":{\"b\":{\"c\":{\"ory\":[{\"competi\":[{\"event\":[{" + "\"externalI\":{\"external\"" +

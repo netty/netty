@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 
 public class WebSocketFrameAggregatorTest {
@@ -42,7 +42,7 @@ public class WebSocketFrameAggregatorTest {
     }
 
     @Test
-    public void testAggregationBinary() {
+    public void testAggregationBinary() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
@@ -77,7 +77,7 @@ public class WebSocketFrameAggregatorTest {
     }
 
     @Test
-    public void testAggregationText() {
+    public void testAggregationText() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(Integer.MAX_VALUE));
         channel.writeInbound(new TextWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new TextWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
@@ -116,23 +116,19 @@ public class WebSocketFrameAggregatorTest {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
-        try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(
+                new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2))));
+
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
         channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
 
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));
-        try {
-            channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(
+                new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2))));
+
         channel.writeInbound(new ContinuationWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content2)));
         channel.writeInbound(new ContinuationWebSocketFrame(true, 0, Unpooled.wrappedBuffer(content2)));
         for (;;) {

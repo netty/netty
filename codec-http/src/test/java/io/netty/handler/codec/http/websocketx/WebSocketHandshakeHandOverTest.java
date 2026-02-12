@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
+
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -183,12 +186,13 @@ public class WebSocketHandshakeHandOverTest {
         assertFalse(clientReceivedMessage);
         // Should throw WebSocketHandshakeException
         try {
-            assertThrows(WebSocketHandshakeException.class, new Executable() {
+            Throwable cause = assertThrows(CompletionException.class, new Executable() {
                 @Override
                 public void execute() {
                     handshakeHandler.getHandshakeFuture().syncUninterruptibly();
                 }
             });
+            assertInstanceOf(WebSocketHandshakeException.class, cause.getCause());
         } finally {
             serverChannel.finishAndReleaseAll();
         }
@@ -288,7 +292,8 @@ public class WebSocketHandshakeHandOverTest {
      * @param srcChannel The source channel
      * @param dstChannel The destination channel
      */
-    private static void transferAllDataWithMerge(EmbeddedChannel srcChannel, EmbeddedChannel dstChannel)  {
+    private static void transferAllDataWithMerge(EmbeddedChannel srcChannel, EmbeddedChannel dstChannel)
+            throws Exception {
         ByteBuf mergedBuffer = null;
         for (;;) {
             Object srcData = srcChannel.readOutbound();

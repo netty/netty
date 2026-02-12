@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 public class CodecProtobufTest {
 
     @Test
-    public void testDecoder() {
+    public void testDecoder() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ProtobufVarint32FrameDecoder());
         byte[] b = { 4, 1, 1, 1, 1 };
         assertFalse(ch.writeInbound(wrappedBuffer(b, 0, 1)));

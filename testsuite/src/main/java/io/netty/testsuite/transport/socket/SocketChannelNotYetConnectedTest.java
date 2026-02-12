@@ -36,11 +36,12 @@ import org.junit.jupiter.api.Timeout;
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     @Test
@@ -58,19 +59,13 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandler() { })
                 .bind(newSocketAddress()).get();
         try {
-            try {
-                ch.shutdown(ChannelShutdownType.newInbound()).syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.shutdown(ChannelShutdownType.newInbound()).syncUninterruptibly());
+            checkThrowable(cause.getCause());
 
-            try {
-                ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            cause = assertThrows(CompletionException.class,
+                    () -> ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly());
+            checkThrowable(cause.getCause());
         } finally {
             ch.close().syncUninterruptibly();
         }

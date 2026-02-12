@@ -72,7 +72,7 @@ public class ChunkedWriteHandlerTest {
 
     // See #310
     @Test
-    public void testChunkedStream() {
+    public void testChunkedStream() throws Exception {
         check(new ChunkedStream(new ByteArrayInputStream(BYTES)));
 
         check(new ChunkedStream(new ByteArrayInputStream(BYTES)),
@@ -81,7 +81,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testChunkedNioStream() {
+    public void testChunkedNioStream() throws Exception {
         check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
 
         check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
@@ -90,21 +90,21 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testChunkedFile() throws IOException {
+    public void testChunkedFile() throws Exception {
         check(new ChunkedFile(TMP));
 
         check(new ChunkedFile(TMP), new ChunkedFile(TMP), new ChunkedFile(TMP));
     }
 
     @Test
-    public void testChunkedNioFile() throws IOException {
+    public void testChunkedNioFile() throws Exception {
         check(new ChunkedNioFile(TMP));
 
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
     }
 
     @Test
-    public void testChunkedNioFileLeftPositionUnchanged() throws IOException {
+    public void testChunkedNioFileLeftPositionUnchanged() throws Exception {
         FileChannel in = null;
         final long expectedPosition = 10;
         try {
@@ -144,7 +144,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testUnchunkedData() throws IOException {
+    public void testUnchunkedData() throws Exception {
         check(Unpooled.wrappedBuffer(BYTES));
 
         check(Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES), Unpooled.wrappedBuffer(BYTES));
@@ -153,7 +153,7 @@ public class ChunkedWriteHandlerTest {
     // Test case which shows that there is not a bug like stated here:
     // https://stackoverflow.com/a/10426305
     @Test
-    public void testListenerNotifiedWhenIsEnd() {
+    public void testListenerNotifiedWhenIsEnd() throws Exception {
         ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
 
         ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
@@ -215,7 +215,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testChunkedMessageInput() {
+    public void testChunkedMessageInput() throws Exception {
 
         ChunkedInput<Object> input = new ChunkedInput<Object>() {
             private boolean done;
@@ -265,55 +265,55 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testWriteFailureChunkedStream() throws IOException {
+    public void testWriteFailureChunkedStream() throws Exception {
         checkFirstFailed(new ChunkedStream(new ByteArrayInputStream(BYTES)));
     }
 
     @Test
-    public void testWriteFailureChunkedNioStream() throws IOException {
+    public void testWriteFailureChunkedNioStream() throws Exception {
         checkFirstFailed(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
     }
 
     @Test
-    public void testWriteFailureChunkedFile() throws IOException {
+    public void testWriteFailureChunkedFile() throws Exception {
         checkFirstFailed(new ChunkedFile(TMP));
     }
 
     @Test
-    public void testWriteFailureChunkedNioFile() throws IOException {
+    public void testWriteFailureChunkedNioFile() throws Exception {
         checkFirstFailed(new ChunkedNioFile(TMP));
     }
 
     @Test
-    public void testWriteFailureUnchunkedData() throws IOException {
+    public void testWriteFailureUnchunkedData() throws Exception {
         checkFirstFailed(Unpooled.wrappedBuffer(BYTES));
     }
 
     @Test
-    public void testSkipAfterFailedChunkedStream() throws IOException {
+    public void testSkipAfterFailedChunkedStream() throws Exception {
         checkSkipFailed(new ChunkedStream(new ByteArrayInputStream(BYTES)),
                         new ChunkedStream(new ByteArrayInputStream(BYTES)));
     }
 
     @Test
-    public void testSkipAfterFailedChunkedNioStream() throws IOException {
+    public void testSkipAfterFailedChunkedNioStream() throws Exception {
         checkSkipFailed(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
                         new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
     }
 
     @Test
-    public void testSkipAfterFailedChunkedFile() throws IOException {
+    public void testSkipAfterFailedChunkedFile() throws Exception {
         checkSkipFailed(new ChunkedFile(TMP), new ChunkedFile(TMP));
     }
 
     @Test
-    public void testSkipAfterFailedChunkedNioFile() throws IOException {
+    public void testSkipAfterFailedChunkedNioFile() throws Exception {
         checkSkipFailed(new ChunkedNioFile(TMP), new ChunkedFile(TMP));
     }
 
     // See https://github.com/netty/netty/issues/8700.
     @Test
-    public void testFailureWhenLastChunkFailed() throws IOException {
+    public void testFailureWhenLastChunkFailed() throws Exception {
         ChannelOutboundHandler failLast = new ChannelOutboundHandler() {
             private int passedWrites;
 
@@ -350,7 +350,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testDiscardPendingWritesOnInactive() throws IOException {
+    public void testDiscardPendingWritesOnInactive() throws Exception {
 
         final AtomicBoolean closeWasCalled = new AtomicBoolean(false);
 
@@ -412,7 +412,7 @@ public class ChunkedWriteHandlerTest {
 
     // See https://github.com/netty/netty/issues/8700.
     @Test
-    public void testStopConsumingChunksWhenFailed() {
+    public void testStopConsumingChunksWhenFailed() throws Exception {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.ISO_8859_1);
         final AtomicInteger chunks = new AtomicInteger(0);
 
@@ -471,7 +471,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testCloseSuccessfulChunkedInput() {
+    public void testCloseSuccessfulChunkedInput() throws Exception {
         int chunks = 10;
         TestChunkedInput input = new TestChunkedInput(chunks);
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
@@ -489,17 +489,12 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testCloseFailedChunkedInput() {
+    public void testCloseFailedChunkedInput() throws Exception {
         Exception error = new Exception("Unable to produce a chunk");
         final ThrowingChunkedInput input = new ThrowingChunkedInput(error);
         final EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
-        Exception e = assertThrows(Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                ch.writeOutbound(input);
-            }
-        });
+        Exception e = assertThrows(Exception.class, () -> ch.writeOutbound(input));
         assertEquals(error, e);
 
         assertTrue(input.isClosed());
@@ -572,7 +567,7 @@ public class ChunkedWriteHandlerTest {
     }
 
     @Test
-    public void testEndOfInputWhenChannelIsClosedwhenWrite() {
+    public void testEndOfInputWhenChannelIsClosedwhenWrite() throws Exception {
         ChunkedInput<ByteBuf> input = new ChunkedInput<ByteBuf>() {
 
             @Override
@@ -643,7 +638,7 @@ public class ChunkedWriteHandlerTest {
         assertFalse(ch.finish());
     }
 
-    private static void check(Object... inputs) {
+    private static void check(Object... inputs) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
         for (Object input: inputs) {
@@ -672,7 +667,7 @@ public class ChunkedWriteHandlerTest {
         assertEquals(BYTES.length * inputs.length, read);
     }
 
-    private static void checkFirstFailed(Object input) {
+    private static void checkFirstFailed(Object input) throws Exception {
         ChannelOutboundHandler noOpWrites = new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
@@ -689,7 +684,7 @@ public class ChunkedWriteHandlerTest {
         assertTrue(r.cause() instanceof RuntimeException);
     }
 
-    private static void checkSkipFailed(Object input1, Object input2) {
+    private static void checkSkipFailed(Object input1, Object input2) throws Exception {
         ChannelOutboundHandler failFirst = new ChannelOutboundHandler() {
             private boolean alreadyFailed;
 

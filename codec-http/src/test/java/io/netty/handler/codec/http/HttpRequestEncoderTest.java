@@ -295,7 +295,7 @@ public class HttpRequestEncoderTest {
     }
 
     @Test
-    public void testCustomMessageEmptyLastContent() {
+    public void testCustomMessageEmptyLastContent() throws Exception {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         HttpRequest customMsg = new CustomFullHttpRequest(HttpVersion.HTTP_1_1,

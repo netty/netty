@@ -16,7 +16,8 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
+
+import java.util.concurrent.CompletionException;
 
 /**
  * The {@link CompleteFuture} which is failed already.  It is
@@ -50,14 +51,12 @@ public class FailedFuture<V> extends CompleteFuture<V> {
 
     @Override
     public Future<V> sync() {
-        PlatformDependent.throwException(cause);
-        return this;
+        throw new CompletionException(cause);
     }
 
     @Override
     public Future<V> syncUninterruptibly() {
-        PlatformDependent.throwException(cause);
-        return this;
+        throw new CompletionException(cause);
     }
 
     @Override

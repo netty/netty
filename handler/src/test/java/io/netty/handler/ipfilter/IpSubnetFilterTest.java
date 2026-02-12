@@ -137,7 +137,7 @@ public class IpSubnetFilterTest {
     }
 
     @Test
-    public void testUniqueIpFilterHandler() {
+    public void testUniqueIpFilterHandler() throws Exception {
         UniqueIpFilter handler = new UniqueIpFilter();
 
         EmbeddedChannel ch1 = newEmbeddedInetChannel("91.92.93.1", handler);

@@ -48,7 +48,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    public void testFrameAndContentEncoding() {
+    public void testFrameAndContentEncoding() throws Exception {
         StompHeadersSubframe frame = new DefaultStompHeadersSubframe(StompCommand.CONNECT);
         StompHeaders headers = frame.headers();
         headers.set(StompHeaders.HOST, "stomp.github.org");
@@ -73,7 +73,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    public void testUtf8FrameEncoding() {
+    public void testUtf8FrameEncoding() throws Exception {
         StompFrame frame = new DefaultStompFrame(StompCommand.SEND,
                                                  Unpooled.wrappedBuffer("body".getBytes(CharsetUtil.UTF_8)));
         StompHeaders incoming = frame.headers();
@@ -88,7 +88,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    public void testOneBufferForStompFrameWithEmptyContent() {
+    public void testOneBufferForStompFrameWithEmptyContent() throws Exception {
         StompFrame connectedFrame = new DefaultStompFrame(StompCommand.CONNECTED);
         connectedFrame.headers().set(StompHeaders.VERSION, "1.2");
 
@@ -103,7 +103,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    void testEscapeStompHeaders() {
+    void testEscapeStompHeaders() throws Exception {
         StompFrame messageFrame = new DefaultStompFrame(StompCommand.MESSAGE);
         messageFrame.headers()
                   .add(StompHeaders.MESSAGE_ID, "100")
@@ -124,7 +124,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    void testNotEscapeStompHeadersForConnectCommand() {
+    void testNotEscapeStompHeadersForConnectCommand() throws Exception {
         String expectedStompFrame = "CONNECT\n"
                 + "colonHeaderName-::colonHeaderValue-:\n"
                 + '\n' + '\0';
@@ -143,7 +143,7 @@ public class StompSubframeEncoderTest {
     }
 
     @Test
-    void testNotEscapeStompHeadersForConnectedCommand() {
+    void testNotEscapeStompHeadersForConnectedCommand() throws Exception {
         String expectedStompFrame = "CONNECTED\n"
                                     + "colonHeaderName-::colonHeaderValue-:\n"
                                     + '\n' + '\0';

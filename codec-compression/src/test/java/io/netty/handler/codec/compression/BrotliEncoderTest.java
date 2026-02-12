@@ -46,13 +46,13 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
     }
 
     @Override
-    public void destroyChannel() {
+    public void destroyChannel() throws Exception {
         ENCODER_CHANNEL.finishAndReleaseAll();
         DECODER_CHANNEL.finishAndReleaseAll();
     }
 
     @Override
-    protected ByteBuf decompress(ByteBuf compressed, int originalLength) {
+    protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
         DECODER_CHANNEL.writeInbound(compressed);
 
         ByteBuf aggregatedBuffer = Unpooled.buffer();

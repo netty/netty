@@ -25,7 +25,6 @@ import java.util.List;
 
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,7 +74,7 @@ public class HttpClientUpgradeHandlerTest {
     }
 
     @Test
-    public void testSuccessfulUpgrade() {
+    public void testSuccessfulUpgrade() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -128,7 +127,7 @@ public class HttpClientUpgradeHandlerTest {
     }
 
     @Test
-    public void testUpgradeRejected() {
+    public void testUpgradeRejected() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -165,7 +164,7 @@ public class HttpClientUpgradeHandlerTest {
     }
 
     @Test
-    public void testEarlyBailout() {
+    public void testEarlyBailout() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -197,7 +196,7 @@ public class HttpClientUpgradeHandlerTest {
     }
 
     @Test
-    public void dontStripConnectionHeaders() {
+    public void dontStripConnectionHeaders() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -218,7 +217,7 @@ public class HttpClientUpgradeHandlerTest {
     }
 
     @Test
-    public void testMultipleUpgradeRequestsFail() {
+    public void testMultipleUpgradeRequestsFail() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -231,19 +230,14 @@ public class HttpClientUpgradeHandlerTest {
         assertTrue(request.release());
 
         final FullHttpRequest secondReq = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
-        assertThrows(IllegalStateException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        channel.writeOutbound(secondReq);
-                    }
-                });
+        assertThrows(IllegalStateException.class, () -> channel.writeOutbound(secondReq));
 
         assertEquals(0, secondReq.refCnt());
         assertFalse(channel.finish());
     }
 
     @Test
-    public void forwardOnFailure() {
+    public void forwardOnFailure() throws Exception {
         HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
         HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
@@ -258,7 +252,8 @@ public class HttpClientUpgradeHandlerTest {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
         response.headers().add(HttpHeaderNames.UPGRADE, "");
         assertFalse(channel.writeInbound(response));
-        assertThrows(IllegalStateException.class, () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertThrows(IllegalStateException.class,
+                () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
 
         FullHttpResponse full = channel.readInbound();
         assertTrue(full.release());

@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -66,7 +65,6 @@ import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -169,12 +167,8 @@ public class SniHandlerTest {
                 final byte[] bytes = new byte[1024];
                 bytes[0] = SslUtils.SSL_CONTENT_TYPE_ALERT;
 
-                DecoderException e = assertThrows(DecoderException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        ch.writeInbound(Unpooled.wrappedBuffer(bytes));
-                    }
-                });
+                DecoderException e = assertThrows(DecoderException.class,
+                        () -> ch.writeInbound(Unpooled.wrappedBuffer(bytes)));
                 assertInstanceOf(NotSslRecordException.class, e.getCause());
                 assertFalse(ch.finish());
             } finally {
@@ -286,12 +280,8 @@ public class SniHandlerTest {
                 // that isn't ASCII as per RFC 6066 - https://tools.ietf.org/html/rfc6066#page-6
                 ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
 
-                assertThrows(DecoderException.class, new Executable() {
-                    @Override
-                    public void execute() throws Throwable {
-                        ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
-                    }
-                });
+                assertThrows(DecoderException.class, () -> ch.writeInbound(
+                        Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex))));
             } finally {
                 ch.finishAndReleaseAll();
             }
@@ -672,7 +662,7 @@ public class SniHandlerTest {
     }
 
     private static List<ByteBuf> clientHelloInMultipleFragments(
-            SslProvider provider, String hostname, int maxTlsPlaintextSize) throws SSLException {
+            SslProvider provider, String hostname, int maxTlsPlaintextSize) throws Exception {
         final EmbeddedChannel client = new EmbeddedChannel();
         final SslContext ctx = SslContextBuilder.forClient()
                 .sslProvider(provider)
@@ -739,12 +729,7 @@ public class SniHandlerTest {
         buffer.writeMedium(0xFFFFFF); // Length
         buffer.writeShort((short) 0x0303); // TLS 1.2
 
-        assertThrows(TooLongFrameException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                ch.writeInbound(buffer);
-            }
-        });
+        assertThrows(TooLongFrameException.class, () -> ch.writeInbound(buffer));
         try {
             while (completionEventRef.get() == null) {
                 Thread.sleep(100);

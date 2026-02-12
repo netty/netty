@@ -42,8 +42,10 @@ import org.junit.jupiter.api.function.Executable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -183,12 +185,13 @@ public class OpenSslCertificateCompressionTest {
                         .build()
         );
 
-        Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
+        Throwable cause = Assertions.assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 runCertCompressionTest(clientSslContext, serverSslContext);
             }
         });
+        assertInstanceOf(SSLHandshakeException.class, cause.getCause());
     }
 
     @Test
@@ -212,12 +215,13 @@ public class OpenSslCertificateCompressionTest {
                         .build()
         );
 
-        Assertions.assertThrows(SSLHandshakeException.class, new Executable() {
+        Throwable cause = Assertions.assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 runCertCompressionTest(clientSslContext, serverSslContext);
             }
         });
+        assertInstanceOf(SSLHandshakeException.class, cause.getCause());
     }
 
     @Test

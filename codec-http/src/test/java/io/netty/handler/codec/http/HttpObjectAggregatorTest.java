@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpObjectAggregatorTest {
 
     @Test
-    public void testAggregate() {
+    public void testAggregate() throws Exception {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
@@ -86,7 +86,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testAggregateWithTrailer() {
+    public void testAggregateWithTrailer() throws Exception {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
@@ -116,7 +116,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequest() {
+    public void testOversizedRequest() throws Exception {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
@@ -132,18 +132,13 @@ public class HttpObjectAggregatorTest {
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertFalse(embedder.isOpen());
 
-        assertThrows(ClosedChannelException.class, new Executable() {
-            @Override
-            public void execute() {
-                embedder.writeInbound(chunk3);
-            }
-        });
+        assertThrows(ClosedChannelException.class, () -> embedder.writeInbound(chunk3));
 
         assertFalse(embedder.finish());
     }
 
     @Test
-    public void testOversizedRequestWithContentLengthAndDecoder() {
+    public void testOversizedRequestWithContentLengthAndDecoder() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4, false));
         assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
                 "PUT /upload HTTP/1.1\r\n" +
@@ -194,7 +189,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWithoutKeepAlive() {
+    public void testOversizedRequestWithoutKeepAlive() throws Exception {
         // send an HTTP/1.0 request with no keep-alive header
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
         HttpUtil.setContentLength(message, 5);
@@ -202,13 +197,13 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWithContentLength() {
+    public void testOversizedRequestWithContentLength() throws Exception {
         HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "http://localhost");
         HttpUtil.setContentLength(message, 5);
         checkOversizedRequest(message);
     }
 
-    private static void checkOversizedRequest(HttpRequest message) {
+    private static void checkOversizedRequest(HttpRequest message) throws Exception {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
 
         assertFalse(embedder.writeInbound(message));
@@ -222,13 +217,8 @@ public class HttpObjectAggregatorTest {
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
 
-            assertThrows(ClosedChannelException.class, new Executable() {
-                @Override
-                public void execute() {
-                    embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
-                }
-            });
-
+            assertThrows(ClosedChannelException.class,
+                    () -> embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());
@@ -278,7 +268,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedResponse() {
+    public void testOversizedResponse() throws Exception {
         final EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(4));
         HttpResponse message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
@@ -287,12 +277,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
 
-        assertThrows(TooLongHttpContentException.class, new Executable() {
-            @Override
-            public void execute() {
-                embedder.writeInbound(chunk2);
-            }
-        });
+        assertThrows(TooLongHttpContentException.class, () -> embedder.writeInbound(chunk2));
 
         assertFalse(embedder.isOpen());
         assertFalse(embedder.finish());
@@ -325,16 +310,11 @@ public class HttpObjectAggregatorTest {
         ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
         aggr.handlerAdded(ctx);
         Mockito.verifyNoMoreInteractions(ctx);
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                aggr.setMaxCumulationBufferComponents(10);
-            }
-        });
+        assertThrows(IllegalStateException.class, () -> aggr.setMaxCumulationBufferComponents(10));
     }
 
     @Test
-    public void testAggregateTransferEncodingChunked() {
+    public void testAggregateTransferEncodingChunked() throws Exception {
         HttpObjectAggregator aggr = new HttpObjectAggregator(1024 * 1024);
         EmbeddedChannel embedder = new EmbeddedChannel(aggr);
 
@@ -362,7 +342,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testBadRequest() {
+    public void testBadRequest() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(1024 * 1024));
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         Object inbound = ch.readInbound();
@@ -384,7 +364,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWith100Continue() {
+    public void testOversizedRequestWith100Continue() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(8));
 
         // Send an oversized request with 100 continue.
@@ -431,12 +411,12 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testUnsupportedExpectHeaderExpectation() {
+    public void testUnsupportedExpectHeaderExpectation() throws Exception {
         runUnsupportedExceptHeaderExceptionTest(true);
         runUnsupportedExceptHeaderExceptionTest(false);
     }
 
-    private static void runUnsupportedExceptHeaderExceptionTest(final boolean close) {
+    private static void runUnsupportedExceptHeaderExceptionTest(final boolean close) throws Exception {
         final HttpObjectAggregator aggregator;
         final int maxContentLength = 4;
         if (close) {
@@ -477,7 +457,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testValidRequestWith100ContinueAndDecoder() {
+    public void testValidRequestWith100ContinueAndDecoder() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(100));
         embedder.writeInbound(Unpooled.copiedBuffer(
             "GET /upload HTTP/1.1\r\n" +
@@ -494,7 +474,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWith100ContinueAndDecoder() {
+    public void testOversizedRequestWith100ContinueAndDecoder() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4));
         embedder.writeInbound(Unpooled.copiedBuffer(
                 "PUT /upload HTTP/1.1\r\n" +
@@ -523,7 +503,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWith100ContinueAndDecoderCloseConnection() {
+    public void testOversizedRequestWith100ContinueAndDecoderCloseConnection() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4, true));
         embedder.writeInbound(Unpooled.copiedBuffer(
                 "PUT /upload HTTP/1.1\r\n" +
@@ -542,7 +522,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testRequestAfterOversized100ContinueAndDecoder() {
+    public void testRequestAfterOversized100ContinueAndDecoder() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(15));
 
         // Write first request with Expect: 100-continue.
@@ -589,7 +569,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testReplaceAggregatedRequest() {
+    public void testReplaceAggregatedRequest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(1024 * 1024));
 
         Exception boom = new Exception("boom");
@@ -607,7 +587,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testReplaceAggregatedResponse() {
+    public void testReplaceAggregatedResponse() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpObjectAggregator(1024 * 1024));
 
         Exception boom = new Exception("boom");
@@ -625,7 +605,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testSelectiveRequestAggregation() {
+    public void testSelectiveRequestAggregation() throws Exception {
         HttpObjectAggregator myPostAggregator = new HttpObjectAggregator(1024 * 1024) {
             @Override
             protected boolean isStartMessage(HttpObject msg) throws Exception {
@@ -684,7 +664,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testSelectiveResponseAggregation() {
+    public void testSelectiveResponseAggregation() throws Exception {
         HttpObjectAggregator myTextAggregator = new HttpObjectAggregator(1024 * 1024) {
             @Override
             protected boolean isStartMessage(HttpObject msg) throws Exception {
@@ -744,22 +724,17 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testPrematureClosureWithChunkedEncodingAndAggregator() {
+    public void testPrematureClosureWithChunkedEncodingAndAggregator() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024));
 
         // Write the partial response.
         assertFalse(ch.writeInbound(Unpooled.copiedBuffer(
                 "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", CharsetUtil.US_ASCII)));
-        assertThrows(PrematureChannelClosureException.class, new Executable() {
-            @Override
-            public void execute() {
-                ch.finish();
-            }
-        });
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
     }
 
     @Test
-    public void invalidContinueLength() {
+    public void invalidContinueLength() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpServerCodec(), new HttpObjectAggregator(1024));
 
         channel.writeInbound(Unpooled.copiedBuffer("POST / HTTP/1.1\r\n" +

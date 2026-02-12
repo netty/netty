@@ -48,16 +48,16 @@ public class WebSocketServerHandshaker08Test extends WebSocketServerHandshakerTe
     }
 
     @Test
-    public void testPerformOpeningHandshake() {
+    public void testPerformOpeningHandshake() throws Exception {
         testPerformOpeningHandshake0(true);
     }
 
     @Test
-    public void testPerformOpeningHandshakeSubProtocolNotSupported() {
+    public void testPerformOpeningHandshakeSubProtocolNotSupported() throws Exception {
         testPerformOpeningHandshake0(false);
     }
 
-    private static void testPerformOpeningHandshake0(boolean subProtocol) {
+    private static void testPerformOpeningHandshake0(boolean subProtocol) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new HttpObjectAggregator(42), new HttpRequestDecoder(), new HttpResponseEncoder());
 

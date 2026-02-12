@@ -35,7 +35,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testSize1Varint() {
+    public void testSize1Varint() throws Exception {
         final int size = 1;
         final int num = 10;
         assertEquals(size, ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num));
@@ -58,7 +58,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testSize2Varint() {
+    public void testSize2Varint() throws Exception {
         final int size = 2;
         final int num = 266;
         assertEquals(size, ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num));
@@ -93,7 +93,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testSize3Varint() {
+    public void testSize3Varint() throws Exception {
         final int size = 3;
         final int num = 0x4000;
         assertEquals(size, ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num));
@@ -129,7 +129,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testSize4Varint() {
+    public void testSize4Varint() throws Exception {
         final int size = 4;
         final int num = 0x200000;
         assertEquals(size, ProtobufVarint32LengthFieldPrepender.computeRawVarint32Size(num));
@@ -166,7 +166,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testTinyEncode() {
+    public void testTinyEncode() throws Exception {
         byte[] b = { 4, 1, 1, 1, 1 };
         assertTrue(ch.writeOutbound(wrappedBuffer(b, 1, b.length - 1)));
 
@@ -181,7 +181,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
     }
 
     @Test
-    public void testRegularDecode() {
+    public void testRegularDecode() throws Exception {
         byte[] b = new byte[2048];
         for (int i = 2; i < 2048; i ++) {
             b[i] = 1;

@@ -39,6 +39,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,8 +47,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollReuseAddrTest {
@@ -104,12 +106,9 @@ public class EpollReuseAddrTest {
             throws Exception {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         Channel ch = bootstrap.bind().get();
-        try {
-            bootstrap.bind(ch.localAddress()).syncUninterruptibly();
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof IOException);
-        }
+        CompletionException e = assertThrows(CompletionException.class,
+                () -> bootstrap.bind(ch.localAddress()).syncUninterruptibly());
+        assertInstanceOf(IOException.class, e.getCause());
         ch.close().syncUninterruptibly();
     }
 

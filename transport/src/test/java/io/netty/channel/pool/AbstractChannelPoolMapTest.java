@@ -30,12 +30,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,12 +76,13 @@ public class AbstractChannelPoolMapTest {
         assertFalse(poolMap.iterator().hasNext());
         assertEquals(0, poolMap.size());
 
-        assertThrows(ConnectException.class, new Executable() {
+        Throwable cause = assertThrows(CompletionException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
                 pool.acquire().syncUninterruptibly();
             }
         });
+        assertInstanceOf(ConnectException.class, cause.getCause());
         poolMap.close();
     }
 

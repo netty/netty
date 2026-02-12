@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecHaProxyTest {
 
     @Test
-    public void testDecoder() {
+    public void testDecoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(HAProxyMessageEncoder.INSTANCE);
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,

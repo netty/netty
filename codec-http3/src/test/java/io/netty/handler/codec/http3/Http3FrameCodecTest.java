@@ -155,7 +155,7 @@ public class Http3FrameCodecTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(codecChannel.finish());
         assertFalse(decoderStream.finish());
         assertFalse(encoderStream.finish());
@@ -675,7 +675,7 @@ public class Http3FrameCodecTest {
         return delayQpackStreams && !qpackAttributes.encoderStreamAvailable() && isHeaderFrame;
     }
 
-    private void encodeFrame(boolean delayQpackStreams, Http3Frame frame, boolean isHeaderFrame) {
+    private void encodeFrame(boolean delayQpackStreams, Http3Frame frame, boolean isHeaderFrame) throws Exception {
         boolean wroteData = codecChannel.writeOutbound(retainAndDuplicate(frame));
         assertEquals(!isWriteBuffered(delayQpackStreams, isHeaderFrame), wroteData);
     }

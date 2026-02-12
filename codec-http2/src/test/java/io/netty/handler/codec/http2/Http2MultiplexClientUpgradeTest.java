@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -86,14 +86,11 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
         final C codec = newCodec(null);
         final EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
 
-        assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Http2Exception {
-                try {
-                    codec.onHttpClientUpgrade();
-                } finally {
-                    ch.finishAndReleaseAll();
-                }
+        assertThrows(Http2Exception.class, () -> {
+            try {
+                codec.onHttpClientUpgrade();
+            } finally {
+                ch.finishAndReleaseAll();
             }
         });
     }

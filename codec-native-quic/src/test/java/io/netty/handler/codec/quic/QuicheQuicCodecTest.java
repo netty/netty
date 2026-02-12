@@ -42,16 +42,16 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
     }
 
     @Test
-    public void testFlushStrategyUsedWithBytes() {
+    public void testFlushStrategyUsedWithBytes() throws Exception {
         testFlushStrategy(true);
     }
 
     @Test
-    public void testFlushStrategyUsedWithPackets() {
+    public void testFlushStrategyUsedWithPackets() throws Exception {
         testFlushStrategy(false);
     }
 
-    private void testFlushStrategy(boolean useBytes) {
+    private void testFlushStrategy(boolean useBytes) throws Exception {
         final int bytes = 8;
         final AtomicInteger numBytesTracker = new AtomicInteger();
         final AtomicInteger numPacketsTracker = new AtomicInteger();

@@ -117,7 +117,8 @@ public class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @MethodSource("connectionCloseProvider")
     public void testConnectionCloseHeaderHandledCorrectly(
-            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength) {
+            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength)
+            throws Exception {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);
@@ -133,7 +134,8 @@ public class HttpServerKeepAliveHandlerTest {
     @ParameterizedTest
     @MethodSource("connectionCloseProvider")
     public void testConnectionCloseHeaderHandledCorrectlyForVoidPromise(
-            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength) {
+            HttpVersion httpVersion, HttpResponseStatus responseStatus, int setSelfDefinedMessageLength)
+            throws Exception {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response, setSelfDefinedMessageLength);
@@ -151,7 +153,7 @@ public class HttpServerKeepAliveHandlerTest {
     public void testPipelineKeepAlive(boolean isKeepAliveResponseExpected, HttpVersion httpVersion,
                                        HttpResponseStatus responseStatus,
                                        String sendKeepAlive, int setSelfDefinedMessageLength,
-                                       AsciiString setResponseConnection) {
+                                       AsciiString setResponseConnection) throws Exception {
         FullHttpRequest firstRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");
         setKeepAlive(firstRequest, true);
         FullHttpRequest secondRequest = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");

@@ -19,7 +19,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 
@@ -45,7 +44,7 @@ public class Socks5CommandResponseDecoderTest {
     };
 
     private static void test(
-            Socks5CommandStatus status, Socks5AddressType bndAddrType, String bndAddr, int bndPort) {
+            Socks5CommandStatus status, Socks5AddressType bndAddrType, String bndAddr, int bndPort) throws Exception {
         logger.debug("Testing status: " + status + " bndAddrType: " + bndAddrType);
         Socks5CommandResponse msg =
                 new DefaultSocks5CommandResponse(status, bndAddrType, bndAddr, bndPort);
@@ -64,7 +63,7 @@ public class Socks5CommandResponseDecoderTest {
      * Verifies that sent socks messages are decoded correctly.
      */
     @Test
-    public void testSocksCmdResponseDecoder() {
+    public void testSocksCmdResponseDecoder() throws Exception {
         for (Socks5CommandStatus cmdStatus: STATUSES) {
             for (Socks5AddressType addressType : Arrays.asList(Socks5AddressType.DOMAIN,
                                                                Socks5AddressType.IPv4,
@@ -79,19 +78,15 @@ public class Socks5CommandResponseDecoderTest {
      */
     @Test
     public void testInvalidAddress() {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() {
-                test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80);
-            }
-        });
+        assertThrows(IllegalArgumentException.class,
+                () -> test(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "1", 80));
     }
 
     /**
      * Verifies that send socks messages are decoded correctly when bound host and port are set.
      */
     @Test
-    public void testSocksCmdResponseDecoderIncludingHost() {
+    public void testSocksCmdResponseDecoderIncludingHost() throws Exception {
         for (Socks5CommandStatus cmdStatus : STATUSES) {
             test(cmdStatus, Socks5AddressType.IPv4,
                  "127.0.0.1", 80);

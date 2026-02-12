@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class SocksAuthResponseDecoderTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SocksAuthResponseDecoderTest.class);
 
-    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus) {
+    private static void testSocksAuthResponseDecoderWithDifferentParams(SocksAuthStatus authStatus) throws Exception {
         logger.debug("Testing SocksAuthResponseDecoder with authStatus: " + authStatus);
         SocksAuthResponse msg = new SocksAuthResponse(authStatus);
         SocksAuthResponseDecoder decoder = new SocksAuthResponseDecoder();
@@ -38,7 +38,7 @@ public class SocksAuthResponseDecoderTest {
     }
 
     @Test
-    public void testSocksCmdResponseDecoder() {
+    public void testSocksCmdResponseDecoder() throws Exception {
         for (SocksAuthStatus authStatus: SocksAuthStatus.values()) {
             testSocksAuthResponseDecoderWithDifferentParams(authStatus);
         }

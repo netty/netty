@@ -24,7 +24,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,7 +31,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
@@ -59,17 +57,12 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     @Override
     public void testZLIB_OR_NONE3() throws Exception {
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                JdkZlibTest.super.testZLIB_OR_NONE3();
-            }
-        });
+        assertThrows(DecompressionException.class, JdkZlibTest.super::testZLIB_OR_NONE3);
     }
 
     @Test
     // verifies backward compatibility
-    public void testConcatenatedStreamsReadFirstOnly() throws IOException {
+    public void testConcatenatedStreamsReadFirstOnly() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
@@ -89,7 +82,7 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
-    public void testConcatenatedStreamsReadFully() throws IOException {
+    public void testConcatenatedStreamsReadFully() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
@@ -111,7 +104,7 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Test
-    public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
+    public void testConcatenatedStreamsReadFullyWhenFragmented() throws Exception {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {

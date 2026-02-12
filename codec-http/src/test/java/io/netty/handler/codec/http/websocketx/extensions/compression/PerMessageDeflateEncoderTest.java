@@ -33,6 +33,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
@@ -40,6 +41,7 @@ import static io.netty.util.CharsetUtil.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,7 +51,7 @@ public class PerMessageDeflateEncoderTest {
     private static final Random random = new Random();
 
     @Test
-    public void testCompressedFrame() {
+    public void testCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
@@ -81,7 +83,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testAlreadyCompressedFrame() {
+    public void testAlreadyCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         // initialize
@@ -109,7 +111,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testFragmentedFrame() {
+    public void testFragmentedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false,
                                                                                           NEVER_SKIP));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
@@ -176,7 +178,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testCompressionSkipForBinaryFrame() {
+    public void testCompressionSkipForBinaryFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false,
                                                                                           ALWAYS_SKIP));
         byte[] payload = new byte[300];
@@ -195,7 +197,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testSelectivityCompressionSkip() {
+    public void testSelectivityCompressionSkip() throws Exception {
         WebSocketExtensionFilter selectivityCompressionFilter = new WebSocketExtensionFilter() {
             @Override
             public boolean mustSkip(WebSocketFrame frame) {
@@ -243,7 +245,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testIllegalStateWhenCompressionInProgress() {
+    public void testIllegalStateWhenCompressionInProgress() throws Exception {
         WebSocketExtensionFilter selectivityCompressionFilter = new WebSocketExtensionFilter() {
             @Override
             public boolean mustSkip(WebSocketFrame frame) {
@@ -272,12 +274,7 @@ public class PerMessageDeflateEncoderTest {
 
         //final part throwing exception
         try {
-            assertThrows(EncoderException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    encoderChannel.writeOutbound(finalPart);
-                }
-            });
+            assertThrows(EncoderException.class, () -> encoderChannel.writeOutbound(finalPart));
         } finally {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());
@@ -285,7 +282,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testEmptyFrameCompression() {
+    public void testEmptyFrameCompression() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         TextWebSocketFrame emptyFrame = new TextWebSocketFrame("");
@@ -302,18 +299,13 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testCodecExceptionForNotFinEmptyFrame() {
+    public void testCodecExceptionForNotFinEmptyFrame() throws Exception {
         final EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         final TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
 
         try {
-            assertThrows(EncoderException.class, new Executable() {
-                @Override
-                public void execute() {
-                    encoderChannel.writeOutbound(emptyNotFinFrame);
-                }
-            });
+            assertThrows(EncoderException.class, () -> encoderChannel.writeOutbound(emptyNotFinFrame));
         } finally {
             // EmptyByteBuf buffer
             assertFalse(emptyNotFinFrame.release());

@@ -94,7 +94,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Http3FrameToHttpObjectCodecTest {
 
     @Test
-    public void testUpgradeEmptyFullResponse() {
+    public void testUpgradeEmptyFullResponse() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
 
@@ -106,7 +106,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void encode100ContinueAsHttp2HeadersFrameThatIsNotEndStream() {
+    public void encode100ContinueAsHttp2HeadersFrameThatIsNotEndStream() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
@@ -120,7 +120,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void encodeNonFullHttpResponse100ContinueIsRejected() {
+    public void encodeNonFullHttpResponse100ContinueIsRejected() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         assertThrows(EncoderException.class, () -> ch.writeOutbound(new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
@@ -128,7 +128,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeNonEmptyFullResponse() {
+    public void testUpgradeNonEmptyFullResponse() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello)));
@@ -148,7 +148,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeEmptyFullResponseWithTrailers() {
+    public void testUpgradeEmptyFullResponseWithTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpHeaders trailers = response.trailingHeaders();
@@ -166,7 +166,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeNonEmptyFullResponseWithTrailers() {
+    public void testUpgradeNonEmptyFullResponseWithTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello);
@@ -192,7 +192,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeHeaders() {
+    public void testUpgradeHeaders() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         assertTrue(ch.writeOutbound(response));
@@ -206,7 +206,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeChunk() {
+    public void testUpgradeChunk() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(hello);
@@ -225,7 +225,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeEmptyEnd() {
+    public void testUpgradeEmptyEnd() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
@@ -241,7 +241,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeDataEnd() {
+    public void testUpgradeDataEnd() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent end = new DefaultLastHttpContent(hello, true);
@@ -259,7 +259,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeDataEndWithTrailers() {
+    public void testUpgradeDataEndWithTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent trailers = new DefaultLastHttpContent(hello, true);
@@ -282,7 +282,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeHeaders() {
+    public void testDowngradeHeaders() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.path("/");
@@ -302,7 +302,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeHeadersWithContentLength() {
+    public void testDowngradeHeadersWithContentLength() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.path("/");
@@ -323,7 +323,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeTrailers() {
+    public void testDowngradeTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.set("key", "value");
@@ -344,7 +344,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeData() {
+    public void testDowngradeData() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp3DataFrame(hello)));
@@ -362,7 +362,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeEndData() {
+    public void testDowngradeEndData() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInboundWithFin(new DefaultHttp3DataFrame(hello)));
@@ -388,7 +388,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
     // client-specific tests
     @Test
-    public void testEncodeEmptyFullRequest() {
+    public void testEncodeEmptyFullRequest() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world")));
 
@@ -404,7 +404,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeNonEmptyFullRequest() {
+    public void testEncodeNonEmptyFullRequest() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(
@@ -429,7 +429,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeEmptyFullRequestWithTrailers() {
+    public void testEncodeEmptyFullRequestWithTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         FullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.PUT, "/hello/world");
@@ -453,7 +453,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeNonEmptyFullRequestWithTrailers() {
+    public void testEncodeNonEmptyFullRequestWithTrailers() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         FullHttpRequest request = new DefaultFullHttpRequest(
@@ -485,7 +485,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeRequestHeaders() {
+    public void testEncodeRequestHeaders() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
         assertTrue(ch.writeOutbound(request));
@@ -503,7 +503,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeChunkAsClient() {
+    public void testEncodeChunkAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(hello);
@@ -521,7 +521,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeEmptyEndAsClient() {
+    public void testEncodeEmptyEndAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
@@ -537,7 +537,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeDataEndAsClient() {
+    public void testEncodeDataEndAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent end = new DefaultLastHttpContent(hello, true);
@@ -555,7 +555,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeTrailersAsClient() {
+    public void testEncodeTrailersAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
         HttpHeaders headers = trailers.trailingHeaders();
@@ -570,7 +570,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeDataEndWithTrailersAsClient() {
+    public void testEncodeDataEndWithTrailersAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent trailers = new DefaultLastHttpContent(hello, true);
@@ -593,7 +593,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeFullPromiseCompletes() {
+    public void testEncodeFullPromiseCompletes() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Future<Void> writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
@@ -612,7 +612,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeEmptyLastPromiseCompletes() {
+    public void testEncodeEmptyLastPromiseCompletes() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
@@ -640,7 +640,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeMultiplePromiseCompletes() {
+    public void testEncodeMultiplePromiseCompletes() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
@@ -665,7 +665,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeTrailersCompletes() {
+    public void testEncodeTrailersCompletes() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
@@ -720,7 +720,7 @@ public class Http3FrameToHttpObjectCodecTest {
             boolean last,
             boolean nonEmptyContent,
             boolean hasTrailers
-    ) {
+    ) throws Exception {
         ByteBuf content = nonEmptyContent ? Unpooled.wrappedBuffer(new byte[1]) : Unpooled.EMPTY_BUFFER;
         HttpHeaders trailers = new DefaultHttpHeaders();
         if (hasTrailers) {
@@ -804,7 +804,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void decode100ContinueHttp2HeadersAsFullHttpResponse() {
+    public void decode100ContinueHttp2HeadersAsFullHttpResponse() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -825,7 +825,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseHeaders() {
+    public void testDecodeResponseHeaders() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -844,7 +844,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseHeadersWithContentLength() {
+    public void testDecodeResponseHeadersWithContentLength() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -864,7 +864,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseTrailersAsClient() {
+    public void testDecodeResponseTrailersAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Http3Headers headers = new DefaultHttp3Headers();
         headers.set("key", "value");
@@ -884,7 +884,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeDataAsClient() {
+    public void testDecodeDataAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp3DataFrame(hello)));
@@ -902,7 +902,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeEndDataAsClient() {
+    public void testDecodeEndDataAsClient() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInboundWithFin(new DefaultHttp3DataFrame(hello)));
@@ -927,7 +927,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testHostTranslated() {
+    public void testHostTranslated() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
         request.headers().add(HttpHeaderNames.HOST, "example.com");
@@ -1050,7 +1050,7 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUnsupportedIncludeSomeDetails() {
+    public void testUnsupportedIncludeSomeDetails() throws Exception {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         UnsupportedMessageTypeException ex = assertThrows(
                 UnsupportedMessageTypeException.class, () -> ch.writeOutbound("unsupported"));

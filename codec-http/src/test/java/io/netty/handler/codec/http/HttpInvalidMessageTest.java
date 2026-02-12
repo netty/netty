@@ -105,7 +105,7 @@ public class HttpInvalidMessageTest {
         ensureInboundTrafficDiscarded(ch);
     }
 
-    private void ensureInboundTrafficDiscarded(EmbeddedChannel ch) {
+    private void ensureInboundTrafficDiscarded(EmbeddedChannel ch) throws Exception {
         // Generate a lot of random traffic to ensure that it's discarded silently.
         byte[] data = new byte[1048576];
         rnd.nextBytes(data);

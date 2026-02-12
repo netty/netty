@@ -115,7 +115,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         super.handlerRemoved(ctx);
     }
 
-    private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
+    private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
         if (encoder == null) {
             encoder = EmbeddedChannel.builder()
                     .handlers(ZlibCodecFactory.newZlibEncoder(
@@ -158,7 +158,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
         return compressedContent;
     }
 
-    private void cleanup() {
+    private void cleanup() throws Exception {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
             encoder.finishAndReleaseAll();

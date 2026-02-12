@@ -271,7 +271,7 @@ public class HttpResponseEncoderTest {
     }
 
     private static void assertEmptyResponse(EmbeddedChannel channel, HttpResponseStatus status,
-                                            CharSequence headerName, boolean headerStripped) {
+                                            CharSequence headerName, boolean headerStripped) throws Exception {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
         if (HttpHeaderNames.CONTENT_LENGTH.contentEquals(headerName)) {
             response.headers().set(headerName, "0");
@@ -357,16 +357,17 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusResetContentTransferContentLength() {
+    public void testStatusResetContentTransferContentLength() throws Exception {
         testStatusResetContentTransferContentLength0(HttpHeaderNames.CONTENT_LENGTH, Unpooled.buffer().writeLong(8));
     }
 
     @Test
-    public void testStatusResetContentTransferEncoding() {
+    public void testStatusResetContentTransferEncoding() throws Exception {
         testStatusResetContentTransferContentLength0(HttpHeaderNames.TRANSFER_ENCODING, Unpooled.buffer().writeLong(8));
     }
 
-    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, ByteBuf content) {
+    private static void testStatusResetContentTransferContentLength0(CharSequence headerName, ByteBuf content)
+            throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
 
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.RESET_CONTENT);

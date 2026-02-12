@@ -41,7 +41,7 @@ public class HttpContentDecompressorTest {
 
     // See https://github.com/netty/netty/issues/8915.
     @Test
-    public void testInvokeReadWhenNotProduceMessage() {
+    public void testInvokeReadWhenNotProduceMessage() throws Exception {
         final AtomicInteger readCalled = new AtomicInteger();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
@@ -97,7 +97,7 @@ public class HttpContentDecompressorTest {
     @ParameterizedTest
     @MethodSource("encodings")
     @DisabledForSlowLeakDetection
-    public void testZipBomb(String encoding) {
+    public void testZipBomb(String encoding) throws Exception {
         int chunkSize = 1024 * 1024;
         int numberOfChunks = 256;
         int memoryLimit = chunkSize * 128;

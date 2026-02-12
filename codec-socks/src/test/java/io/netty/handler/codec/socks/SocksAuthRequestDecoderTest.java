@@ -30,7 +30,7 @@ public class SocksAuthRequestDecoderTest {
     private static final String password = "testPassword";
 
     @Test
-    public void testAuthRequestDecoder() {
+    public void testAuthRequestDecoder() throws Exception {
         SocksAuthRequest msg = new SocksAuthRequest(username, password);
         SocksAuthRequestDecoder decoder = new SocksAuthRequestDecoder();
         EmbeddedChannel embedder = new EmbeddedChannel(decoder);
@@ -42,7 +42,7 @@ public class SocksAuthRequestDecoderTest {
     }
 
     @Test
-    public void testAuthRequestDecoderPartialSend() {
+    public void testAuthRequestDecoderPartialSend() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new SocksAuthRequestDecoder());
         ByteBuf byteBuf = Unpooled.buffer(16);
 

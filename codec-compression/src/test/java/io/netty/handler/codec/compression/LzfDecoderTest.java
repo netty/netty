@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import static com.ning.compress.lzf.LZFChunk.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,12 +42,8 @@ public class LzfDecoderTest extends AbstractDecoderTest {
         in.writeByte(BLOCK_TYPE_NON_COMPRESSED);
         in.writeShort(0);
 
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "unexpected block identifier");
+        Throwable cause = assertThrows(DecompressionException.class,
+                () -> channel.writeInbound(in), "unexpected block identifier");
     }
 
     @Test
@@ -59,12 +54,7 @@ public class LzfDecoderTest extends AbstractDecoderTest {
         in.writeByte(0xFF);   //random value
         in.writeInt(0);
 
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "unknown type of chunk");
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unknown type of chunk");
     }
 
     @Override

@@ -44,7 +44,7 @@ public class DefaultSocks5CommandResponseTest {
      * Verifies content of the response when domain is not specified.
      */
     @Test
-    public void testEmptyDomain() {
+    public void testEmptyDomain() throws Exception {
         Socks5CommandResponse socks5CmdResponse = new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.SUCCESS, Socks5AddressType.DOMAIN);
         assertNull(socks5CmdResponse.bndAddr());
@@ -68,7 +68,7 @@ public class DefaultSocks5CommandResponseTest {
      * Verifies content of the response when IPv4 address is specified.
      */
     @Test
-    public void testIPv4Host() {
+    public void testIPv4Host() throws Exception {
         Socks5CommandResponse socks5CmdResponse = new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4, "127.0.0.1", 80);
         assertEquals("127.0.0.1", socks5CmdResponse.bndAddr());
@@ -95,7 +95,7 @@ public class DefaultSocks5CommandResponseTest {
      * Verifies that empty domain is allowed Response.
      */
     @Test
-    public void testEmptyBoundAddress() {
+    public void testEmptyBoundAddress() throws Exception {
         Socks5CommandResponse socks5CmdResponse = new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.SUCCESS, Socks5AddressType.DOMAIN, "", 80);
         assertEquals("", socks5CmdResponse.bndAddr());

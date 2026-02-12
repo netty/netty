@@ -122,7 +122,7 @@ public abstract class WebSocketServerHandshakerTest {
     }
 
     @Test
-    public void testHandshakeForHttpRequestWithoutAggregator() {
+    public void testHandshakeForHttpRequestWithoutAggregator() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new HttpResponseEncoder());
         WebSocketServerHandshaker serverHandshaker = newHandshaker("ws://example.com/chat",
                                                                    "chat", WebSocketDecoderConfig.DEFAULT);

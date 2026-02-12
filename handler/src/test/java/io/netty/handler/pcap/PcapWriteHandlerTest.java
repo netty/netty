@@ -57,7 +57,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -66,8 +65,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class PcapWriteHandlerTest {
 
@@ -149,7 +148,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void embeddedUdp() {
+    public void embeddedUdp() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
 
@@ -187,7 +186,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpMixedAddress() throws SocketException {
+    public void udpMixedAddress() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
 
@@ -217,7 +216,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpLargeByteBufPayload() {
+    public void udpLargeByteBufPayload() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         //Create payload 1 byte larger than maximum
         String payloadString = new String(new char[65507 + 1]).replace('\0', 'X');
@@ -248,7 +247,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpLargeDatagramPayload() {
+    public void udpLargeDatagramPayload() throws Exception {
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
@@ -279,7 +278,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpZeroLengthByteBufCaptured() {
+    public void udpZeroLengthByteBufCaptured() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
@@ -315,7 +314,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpZeroLengthByteBufDiscarded() {
+    public void udpZeroLengthByteBufDiscarded() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
@@ -349,7 +348,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpZeroLengthDatagramCaptured() {
+    public void udpZeroLengthDatagramCaptured() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
@@ -387,7 +386,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpZeroLengthDatagramDiscarded() {
+    public void udpZeroLengthDatagramDiscarded() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
@@ -423,7 +422,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void udpExceptionCaught() {
+    public void udpExceptionCaught() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         try {
             final RuntimeException exception = new RuntimeException();
@@ -444,12 +443,8 @@ public class PcapWriteHandlerTest {
             assertEquals(24, pcapBuffer.readableBytes());
 
             // Verify thrown exception
-            try {
-                embeddedChannel.checkException();
-                fail();
-            } catch (Throwable t) {
-                assertSame(exception, t);
-            }
+            Exception cause = assertThrows(Exception.class, embeddedChannel::checkException);
+            assertSame(exception, cause);
 
             assertFalse(embeddedChannel.finishAndReleaseAll());
         } finally {
@@ -596,7 +591,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void embeddedTcpClient() {
+    public void embeddedTcpClient() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         //Differing size payloads so that sequence numbers and ack numbers are different
         final ByteBuf readPayload = Unpooled.wrappedBuffer("Read".getBytes());
@@ -647,7 +642,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void embeddedTcpServer() {
+    public void embeddedTcpServer() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         //Differing size payloads so that sequence numbers and ack numbers are different
         final ByteBuf readPayload = Unpooled.wrappedBuffer("Read".getBytes());
@@ -698,7 +693,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void tcpLargePayload() {
+    public void tcpLargePayload() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         String payloadString = new String(new char[65495 + 1]).replace('\0', 'X');
         final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
@@ -739,7 +734,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void tcpZeroByteCaptured() {
+    public void tcpZeroByteCaptured() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
@@ -787,7 +782,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void tcpZeroByteDiscarded() {
+    public void tcpZeroByteDiscarded() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
@@ -825,7 +820,7 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
-    public void tcpExceptionCaught() {
+    public void tcpExceptionCaught() throws Exception {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final RuntimeException exception = new RuntimeException();
 
@@ -867,20 +862,15 @@ public class PcapWriteHandlerTest {
         assertEquals(0, tcpPacket.readUnsignedShort()); // Urgent Pointer
 
         // Verify thrown exception
-        try {
-            embeddedChannel.checkException();
-            fail();
-        } catch (Throwable t) {
-            assertSame(exception, t);
-        } finally {
-            pcapBuffer.release();
-        }
+        Exception cause = assertThrows(Exception.class, embeddedChannel::checkException);
+        assertSame(exception, cause);
+        pcapBuffer.release();
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
 
     @Test
-    public void writePcapGreaterThan4Gb() {
+    public void writePcapGreaterThan4Gb() throws Exception {
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 

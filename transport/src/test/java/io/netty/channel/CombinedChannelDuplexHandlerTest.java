@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class CombinedChannelDuplexHandlerTest {
 
@@ -130,7 +129,7 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    public void testInboundEvents() {
+    public void testInboundEvents() throws Exception {
         InboundEventHandler inboundHandler = new InboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
@@ -152,19 +151,16 @@ public class CombinedChannelDuplexHandlerTest {
 
         // Should have not received any more events as it was removed before via removeInboundHandler()
         assertNull(inboundHandler.pollEvent());
-        try {
-            channel.checkException();
-            fail();
-        } catch (Throwable cause) {
-            assertSame(CAUSE, cause);
-        }
+
+        Throwable cause = assertThrows(Throwable.class, channel::checkException);
+        assertSame(CAUSE, cause);
 
         assertTrue(channel.finish());
         assertNull(inboundHandler.pollEvent());
     }
 
     @Test
-    public void testOutboundEvents() {
+    public void testOutboundEvents() throws Exception {
         ChannelInboundHandler inboundHandler = new ChannelInboundHandler() { };
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
@@ -243,7 +239,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testPromisesPassed() {
+    public void testPromisesPassed() throws Exception {
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(

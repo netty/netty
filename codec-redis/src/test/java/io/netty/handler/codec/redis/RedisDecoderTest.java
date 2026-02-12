@@ -75,22 +75,19 @@ public class RedisDecoderTest {
 
     @Test
     public void shouldNotDecodeInlineCommandByDefault() {
-        assertThrows(DecoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                assertFalse(channel.writeInbound(byteBufOf("P")));
-                assertFalse(channel.writeInbound(byteBufOf("I")));
-                assertFalse(channel.writeInbound(byteBufOf("N")));
-                assertFalse(channel.writeInbound(byteBufOf("G")));
-                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+        assertThrows(DecoderException.class, () -> {
+            assertFalse(channel.writeInbound(byteBufOf("P")));
+            assertFalse(channel.writeInbound(byteBufOf("I")));
+            assertFalse(channel.writeInbound(byteBufOf("N")));
+            assertFalse(channel.writeInbound(byteBufOf("G")));
+            assertTrue(channel.writeInbound(byteBufOf("\r\n")));
 
-                channel.readInbound();
-            }
+            channel.readInbound();
         });
     }
 
     @Test
-    public void shouldDecodeInlineCommand() {
+    public void shouldDecodeInlineCommand() throws Exception {
         channel = newChannel(true);
 
         assertFalse(channel.writeInbound(byteBufOf("P")));
@@ -107,7 +104,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeSimpleString() {
+    public void shouldDecodeSimpleString() throws Exception {
         assertFalse(channel.writeInbound(byteBufOf("+")));
         assertFalse(channel.writeInbound(byteBufOf("O")));
         assertFalse(channel.writeInbound(byteBufOf("K")));
@@ -121,7 +118,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeTwoSimpleStrings() {
+    public void shouldDecodeTwoSimpleStrings() throws Exception {
         assertFalse(channel.writeInbound(byteBufOf("+")));
         assertFalse(channel.writeInbound(byteBufOf("O")));
         assertFalse(channel.writeInbound(byteBufOf("K")));
@@ -138,7 +135,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeError() {
+    public void shouldDecodeError() throws Exception {
         String content = "ERROR sample message";
         assertFalse(channel.writeInbound(byteBufOf("-")));
         assertFalse(channel.writeInbound(byteBufOf(content)));
@@ -153,7 +150,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeInteger() {
+    public void shouldDecodeInteger() throws Exception {
         long value = 1234L;
         byte[] content = bytesOf(value);
         assertFalse(channel.writeInbound(byteBufOf(":")));
@@ -168,7 +165,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeBulkString() {
+    public void shouldDecodeBulkString() throws Exception {
         String buf1 = "bulk\nst";
         String buf2 = "ring\ntest\n1234";
         byte[] content = bytesOf(buf1 + buf2);
@@ -187,7 +184,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeEmptyBulkString() {
+    public void shouldDecodeEmptyBulkString() throws Exception {
         byte[] content = bytesOf("");
         assertFalse(channel.writeInbound(byteBufOf("$")));
         assertFalse(channel.writeInbound(byteBufOf(Integer.toString(content.length))));
@@ -203,7 +200,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeNullBulkString() {
+    public void shouldDecodeNullBulkString() throws Exception {
         assertFalse(channel.writeInbound(byteBufOf("$")));
         assertFalse(channel.writeInbound(byteBufOf(Integer.toString(-1))));
         assertTrue(channel.writeInbound(byteBufOf("\r\n")));
@@ -276,7 +273,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() {
+    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
@@ -286,16 +283,11 @@ public class RedisDecoderTest {
         final ArrayRedisMessage msg = channel.readInbound();
 
         ReferenceCountUtil.release(msg);
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                ReferenceCountUtil.release(msg);
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> ReferenceCountUtil.release(msg));
     }
 
     @Test
-    public void shouldErrorOnReleaseArrayChildReferenceCounted() {
+    public void shouldErrorOnReleaseArrayChildReferenceCounted() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));

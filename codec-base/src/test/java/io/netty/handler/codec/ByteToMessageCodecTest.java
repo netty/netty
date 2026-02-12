@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ByteToMessageCodecTest {
 
     @Test
-    public void testForwardPendingData() {
+    public void testForwardPendingData() throws Exception {
         ByteToMessageCodec<Integer> codec = new ByteToMessageCodec<Integer>() {
             @Override
             protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) {

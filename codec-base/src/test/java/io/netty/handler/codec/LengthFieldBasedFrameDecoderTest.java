@@ -22,13 +22,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldBasedFrameDecoderTest {
 
     @Test
-    public void testDiscardTooLongFrame1() {
+    public void testDiscardTooLongFrame1() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeInt(32);
         for (int i = 0; i < 32; i++) {
@@ -37,12 +37,7 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf);
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buf));
         assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
@@ -56,7 +51,7 @@ public class LengthFieldBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDiscardTooLongFrame2() {
+    public void testDiscardTooLongFrame2() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeInt(32);
         for (int i = 0; i < 32; i++) {
@@ -65,12 +60,8 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf.readRetainedSlice(14));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class,
+                () -> channel.writeInbound(buf.readRetainedSlice(14)));
         assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
         assertTrue(channel.finish());

@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MessageToMessageDecoderTest {
 
     @Test
-    void testReadIfNotAutoReadWhenNotSharable() {
+    void testReadIfNotAutoReadWhenNotSharable() throws Exception {
         ReadCountHandler readCountHandler = new ReadCountHandler();
         EmbeddedChannel channel = new EmbeddedChannel(new MessageToMessageDecoder<String>() {
             private int count;

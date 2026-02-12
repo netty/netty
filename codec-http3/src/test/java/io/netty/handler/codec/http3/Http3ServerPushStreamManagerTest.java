@@ -83,7 +83,7 @@ public class Http3ServerPushStreamManagerTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(localControlStream.finish());
         assertFalse(channel.finish());
     }

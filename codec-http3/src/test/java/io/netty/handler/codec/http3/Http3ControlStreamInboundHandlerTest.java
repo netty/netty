@@ -224,7 +224,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     private void writeValidFrame(boolean forwardControlFrames, EmbeddedChannel channel,
-                                 Http3ControlStreamFrame controlStreamFrame) {
+                                 Http3ControlStreamFrame controlStreamFrame) throws Exception {
         assertEquals(forwardControlFrames, channel.writeInbound(controlStreamFrame));
         if (forwardControlFrames) {
             assertFrameSame(controlStreamFrame, channel.readInbound());
@@ -234,9 +234,9 @@ public class Http3ControlStreamInboundHandlerTest extends
     }
 
     private void writeInvalidFrame(boolean forwardControlFrames, Http3ErrorCode expectedCode, EmbeddedChannel channel,
-                                   Http3Frame frame) {
+                                   Http3Frame frame) throws Exception {
         if (forwardControlFrames) {
-            Exception e = assertThrows(Exception.class, () -> channel.writeInbound(frame));
+            Throwable e = assertThrows(Exception.class, () -> channel.writeInbound(frame));
             assertException(expectedCode, e);
         } else {
             assertFalse(channel.writeInbound(frame));

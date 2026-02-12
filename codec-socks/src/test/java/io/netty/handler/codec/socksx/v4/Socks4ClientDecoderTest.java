@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class Socks4ClientDecoderTest {
     private static final Logger logger = LoggerFactory.getLogger(Socks4ClientDecoderTest.class);
 
-    private static void test(Socks4CommandStatus cmdStatus, String dstAddr, int dstPort) {
+    private static void test(Socks4CommandStatus cmdStatus, String dstAddr, int dstPort) throws Exception {
         logger.debug("Testing cmdStatus: " + cmdStatus);
         Socks4CommandResponse msg = new DefaultSocks4CommandResponse(cmdStatus, dstAddr, dstPort);
         EmbeddedChannel embedder = new EmbeddedChannel(new Socks4ClientDecoder());
@@ -45,7 +45,7 @@ public class Socks4ClientDecoderTest {
      * Verifies that sent socks messages are decoded correctly.
      */
     @Test
-    public void testSocksCmdResponseDecoder() {
+    public void testSocksCmdResponseDecoder() throws Exception {
         test(Socks4CommandStatus.IDENTD_AUTH_FAILURE, null, 0);
         test(Socks4CommandStatus.IDENTD_UNREACHABLE, null, 0);
         test(Socks4CommandStatus.REJECTED_OR_FAILED, null, 0);

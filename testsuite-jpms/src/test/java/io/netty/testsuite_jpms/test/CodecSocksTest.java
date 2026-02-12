@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecSocksTest {
 
     @Test
-    public void testEncoder() {
+    public void testEncoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new SocksMessageEncoder());
         assertTrue(channel.writeOutbound(new SocksCmdRequest(SocksCmdType.BIND,
                 SocksAddressType.IPv4, "54.54.111.253", 1)));

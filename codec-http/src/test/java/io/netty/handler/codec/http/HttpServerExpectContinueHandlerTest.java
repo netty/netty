@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpServerExpectContinueHandlerTest {
 
     @Test
-    public void shouldRespondToExpectedHeader() {
+    public void shouldRespondToExpectedHeader() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpServerExpectContinueHandler() {
             @Override
             protected HttpResponse acceptMessage(HttpRequest request) {
@@ -52,7 +52,7 @@ public class HttpServerExpectContinueHandlerTest {
     }
 
     @Test
-    public void shouldAllowCustomResponses() {
+    public void shouldAllowCustomResponses() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(
             new HttpServerExpectContinueHandler() {
                 @Override

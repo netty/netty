@@ -39,6 +39,7 @@ import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -47,8 +48,8 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
@@ -128,18 +129,14 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             s = ss.accept();
 
             ch.close().syncUninterruptibly();
-            try {
-                ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
-            try {
-                ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly());
+            checkThrowable(cause.getCause());
+
+            ch.close().syncUninterruptibly();
+            cause = assertThrows(CompletionException.class,
+                    () -> ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly());
+            checkThrowable(cause.getCause());
         } finally {
             if (s != null) {
                 s.close();
@@ -198,13 +195,11 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(h.ch.isShutdown(ChannelShutdownDirection.Inbound));
             assertTrue(h.ch.isShutdown(ChannelShutdownDirection.Outbound));
 
-            try {
-                // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[]{ 2 }, 0 , 2)).sync();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            // If half-closed, the local endpoint shouldn't be able to write
+            final Channel fch = ch;
+            Throwable cause = assertThrows(CompletionException.class,
+                    () -> fch.writeAndFlush(randomBufferType(fch.alloc(), new byte[]{ 2 }, 0 , 2)).sync());
+            checkThrowable(cause.getCause());
             assertNull(h.writabilityQueue.poll());
         } finally {
             if (s != null) {

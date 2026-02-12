@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class DelimiterBasedFrameDecoderTest {
 
     @Test
-    public void testMultipleLinesStrippedDelimiters() {
+    public void testMultipleLinesStrippedDelimiters() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
@@ -48,7 +48,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testIncompleteLinesStrippedDelimiters() {
+    public void testIncompleteLinesStrippedDelimiters() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, true,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));
@@ -68,7 +68,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testMultipleLines() {
+    public void testMultipleLines() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("TestLine\r\ng\r\n", Charset.defaultCharset()));
@@ -86,7 +86,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testIncompleteLines() {
+    public void testIncompleteLines() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new DelimiterBasedFrameDecoder(8192, false,
                 Delimiters.lineDelimiter()));
         ch.writeInbound(Unpooled.copiedBuffer("Test", Charset.defaultCharset()));

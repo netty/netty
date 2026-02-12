@@ -112,7 +112,7 @@ public class MessageAggregatorTest {
         assertEquals(2, counter.value);
         assertThrows(PrematureChannelClosureException.class, new Executable() {
             @Override
-            public void execute() {
+            public void execute() throws Exception {
                 embedded.finish();
             }
         });

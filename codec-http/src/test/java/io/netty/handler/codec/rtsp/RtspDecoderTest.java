@@ -39,7 +39,7 @@ public class RtspDecoderTest {
      * responses. This test verifies that the issue is solved.
      */
     @Test
-    public void testReceiveAnnounce() {
+    public void testReceiveAnnounce() throws Exception {
         byte[] data1 = ("ANNOUNCE rtsp://172.20.184.218:554/d3abaaa7-65f2-"
                       + "42b4-8d6b-379f492fcf0f RTSP/1.0\r\n"
                       + "CSeq: 2\r\n"

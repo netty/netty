@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DnsQueryTest {
 
     @Test
-    public void testEncodeAndDecodeQuery() {
+    public void testEncodeAndDecodeQuery() throws Exception {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());

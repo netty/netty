@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class WebSocketServerCompressionHandlerTest {
 
     @Test
-    public void testNormalSuccess() {
+    public void testNormalSuccess() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
@@ -59,7 +59,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testClientWindowSizeSuccess() {
+    public void testClientWindowSizeSuccess() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false, 0)));
 
@@ -80,7 +80,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testClientWindowSizeUnavailable() {
+    public void testClientWindowSizeUnavailable() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false, 0)));
 
@@ -101,7 +101,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testServerWindowSizeSuccess() {
+    public void testServerWindowSizeSuccess() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, true, 15, false, false, 0)));
 
@@ -122,7 +122,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testServerWindowSizeDisable() {
+    public void testServerWindowSizeDisable() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false, 0)));
 
@@ -140,7 +140,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testServerNoContext() {
+    public void testServerNoContext() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_NO_CONTEXT);
@@ -157,7 +157,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testClientNoContext() {
+    public void testClientNoContext() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_NO_CONTEXT);
@@ -177,7 +177,7 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
-    public void testServerWindowSizeDisableThenFallback() {
+    public void testServerWindowSizeDisableThenFallback() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false, 0)));
 

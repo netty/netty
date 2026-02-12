@@ -26,15 +26,15 @@ final class Socks5CommonTestUtils {
         //NOOP
     }
 
-    public static void writeFromClientToServer(EmbeddedChannel embedder, Socks5Message msg) {
+    public static void writeFromClientToServer(EmbeddedChannel embedder, Socks5Message msg) throws Exception {
         embedder.writeInbound(encodeClient(msg));
     }
 
-    public static void writeFromServerToClient(EmbeddedChannel embedder, Socks5Message msg) {
+    public static void writeFromServerToClient(EmbeddedChannel embedder, Socks5Message msg) throws Exception {
         embedder.writeInbound(encodeServer(msg));
     }
 
-    public static ByteBuf encodeClient(Socks5Message msg) {
+    public static ByteBuf encodeClient(Socks5Message msg) throws Exception {
         EmbeddedChannel out = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
         out.writeOutbound(msg);
 
@@ -44,7 +44,7 @@ final class Socks5CommonTestUtils {
         return encoded;
     }
 
-    public static ByteBuf encodeServer(Socks5Message msg) {
+    public static ByteBuf encodeServer(Socks5Message msg) throws Exception {
         EmbeddedChannel out = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
         out.writeOutbound(msg);
 

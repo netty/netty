@@ -23,7 +23,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 
 import java.net.IDN;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +34,7 @@ public class Socks5CommandRequestDecoderTest {
             InternalLoggerFactory.getInstance(Socks5CommandRequestDecoderTest.class);
 
     private static void test(
-            Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
+            Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) throws Exception {
         logger.debug(
                 "Testing type: " + type + " dstAddrType: " + dstAddrType +
                 " dstAddr: " + dstAddr + " dstPort: " + dstPort);
@@ -53,7 +52,7 @@ public class Socks5CommandRequestDecoderTest {
     }
 
     @Test
-    public void testCmdRequestDecoderIPv4() {
+    public void testCmdRequestDecoderIPv4() throws Exception {
         String[] hosts = {"127.0.0.1", };
         int[] ports = {1, 32769, 65535 };
         for (Socks5CommandType cmdType: Arrays.asList(Socks5CommandType.BIND,
@@ -68,7 +67,7 @@ public class Socks5CommandRequestDecoderTest {
     }
 
     @Test
-    public void testCmdRequestDecoderIPv6() throws UnknownHostException {
+    public void testCmdRequestDecoderIPv6() throws Exception {
         String[] hosts = {
                 NetUtil.bytesToIpAddress(SocketUtils.addressByName("::1").getAddress()) };
         int[] ports = {1, 32769, 65535};
@@ -84,7 +83,7 @@ public class Socks5CommandRequestDecoderTest {
     }
 
     @Test
-    public void testCmdRequestDecoderDomain() {
+    public void testCmdRequestDecoderDomain() throws Exception {
         String[] hosts = {"google.com" ,
                           "مثال.إختبار",
                           "παράδειγμα.δοκιμή",

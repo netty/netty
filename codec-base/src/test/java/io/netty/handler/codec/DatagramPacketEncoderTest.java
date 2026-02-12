@@ -45,21 +45,21 @@ public class DatagramPacketEncoderTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws Exception {
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testEncode() {
+    public void testEncode() throws Exception {
         testEncode(false);
     }
 
     @Test
-    public void testEncodeWithSenderIsNull() {
+    public void testEncodeWithSenderIsNull() throws Exception {
         testEncode(true);
     }
 
-    private void testEncode(boolean senderIsNull) {
+    private void testEncode(boolean senderIsNull) throws Exception {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = senderIsNull ? null : SocketUtils.socketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
@@ -75,7 +75,7 @@ public class DatagramPacketEncoderTest {
     }
 
     @Test
-    public void testUnmatchedMessageType() {
+    public void testUnmatchedMessageType() throws Exception {
         InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
         InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
         DefaultAddressedEnvelope<Long, InetSocketAddress> envelope =
@@ -90,7 +90,7 @@ public class DatagramPacketEncoderTest {
     }
 
     @Test
-    public void testUnmatchedType() {
+    public void testUnmatchedType() throws Exception {
         String netty = "netty";
         assertTrue(channel.writeOutbound(netty));
         assertSame(netty, channel.readOutbound());

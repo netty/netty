@@ -267,7 +267,7 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public Object netty() {
+    public Object netty() throws Exception {
         GET.setIndex(readerIndex, writeIndex);
         nettyChannel.writeInbound(GET);
         return nettyChannel.outboundMessages().poll();

@@ -208,7 +208,7 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
-    public void testInvalidHostWhenIncorrectWebSocketURI() {
+    public void testInvalidHostWhenIncorrectWebSocketURI() throws Exception {
         URI uri = URI.create("/ws");
         EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
         final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
@@ -222,7 +222,7 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
-    public void testInvalidOriginWhenIncorrectWebSocketURI() {
+    public void testInvalidOriginWhenIncorrectWebSocketURI() throws Exception {
         URI uri = URI.create("/ws");
         EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
         HttpHeaders headers = new DefaultHttpHeaders();
@@ -319,17 +319,17 @@ public abstract class WebSocketClientHandshakerTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testHttpResponseAndFrameInSameBuffer() {
+    public void testHttpResponseAndFrameInSameBuffer() throws Exception {
         testHttpResponseAndFrameInSameBuffer(false);
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testHttpResponseAndFrameInSameBufferCodec() {
+    public void testHttpResponseAndFrameInSameBufferCodec() throws Exception {
         testHttpResponseAndFrameInSameBuffer(true);
     }
 
-    private void testHttpResponseAndFrameInSameBuffer(boolean codec) {
+    private void testHttpResponseAndFrameInSameBuffer(boolean codec) throws Exception {
         String url = "ws://localhost:9999/ws";
         final WebSocketClientHandshaker shaker = newHandshaker(URI.create(url));
         final WebSocketClientHandshaker handshaker = new WebSocketClientHandshaker(
@@ -476,7 +476,7 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
-    public void testHandshakeForHttpResponseWithoutAggregator() {
+    public void testHandshakeForHttpResponseWithoutAggregator() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder(), new HttpResponseDecoder());
         URI uri = URI.create("ws://localhost:9999/chat");
         WebSocketClientHandshaker clientHandshaker = newHandshaker(uri);

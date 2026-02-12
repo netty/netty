@@ -68,7 +68,7 @@ public class XmlDecoderTest {
      * This test feeds basic XML and verifies the resulting messages
      */
     @Test
-    public void shouldDecodeRequestWithSimpleXml() {
+    public void shouldDecodeRequestWithSimpleXml() throws Exception {
         Object temp;
 
         write(XML1);
@@ -229,7 +229,7 @@ public class XmlDecoderTest {
      * This test checks for different attributes in XML header
      */
     @Test
-    public void shouldDecodeXmlHeader() {
+    public void shouldDecodeXmlHeader() throws Exception {
         Object temp;
 
         write(XML3);
@@ -264,7 +264,7 @@ public class XmlDecoderTest {
      * This test checks for no XML header
      */
     @Test
-    public void shouldDecodeWithoutHeader() {
+    public void shouldDecodeWithoutHeader() throws Exception {
         Object temp;
 
         write(XML4);
@@ -295,7 +295,7 @@ public class XmlDecoderTest {
         assertNull(temp);
     }
 
-    private void write(String content) {
+    private void write(String content) throws Exception {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8)));
     }
 }

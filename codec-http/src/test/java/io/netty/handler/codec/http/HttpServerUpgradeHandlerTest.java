@@ -67,7 +67,7 @@ public class HttpServerUpgradeHandlerTest {
     }
 
     @Test
-    public void upgradesPipelineInSameMethodInvocation() {
+    public void upgradesPipelineInSameMethodInvocation() throws Exception {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
             @Override
@@ -153,7 +153,7 @@ public class HttpServerUpgradeHandlerTest {
     }
 
     @Test
-    public void skippedUpgrade() {
+    public void skippedUpgrade() throws Exception {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
             @Override
@@ -198,7 +198,7 @@ public class HttpServerUpgradeHandlerTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    public void upgradeFail(boolean removeAfterFirst) {
+    public void upgradeFail(boolean removeAfterFirst) throws Exception {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
             @Override
@@ -242,7 +242,7 @@ public class HttpServerUpgradeHandlerTest {
     }
 
     @Test
-    public void upgradeExpect() {
+    public void upgradeExpect() throws Exception {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
             @Override

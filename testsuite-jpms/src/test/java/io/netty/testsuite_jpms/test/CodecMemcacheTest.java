@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodecMemcacheTest {
 
     @Test
-    public void testEncoder() {
+    public void testEncoder() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new BinaryMemcacheRequestEncoder());
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
         assertTrue(channel.writeOutbound(request));

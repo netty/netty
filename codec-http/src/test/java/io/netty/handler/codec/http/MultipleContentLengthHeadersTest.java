@@ -57,7 +57,7 @@ public class MultipleContentLengthHeadersTest {
     @ParameterizedTest
     @MethodSource("parameters")
     public void testMultipleContentLengthHeadersBehavior(boolean allowDuplicateContentLengths,
-                                                         boolean sameValue, boolean singleField) {
+                                                         boolean sameValue, boolean singleField) throws Exception {
         EmbeddedChannel channel = newChannel(allowDuplicateContentLengths);
         String requestStr = setupRequestString(sameValue, singleField);
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
@@ -96,7 +96,7 @@ public class MultipleContentLengthHeadersTest {
     }
 
     @Test
-    public void testDanglingComma() {
+    public void testDanglingComma() throws Exception {
         EmbeddedChannel channel = newChannel(false);
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                             "Content-Length: 1,\r\n" +

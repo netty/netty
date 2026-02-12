@@ -73,12 +73,7 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
         channel.parent().pipeline().fireExceptionCaught(testExc);
 
         assertTrue(channel.isActive());
-        RuntimeException exc = assertThrows(RuntimeException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                inboundHandler.checkException();
-            }
-        });
+        Throwable exc = assertThrows(RuntimeException.class, inboundHandler::checkException);
         assertEquals(testExc, exc);
     }
 

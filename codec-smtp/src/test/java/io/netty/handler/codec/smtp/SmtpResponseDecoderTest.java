@@ -21,7 +21,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SmtpResponseDecoderTest {
 
     @Test
-    public void testDecodeOneLineResponse() {
+    public void testDecodeOneLineResponse() throws Exception {
         EmbeddedChannel channel = newChannel();
         assertTrue(channel.writeInbound(newBuffer("200 Ok\r\n")));
         assertTrue(channel.finish());
@@ -49,7 +48,7 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
-    public void testDecodeOneLineResponseNoDetails() {
+    public void testDecodeOneLineResponseNoDetails() throws Exception {
         EmbeddedChannel channel = newChannel();
         assertTrue(channel.writeInbound(newBuffer("250 \r\n")));
         assertTrue(channel.finish());
@@ -61,7 +60,7 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
-    public void testDecodeOneLineResponseChunked() {
+    public void testDecodeOneLineResponseChunked() throws Exception {
         EmbeddedChannel channel = newChannel();
         assertFalse(channel.writeInbound(newBuffer("200 Ok")));
         assertTrue(channel.writeInbound(newBuffer("\r\n")));
@@ -77,7 +76,7 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
-    public void testDecodeTwoLineResponse() {
+    public void testDecodeTwoLineResponse() throws Exception {
         EmbeddedChannel channel = newChannel();
         assertTrue(channel.writeInbound(newBuffer("200-Hello\r\n200 Ok\r\n")));
         assertTrue(channel.finish());
@@ -93,7 +92,7 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
-    public void testDecodeTwoLineResponseChunked() {
+    public void testDecodeTwoLineResponseChunked() throws Exception {
         EmbeddedChannel channel = newChannel();
         assertFalse(channel.writeInbound(newBuffer("200-")));
         assertFalse(channel.writeInbound(newBuffer("Hello\r\n2")));
@@ -114,34 +113,19 @@ public class SmtpResponseDecoderTest {
     @Test
     public void testDecodeInvalidSeparator() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(newBuffer("200:Ok\r\n"));
-            }
-        });
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("200:Ok\r\n")));
     }
 
     @Test
     public void testDecodeInvalidCode() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(newBuffer("xyz Ok\r\n"));
-            }
-        });
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("xyz Ok\r\n")));
     }
 
     @Test
     public void testDecodeInvalidLine() {
         final EmbeddedChannel channel = newChannel();
-        assertThrows(DecoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(newBuffer("Ok\r\n"));
-            }
-        });
+        assertThrows(DecoderException.class, () -> channel.writeInbound(newBuffer("Ok\r\n")));
     }
 
     private static EmbeddedChannel newChannel() {

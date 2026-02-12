@@ -22,7 +22,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 
@@ -73,7 +72,7 @@ public class DnsResponseTest {
     };
 
     @Test
-    public void readResponseTest() {
+    public void readResponseTest() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         for (byte[] p: packets) {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
@@ -96,32 +95,24 @@ public class DnsResponseTest {
     }
 
     @Test
-    public void readMalformedResponseTest() {
+    public void readMalformedResponseTest() throws Exception {
         final EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         final ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
-                @Override
-                public void execute() {
-                    embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
-                }
-            });
+            assertThrows(CorruptedFrameException.class,
+                    () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }
     }
 
     @Test
-    public void readIncompleteResponseTest() {
+    public void readIncompleteResponseTest() throws Exception {
         final EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         final ByteBuf packet = embedder.alloc().buffer(512);
         try {
-            assertThrows(CorruptedFrameException.class, new Executable() {
-                @Override
-                public void execute() {
-                    embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
-                }
-            });
+            assertThrows(CorruptedFrameException.class,
+                    () -> embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0))));
         } finally {
             assertFalse(embedder.finish());
         }

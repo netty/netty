@@ -71,14 +71,14 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
 
     // Tests that copies do not attempt to overrun into a previous frame chunk
     @Test
-    public void test5323211032315942961() {
+    public void test5323211032315942961() throws Exception {
         testWithSeed(5323211032315942961L);
     }
 
     // Tests that when generating the hash lookup table for finding copies, we
     // do not exceed the length of the input when there are no copies
     @Test
-    public void test7088170877360183401() {
+    public void test7088170877360183401() throws Exception {
         testWithSeed(7088170877360183401L);
     }
 
@@ -101,7 +101,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
-    private void testWithSeed(long seed) {
+    private void testWithSeed(long seed) throws Exception {
         byte[] data = new byte[16 * 1048576];
         new Random(seed).nextBytes(data);
         testIdentity(data, true);

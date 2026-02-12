@@ -108,7 +108,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         super.channelInactive(ctx);
     }
 
-    private ByteBuf decompressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
+    private ByteBuf decompressContent(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
         if (decoder == null) {
             if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
                 throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
@@ -156,7 +156,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         return compositeDecompressedContent;
     }
 
-    private void cleanup() {
+    private void cleanup() throws Exception {
         if (decoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
             decoder.finishAndReleaseAll();

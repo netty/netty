@@ -85,7 +85,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         });
     }
 
-    boolean writeInboundWithFin(Object... msgs) {
+    boolean writeInboundWithFin(Object... msgs) throws Exception {
         shutdown(ChannelShutdownType.newInbound(0));
         boolean written = writeInbound(msgs);
         fireInputShutdownEvents();

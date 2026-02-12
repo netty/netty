@@ -52,7 +52,7 @@ public class BinaryMemcacheObjectAggregatorTest {
     private EmbeddedChannel channel;
 
     @Test
-    public void shouldAggregateChunksOnDecode() {
+    public void shouldAggregateChunksOnDecode() throws Exception {
         int smallBatchSize = 2;
         channel = new EmbeddedChannel(
             new BinaryMemcacheRequestDecoder(smallBatchSize),
@@ -80,7 +80,7 @@ public class BinaryMemcacheObjectAggregatorTest {
     }
 
     @Test
-    public void shouldRetainByteBufWhenAggregating() {
+    public void shouldRetainByteBufWhenAggregating() throws Exception {
         channel = new EmbeddedChannel(
                 new BinaryMemcacheRequestEncoder(),
                 new BinaryMemcacheRequestDecoder(),

@@ -39,7 +39,7 @@ public class SpdyFrameCodecTest {
     );
 
     @Test
-    public void testDecodeUnknownFrame() {
+    public void testDecodeUnknownFrame() throws Exception {
         final SpdyFrameEncoder encoder = new SpdyFrameEncoder(SpdyVersion.SPDY_3_1);
         final ByteBuf buf = encoder.encodeUnknownFrame(
             UnpooledByteBufAllocator.DEFAULT,
@@ -57,7 +57,7 @@ public class SpdyFrameCodecTest {
     }
 
     @Test
-    public void testEncodeUnknownFrame() {
+    public void testEncodeUnknownFrame() throws Exception {
         final SpdyUnknownFrame spdyUnknownFrame = new DefaultSpdyUnknownFrame(
             200,
             (byte) 13,

@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -54,12 +53,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[1] = 0x00;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "unexpected block identifier");
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unexpected block identifier");
     }
 
     @Test
@@ -68,12 +62,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[12] = (byte) 0xFF;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "invalid compressedLength");
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "invalid compressedLength");
     }
 
     @Test
@@ -82,12 +71,8 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[16] = (byte) 0xFF;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "invalid decompressedLength");
+        assertThrows(DecompressionException.class,
+                () -> channel.writeInbound(in), "invalid decompressedLength");
     }
 
     @Test
@@ -96,12 +81,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[13] = 0x01;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "mismatch");
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "mismatch");
     }
 
     @Test
@@ -110,12 +90,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[8] = 0x36;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "unexpected blockType");
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "unexpected blockType");
     }
 
     @Test
@@ -124,12 +99,8 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[17] = 0x01;
 
         final ByteBuf in = Unpooled.wrappedBuffer(data);
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(in);
-            }
-        }, "mismatching checksum");
+        assertThrows(DecompressionException.class,
+                () -> channel.writeInbound(in), "mismatching checksum");
     }
 
     @Test
@@ -138,12 +109,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         data[44] = 0x01;
 
         assertThrows(DecompressionException.class,
-                new Executable() {
-                    @Override
-                    public void execute() {
-                        tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data));
-                    }
-                }, "checksum error");
+                () -> tryDecodeAndCatchBufLeaks(channel, Unpooled.wrappedBuffer(data)), "checksum error");
     }
 
     @Override

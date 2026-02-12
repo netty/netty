@@ -197,7 +197,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     }
 
     @Test
-    public void testFlush() {
+    public void testFlush() throws Exception {
         Lz4FrameEncoder encoder = new Lz4FrameEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         int size = 27;
@@ -214,7 +214,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
     }
 
     @Test
-    public void testAllocatingAroundBlockSize() {
+    public void testAllocatingAroundBlockSize() throws Exception {
         int blockSize = 100;
         Lz4FrameEncoder encoder = newEncoder(blockSize, Lz4FrameEncoder.DEFAULT_MAX_ENCODE_SIZE);
         EmbeddedChannel channel = new EmbeddedChannel(encoder);

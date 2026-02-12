@@ -23,12 +23,10 @@ import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
-import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -44,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class ApplicationProtocolNegotiationHandlerTest {
 
     @Test
-    public void testRemoveItselfIfNoSslHandlerPresent() throws NoSuchAlgorithmException {
+    public void testRemoveItselfIfNoSslHandlerPresent() throws Exception {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -71,7 +69,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
     }
 
     @Test
-    public void testHandshakeFailure() {
+    public void testHandshakeFailure() throws Exception {
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -89,16 +87,16 @@ public class ApplicationProtocolNegotiationHandlerTest {
     }
 
     @Test
-    public void testHandshakeSuccess() throws NoSuchAlgorithmException {
+    public void testHandshakeSuccess() throws Exception {
         testHandshakeSuccess0(false);
     }
 
     @Test
-    public void testHandshakeSuccessWithSslHandlerAddedLater() throws NoSuchAlgorithmException {
+    public void testHandshakeSuccessWithSslHandlerAddedLater() throws Exception {
         testHandshakeSuccess0(true);
     }
 
-    private static void testHandshakeSuccess0(boolean addLater) throws NoSuchAlgorithmException {
+    private static void testHandshakeSuccess0(boolean addLater) throws Exception {
         final AtomicBoolean configureCalled = new AtomicBoolean(false);
         ChannelHandler alpnHandler = new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
             @Override
@@ -142,12 +140,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(alpnHandler);
         channel.pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
         assertNull(channel.pipeline().context(alpnHandler));
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.finishAndReleaseAll();
-            }
-        });
+        assertThrows(IllegalStateException.class, channel::finishAndReleaseAll);
     }
 
     @Test
