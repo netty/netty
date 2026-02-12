@@ -183,6 +183,9 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
                     }
                     socket.listen(config.getBacklog());
                     active = true;
+
+                    // We now listen for new connections, submit the ops so we receive events.
+                    submitCurrentOps();
                 } catch (Throwable cause) {
                     promise.setFailure(cause);
                     return;
