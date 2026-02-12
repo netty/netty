@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,29 @@ public class EpollTest {
     @Test
     public void testIsAvailable() {
         assertTrue(Epoll.isAvailable());
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testEpollWaitTimeoutAccuracy() throws Exception {
+        final int timeoutMs = 200;
+        final FileDescriptor epoll = Native.newEpollCreate();
+        final EpollEventArray eventArray = new EpollEventArray(8);
+        try {
+            long startNs = System.nanoTime();
+            // No fds registered, so this will just wait for the timeout.
+            int ready = Native.epollWait(epoll, eventArray, timeoutMs);
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+
+            assertEquals(0, ready);
+            // Should have waited at least close to the timeout
+            assertThat(elapsedMs).isGreaterThanOrEqualTo(timeoutMs - 20);
+            // Should not have waited vastly longer than the timeout
+            assertThat(elapsedMs).isLessThan(timeoutMs + 200);
+        } finally {
+            eventArray.free();
+            epoll.close();
+        }
     }
 
     // Testcase for https://github.com/netty/netty/issues/8444

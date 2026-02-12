@@ -264,11 +264,13 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     private Http3UnidirectionalStreamInboundHandler newUniStreamInboundHandler(boolean server,
             @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
         return server ?
-                new Http3UnidirectionalStreamInboundServerHandler((v, __, ___) -> new CodecHandler(),
+                new Http3UnidirectionalStreamInboundServerHandler((v, __, ___, ____) -> new CodecHandler(),
+                        (id, v) -> false,
                         localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,
                         () -> new QpackEncoderHandler((long) Integer.MAX_VALUE, qpackDecoder),
                         () -> new QpackDecoderHandler(qpackEncoder)) :
-                new Http3UnidirectionalStreamInboundClientHandler((v, __, ___) -> new CodecHandler(),
+                new Http3UnidirectionalStreamInboundClientHandler((v, __, ___, ____) -> new CodecHandler(),
+                        (id, v) -> false,
                         localControlStreamHandler, remoteControlStreamHandler,
                         unknownStreamHandlerFactory,
                         pushId -> new Http3PushStreamClientInitializer() {

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
+import io.netty.handler.codec.http3.Http3Settings.NonStandardHttp3SettingsValidator;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.jetbrains.annotations.Nullable;
@@ -47,6 +48,7 @@ abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDeco
             AttributeKey.valueOf("H3_REMOTE_QPACK_ENCODER_STREAM");
 
     final Http3FrameCodecFactory codecFactory;
+    final NonStandardHttp3SettingsValidator nonStandardSettingsValidator;
     final Http3ControlStreamInboundHandler localControlStreamHandler;
     final Http3ControlStreamOutboundHandler remoteControlStreamHandler;
     final Supplier<ChannelHandler> qpackEncoderHandlerFactory;
@@ -54,12 +56,14 @@ abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDeco
     final LongFunction<ChannelHandler> unknownStreamHandlerFactory;
 
     Http3UnidirectionalStreamInboundHandler(Http3FrameCodecFactory codecFactory,
+                                            NonStandardHttp3SettingsValidator nonStandardSettingsValidator,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
                                             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
                                             @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory,
                                             Supplier<ChannelHandler> qpackEncoderHandlerFactory,
                                             Supplier<ChannelHandler> qpackDecoderHandlerFactory) {
         this.codecFactory = codecFactory;
+        this.nonStandardSettingsValidator = nonStandardSettingsValidator;
         this.localControlStreamHandler = localControlStreamHandler;
         this.remoteControlStreamHandler = remoteControlStreamHandler;
         this.qpackEncoderHandlerFactory = qpackEncoderHandlerFactory;
@@ -117,7 +121,7 @@ abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDeco
             // Replace this handler with the codec now.
             ctx.pipeline().replace(this, null,
                     codecFactory.newCodec(Http3ControlStreamFrameTypeValidator.INSTANCE, NO_STATE,
-                            NO_STATE));
+                            NO_STATE, nonStandardSettingsValidator));
         } else {
             // Only one control stream is allowed.
             // See https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-6.2.1
