@@ -347,6 +347,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    protected void doRegister(ChannelPromise promise) {
+        super.doRegister(promise);
+        promise.addListener(f -> {
+            if (f.isSuccess() && isRegistered()) {
+                // As Datagram is connection-less we can submit the current ops once the registration itself was
+                // successful.
+                submitCurrentOps();
+            }
+        });
+    }
+
+    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
