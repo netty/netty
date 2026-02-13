@@ -1,0 +1,105 @@
+name: Auto Backport to 4.1
+on:
+  pull_request_target:
+    types:
+      - closed
+      - labeled
+    branches:
+      - '4.2'
+
+jobs:
+  backport:
+    name: "Backporting to 4.1"
+    concurrency:
+      group: backporting-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.1')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          fetch-depth: '0' # Cherry-pick needs full history
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Create backport PR branch and cherry-pick
+        id: cherry-pick
+        run: |
+          MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
+          echo "Backporting commit: $MERGE_COMMIT"
+          
+          BACKPORT_BRANCH="backport-pr-${{ github.event.pull_request.number }}-to-4.1"
+          git fetch origin 4.1:4.1
+          git checkout -b "$BACKPORT_BRANCH" 4.1
+          
+          if git cherry-pick -x "$MERGE_COMMIT"; then
+            echo "Cherry-pick successful"
+          else
+            echo "Cherry-pick failed - conflicts detected"
+            git cherry-pick --abort
+            exit 1
+          fi
+          echo "branch=$BACKPORT_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Push backport branch
+        id: push
+        if: steps.cherry-pick.outcome == 'success'
+        run: |
+          if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
+            echo "Backport branch push failed"
+            exit 1
+          fi
+          
+      - name: Create pull request
+        if: steps.cherry-pick.outcome == 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Backport 4.1: ${context.payload.pull_request.title}`,
+              head: '${{ steps.cherry-pick.outputs.branch }}',
+              base: '4.1',
+              body: `Backport of #${context.payload.pull_request.number} to 4.1\n` +
+                    `Cherry-picked commit: ${context.payload.pull_request.merge_commit_sha}\n\n---\n` +
+                    `${context.payload.pull_request.body || ''}`
+            });
+            console.log(`Created backport PR: ${pr.html_url}`);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Backport PR for 4.1: #${pr.number}`
+            });
+
+      - name: Report cherry-pick conflicts
+        if: failure() && steps.cherry-pick.outcome != 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 4.1.`
+            });
+
+      - name: Report backport branch push failure
+        if: failure() && steps.push.outcome != 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create automatic backport PR.\n`+
+                    `I could cherry-pick onto 4.1 just fine, but pushing the new branch failed.`
+            });
