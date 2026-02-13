@@ -22,6 +22,12 @@ jobs:
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
 
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
       - name: Create backport PR branch and cherry-pick
         id: cherry-pick
         run: |
