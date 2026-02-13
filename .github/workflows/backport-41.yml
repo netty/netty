@@ -19,6 +19,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
           fetch-depth: '0' # Cherry-pick needs full history
 
       - name: Setup git configuration
