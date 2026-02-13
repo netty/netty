@@ -1,6 +1,6 @@
 name: Auto Backport to 4.1
 on:
-  pull_request:
+  pull_request_target:
     types:
       - closed
       - labeled
