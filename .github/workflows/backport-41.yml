@@ -3,12 +3,15 @@ on:
   pull_request:
     types:
       - closed
+      - labeled
     branches:
       - '4.2'
 
 jobs:
   backport:
-    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.1')
+    if: github.event.pull_request.merged && (
+      github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.1') ||
+      github.event.action == 'labeled' && contains(github.event.label.name, 'needs-cherry-pick-4.1'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
