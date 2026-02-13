@@ -517,9 +517,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         OpenSslCredentialPointer pointer = (OpenSslCredentialPointer) credential;
 
+        // Retain the credential for the lifetime of this context
+        // Must be done outside the try block so that if retain() throws,
+        // we don't try to release() and hide the original exception
+        credential.retain();
         try {
-            // Retain the credential for the lifetime of this context
-            credential.retain();
             credentials.add(credential);
             SSLContext.addCredential(ctx, pointer.credentialAddress());
         } catch (Exception e) {

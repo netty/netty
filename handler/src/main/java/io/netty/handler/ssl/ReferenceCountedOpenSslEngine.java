@@ -2333,8 +2333,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw re;
             }
             OpenSslCredentialPointer pointer = (OpenSslCredentialPointer) credential;
+            // Retain the credential for the lifetime of this SSL connection
+            // Must be done outside the try block so that if retain() throws,
+            // we don't try to release() and hide the original exception
+            credential.retain();
             try {
-                credential.retain();
                 SSL.addCredential(ssl, pointer.credentialAddress());
             } catch (Exception e) {
                 credential.release();
