@@ -60,6 +60,7 @@ jobs:
         if: steps.cherry-pick.outcome == 'success'
         uses: actions/github-script@v8
         with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
