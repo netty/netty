@@ -22,18 +22,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: '0' # Cherry-pick needs full history
-          token: '${{ secrets.GITHUB_TOKEN }}'
 
       - name: Setup git configuration
         run: |
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
-
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
-          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
       - name: Create backport PR branch and cherry-pick
         id: cherry-pick
@@ -70,7 +63,6 @@ jobs:
         if: steps.cherry-pick.outputs.success == 'true'
         uses: actions/github-script@v8
         with:
-          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -94,7 +86,6 @@ jobs:
         if: failure() && steps.cherry-pick.outputs.success == 'false'
         uses: actions/github-script@v8
         with:
-          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -107,7 +98,6 @@ jobs:
         if: failure() && steps.push.outputs.push_failed == 'true'
         uses: actions/github-script@v8
         with:
-          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
