@@ -40,10 +40,8 @@ jobs:
           
           if git cherry-pick -x "$MERGE_COMMIT"; then
             echo "Cherry-pick successful"
-            echo "success=true" >> "$GITHUB_OUTPUT"
           else
             echo "Cherry-pick failed - conflicts detected"
-            echo "success=false" >> "$GITHUB_OUTPUT"
             git cherry-pick --abort
             exit 1
           fi
@@ -51,16 +49,15 @@ jobs:
 
       - name: Push backport branch
         id: push
-        if: steps.cherry-pick.outputs.success == 'true'
+        if: steps.cherry-pick.outcome == 'success'
         run: |
           if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
             echo "Backport branch push failed"
-            echo "push_failed=true" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           
       - name: Create pull request
-        if: steps.cherry-pick.outputs.success == 'true'
+        if: steps.cherry-pick.outcome == 'success'
         uses: actions/github-script@v8
         with:
           script: |
@@ -83,7 +80,7 @@ jobs:
             });
 
       - name: Report cherry-pick conflicts
-        if: failure() && steps.cherry-pick.outputs.success == 'false'
+        if: failure() && steps.cherry-pick.outcome != 'success'
         uses: actions/github-script@v8
         with:
           script: |
@@ -95,7 +92,7 @@ jobs:
             });
 
       - name: Report backport branch push failure
-        if: failure() && steps.push.outputs.push_failed == 'true'
+        if: failure() && steps.push.outcome != 'success'
         uses: actions/github-script@v8
         with:
           script: |
