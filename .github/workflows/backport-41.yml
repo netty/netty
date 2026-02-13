@@ -34,19 +34,24 @@ jobs:
           
           if git cherry-pick -x "$MERGE_COMMIT"; then
             echo "Cherry-pick successful"
-            echo "success=true" >> $GITHUB_OUTPUT
+            echo "success=true" >> "$GITHUB_OUTPUT"
           else
             echo "Cherry-pick failed - conflicts detected"
-            echo "success=false" >> $GITHUB_OUTPUT
+            echo "success=false" >> "$GITHUB_OUTPUT"
             git cherry-pick --abort
             exit 1
           fi
-          echo "branch=$BACKPORT_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$BACKPORT_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Push backport branch
+        id: push
         if: steps.cherry-pick.outputs.success == 'true'
         run: |
-          git push origin "${{ steps.cherry-pick.outputs.branch }}"
+          if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
+            echo "Backport branch push failed"
+            echo "push_failed=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
           
       - name: Create pull request
         if: steps.cherry-pick.outputs.success == 'true'
@@ -81,4 +86,17 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 4.1.`
+            });
+
+      - name: Report backport branch push failure
+        if: failure() && steps.push.outputs.push_failed == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create automatic backport PR.\n`+
+                    `I could cherry-pick onto 4.1 just fine, but pushing the new branch failed.`
             });
