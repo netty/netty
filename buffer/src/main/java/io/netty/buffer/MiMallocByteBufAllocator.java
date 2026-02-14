@@ -1984,6 +1984,7 @@ final class MiMallocByteBufAllocator {
                 (goodAllocSize = getGoodOsAllocSize(size)) <= LARGE_BLOCK_SIZE_MAX) { // If not huge.
             long threadId = Thread.currentThread().getId();
             int currentHeapsScanLength;
+            int expansions = 0;
             do {
                 currentHeapsScanLength = this.heapsScanLength.get();
                 int mask = currentHeapsScanLength - 1;
@@ -2009,7 +2010,8 @@ final class MiMallocByteBufAllocator {
                         }
                     }
                 }
-            } while (tryExpandHeapsScanLength(currentHeapsScanLength));
+                expansions++;
+            } while (expansions <= 3 && tryExpandHeapsScanLength(currentHeapsScanLength));
         }
         assert this.sharedHeapWraps[0] != null && this.sharedHeapWraps[0].heap != null;
         LocalHeap heap = this.sharedHeapWraps[0].heap;
