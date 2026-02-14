@@ -18,7 +18,9 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -38,6 +40,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.StampedLock;
 import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.ABANDON;
 import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.FORCE;
 import static io.netty.buffer.MiMallocByteBufAllocator.CollectType.NORMAL;
@@ -140,13 +143,15 @@ final class MiMallocByteBufAllocator {
 
     private final AtomicLong usedMemory = new AtomicLong();
 
+    private final SharedHeapWrap[] sharedHeapWraps;
+
     MiMallocByteBufAllocator(ChunkAllocator chunkAllocator) {
         this.chunkAllocator = chunkAllocator;
         this.abandonedSegmentDeque = new ConcurrentLinkedDeque<Segment>();
         this.THREAD_LOCAL_HEAP = new FastThreadLocal<LocalHeap>() {
             @Override
             protected LocalHeap initialValue() {
-                return new LocalHeap(MiMallocByteBufAllocator.this);
+                return new LocalHeap(MiMallocByteBufAllocator.this, null);
             }
 
             @Override
@@ -155,16 +160,28 @@ final class MiMallocByteBufAllocator {
                 heap.heapCollect(ABANDON);
             }
         };
+        this.sharedHeapWraps = new SharedHeapWrap[NettyRuntime.availableProcessors() * 2];
+        for (int i = 0; i < sharedHeapWraps.length; i++) {
+            sharedHeapWraps[i] = new SharedHeapWrap();
+        }
+        // Init the first heap.
+        sharedHeapWraps[0].heap = new LocalHeap(this, sharedHeapWraps[0].lock);
     }
 
     @SuppressWarnings("FinalizeDeclaration")
     @Override
     protected void finalize() throws Throwable {
         try {
+            freeAllSharedSegments();
             freeAllAbandonedSegments();
         } finally {
             super.finalize();
         }
+    }
+
+    static final class SharedHeapWrap {
+        private final StampedLock lock = new StampedLock();
+        private LocalHeap heap;
     }
 
     private void freeAllAbandonedSegments() {
@@ -172,6 +189,24 @@ final class MiMallocByteBufAllocator {
         while ((segment = this.abandonedSegmentDeque.poll()) != null) {
             this.abandonedSegmentCount.decrementAndGet();
             segment.deallocate();
+        }
+    }
+
+    private void freeAllSharedSegments() {
+        StampedLock lock;
+        long lockStamp;
+        LocalHeap heap;
+        for (SharedHeapWrap sharedHeapWrap : this.sharedHeapWraps) {
+            lock = sharedHeapWrap.lock;
+            lockStamp = lock.writeLock();
+            heap = sharedHeapWrap.heap;
+            if (heap != null) {
+                try {
+                    heap.heapCollect(ABANDON);
+                } finally {
+                    lock.unlockWrite(lockStamp);
+                }
+            }
         }
     }
 
@@ -221,14 +256,16 @@ final class MiMallocByteBufAllocator {
         private final ArrayDeque<Block> blockDeque;
         private Segment reservedNormalSegment;
         private long reservedNormalSegmentNano;
+        private final StampedLock sharedLock;
 
-        LocalHeap(MiMallocByteBufAllocator allocator) {
+        LocalHeap(MiMallocByteBufAllocator allocator, StampedLock sharedLock) {
             segmentTld = new SegmentTld();
             pagesFreeDirect = new Page[PAGES_FREE_DIRECT_ARRAY_SIZE + 1];
             Arrays.fill(pagesFreeDirect, EMPTY_PAGE);
             this.allocator = allocator;
             this.threadDelayedFreeList = new AtomicReference<>();
             this.blockDeque = new ArrayDeque<Block>(32);
+            this.sharedLock = sharedLock;
             pageQueues = new PageQueue[] {
                     new PageQueue(1, 0), // placeholder, not used.
                     new PageQueue(1, 1), new PageQueue(2, 2),
@@ -448,6 +485,25 @@ final class MiMallocByteBufAllocator {
             }
         }
 
+        private Page createHugePage(int size) {
+            // Allocate the segment.
+            AbstractByteBuf buf = this.allocator.newChunk(size);
+            if (buf == null) {
+                return null; // Signal OOM
+            }
+            // huge segment only needs 1 slice.
+            Segment segment = new Segment(this.allocator, size, 1, SEGMENT_HUGE, buf, this);
+            segmentsTrackSize(segment.segmentSize);
+            // Allocate a huge page which spans the entire segment.
+            Page page = segmentHugeSpanAllocate(segment, size);
+            // A fresh page was found, initialize it.
+            page.reservedBlocks = 1;
+            page.retireExpire = 0;
+            page.freeList = new Block(page, page.blockSize, page.adjustment, null);
+            page.capacityBlocks = 1;
+            return page;
+        }
+
         // Large and huge page allocation.
         // Huge pages contain just one block, and the segment contains just that page (as `SEGMENT_HUGE`).
         private Page largeOrHugePageAlloc(int size) {
@@ -575,15 +631,15 @@ final class MiMallocByteBufAllocator {
         private Block getBlock(Page page, int blockBytes, int adjustment) {
             Block block;
             if (blockDeque.isEmpty()) {
-                block = new Block();
+                block = new Block(page, blockBytes, adjustment, null);
             } else {
                 block = blockDeque.pollLast();
                 assert block != null;
+                block.page = page;
+                block.blockBytes = blockBytes;
+                block.blockAdjustment = adjustment;
+                block.nextBlock = null;
             }
-            block.page = page;
-            block.blockBytes = blockBytes;
-            block.blockAdjustment = adjustment;
-            block.nextBlock = null;
             return block;
         }
 
@@ -1685,7 +1741,12 @@ final class MiMallocByteBufAllocator {
         private int blockAdjustment;
         private Block nextBlock;
 
-        Block() { }
+        Block(Page page, int blockBytes, int blockAdjustment, Block nextBlock) {
+            this.page = page;
+            this.blockBytes = blockBytes;
+            this.blockAdjustment = blockAdjustment;
+            this.nextBlock = nextBlock;
+        }
     }
 
     private AbstractByteBuf newChunk(int size) {
@@ -1729,6 +1790,12 @@ final class MiMallocByteBufAllocator {
         private final AbstractByteBuf delegate;
         private final MiMallocByteBufAllocator parent;
         private final int segmentSize;
+        // For shared heap:
+        //     The `ownerThread` is the thread who create this segment.
+        // For thread-local heap:
+        //     (1).The `ownerThread` is the thread who create/reclaim this segment.
+        //     (2).If `ownerThread` is null, signals this segment is abandoned
+        //         (the segment is in the abandoned queue, or it's a huge segment).
         private Thread ownerThread;
         private LocalHeap ownerHeap;
         private final Span[] slices;
@@ -1787,17 +1854,36 @@ final class MiMallocByteBufAllocator {
         assert page != null;
         Segment segment = page.segment;
         assert segment != null;
-        if (segment.ownerThread == Thread.currentThread()) { // thread-local free.
-            page.freeBlockLocal(block, page.isInFull, segment.ownerHeap);
+        LocalHeap ownerHeap = segment.ownerHeap;
+        // If `ownerThread` is not null, then the `ownerHeap` must not be null.
+        // If `ownerThread` is null, then the `ownerHeap` might be null (segment in abandoned queue),
+        // or not null(huge segment).
+        assert segment.ownerThread == null || ownerHeap != null;
+        if (segment.ownerThread == Thread.currentThread() && ownerHeap.sharedLock == null) {
+            // thread-local free.
+            page.freeBlockLocal(block, page.isInFull, ownerHeap);
         } else {
-            // Not thread-local, use the generic multi-threaded-free path.
-            freeBlockMt(page, segment, block);
+            StampedLock sharedLock;
+            long lockStamp;
+            if (!page.isHuge && ownerHeap != null && (sharedLock = ownerHeap.sharedLock) != null &&
+                    // Try to acquire the sharedLock once, if failed, then use the multi-threaded-free path.
+                    (lockStamp = sharedLock.tryWriteLock()) != 0) {
+                try {
+                    // Successfully acquired the sharedLock, use thread-local free.
+                    page.freeBlockLocal(block, page.isInFull, ownerHeap);
+                } finally {
+                    sharedLock.unlockWrite(lockStamp);
+                }
+            } else {
+                // Use the generic multi-threaded-free path.
+                freeBlockMt(page, segment, block);
+            }
         }
     }
 
     // Multi-threaded-free, or free a huge block.
     private void freeBlockMt(Page page, Segment segment, Block block) {
-        if (segment.kind == SEGMENT_HUGE) {
+        if (page.isHuge) {
             // Huge page segments are always abandoned and can be freed immediately.
             segmentHugePageFree(segment, page, block);
         } else {
@@ -1883,10 +1969,47 @@ final class MiMallocByteBufAllocator {
     }
 
     private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf, boolean isReAlloc) {
-        LocalHeap localHeap = THREAD_LOCAL_HEAP.get();
+        int goodAllocSize = 0;
+        if (FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
+            return allocate(size, maxCapacity, byteBuf, isReAlloc, THREAD_LOCAL_HEAP.get());
+        } else if (size <= MEDIUM_BLOCK_SIZE_MAX ||
+                (goodAllocSize = getGoodOsAllocSize(size)) <= LARGE_BLOCK_SIZE_MAX) { // If not huge.
+            int sharedHeapsLength = this.sharedHeapWraps.length;
+            long threadId = Thread.currentThread().getId();
+            int mask = sharedHeapsLength - 1;
+            int index = (int) (threadId & mask);
+            SharedHeapWrap sharedHeapWrap;
+            StampedLock lock;
+            long lockStamp;
+            int attempts = sharedHeapsLength << 1;
+            for (int i = 0; i < attempts; i++) {
+                sharedHeapWrap = this.sharedHeapWraps[index + i & mask];
+                lock = sharedHeapWrap.lock;
+                if ((lockStamp = lock.tryWriteLock()) != 0) {
+                    // Was able to allocate.
+                    try {
+                        LocalHeap heap = sharedHeapWrap.heap;
+                        if (heap == null) {
+                            heap = sharedHeapWrap.heap = new LocalHeap(this, lock);
+                        }
+                        return allocate(size, maxCapacity, byteBuf, isReAlloc, heap);
+                    } finally {
+                        lock.unlockWrite(lockStamp);
+                    }
+                }
+            }
+        }
+        assert this.sharedHeapWraps[0] != null && this.sharedHeapWraps[0].heap != null;
+        LocalHeap heap = this.sharedHeapWraps[0].heap;
+        // If it is a huge size, or failed to acquire the shared heap lock.
+        goodAllocSize = goodAllocSize > 0 ? goodAllocSize : getGoodOsAllocSize(size);
+        return allocateFallback(goodAllocSize, maxCapacity, byteBuf, heap, isReAlloc);
+    }
+
+    private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf, boolean isReAlloc, LocalHeap heap) {
         if (size <= PAGES_FREE_DIRECT_SIZE_MAX) {
             int wSize = toWordSize(size);
-            Page page = localHeap.pagesFreeDirect[wSize];
+            Page page = heap.pagesFreeDirect[wSize];
             // Fast path
             Block block = page.freeList;
             if (block != null) {
@@ -1899,7 +2022,7 @@ final class MiMallocByteBufAllocator {
                 return byteBuf;
             }
         }
-        return allocateGeneric(size, maxCapacity, byteBuf, localHeap, isReAlloc);
+        return allocateGeneric(size, maxCapacity, byteBuf, heap, isReAlloc);
     }
 
     private MiByteBuf allocateGeneric(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap, boolean isReAlloc) {
@@ -1942,6 +2065,21 @@ final class MiMallocByteBufAllocator {
             heap.segmentOsFree(heap.reservedNormalSegment);
             heap.reservedNormalSegment = null;
         }
+        return byteBuf;
+    }
+
+    private MiByteBuf allocateFallback(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap, boolean isReAlloc) {
+        Page page = heap.createHugePage(size);
+        if (page == null) { // out of memory
+            PlatformDependent.throwException(new OutOfMemoryError("Unable to allocate " + size + " bytes"));
+        }
+        Block block = page.freeList;
+        if (byteBuf == null) {
+            byteBuf = block;
+        }
+        page.freeList = block.nextBlock;
+        byteBuf.init(block, size, maxCapacity, isReAlloc);
+        page.usedBlocks++;
         return byteBuf;
     }
 
@@ -2108,8 +2246,7 @@ final class MiMallocByteBufAllocator {
             MiMallocByteBufAllocator allocator = this.block.page.segment.parent;
             Block oldBlock = this.block;
             if (this == oldBlock) {
-                LocalHeap heap = allocator.THREAD_LOCAL_HEAP.get();
-                oldBlock = heap.getBlock(oldBlock.page, oldBlock.blockBytes, oldBlock.blockAdjustment);
+                oldBlock = new Block(oldBlock.page, oldBlock.blockBytes, oldBlock.blockAdjustment, null);
             }
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;

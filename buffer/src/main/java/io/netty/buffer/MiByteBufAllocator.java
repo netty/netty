@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -35,7 +34,6 @@ public final class MiByteBufAllocator extends AbstractByteBufAllocator
 
     private final MiMallocByteBufAllocator direct;
     private final MiMallocByteBufAllocator heap;
-    private final PooledByteBufAllocator pooledAlloc;
 
     public MiByteBufAllocator() {
         this(!PlatformDependent.isExplicitNoPreferDirect());
@@ -45,25 +43,16 @@ public final class MiByteBufAllocator extends AbstractByteBufAllocator
         super(preferDirect);
         direct = new MiMallocByteBufAllocator(new DirectChunkAllocator(this));
         heap = new MiMallocByteBufAllocator(new HeapChunkAllocator(this));
-        pooledAlloc = PooledByteBufAllocator.getNonThreadLocalAllocator();
     }
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        if (FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
-            return toLeakAwareBuffer(heap.allocate(initialCapacity, maxCapacity));
-        } else {
-            return pooledAlloc.heapBuffer(initialCapacity, maxCapacity);
-        }
+        return toLeakAwareBuffer(heap.allocate(initialCapacity, maxCapacity));
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        if (FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
-            return toLeakAwareBuffer(direct.allocate(initialCapacity, maxCapacity));
-        } else {
-            return pooledAlloc.directBuffer(initialCapacity, maxCapacity);
-        }
+        return toLeakAwareBuffer(direct.allocate(initialCapacity, maxCapacity));
     }
 
     @Override
@@ -73,12 +62,12 @@ public final class MiByteBufAllocator extends AbstractByteBufAllocator
 
     @Override
     public long usedHeapMemory() {
-        return heap.usedMemory() + pooledAlloc.usedHeapMemory();
+        return heap.usedMemory();
     }
 
     @Override
     public long usedDirectMemory() {
-        return direct.usedMemory() + pooledAlloc.usedDirectMemory();
+        return direct.usedMemory();
     }
 
     long abandonedHeapSegmentCount() {
