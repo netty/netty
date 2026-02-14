@@ -642,7 +642,8 @@ public final class PlatformDependent {
     }
 
     /**
-     * {@code true} if unaligned access is possible, either natively through {@code Unsafe} or via {@code VarHandle}.
+     * {@code true} if multi-byte access at arbitrary offsets is possible, either natively through {@code Unsafe}
+     * or via {@code VarHandle} where the JVM handles alignment and byte ordering internally.
      */
     public static boolean canUnalignedAccess() {
         return isUnaligned() || VAR_HANDLE;
