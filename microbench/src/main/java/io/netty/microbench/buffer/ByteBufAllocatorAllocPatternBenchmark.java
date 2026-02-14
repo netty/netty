@@ -200,7 +200,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         public void tearDown() {
             releaseBufferArray(buffers);
             try {
-                Thread.sleep(5000);
+                Thread.sleep(3000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -245,7 +245,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         fastThread.join();
     }
 
-    @Threads(8)
+    @Threads(16)
     @Benchmark
     public void directAllocation(AllocationPatternState state) {
         state.performDirectAllocation();
@@ -263,7 +263,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
-        super(true, false);
+        super(true, true);
     }
 
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
