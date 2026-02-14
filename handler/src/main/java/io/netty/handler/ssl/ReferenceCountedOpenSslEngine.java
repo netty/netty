@@ -2085,6 +2085,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private String toJavaCipherSuite(String openSslCipherSuite, String version) {
+        if (openSslCipherSuite == null) {
+            return null;
+        }
         String prefix = toJavaCipherSuitePrefix(version);
         return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
     }
