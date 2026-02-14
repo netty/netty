@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-public class UnalignedAccessUnavailableBenchmark extends AbstractMicrobenchmark {
+public class VarHandleAccessBenchmark extends AbstractMicrobenchmark {
 
     private ByteBuf unsafeDirect;
     private ByteBuf unsafeHeap;
@@ -51,7 +51,7 @@ public class UnalignedAccessUnavailableBenchmark extends AbstractMicrobenchmark 
         unsafeHeap.release();
     }
 
-    // UNALIGNED = false (known unsupported): should use 8x getByte
+    // UNALIGNED = false: should use VarHandle for multi-byte access
     @Benchmark
     @Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=false")
     public long getLongDirectFalse() {
@@ -61,19 +61,6 @@ public class UnalignedAccessUnavailableBenchmark extends AbstractMicrobenchmark 
     @Benchmark
     @Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=false")
     public long getLongHeapFalse() {
-        return unsafeHeap.getLong(0);
-    }
-
-    // UNALIGNED = unavailable (unknown): should use VarHandle
-    @Benchmark
-    @Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=unavailable")
-    public long getLongDirectUnavailable() {
-        return unsafeDirect.getLong(0);
-    }
-
-    @Benchmark
-    @Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=unavailable")
-    public long getLongHeapUnavailable() {
         return unsafeHeap.getLong(0);
     }
 }

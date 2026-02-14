@@ -31,10 +31,7 @@ import java.nio.ByteBuffer;
  */
 public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
-    private static final boolean USE_VAR_HANDLE =
-            !PlatformDependent.isUnaligned() &&
-            !PlatformDependent.isUnalignedAvailable() &&
-            PlatformDependent.hasVarHandle();
+    private static final boolean USE_VAR_HANDLE = PlatformDependent.useVarHandleForMultiByteAccess();
 
     long memoryAddress;
 

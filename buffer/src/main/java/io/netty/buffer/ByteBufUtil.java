@@ -74,9 +74,7 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
-    private static final boolean SWAR_UNALIGNED =
-            PlatformDependent.isUnaligned() ||
-            (!PlatformDependent.isUnalignedAvailable() && PlatformDependent.hasVarHandle());
+    private static final boolean SWAR_UNALIGNED = PlatformDependent.canUnalignedAccess();
 
     static {
         String allocType = SystemPropertyUtil.get(

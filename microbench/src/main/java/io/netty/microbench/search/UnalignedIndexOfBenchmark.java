@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 @Warmup(iterations = 5)
 @Measurement(iterations = 5)
-@Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=unavailable")
+@Fork(value = 1, jvmArgsAppend = "-Dio.netty.unalignedAccess=false")
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class UnalignedIndexOfBenchmark extends AbstractMicrobenchmark {

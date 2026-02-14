@@ -454,13 +454,6 @@ public final class PlatformDependent {
     }
 
     /**
-     * {@code true} if and only if unaligned access support could be queried from the runtime.
-     */
-    public static boolean isUnalignedAvailable() {
-        return PlatformDependent0.isUnalignedAvailable();
-    }
-
-    /**
      * Returns {@code true} if the platform has reliable low-level direct buffer access API and a user has not specified
      * {@code -Dio.netty.noPreferDirect} option.
      */
@@ -634,6 +627,25 @@ public final class PlatformDependent {
 
     public static boolean hasVarHandle() {
         return VAR_HANDLE;
+    }
+
+    /**
+     * {@code true} if {@code VarHandle} should be used for multi-byte access.
+     *
+     * The multi-byte access strategy is determined as follows:
+     * 1) If the platform supports unaligned access natively, use {@code Unsafe} as the fastest option.
+     * 2) Otherwise, if {@code VarHandle} is available, use it as a fallback.
+     * 3) Otherwise, fall back to manual byte-by-byte access.
+     */
+    public static boolean useVarHandleForMultiByteAccess() {
+        return !isUnaligned() && VAR_HANDLE;
+    }
+
+    /**
+     * {@code true} if unaligned access is possible, either natively through {@code Unsafe} or via {@code VarHandle}.
+     */
+    public static boolean canUnalignedAccess() {
+        return isUnaligned() || VAR_HANDLE;
     }
 
     public static VarHandle findVarHandleOfIntField(MethodHandles.Lookup lookup, Class<?> type, String fieldName) {

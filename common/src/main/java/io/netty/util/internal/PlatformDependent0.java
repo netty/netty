@@ -82,7 +82,6 @@ final class PlatformDependent0 {
     private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
     private static final boolean UNALIGNED;
-    private static final boolean UNALIGNED_AVAILABLE;
 
     private static final long BITS_MAX_DIRECT_MEMORY;
 
@@ -275,7 +274,6 @@ final class PlatformDependent0 {
             INT_ARRAY_BASE_OFFSET = -1;
             INT_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
-            UNALIGNED_AVAILABLE = false;
             BITS_MAX_DIRECT_MEMORY = -1;
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
@@ -338,7 +336,6 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
-            final boolean unalignedAvailable;
             String unalignedProperty = SystemPropertyUtil.get("io.netty.unalignedAccess", "").trim();
 
             // using a known type to avoid loading new classes
@@ -351,9 +348,6 @@ final class PlatformDependent0 {
                     }
                     if ("false".equalsIgnoreCase(unalignedProperty)) {
                         return Boolean.FALSE;
-                    }
-                    if ("unavailable".equalsIgnoreCase(unalignedProperty)) {
-                        return new UnsupportedOperationException("io.netty.unalignedAccess=unavailable");
                     }
                     try {
                         Class<?> bitsClass =
@@ -403,13 +397,11 @@ final class PlatformDependent0 {
 
             if (maybeUnaligned instanceof Boolean) {
                 unaligned = (Boolean) maybeUnaligned;
-                unalignedAvailable = true;
                 logger.debug("java.nio.Bits.unaligned: available, {}", unaligned);
             } else {
                 String arch = SystemPropertyUtil.get("os.arch", "");
                 //noinspection DynamicRegexReplaceableByCompiledPattern
                 unaligned = arch.matches("^(i[3-6]86|x86(_64)?|x64|amd64)$");
-                unalignedAvailable = false;
                 Throwable t = (Throwable) maybeUnaligned;
                 if (logger.isTraceEnabled()) {
                     logger.debug("java.nio.Bits.unaligned: unavailable, {}", unaligned, t);
@@ -420,7 +412,6 @@ final class PlatformDependent0 {
 
             UNALIGNED = unaligned;
             BITS_MAX_DIRECT_MEMORY = maybeMaxMemory.get() >= 0? maybeMaxMemory.get() : -1;
-            UNALIGNED_AVAILABLE = unalignedAvailable;
 
             if (javaVersion() >= 9) {
                 Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -643,10 +634,6 @@ final class PlatformDependent0 {
 
     static boolean isUnaligned() {
         return UNALIGNED;
-    }
-
-    static boolean isUnalignedAvailable() {
-        return UNALIGNED_AVAILABLE;
     }
 
     /**
