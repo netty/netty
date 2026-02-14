@@ -21,6 +21,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -38,6 +39,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.StampedLock;
@@ -145,6 +147,11 @@ final class MiMallocByteBufAllocator {
 
     private final SharedHeapWrap[] sharedHeapWraps;
 
+    private static final int MAX_SHARED_HEAP_WRAPS_LENGTH =
+            MathUtil.safeFindNextPositivePowerOfTwo(NettyRuntime.availableProcessors() * 2);
+
+    private final AtomicInteger heapsScanLength;
+
     MiMallocByteBufAllocator(ChunkAllocator chunkAllocator) {
         this.chunkAllocator = chunkAllocator;
         this.abandonedSegmentDeque = new ConcurrentLinkedDeque<Segment>();
@@ -160,12 +167,13 @@ final class MiMallocByteBufAllocator {
                 heap.heapCollect(ABANDON);
             }
         };
-        this.sharedHeapWraps = new SharedHeapWrap[NettyRuntime.availableProcessors() * 2];
+        this.sharedHeapWraps = new SharedHeapWrap[MAX_SHARED_HEAP_WRAPS_LENGTH];
         for (int i = 0; i < sharedHeapWraps.length; i++) {
             sharedHeapWraps[i] = new SharedHeapWrap();
         }
         // Init the first heap.
         sharedHeapWraps[0].heap = new LocalHeap(this, sharedHeapWraps[0].lock);
+        this.heapsScanLength = new AtomicInteger(1);
     }
 
     @SuppressWarnings("FinalizeDeclaration")
@@ -1974,36 +1982,49 @@ final class MiMallocByteBufAllocator {
             return allocate(size, maxCapacity, byteBuf, isReAlloc, THREAD_LOCAL_HEAP.get());
         } else if (size <= MEDIUM_BLOCK_SIZE_MAX ||
                 (goodAllocSize = getGoodOsAllocSize(size)) <= LARGE_BLOCK_SIZE_MAX) { // If not huge.
-            int sharedHeapsLength = this.sharedHeapWraps.length;
             long threadId = Thread.currentThread().getId();
-            int mask = sharedHeapsLength - 1;
-            int index = (int) (threadId & mask);
-            SharedHeapWrap sharedHeapWrap;
-            StampedLock lock;
-            long lockStamp;
-            int attempts = sharedHeapsLength << 1;
-            for (int i = 0; i < attempts; i++) {
-                sharedHeapWrap = this.sharedHeapWraps[index + i & mask];
-                lock = sharedHeapWrap.lock;
-                if ((lockStamp = lock.tryWriteLock()) != 0) {
-                    // Was able to allocate.
-                    try {
-                        LocalHeap heap = sharedHeapWrap.heap;
-                        if (heap == null) {
-                            heap = sharedHeapWrap.heap = new LocalHeap(this, lock);
+            int currentHeapsScanLength;
+            do {
+                currentHeapsScanLength = this.heapsScanLength.get();
+                int mask = currentHeapsScanLength - 1;
+                int index = (int) (threadId & mask);
+                SharedHeapWrap sharedHeapWrap;
+                StampedLock lock;
+                long lockStamp;
+                // Attempts range:[3, 10], to avoid spinning too long.
+                int attempts = Math.max(3, Math.min(currentHeapsScanLength, 10));
+                for (int i = 0; i < attempts; i++) {
+                    sharedHeapWrap = this.sharedHeapWraps[index + i & mask];
+                    lock = sharedHeapWrap.lock;
+                    if ((lockStamp = lock.tryWriteLock()) != 0) {
+                        // Was able to allocate.
+                        try {
+                            LocalHeap heap = sharedHeapWrap.heap;
+                            if (heap == null) {
+                                heap = sharedHeapWrap.heap = new LocalHeap(this, lock);
+                            }
+                            return allocate(size, maxCapacity, byteBuf, isReAlloc, heap);
+                        } finally {
+                            lock.unlockWrite(lockStamp);
                         }
-                        return allocate(size, maxCapacity, byteBuf, isReAlloc, heap);
-                    } finally {
-                        lock.unlockWrite(lockStamp);
                     }
                 }
-            }
+            } while (tryExpandHeapsScanLength(currentHeapsScanLength));
         }
         assert this.sharedHeapWraps[0] != null && this.sharedHeapWraps[0].heap != null;
         LocalHeap heap = this.sharedHeapWraps[0].heap;
         // If it is a huge size, or failed to acquire the shared heap lock.
         goodAllocSize = goodAllocSize > 0 ? goodAllocSize : getGoodOsAllocSize(size);
         return allocateFallback(goodAllocSize, maxCapacity, byteBuf, heap, isReAlloc);
+    }
+
+    private boolean tryExpandHeapsScanLength(int currentHeapsScanLength) {
+        if (currentHeapsScanLength >= MAX_SHARED_HEAP_WRAPS_LENGTH) {
+            return false;
+        }
+        // If the CAS failed, means another thread has already expanded the `heapsScanLength`.
+        this.heapsScanLength.compareAndSet(currentHeapsScanLength, currentHeapsScanLength << 1);
+        return true;
     }
 
     private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf, boolean isReAlloc, LocalHeap heap) {
