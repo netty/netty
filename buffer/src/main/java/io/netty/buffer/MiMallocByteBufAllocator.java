@@ -2068,19 +2068,19 @@ final class MiMallocByteBufAllocator {
         return byteBuf;
     }
 
-    private MiByteBuf allocateFallback(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap, boolean isReAlloc) {
+    private MiByteBuf allocateFallback(int size, int maxCapacity, MiByteBuf buf, LocalHeap heap, boolean isReAlloc) {
         Page page = heap.createHugePage(size);
         if (page == null) { // out of memory
             PlatformDependent.throwException(new OutOfMemoryError("Unable to allocate " + size + " bytes"));
         }
         Block block = page.freeList;
-        if (byteBuf == null) {
-            byteBuf = block;
+        if (buf == null) {
+            buf = block;
         }
         page.freeList = block.nextBlock;
-        byteBuf.init(block, size, maxCapacity, isReAlloc);
+        buf.init(block, size, maxCapacity, isReAlloc);
         page.usedBlocks++;
-        return byteBuf;
+        return buf;
     }
 
     private static int pageBin(Page page) {
