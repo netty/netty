@@ -54,8 +54,37 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
                                         @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
                                         @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
                                         @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+        this(inboundControlStreamHandler, pushStreamHandlerFactory, unknownInboundStreamHandlerFactory, localSettings,
+                disableQpackDynamicTable, null);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
+     *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
+     *                                              interested in these.
+     * @param pushStreamHandlerFactory              the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for push streams {@code null} if no special
+     *                                              handling should be done. When present, push ID will be passed as an
+     *                                              argument to the {@link LongFunction}.
+     * @param unknownInboundStreamHandlerFactory    the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for unknown inbound stream types or
+     *                                              {@code null} if no special handling should be done.
+     * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
+     *                                              remote peer or {@code null} if the default settings should be used.
+     * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
+     * @param nonStandardSettingsValidator          the {@link Http3Settings.NonStandardHttp3SettingsValidator} to use
+     *                                              when validating settings that are non-standard.
+     */
+    public Http3ClientConnectionHandler(@Nullable ChannelHandler inboundControlStreamHandler,
+                                        @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
+                                        @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
+                                        @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable,
+                                        @Nullable Http3Settings.NonStandardHttp3SettingsValidator
+                                                nonStandardSettingsValidator) {
         super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
-                disableQpackDynamicTable);
+                disableQpackDynamicTable, nonStandardSettingsValidator);
         this.pushStreamHandlerFactory = pushStreamHandlerFactory;
     }
 
@@ -70,7 +99,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
-                new Http3UnidirectionalStreamInboundClientHandler(codecFactory,
+                new Http3UnidirectionalStreamInboundClientHandler(codecFactory, nonStandardSettingsValidator,
                         localControlStreamHandler, remoteControlStreamHandler,
                         unknownInboundStreamHandlerFactory, pushStreamHandlerFactory,
                         () -> new QpackEncoderHandler(maxTableCapacity, qpackDecoder),
