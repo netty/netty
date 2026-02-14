@@ -18,7 +18,6 @@ package io.netty.buffer;
 
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<PooledByteBuf<T>> recyclerHandle;
+    private final EnhancedHandle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -45,7 +44,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = ObjectUtil.checkNotNull((Handle<PooledByteBuf<T>>) recyclerHandle, "recyclerHandle");
+        this.recyclerHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
@@ -182,12 +181,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             tmpNioBuf = null;
             chunk = null;
             cache = null;
-            if (recyclerHandle instanceof EnhancedHandle) {
-                EnhancedHandle<PooledByteBuf<T>> enhancedHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
-                enhancedHandle.unguardedRecycle(this);
-            } else {
-                recyclerHandle.recycle(this);
-            }
+            this.recyclerHandle.unguardedRecycle(this);
         }
     }
 

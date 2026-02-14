@@ -39,10 +39,6 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
         return buf;
     }
 
-    static PooledHeapByteBuf newInstanceNoThreadLocal(Handle<PooledHeapByteBuf> handle) {
-        return new PooledHeapByteBuf(handle, 0);
-    }
-
     PooledHeapByteBuf(Handle<? extends PooledHeapByteBuf> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
