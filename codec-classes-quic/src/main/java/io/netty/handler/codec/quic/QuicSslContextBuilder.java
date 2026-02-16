@@ -179,7 +179,27 @@ public final class QuicSslContextBuilder {
         this.forServer = forServer;
     }
 
-    private QuicSslContextBuilder sni(Mapping<? super String, ? extends QuicSslContext> mapping) {
+    /**
+     * Enables
+     * <a href="https://quicwg.org/ops-drafts/draft-ietf-quic-manageability.html#name-server-name-indication-sni">
+     *     SNI</a> support on the server side.
+     * <p>
+     * The provided {@link Mapping} receives the hostname from the client and returns the
+     * {@link QuicSslContext} to use for that connection. The returned context's settings
+     * (such as {@link #clientAuth(ClientAuth)}, {@link #trustManager(TrustManagerFactory)}, etc.)
+     * will be applied to the connection.
+     * <p>
+     * Use {@link io.netty.util.DomainWildcardMappingBuilder} to create the {@link Mapping} when
+     * matching against domain patterns is needed.
+     *
+     * @param mapping the {@link Mapping} that maps hostnames to {@link QuicSslContext} instances
+     * @return this builder
+     * @throws NullPointerException if {@code mapping} is {@code null}
+     */
+    public QuicSslContextBuilder sni(Mapping<? super String, ? extends QuicSslContext> mapping) {
+        if (!forServer) {
+            throw new UnsupportedOperationException("Only supported for server");
+        }
         this.mapping = checkNotNull(mapping, "mapping");
         return this;
     }
