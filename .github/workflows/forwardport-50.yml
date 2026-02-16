@@ -1,4 +1,4 @@
-name: Auto Forward pport to 5.0
+name: Auto Forward port to 5.0
 on:
   pull_request_target:
     types:
