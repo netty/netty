@@ -1562,7 +1562,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         CountDownLatch sniEventLatch = new CountDownLatch(1);
         CountDownLatch sslEventLatch = new CountDownLatch(1);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
-                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt instanceof SniCompletionEvent) {
@@ -1574,10 +1574,10 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 sslEventLatch.countDown();
                             }
                         }
-                        super.userEventTriggered(ctx, evt);
+                        ctx.fireUserEventTriggered(evt);
                     }
                 },
-                new ChannelInboundHandlerAdapter());
+                new ChannelInboundHandler() { });
 
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
@@ -1593,13 +1593,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientQuicChannelHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
 
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
             sniEventLatch.await();
