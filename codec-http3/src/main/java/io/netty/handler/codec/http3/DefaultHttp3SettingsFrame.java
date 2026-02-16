@@ -108,7 +108,8 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
      * @return              the newly created copy.
      */
     public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
-        DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
+        Http3Settings settingsCopy = new Http3Settings(settingsFrame.settings().nonStandardSettingsValidator);
+        DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame(settingsCopy);
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
             copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
         } else {
