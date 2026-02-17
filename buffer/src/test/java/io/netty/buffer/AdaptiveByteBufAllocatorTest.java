@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.test.DisabledForSlowLeakDetection;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.RepeatedTest;
@@ -392,6 +393,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         task.get();
     }
 
+    @DisabledForSlowLeakDetection
     @RepeatedTest(100)
     void buddyAllocationConsistency(RepetitionInfo info) {
         SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
