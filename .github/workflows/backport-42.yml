@@ -1,19 +1,19 @@
-name: Auto Backport to 4.1
+name: Auto Backport to 4.2
 on:
   pull_request_target:
     types:
       - closed
       - labeled
     branches:
-      - '4.2'
+      - '5.0'
 
 jobs:
   backport:
-    name: "Backporting to 4.1"
+    name: "Backporting to 4.2"
     concurrency:
-      group: port-41-${{ github.event.pull_request.number }}
+      group: port-42-${{ github.event.pull_request.number }}
       cancel-in-progress: true
-    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.1')
+    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.2')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,9 +34,9 @@ jobs:
           MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
           echo "Backporting commit: $MERGE_COMMIT"
           
-          BACKPORT_BRANCH="backport-pr-${{ github.event.pull_request.number }}-to-4.1"
-          git fetch origin 4.1:4.1
-          git checkout -b "$BACKPORT_BRANCH" 4.1
+          BACKPORT_BRANCH="backport-pr-${{ github.event.pull_request.number }}-to-4.2"
+          git fetch origin 4.2:4.2
+          git checkout -b "$BACKPORT_BRANCH" 4.2
           
           if git cherry-pick -x "$MERGE_COMMIT"; then
             echo "Cherry-pick successful"
@@ -66,10 +66,10 @@ jobs:
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Backport 4.1: ${context.payload.pull_request.title}`,
+              title: `Backport 4.2: ${context.payload.pull_request.title}`,
               head: '${{ steps.cherry-pick.outputs.branch }}',
-              base: '4.1',
-              body: `Backport of #${context.payload.pull_request.number} to 4.1\n` +
+              base: '4.2',
+              body: `Backport of #${context.payload.pull_request.number} to 4.2\n` +
                     `Cherry-picked commit: ${context.payload.pull_request.merge_commit_sha}\n\n---\n` +
                     `${context.payload.pull_request.body || ''}`
             });
@@ -78,7 +78,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `Backport PR for 4.1: #${pr.number}`
+              body: `Backport PR for 4.2: #${pr.number}`
             });
 
       - name: Report cherry-pick conflicts
@@ -90,7 +90,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 4.1.`
+              body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 4.2.`
             });
 
       - name: Report backport branch push failure
@@ -103,7 +103,7 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: `Could not create automatic backport PR.\n`+
-                    `I could cherry-pick onto 4.1 just fine, but pushing the new branch failed.`
+                    `I could cherry-pick onto 4.2 just fine, but pushing the new branch failed.`
             });
 
       - name: Remove branch on PR create failure
