@@ -60,7 +60,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>c9d3e85f0f2acda30acbe186033bf534faeba7f3</quicheCommitSha>
+    <quicheCommitSha>4f347477006bf7f928335d28f05056013f70b87e</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -820,7 +820,7 @@
                       <equals arg1="${platform}" arg2="android" />
                       <then>
                         <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
+                          <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
                           <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
@@ -831,7 +831,7 @@
                           <equals arg1="${os.detected.name}" arg2="windows" />
                           <then>
                             <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                              <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <arg value="${cargoTarget}" />
                               <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                               <env key="DEBUG" value="true" />
@@ -843,7 +843,7 @@
                             <equals arg1="${crossCompile}" arg2="linux" />
                             <then>
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                                <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                                <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <arg value="${cargoTarget}" />
                                 <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
@@ -856,7 +856,7 @@
                             <equals arg1="${crossCompile}" arg2="mac" />
                             <then>
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                                <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                                <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <env key="CFLAGS" value="${extraCflags}" />
                                 <env key="CXXFLAGS" value="${extraCxxflags}" />
                                 <arg value="${cargoTarget}" />
@@ -869,7 +869,7 @@
                           </elseif>
                           <else>
                             <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                              <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <env key="CFLAGS" value="${extraCflags}" />
                               <env key="CXXFLAGS" value="${extraCxxflags}" />
                               <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
