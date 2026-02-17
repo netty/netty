@@ -1,0 +1,106 @@
+name: Auto Forward port to 5.0
+on:
+  pull_request_target:
+    types:
+      - closed
+      - labeled
+    branches:
+      - '4.2'
+
+jobs:
+  backport:
+    name: "Forward porting to 5.0"
+    concurrency:
+      group: backporting-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-5.0')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          fetch-depth: '0' # Cherry-pick needs full history
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Create forward port PR branch and cherry-pick
+        id: cherry-pick
+        run: |
+          MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
+          echo "Forward porting commit: $MERGE_COMMIT"
+          
+          FORWARDPORT_BRANCH="forwardport-pr-${{ github.event.pull_request.number }}-to-5.0"
+          git fetch origin 5.0:5.0
+          git checkout -b "$FORWARDPORT_BRANCH" 5.0
+          
+          if git cherry-pick -x "$MERGE_COMMIT"; then
+            echo "Cherry-pick successful"
+          else
+            echo "Cherry-pick failed - conflicts detected"
+            git cherry-pick --abort
+            exit 1
+          fi
+          echo "branch=$FORWARDPORT_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Push backport branch
+        id: push
+        if: steps.cherry-pick.outcome == 'success'
+        run: |
+          if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
+            echo "Backport branch push failed"
+            exit 1
+          fi
+          
+      - name: Create pull request
+        if: steps.cherry-pick.outcome == 'success'
+        uses: actions/github-script@v8
+        with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Forward port 5.0: ${context.payload.pull_request.title}`,
+              head: '${{ steps.cherry-pick.outputs.branch }}',
+              base: '5.0',
+              body: `Forward port of #${context.payload.pull_request.number} to 5.0\n` +
+                    `Cherry-picked commit: ${context.payload.pull_request.merge_commit_sha}\n\n---\n` +
+                    `${context.payload.pull_request.body || ''}`
+            });
+            console.log(`Created forward port PR: ${pr.html_url}`);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Forward port PR for 5.0: #${pr.number}`
+            });
+
+      - name: Report cherry-pick conflicts
+        if: failure() && steps.cherry-pick.outcome != 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 5.0.`
+            });
+
+      - name: Report backport branch push failure
+        if: failure() && steps.push.outcome != 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create automatic backport PR.\n`+
+                    `I could cherry-pick onto 5.0 just fine, but pushing the new branch failed.`
+            });
