@@ -55,8 +55,10 @@ public final class LeakPresenceExtension
     @Override
     public void beforeAll(ExtensionContext context) {
         ExtensionContext.Store store = context.getStore(ExtensionContext.Namespace.GLOBAL);
-        if (store.get(SCOPE_KEY) != null) {
-            throw new IllegalStateException("Weird context lifecycle");
+        LeakPresenceDetector.ResourceScope existingScope = (LeakPresenceDetector.ResourceScope) store.get(SCOPE_KEY);
+        if (existingScope != null) {
+            existingScope.retain();
+            return;
         }
         LeakPresenceDetector.ResourceScope scope = new LeakPresenceDetector.ResourceScope(context.getDisplayName());
         store.put(SCOPE_KEY, scope);
