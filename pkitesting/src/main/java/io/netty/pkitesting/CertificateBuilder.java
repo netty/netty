@@ -113,6 +113,7 @@ public final class CertificateBuilder {
     static final String OID_PKIX_KP_EMAIL_PROTECTION = OID_PKIX_KP + ".4";
     static final String OID_PKIX_KP_TIME_STAMPING = OID_PKIX_KP + ".8";
     static final String OID_PKIX_KP_OCSP_SIGNING = OID_PKIX_KP + ".9";
+    static final String OID_PKIX_PE_ACME_IDENTIFIER = "1.3.6.1.5.5.7.1.31";
     static final String OID_KERBEROS_KEY_PURPOSE_CLIENT_AUTH = "1.3.6.1.5.2.3.4";
     static final String OID_MICROSOFT_SMARTCARD_LOGIN = "1.3.6.1.4.1.311.20.2.2";
     private static final GeneralName[] EMPTY_GENERAL_NAMES = new GeneralName[0];
@@ -558,6 +559,31 @@ public final class CertificateBuilder {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Add an {@code acmeIdentifier} extension marked {@code critical}, with the given authorization SHA-256 value.
+     * <p>
+     * The {@code acmeIdentifier} extension is specified by
+     * <a href="https://datatracker.ietf.org/doc/html/rfc8737">RFC 8737</a>,
+     * which specify the TLS-ALPN-01 challenge type.
+     * See the <a href="https://letsencrypt.org/docs/challenge-types/#tls-alpn-01">Let's Encrypt documentation</a>
+     * for a short summary of this ACME challenge method.
+     * <p>
+     * To use this challenge method, the server must accept TLS connections with an ALPN protocol name of
+     * {@code acme-tls/1} and an SNI extension for the hostname being challenged.
+     * The server must then offer a self-signed certificate that include both this extension,
+     * and a {@linkplain #addSanDnsName(String) dNSName SAN} with the hostname that is being challenged.
+     * <p>
+     * The extension value must be the SHA-256 of the key authorization challenge.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc8555#section-8.1">RFC 8555</a> for details on key
+     * authorizations.
+     *
+     * @param sha256 The SHA-256 of the key authorization.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder addAcmeIdentifierExtension(byte[] sha256) {
+        return addExtension(OID_PKIX_PE_ACME_IDENTIFIER, true, requireNonNull(sha256, "sha256"));
     }
 
     /**
