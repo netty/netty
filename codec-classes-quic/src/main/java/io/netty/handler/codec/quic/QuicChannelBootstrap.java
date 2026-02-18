@@ -50,7 +50,8 @@ public final class QuicChannelBootstrap {
 
     private SocketAddress local;
     private SocketAddress remote;
-    private QuicConnectionAddress connectionAddress = QuicConnectionAddress.EPHEMERAL;
+    private QuicConnectionAddress localAddress = QuicConnectionAddress.EPHEMERAL;
+    private QuicConnectionAddress remoteAddress = QuicConnectionAddress.EPHEMERAL;
     private ChannelHandler handler;
     private ChannelHandler streamHandler;
 
@@ -178,9 +179,35 @@ public final class QuicChannelBootstrap {
      *
      * @param connectionAddress     the {@link QuicConnectionAddress} to use.
      * @return                      this instance.
+     * @deprecated                  use {@link #localConnectionAddress(QuicConnectionAddress)}.
      */
+    @Deprecated
     public QuicChannelBootstrap connectionAddress(QuicConnectionAddress connectionAddress) {
-        this.connectionAddress = ObjectUtil.checkNotNull(connectionAddress, "connectionAddress");
+        this.localAddress = ObjectUtil.checkNotNull(connectionAddress, "connectionAddress");
+        return this;
+    }
+
+    /**
+     * Set the {@link QuicConnectionAddress} to use. If none is specified a random address is generated on your
+     * behalf.
+     *
+     * @param localConnectionAddress     the {@link QuicConnectionAddress} to use.
+     * @return                      this instance.
+     */
+    public QuicChannelBootstrap localConnectionAddress(QuicConnectionAddress localConnectionAddress) {
+        this.localAddress = ObjectUtil.checkNotNull(localConnectionAddress, "localConnectionAddress");
+        return this;
+    }
+
+    /**
+     * Set the {@link QuicConnectionAddress} to use. If none is specified a random address is generated on your
+     * behalf.
+     *
+     * @param remoteConnectionAddress     the {@link QuicConnectionAddress} to use.
+     * @return                            this instance.
+     */
+    public QuicChannelBootstrap remoteConnectionAddress(QuicConnectionAddress remoteConnectionAddress) {
+        this.remoteAddress = ObjectUtil.checkNotNull(remoteConnectionAddress, "remoteConnectionAddress");
         return this;
     }
 
@@ -220,7 +247,8 @@ public final class QuicChannelBootstrap {
             throw new IllegalStateException("remote not set");
         }
 
-        final QuicConnectionAddress address = connectionAddress;
+        final QuicConnectionAddress localaddress = localAddress;
+        final QuicConnectionAddress remoteaddress = remoteAddress;
         QuicChannel channel = QuicheQuicChannel.forClient(parent, (InetSocketAddress)  local,
                 (InetSocketAddress) remote,
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
@@ -232,7 +260,7 @@ public final class QuicChannelBootstrap {
             if (cause != null) {
                 promise.setFailure(cause);
             } else {
-                channel.connect(address).addListener(f -> {
+                channel.connect(remoteaddress, localaddress).addListener(f -> {
                     Throwable error = f.cause();
                     if (error != null) {
                         promise.setFailure(error);

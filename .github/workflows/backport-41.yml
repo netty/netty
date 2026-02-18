@@ -81,10 +81,24 @@ jobs:
               body: `Backport PR for 4.1: #${pr.number}`
             });
 
-      - name: Report cherry-pick conflicts
-        if: failure() && steps.cherry-pick.outcome != 'success'
+      # Important: This script MUST run with the default GITHUB_TOKEN to avoid triggering other actions.
+      - name: Remove triggering label
+        if: steps.create-pr.outcome == 'success'
         uses: actions/github-script@v8
         with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              name: 'needs-cherry-pick-4.1'
+            });
+
+      - name: Report cherry-pick conflicts
+        if: failure() && steps.cherry-pick.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -94,9 +108,10 @@ jobs:
             });
 
       - name: Report backport branch push failure
-        if: failure() && steps.push.outcome != 'success'
+        if: failure() && steps.push.outcome == 'failure'
         uses: actions/github-script@v8
         with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
           script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -107,6 +122,6 @@ jobs:
             });
 
       - name: Remove branch on PR create failure
-        if: failure() && steps.create-pr.outcome != 'success'
+        if: failure() && steps.cherry-pick.outputs.branch
         run: |
           git push -d origin "${{ steps.cherry-pick.outputs.branch }}"
