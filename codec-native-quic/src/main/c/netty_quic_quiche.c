@@ -311,6 +311,10 @@ static jint netty_quiche_err_crypto_buffer_exceeded(JNIEnv* env, jclass clazz) {
     return QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED;
 }
 
+static jint netty_quiche_err_invalid_dcid_initialization(JNIEnv* env, jclass clazz) {
+    return QUICHE_ERR_INVALID_DCID_INITIALIZATION;
+}
+
 static jint netty_quiche_cc_reno(JNIEnv* env, jclass clazz) {
     return QUICHE_CC_RENO;
 }
@@ -320,7 +324,7 @@ static jint netty_quiche_cc_cubic(JNIEnv* env, jclass clazz) {
 }
 
 static jint netty_quiche_cc_bbr(JNIEnv* env, jclass clazz) {
-    return QUICHE_CC_BBR;
+    return QUICHE_CC_BBR2_GCONGESTION;
 }
 
 static jint netty_quiche_path_event_type_new(JNIEnv* env, jclass clazz) {
@@ -396,6 +400,24 @@ static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong sci
                                  local_pointer, (socklen_t) local_len,
                                  peer_pointer, (socklen_t) peer_len,
                                  (quiche_config *) config, (void*) ssl, isServer == JNI_TRUE ? true : false);
+    if (conn == NULL) {
+        return -1;
+    }
+    return (jlong) conn;
+}
+
+static jlong netty_quiche_conn_new_with_tls_and_client_dcid(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong odcid, jint odcid_len, jlong local, jint local_len, jlong peer, jint peer_len, jlong config, jlong ssl) {
+    const uint8_t * odcid_pointer = NULL;
+    if (odcid_len != -1) {
+        odcid_pointer = (const uint8_t *) odcid;
+    }
+    const struct sockaddr *local_pointer = (const struct sockaddr*) local;
+    const struct sockaddr *peer_pointer = (const struct sockaddr*) peer;
+    quiche_conn *conn = quiche_conn_new_with_tls_and_client_dcid((const uint8_t *) scid, (size_t) scid_len,
+                                 odcid_pointer, (size_t) odcid_len,
+                                 local_pointer, (socklen_t) local_len,
+                                 peer_pointer, (socklen_t) peer_len,
+                                 (quiche_config *) config, (void*) ssl);
     if (conn == NULL) {
         return -1;
     }
@@ -1155,6 +1177,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "quiche_err_out_of_identifiers", "()I", (void *) netty_quiche_err_out_of_identifiers },
   { "quiche_err_key_update", "()I", (void *) netty_quiche_err_key_update },
   { "quiche_err_crypto_buffer_exceeded", "()I", (void *) netty_quiche_err_crypto_buffer_exceeded },
+  { "quiche_err_invalid_dcid_initialization", "()I", (void *) netty_quiche_err_invalid_dcid_initialization },
   { "quiche_cc_reno", "()I", (void *) netty_quiche_cc_reno },
   { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic },
   { "quiche_cc_bbr", "()I", (void *) netty_quiche_cc_bbr },
@@ -1178,6 +1201,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_source_id", "(J)[B", (void *) netty_quiche_conn_source_id },
   { "quiche_conn_destination_id", "(J)[B", (void *) netty_quiche_conn_destination_id },
   { "quiche_conn_new_with_tls", "(JIJIJIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
+  { "quiche_conn_new_with_tls_and_client_dcid", "(JIJIJIJIJJ)J", (void *) netty_quiche_conn_new_with_tls_and_client_dcid },
   { "quiche_conn_recv", "(JJIJ)I", (void *) netty_quiche_conn_recv },
   { "quiche_conn_send", "(JJIJ)I", (void *) netty_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quiche_conn_free },
