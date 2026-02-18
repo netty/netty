@@ -314,7 +314,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 //     - https://github.com/netty/netty/issues/7758
                 if (result.bytesConsumed() == 0) {
                     int consumed = inNioBuffer.position() - position;
-                    if (consumed != result.bytesConsumed()) {
+                    if (consumed != 0) {
                         // Create a new SSLEngineResult with the correct bytesConsumed().
                         return new SSLEngineResult(
                                 result.getStatus(), result.getHandshakeStatus(), consumed, result.bytesProduced());
