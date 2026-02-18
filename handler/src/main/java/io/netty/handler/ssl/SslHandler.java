@@ -301,27 +301,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int writerIndex = out.writerIndex();
                 ByteBuffer inNioBuffer = getUnwrapInputBuffer(handler, toByteBuffer(in, in.readerIndex(), len));
+                int position = inNioBuffer.position();
                 final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
-                    toByteBuffer(out, writerIndex, out.writableBytes()));
+                        toByteBuffer(out, writerIndex, out.writableBytes()));
                 out.writerIndex(writerIndex + result.bytesProduced());
-                return result;
-            }
 
-            private ByteBuffer getUnwrapInputBuffer(SslHandler handler, ByteBuffer inNioBuffer) {
-                int javaVersion = PlatformDependent.javaVersion();
-                if (javaVersion >= 22 && javaVersion < 25 && inNioBuffer.isDirect()) {
-                    // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
-                    int remaining = inNioBuffer.remaining();
-                    ByteBuffer copy = handler.unwrapInputCopy;
-                    if (copy == null || copy.capacity() < remaining) {
-                        handler.unwrapInputCopy = copy = ByteBuffer.allocate(remaining);
-                    } else {
-                        copy.clear();
+                // This is a workaround for a bug in Android 5.0. Android 5.0 does not correctly update the
+                // SSLEngineResult.bytesConsumed() in some cases and just return 0.
+                //
+                // See:
+                //     - https://android-review.googlesource.com/c/platform/external/conscrypt/+/122080
+                //     - https://github.com/netty/netty/issues/7758
+                if (result.bytesConsumed() == 0) {
+                    int consumed = inNioBuffer.position() - position;
+                    if (consumed != result.bytesConsumed()) {
+                        // Create a new SSLEngineResult with the correct bytesConsumed().
+                        return new SSLEngineResult(
+                                result.getStatus(), result.getHandshakeStatus(), consumed, result.bytesProduced());
                     }
-                    copy.put(inNioBuffer).flip();
-                    return copy;
                 }
-                return inNioBuffer;
+                return result;
             }
 
             @Override
