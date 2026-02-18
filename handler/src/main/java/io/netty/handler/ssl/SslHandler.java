@@ -303,7 +303,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 ByteBuffer inNioBuffer = getUnwrapInputBuffer(handler, toByteBuffer(in, in.readerIndex(), len));
                 int position = inNioBuffer.position();
                 final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
-                        toByteBuffer(out, writerIndex, out.writableBytes()));
+                    toByteBuffer(out, writerIndex, out.writableBytes()));
                 out.writerIndex(writerIndex + result.bytesProduced());
 
                 // This is a workaround for a bug in Android 5.0. Android 5.0 does not correctly update the
@@ -321,6 +321,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
                 return result;
+            }
+
+            private ByteBuffer getUnwrapInputBuffer(SslHandler handler, ByteBuffer inNioBuffer) {
+                int javaVersion = PlatformDependent.javaVersion();
+                if (javaVersion >= 22 && javaVersion < 25 && inNioBuffer.isDirect()) {
+                    // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
+                    int remaining = inNioBuffer.remaining();
+                    ByteBuffer copy = handler.unwrapInputCopy;
+                    if (copy == null || copy.capacity() < remaining) {
+                        handler.unwrapInputCopy = copy = ByteBuffer.allocate(remaining);
+                    } else {
+                        copy.clear();
+                    }
+                    copy.put(inNioBuffer).flip();
+                    return copy;
+                }
+                return inNioBuffer;
             }
 
             @Override
