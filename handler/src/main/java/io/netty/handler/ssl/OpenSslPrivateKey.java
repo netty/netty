@@ -48,7 +48,7 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
         return null;
     }
 
-    private long privateKeyAddress() {
+    long privateKeyAddress() {
         if (refCnt() <= 0) {
             throw new IllegalReferenceCountException();
         }

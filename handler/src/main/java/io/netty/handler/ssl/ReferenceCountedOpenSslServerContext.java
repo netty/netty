@@ -20,13 +20,13 @@ import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
@@ -56,10 +56,11 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options);
+                enableOcsp, keyStore, resumptionController, options, credentials);
     }
 
     ReferenceCountedOpenSslServerContext(
@@ -68,11 +69,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls,
                 null, // No endpoint validation for servers.
-                enableOcsp, true, null, resumptionController, options);
+                enableOcsp, true, null, resumptionController, options, credentials);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
