@@ -42,6 +42,7 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int quiche_err_out_of_identifiers();
     static native int quiche_err_key_update();
     static native int quiche_err_crypto_buffer_exceeded();
+    static native int quiche_err_invalid_dcid_initialization();
     static native int quiche_cc_reno();
     static native int quiche_cc_cubic();
     static native int quiche_cc_bbr();
