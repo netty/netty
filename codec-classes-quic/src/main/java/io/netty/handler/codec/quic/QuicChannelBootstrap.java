@@ -201,7 +201,10 @@ public final class QuicChannelBootstrap {
 
     /**
      * Set the {@link QuicConnectionAddress} to use. If none is specified a random address is generated on your
-     * behalf.
+     * behalf. Be aware that the provided {@link QuicConnectionAddress} should be generated carefully in a random way
+     * that makes it impossible to predict it as otherwise the security of the quic connection might be too weak.
+     * Fore more details see
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9000#section-7.2">RFC9000 Section 7.2</a>.
      *
      * @param remoteConnectionAddress     the {@link QuicConnectionAddress} to use.
      * @return                            this instance.
