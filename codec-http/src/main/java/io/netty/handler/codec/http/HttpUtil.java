@@ -719,8 +719,10 @@ public final class HttpUtil {
      */
     private static int validateCharSequenceToken(CharSequence token) {
         for (int i = 0, len = token.length(); i < len; i++) {
-            byte value = (byte) token.charAt(i);
-            if (!isValidTokenChar(value)) {
+            int value = token.charAt(i);
+            // 1. Check for truncation (anything above 255)
+            // 2. Check against the BitSet (isValidTokenChar handles 128-255 via bit < 0)
+            if (value > 0xFF || !isValidTokenChar((byte) value)) {
                 return i;
             }
         }
