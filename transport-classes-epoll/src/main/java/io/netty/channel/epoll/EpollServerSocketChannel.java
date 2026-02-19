@@ -84,6 +84,8 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         }
         socket.listen(config.getBacklog());
         active = true;
+        // We now listen for new connections, submit the ops so we receive events.
+        submitCurrentOps();
     }
 
     @Override

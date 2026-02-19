@@ -21,6 +21,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
@@ -227,7 +228,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
                 ByteBuf content = (ByteBuf) e.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                        new DefaultAddressedEnvelope<ByteBuf, DomainSocketAddress>(
+                        new DefaultAddressedEnvelope<>(
                                 newDirectBuffer(e, content), (DomainSocketAddress) e.recipient()) : e;
             }
         }
@@ -264,6 +265,18 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollDomainDatagramChannelUnsafe();
+    }
+
+    @Override
+    protected void doRegister(ChannelPromise promise) {
+        super.doRegister(promise);
+        promise.addListener(f -> {
+            if (f.isSuccess() && isRegistered()) {
+                // As Datagram is connection-less we can submit the current ops once the registration itself was
+                // successful.
+                submitCurrentOps();
+            }
+        });
     }
 
     /**

@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,6 @@ public final class TestsuitePermutation {
 
     public static List<ByteBufAllocator> allocator() {
         List<ByteBufAllocator> allocators = new ArrayList<ByteBufAllocator>();
-        allocators.add(UnpooledByteBufAllocator.DEFAULT);
         allocators.add(PooledByteBufAllocator.DEFAULT);
         allocators.add(DEFAULT_ADAPTIVE_ALLOCATOR);
         return allocators;
