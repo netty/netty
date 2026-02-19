@@ -535,4 +535,22 @@ public class HttpUtilTest {
         assertEquals(2, validateToken(asciiStringToken));
         assertEquals(2, validateToken(token));
     }
+
+    @ParameterizedTest
+    @ValueSource(chars = {
+            // High-bit Truncation Candidates (verifying > 0xFF check)
+            // These characters are chosen because their lower 8 bits
+            // alias to valid US-ASCII 'tchar' values.
+            '\u0161', // 0x0161 truncates to 0x61 ('a')
+            '\u0121', // 0x0121 truncates to 0x21 ('!')
+            '\u0231', // 0x0231 truncates to 0x31 ('1')
+            '\u0361'  // 0x0361 truncates to 0x61 ('a')
+    })
+    public void testInvalidTokenCharsOutsideAsciiRange(char invalidChar) {
+        // We use a String here because AsciiString would truncate
+        // the char to a byte during construction.
+        String token = "GE" + invalidChar + 'T';
+        assertEquals(2, validateToken(token),
+            String.format("Character U+%04X should be invalid", (int) invalidChar));
+    }
 }
