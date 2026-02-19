@@ -271,13 +271,18 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             Boolean unaligned = null;
+            String unalignedProperty = SystemPropertyUtil.get("io.netty.unalignedAccess", "").trim();
             // using a known type to avoid loading new classes
             final AtomicLong maybeMaxMemory = new AtomicLong(-1);
             try {
                 Class<?> bitsClass =
                         Class.forName("java.nio.Bits", false, getSystemClassLoader());
                 int version = javaVersion();
-                if (version >= 9) {
+                if ("true".equalsIgnoreCase(unalignedProperty)) {
+                    unaligned = Boolean.TRUE;
+                } else if ("false".equalsIgnoreCase(unalignedProperty)) {
+                    unaligned = Boolean.FALSE;
+                } else if (version >= 9) {
                     // Java9/10 use all lowercase and later versions all uppercase.
                     String fieldName = version >= 11? "MAX_MEMORY" : "maxMemory";
                     // On Java9 and later we try to directly access the field as we can do this without
