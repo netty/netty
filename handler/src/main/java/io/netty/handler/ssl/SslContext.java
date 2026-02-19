@@ -445,7 +445,7 @@ public abstract class SslContext {
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
                                             sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
-                                            false, false, null, keyStore);
+                                            false, false, null, keyStore, null, null);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -462,7 +462,8 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, SecureRandom secureRandom, String keyStoreType,
-            Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+            Map.Entry<SslContextOption<?>, Object>[] ctxOptions,
+            List<OpenSslCredential> credentials)
             throws SSLException {
 
         if (provider == null) {
@@ -475,6 +476,11 @@ public abstract class SslContext {
         case JDK:
             if (enableOcsp) {
                 throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
+            }
+            if (credentials != null && !credentials.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "OpenSslCredential is not supported with SslProvider.JDK. " +
+                                "Use SslProvider.OPENSSL or SslProvider.OPENSSL_REFCNT instead.");
             }
             return new JdkSslServerContext(sslContextProvider,
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
@@ -491,7 +497,8 @@ public abstract class SslContext {
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
+                    credentials);
         default:
             throw new Error("Unexpected provider: " + provider);
         }
@@ -810,7 +817,7 @@ public abstract class SslContext {
                                             apn, null, sessionCacheSize, sessionTimeout, false,
                                             null, KeyStore.getDefaultType(),
                                             SslUtils.defaultEndpointVerificationAlgorithm,
-                                            Collections.emptyList());
+                                            Collections.emptyList(), null, null);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -828,7 +835,8 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout, boolean enableOcsp,
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -839,6 +847,11 @@ public abstract class SslContext {
             case JDK:
                 if (enableOcsp) {
                     throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
+                }
+                if (credentials != null && !credentials.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "OpenSslCredential is not supported with SslProvider.JDK. " +
+                                    "Use SslProvider.OPENSSL or SslProvider.OPENSSL_REFCNT instead.");
                 }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
@@ -852,7 +865,7 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options);
+                        options, credentials);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
@@ -860,7 +873,7 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options);
+                        options, credentials);
             default:
                 throw new Error("Unexpected provider: " + provider);
         }

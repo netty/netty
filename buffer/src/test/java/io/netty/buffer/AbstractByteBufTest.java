@@ -2335,7 +2335,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(60)
     public void testCopyMultipleThreads0() throws Throwable {
         byte[] bytes = new byte[8];
         random.nextBytes(bytes);

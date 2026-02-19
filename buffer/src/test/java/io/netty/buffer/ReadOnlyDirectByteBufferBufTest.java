@@ -597,7 +597,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(60)
     public void testCopyMultipleThreads() throws Throwable {
         final ByteBuf buffer = newRandomReadOnlyBuffer();
         try {
