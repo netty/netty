@@ -18,17 +18,13 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.security.Principal;
@@ -37,6 +33,12 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -246,6 +248,30 @@ public class SslContextBuilderTest {
             }
         } catch (SSLException expected) {
             // ok
+        }
+    }
+
+    @Test
+    void openSslCredentialApiIsNotAvailableWithJdkProvider() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        X509Bundle bundle = new CertificateBuilder()
+                .subject("cn=netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        OpenSslCredential credential = OpenSslCredentialBuilder.forX509(
+                bundle.getKeyPair().getPrivate(), bundle.getCertificatePath())
+                .build();
+        try {
+            SslContextBuilder clientBuilder = SslContextBuilder.forClient();
+            SslContextBuilder serverBuilder = SslContextBuilder.forServer(bundle.toKeyManagerFactory());
+            clientBuilder.sslProvider(SslProvider.JDK);
+            serverBuilder.sslProvider(SslProvider.JDK);
+            clientBuilder.addCredential(credential);
+            serverBuilder.addCredential(credential);
+            assertThrows(IllegalArgumentException.class, () -> clientBuilder.build());
+            assertThrows(IllegalArgumentException.class, () -> serverBuilder.build());
+        } finally {
+            credential.release();
         }
     }
 

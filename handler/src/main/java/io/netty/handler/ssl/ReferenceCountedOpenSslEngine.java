@@ -2299,6 +2299,83 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return applicationProtocol;
     }
 
+    /**
+     * Adds an {@link OpenSslCredential} to this SSL engine.
+     *
+     * <p>This method allows adding credentials on a per-connection basis, which can be useful
+     * for implementing dynamic credential selection based on connection-specific parameters.
+     *
+     * <p>This is a BoringSSL-specific feature.
+     *
+     * @param credential the credential to add
+     * @throws SSLException if the credential cannot be added
+     * @throws IllegalStateException if the handshake has already started
+     * @see OpenSslCredentialBuilder
+     */
+    public void addCredential(OpenSslCredential credential) throws SSLException {
+        synchronized (this) {
+            try {
+                if (destroyed) {
+                    throw new IllegalStateException("Engine is destroyed");
+                }
+                if (handshakeState != HandshakeState.NOT_STARTED) {
+                    throw new IllegalStateException("Handshake has already started");
+                }
+                if (!(credential instanceof OpenSslCredentialPointer)) {
+                    throw new IllegalArgumentException("Unsupported credential type: " + credential);
+                }
+            } catch (RuntimeException re) {
+                try {
+                    credential.release();
+                } catch (Throwable th) {
+                    re.addSuppressed(th);
+                }
+                throw re;
+            }
+            OpenSslCredentialPointer pointer = (OpenSslCredentialPointer) credential;
+            // Retain the credential for the lifetime of this SSL connection
+            // Must be done outside the try block so that if retain() throws,
+            // we don't try to release() and hide the original exception
+            credential.retain();
+            try {
+                SSL.addCredential(ssl, pointer.credentialAddress());
+            } catch (Exception e) {
+                credential.release();
+                throw new SSLException("Failed to add credential to SSL engine", e);
+            }
+        }
+    }
+
+    /**
+     * Returns the selected credential for this SSL connection, or {@code null} if no credential
+     * has been selected yet (e.g., handshake not complete).
+     *
+     * <p>This method returns the credential that was ultimately chosen by the TLS handshake.
+     * It's useful for introspection after the handshake completes.
+     *
+     * <p>This is a BoringSSL-specific feature.
+     *
+     * @return the selected credential, or {@code null} if not available
+     * @throws SSLException if an error occurs querying the credential
+     */
+    public OpenSslCredential getSelectedCredential() throws SSLException {
+        synchronized (this) {
+            if (destroyed) {
+                return null;
+            }
+            try {
+                long credPtr = io.netty.internal.tcnative.SSL.getSelectedCredential(ssl);
+                if (credPtr == 0) {
+                    return null;
+                }
+                // Return a non-owning wrapper since OpenSSL manages the credential's lifetime
+                return new NonOwnedOpenSslCredential(credPtr, OpenSslCredential.CredentialType.X509);
+            } catch (Exception e) {
+                throw new SSLException("Failed to get selected credential", e);
+            }
+        }
+    }
+
     private static long bufferAddress(ByteBuffer b) {
         assert b.isDirect();
         if (PlatformDependent.hasUnsafe()) {

@@ -34,21 +34,24 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, String endpointIdentificationAlgorithm,
                    boolean enableOcsp, List<SNIServerName> serverNames, ResumptionController resumptionController,
-                   Map.Entry<SslContextOption<?>, Object>... options)
+                   Map.Entry<SslContextOption<?>, Object>[] options,
+                   List<OpenSslCredential> credentials)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
                 clientAuth, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, false,
-                serverNames, resumptionController, options);
+                serverNames, resumptionController, options, credentials);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                    List<SNIServerName> serverNames, ResumptionController resumptionController,
-                   Map.Entry<SslContextOption<?>, Object>... options)
+                   Map.Entry<SslContextOption<?>, Object>[] options,
+                   List<OpenSslCredential> credentials)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, null, enableOcsp, false, serverNames, resumptionController, options);
+                clientAuth, protocols, startTls, null, enableOcsp, false, serverNames, resumptionController, options,
+                credentials);
     }
 
     @Override

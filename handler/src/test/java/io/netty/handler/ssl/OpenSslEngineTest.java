@@ -26,6 +26,7 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
@@ -87,6 +88,26 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
+
+    private static X509Bundle rsaCert;
+    private static X509Bundle ecdsaCert;
+
+    @BeforeAll
+    public static void setUpCredentialCerts() throws Exception {
+        // Create RSA certificate for credential tests
+        rsaCert = new CertificateBuilder()
+                .subject("cn=rsa.localhost")
+                .rsa2048()
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        // Create ECDSA certificate for credential tests
+        ecdsaCert = new CertificateBuilder()
+                .subject("cn=ecdsa.localhost")
+                .ecp256()
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+    }
 
     public OpenSslEngineTest() {
         super(SslProvider.isTlsv13Supported(OPENSSL));
@@ -1808,5 +1829,57 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     public void testUsingX509TrustManagerVerifiesSNIHostname(SSLEngineTestParam param) throws Exception {
         super.testUsingX509TrustManagerVerifiesSNIHostname(param);
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testHandshakeWithMultipleCredentials(SSLEngineTestParam param) throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
+        // Create credentials
+        OpenSslCredential rsaCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+
+        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+
+        try {
+            // Server context with both credentials
+            SslContext serverSslContext = wrapContext(param,
+                    SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                            .sslProvider(SslProvider.OPENSSL_REFCNT)
+                            .addCredentials(rsaCredential, ecdsaCredential)
+                            .protocols(param.protocols())
+                            .ciphers(param.ciphers())
+                            .build());
+
+            SslContext clientSslContext = wrapContext(param, SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL_REFCNT)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols(param.protocols())
+                    .ciphers(param.ciphers())
+                    .build());
+
+            SSLEngine clientEngine = wrapEngine(clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            SSLEngine serverEngine = wrapEngine(serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            try {
+                // Perform handshake using base class helper
+                handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+
+                // Verify handshake succeeded
+                assertTrue(serverEngine.getSession().isValid());
+            } finally {
+                cleanupClientSslContext(clientSslContext);
+                cleanupServerSslContext(serverSslContext);
+                cleanupClientSslEngine(clientEngine);
+                cleanupServerSslEngine(serverEngine);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(rsaCredential);
+            ReferenceCountUtil.safeRelease(ecdsaCredential);
+        }
     }
 }
