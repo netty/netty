@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
 import io.netty.util.test.DisabledForSlowLeakDetection;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
@@ -210,6 +211,23 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         if (throwable != null) {
             fail("Expected no exception, but got", throwable);
         }
+    }
+
+    @Test
+    public void testMaxFastCapacity() {
+        int maxSize = 100000;
+        AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
+        ByteBuf buf = alloc.newDirectBuffer(maxSize, maxSize);
+        final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
+        try {
+            buf.capacity(maxSize + 1); // Should throw IllegalArgumentException.
+        } catch (Throwable t) {
+            throwableAtomicReference.set(t);
+        } finally {
+            buf.release();
+        }
+        Throwable throwable = throwableAtomicReference.get();
+        Assertions.assertInstanceOf(IllegalArgumentException.class, throwable);
     }
 
     @DisabledForSlowLeakDetection
