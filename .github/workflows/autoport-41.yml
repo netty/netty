@@ -1,4 +1,4 @@
-name: Auto Backport to 4.1
+name: Auto-port to 4.1
 on:
   pull_request_target:
     types:
@@ -6,10 +6,11 @@ on:
       - labeled
     branches:
       - '4.2'
+      - '5.0'
 
 jobs:
-  backport:
-    name: "Backporting to 4.1"
+  autoport:
+    name: "Auto-porting to 4.1"
     concurrency:
       group: port-41-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -28,15 +29,15 @@ jobs:
           git config --global user.email "netty-project-bot@users.noreply.github.com"
           git config --global user.name "Netty Project Bot"
 
-      - name: Create backport PR branch and cherry-pick
+      - name: Create auto-port PR branch and cherry-pick
         id: cherry-pick
         run: |
           MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
-          echo "Backporting commit: $MERGE_COMMIT"
+          echo "Auto-porting commit: $MERGE_COMMIT"
           
-          BACKPORT_BRANCH="backport-pr-${{ github.event.pull_request.number }}-to-4.1"
+          PORT_BRANCH="auto-port-pr-${{ github.event.pull_request.number }}-to-4.1"
           git fetch origin 4.1:4.1
-          git checkout -b "$BACKPORT_BRANCH" 4.1
+          git checkout -b "$PORT_BRANCH" 4.1
           
           if git cherry-pick -x "$MERGE_COMMIT"; then
             echo "Cherry-pick successful"
@@ -45,14 +46,14 @@ jobs:
             git cherry-pick --abort
             exit 1
           fi
-          echo "branch=$BACKPORT_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "branch=$PORT_BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Push backport branch
+      - name: Push auto-port branch
         id: push
         if: steps.cherry-pick.outcome == 'success'
         run: |
           if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
-            echo "Backport branch push failed"
+            echo "Auto-port branch push failed"
             exit 1
           fi
           
@@ -66,19 +67,19 @@ jobs:
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Backport 4.1: ${context.payload.pull_request.title}`,
+              title: `Auto-port 4.1: ${context.payload.pull_request.title}`,
               head: '${{ steps.cherry-pick.outputs.branch }}',
               base: '4.1',
-              body: `Backport of #${context.payload.pull_request.number} to 4.1\n` +
+              body: `Auto-port of #${context.payload.pull_request.number} to 4.1\n` +
                     `Cherry-picked commit: ${context.payload.pull_request.merge_commit_sha}\n\n---\n` +
                     `${context.payload.pull_request.body || ''}`
             });
-            console.log(`Created backport PR: ${pr.html_url}`);
+            console.log(`Created auto-port PR: ${pr.html_url}`);
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `Backport PR for 4.1: #${pr.number}`
+              body: `Auto-port PR for 4.1: #${pr.number}`
             });
 
       # Important: This script MUST run with the default GITHUB_TOKEN to avoid triggering other actions.
@@ -104,10 +105,10 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `Could not create automatic backport PR.\nGot conflicts when cherry-picking onto 4.1.`
+              body: `Could not create auto-port PR.\nGot conflicts when cherry-picking onto 4.1.`
             });
 
-      - name: Report backport branch push failure
+      - name: Report auto-port branch push failure
         if: failure() && steps.push.outcome == 'failure'
         uses: actions/github-script@v8
         with:
@@ -117,7 +118,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: `Could not create automatic backport PR.\n`+
+              body: `Could not create auto-port PR.\n`+
                     `I could cherry-pick onto 4.1 just fine, but pushing the new branch failed.`
             });
 
