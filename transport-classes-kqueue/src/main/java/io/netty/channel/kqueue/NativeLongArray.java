@@ -85,7 +85,7 @@ final class NativeLongArray {
     private void reallocIfNeeded() {
         if (size == capacity) {
             // Double the capacity while it is "sufficiently small", and otherwise increase by 50%.
-            int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
+            int newLength = capacity <= 65536 ? capacity << 1 : capacity + (capacity >> 1);
             ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
             // Copy over the old content of the memory and reset the position as we always act on the buffer as if
             // the position was never increased.
