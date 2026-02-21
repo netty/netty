@@ -72,6 +72,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -459,7 +460,9 @@ public class SniHandlerTest {
                 serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
 
                 ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-                assertTrue(ccf.awaitUninterruptibly().isSuccess());
+                if (!ccf.awaitUninterruptibly().isSuccess()) {
+                    fail("Connect failed", ccf.cause());
+                }
                 clientChannel = ccf.channel();
 
                 assertTrue(serverAlpnDoneLatch.await(5, TimeUnit.SECONDS));

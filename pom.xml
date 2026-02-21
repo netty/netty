@@ -729,7 +729,7 @@
     <jacoco.argLine />
     <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
-    <argLine.javaProperties>-D_</argLine.javaProperties>
+    <argLine.javaProperties>-Dio.netty.util.LeakPresenceDetector.trackCreationStack=true</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <osmaven.version>1.7.1</osmaven.version>
