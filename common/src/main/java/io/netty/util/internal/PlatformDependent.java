@@ -258,7 +258,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (UNSAFE_UNAVAILABILITY_CAUSE == null || PlatformDependent0.isNativeImage()) {
+        if (PlatformDependent0.isNativeImage()) {
             return false;
         }
         boolean varHandleAvailable = false;
@@ -618,6 +618,26 @@ public final class PlatformDependent {
 
     public static boolean hasVarHandle() {
         return VAR_HANDLE;
+    }
+
+    /**
+     * {@code true} if {@code VarHandle} should be used for multi-byte access.
+     *
+     * The multi-byte access strategy is determined as follows:
+     * 1) If the platform supports unaligned access natively, use {@code Unsafe} as the fastest option.
+     * 2) Otherwise, if {@code VarHandle} is available, use it as a fallback.
+     * 3) Otherwise, fall back to manual byte-by-byte access.
+     */
+    public static boolean useVarHandleForMultiByteAccess() {
+        return !isUnaligned() && VAR_HANDLE;
+    }
+
+    /**
+     * {@code true} if multi-byte access at arbitrary offsets is possible, either natively through {@code Unsafe}
+     * or via {@code VarHandle} where the JVM handles alignment and byte ordering internally.
+     */
+    public static boolean canUnalignedAccess() {
+        return isUnaligned() || VAR_HANDLE;
     }
 
     public static VarHandle findVarHandleOfIntField(MethodHandles.Lookup lookup, Class<?> type, String fieldName) {

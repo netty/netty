@@ -99,7 +99,7 @@ final class KQueueEventArray {
      */
     void realloc(boolean throwIfFail) {
         // Double the capacity while it is "sufficiently small", and otherwise increase by 50%.
-        int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
+        int newLength = capacity <= 65536 ? capacity << 1 : capacity + (capacity >> 1);
 
         try {
             int newCapacity = calculateBufferCapacity(newLength);
