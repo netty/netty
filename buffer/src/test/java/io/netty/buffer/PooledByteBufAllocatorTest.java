@@ -501,7 +501,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
-        FutureTask<Void> task = new FutureTask<>(new Runnable() {
+        final FutureTask<Void> task = new FutureTask<Void>(new Runnable() {
             @Override
             public void run() {
                 final ByteBuf buf;
