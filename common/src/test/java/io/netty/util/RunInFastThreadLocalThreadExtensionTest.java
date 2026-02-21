@@ -22,23 +22,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(RunInFastThreadLocalThreadExtension.class)
 public class RunInFastThreadLocalThreadExtensionTest {
     @Test
     void normalTest() {
-        assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        assertInstanceOf(FastThreadLocalThread.class, Thread.currentThread());
     }
 
     @RepeatedTest(1)
     void repeatedTest() {
-        assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        assertInstanceOf(FastThreadLocalThread.class, Thread.currentThread());
     }
 
     @ParameterizedTest
     @ValueSource(ints = 1)
     void parameterizedTest(int ignoreParameter) {
-        assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        assertInstanceOf(FastThreadLocalThread.class, Thread.currentThread());
     }
 }

@@ -57,7 +57,7 @@ public class RunInFastThreadLocalThreadExtension implements InvocationIntercepto
         proceed(invocation);
     }
 
-    private static void proceed(Invocation<Void> invocation) throws Throwable {
+    private static void proceed(final Invocation<Void> invocation) throws Throwable {
         final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
         Thread thread = new FastThreadLocalThread(new Runnable() {
             @Override
