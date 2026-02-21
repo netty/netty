@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
@@ -211,6 +213,27 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertThat(allocAfter - allocBefore)
                 .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
                 .isLessThan(8 * 1024 * 1024);
+    }
+
+    @Test
+    public void testCapacityNotGreaterThanMaxCapacity() {
+        testCapacityNotGreaterThanMaxCapacity(true);
+        testCapacityNotGreaterThanMaxCapacity(false);
+    }
+
+    private void testCapacityNotGreaterThanMaxCapacity(boolean preferDirect) {
+        int maxSize = 100000;
+        ByteBuf buf = newAllocator(preferDirect).newDirectBuffer(maxSize, maxSize);
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    buf.capacity(maxSize + 1);
+                }
+            });
+        } finally {
+            buf.release();
+        }
     }
 
     protected long expectedUsedMemory(T allocator, int capacity) {
