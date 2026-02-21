@@ -417,7 +417,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
+    @Timeout(10)
     public void testNumThreadCachesWithNoDirectArenas() throws Exception {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
@@ -437,11 +437,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
+    @Timeout(10)
     public void testNumThreadCachesAccountForDirectAndHeapArenas() throws Exception {
-        int numHeapArenas = 1;
+        int numArenas = 1;
         final PooledByteBufAllocator allocator =
-                new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
+                new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         ThreadCache tcache0 = createNewThreadCache(allocator, false);
         assertEquals(1, allocator.metric().numThreadLocalCaches());
@@ -457,7 +457,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
+    @Timeout(10)
     public void testThreadCacheToArenaMappings() throws Exception {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =
