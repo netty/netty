@@ -1433,6 +1433,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 chunk = null;
             } finally {
                 if (chunk != null) {
+                    unreserveMatchingBuddy(1, startingCapacity, startIndex, 0);
                     // If chunk is not null we know that buf.init(...) failed and so we need to manually release
                     // the chunk again as we retained it before calling buf.init(...).
                     chunk.release();
