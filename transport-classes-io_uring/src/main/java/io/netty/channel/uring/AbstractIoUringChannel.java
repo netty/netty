@@ -1187,11 +1187,18 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (deregisterPromise != null) {
                 // A deregistration is already in progress.
                 PromiseNotifier.cascade(deregisterPromise, promise);
+            } else if (!isRegistered()) {
+                promise.setSuccess();
             } else {
                 // We need to store a reference to the original promise as we should only notify it once we
                 // have handles all pending completions.
                 deregisterPromise = promise;
-                super.deregister(newPromise());
+                super.deregister(newPromise().addListener(f -> {
+                    if (!f.isSuccess()) {
+                        this.deregisterPromise = null;
+                        promise.setFailure(f.cause());
+                    }
+                }));
             }
         }
     }
