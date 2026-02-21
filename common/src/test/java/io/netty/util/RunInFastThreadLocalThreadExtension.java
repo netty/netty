@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
+import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
@@ -37,6 +38,26 @@ public class RunInFastThreadLocalThreadExtension implements InvocationIntercepto
             final Invocation<Void> invocation,
             final ReflectiveInvocationContext<Method> invocationContext,
             final ExtensionContext extensionContext) throws Throwable {
+        proceed(invocation);
+    }
+
+    @Override
+    public void interceptTestTemplateMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext) throws Throwable {
+        proceed(invocation);
+    }
+
+    @Override
+    public void interceptDynamicTest(
+            Invocation<Void> invocation,
+            DynamicTestInvocationContext invocationContext,
+            ExtensionContext extensionContext) throws Throwable {
+        proceed(invocation);
+    }
+
+    private static void proceed(Invocation<Void> invocation) throws Throwable {
         final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
         Thread thread = new FastThreadLocalThread(new Runnable() {
             @Override
