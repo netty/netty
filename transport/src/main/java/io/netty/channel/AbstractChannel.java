@@ -43,7 +43,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
     private final Channel parent;
-    private final ChannelId id;
+    private final int hashCode = System.identityHashCode(this);
+    private volatile ChannelId id;
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
@@ -68,7 +69,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
-        id = newId();
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
     }
@@ -81,7 +81,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected AbstractChannel(Channel parent, ChannelId id) {
         this.parent = parent;
-        this.id = id;
+        this.id = ObjectUtil.checkNotNull(id, "id");
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
     }
@@ -100,6 +100,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public final ChannelId id() {
+        ChannelId id = this.id;
+        if (id == null) {
+            id = newId();
+            this.id = id;
+        }
         return id;
     }
 
@@ -210,7 +215,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public final int hashCode() {
-        return id.hashCode();
+        return hashCode;
     }
 
     /**
@@ -239,6 +244,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     @Override
     public String toString() {
+        ChannelId id = id();
         boolean active = isActive();
         if (strValActive == active && strVal != null) {
             return strVal;

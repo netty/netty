@@ -41,9 +41,7 @@ public final class DefaultChannelId implements ChannelId {
     private static final long serialVersionUID = 3884076183504074063L;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelId.class);
-    private static final byte[] MACHINE_ID;
     private static final int PROCESS_ID_LEN = 4;
-    private static final int PROCESS_ID;
     private static final int SEQUENCE_LEN = 4;
     private static final int TIMESTAMP_LEN = 8;
     private static final int RANDOM_LEN = 4;
@@ -54,61 +52,67 @@ public final class DefaultChannelId implements ChannelId {
      * Returns a new {@link DefaultChannelId} instance.
      */
     public static DefaultChannelId newInstance() {
-        return new DefaultChannelId(MACHINE_ID,
-                                    PROCESS_ID,
-                                    nextSequence.getAndIncrement(),
-                                    Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
-                                    ThreadLocalRandom.current().nextInt());
+        int sequence = nextSequence.getAndIncrement();
+        return new DefaultChannelId(DefaultChannelIdValues.MACHINE_ID,
+                DefaultChannelIdValues.PROCESS_ID,
+                sequence,
+                Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
+                sequence);
     }
 
-    static {
-        int processId = -1;
-        String customProcessId = SystemPropertyUtil.get("io.netty.processId");
-        if (customProcessId != null) {
-            try {
-                processId = Integer.parseInt(customProcessId);
-            } catch (NumberFormatException e) {
-                // Malformed input.
+    private static final class DefaultChannelIdValues {
+        private static final byte[] MACHINE_ID = machineId();
+        private static final int PROCESS_ID = processId();
+
+        private static int processId() {
+            int processId = -1;
+            String customProcessId = SystemPropertyUtil.get("io.netty.processId");
+            if (customProcessId != null) {
+                try {
+                    processId = Integer.parseInt(customProcessId);
+                } catch (NumberFormatException e) {
+                    // Malformed input.
+                }
+
+                if (processId < 0) {
+                    processId = -1;
+                    logger.warn("-Dio.netty.processId: {} (malformed)", customProcessId);
+                } else if (logger.isDebugEnabled()) {
+                    logger.debug("-Dio.netty.processId: {} (user-set)", processId);
+                }
             }
 
             if (processId < 0) {
-                processId = -1;
-                logger.warn("-Dio.netty.processId: {} (malformed)", customProcessId);
-            } else if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (user-set)", processId);
+                processId = defaultProcessId();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("-Dio.netty.processId: {} (auto-detected)", processId);
+                }
             }
+            return processId;
         }
 
-        if (processId < 0) {
-            processId = defaultProcessId();
-            if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (auto-detected)", processId);
+        private static byte[] machineId() {
+            byte[] machineId = null;
+            String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
+            if (customMachineId != null) {
+                try {
+                    machineId = parseMAC(customMachineId);
+                } catch (Exception e) {
+                    logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId, e);
+                }
+                if (machineId != null) {
+                    logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
+                }
             }
+
+            if (machineId == null) {
+                machineId = defaultMachineId();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("-Dio.netty.machineId: {} (auto-detected)", MacAddressUtil.formatAddress(machineId));
+                }
+            }
+            return machineId;
         }
-
-        PROCESS_ID = processId;
-
-        byte[] machineId = null;
-        String customMachineId = SystemPropertyUtil.get("io.netty.machineId");
-        if (customMachineId != null) {
-            try {
-                machineId = parseMAC(customMachineId);
-            } catch (Exception e) {
-                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId, e);
-            }
-            if (machineId != null) {
-                logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
-            }
-        }
-
-        if (machineId == null) {
-            machineId = defaultMachineId();
-            if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.machineId: {} (auto-detected)", MacAddressUtil.formatAddress(machineId));
-            }
-        }
-
-        MACHINE_ID = machineId;
     }
 
     static int processHandlePid(ClassLoader loader) {
