@@ -31,6 +31,8 @@ import java.nio.ByteBuffer;
  */
 public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
+    private static final boolean USE_VAR_HANDLE = PlatformDependent.useVarHandleForMultiByteAccess();
+
     long memoryAddress;
 
     /**
@@ -126,11 +128,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected short _getShort(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getShortBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected short _getShortLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getShortLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShortLE(addr(index));
     }
 
@@ -158,11 +166,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected int _getInt(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getIntBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected int _getIntLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getIntLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getIntLE(addr(index));
     }
 
@@ -174,11 +188,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected long _getLong(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getLongBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
     protected long _getLongLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getLongLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLongLE(addr(index));
     }
 
@@ -219,11 +239,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setShortBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShort(addr(index), value);
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setShortLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShortLE(addr(index), value);
     }
 
@@ -253,11 +281,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setIntBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setInt(addr(index), value);
     }
 
     @Override
     protected void _setIntLE(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setIntLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setIntLE(addr(index), value);
     }
 
@@ -270,11 +306,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setLongBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLong(addr(index), value);
     }
 
     @Override
     protected void _setLongLE(int index, long value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setLongLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLongLE(addr(index), value);
     }
 
