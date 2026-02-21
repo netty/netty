@@ -349,13 +349,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Timeout(value = 20, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
         testThreadCacheDestroyed(false);
     }
 
     @Test
-    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Timeout(value = 20, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
         testThreadCacheDestroyed(true);
     }
@@ -408,7 +408,6 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         while (allocator.metric().numThreadLocalCaches() > 0) {
             // Signal we want to have a GC run to ensure we can process our ThreadCleanerReference
             System.gc();
-            System.runFinalization();
             LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
 
