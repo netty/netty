@@ -1373,7 +1373,7 @@ final class AdaptivePoolingAllocator {
             int tree = (capFactor << 1) - 1;
             int maxShift = Integer.numberOfTrailingZeros(capFactor);
             assert maxShift <= 30; // The top 2 bits are used for marking.
-            freeListCapacity = tree >> 1;
+            freeListCapacity = capFactor;
             freeList = MpscIntQueue.create(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
             buddies = new byte[1 + tree];
 
