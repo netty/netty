@@ -1399,10 +1399,8 @@ final class AdaptivePoolingAllocator {
         private void deallocateIfNeeded(int localSize) {
             // Check if all segments have been returned.
             int totalFreeSegments = localSize + externalFreeList.size();
-            if (totalFreeSegments == segments) {
-                if (STATE.compareAndSet(this, localSize, DEALLOCATED)) {
-                    deallocate();
-                }
+            if (totalFreeSegments == segments && STATE.compareAndSet(this, localSize, DEALLOCATED)) {
+                deallocate();
             }
         }
 
