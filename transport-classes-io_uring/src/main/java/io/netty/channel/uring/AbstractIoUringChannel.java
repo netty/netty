@@ -101,6 +101,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private Promise<Void> delayedClose;
     private boolean inputClosedSeenErrorOnRead;
     private boolean socketIsEmpty;
+    private Promise<Void> deregisterPromise;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
@@ -504,7 +505,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // was a close that needs to be done now.
             handleDelayedClosed();
 
-            if (ioState == 0 && closed) {
+            if (ioState == 0 && (closed || deregisterPromise != null)) {
                 // Cancel the registration now.
                 registration.cancel();
             }
@@ -515,6 +516,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             freeMsgHdrArray();
             freeRemoteAddressMemory();
             AbstractIoUringChannel.this.unregistered();
+
+            // Check if we need to notify about the deregistration.
+            if (deregisterPromise != null) {
+                Promise<Void> promise = deregisterPromise;
+                deregisterPromise = null;
+                promise.setSuccess(null);
+            }
         }
 
         @Override
@@ -564,37 +572,46 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    private void cancelOps(boolean cancelConnect) {
+    private boolean cancelOps(boolean cancelConnect) {
         if (registration == null || !registration.isValid()) {
-            return;
+            return false;
         }
+        boolean cancelled = false;
         byte flags = (byte) 0;
         if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
             long id = registration.submit(
                     IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
             assert id != 0;
             pollRdhupId = 0;
+            cancelled = true;
         }
         if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
             long id = registration.submit(
                     IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
             assert id != 0;
             pollInId = 0;
+            cancelled = true;
         }
         if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
             long id = registration.submit(
                     IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
             assert id != 0;
             pollOutId = 0;
+            cancelled = true;
         }
         if (cancelConnect && connectId != 0) {
             // Best effort to cancel the already submitted connect request.
             long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
             assert id != 0;
             connectId = 0;
+            cancelled = true;
+        }
+        if (numOutstandingReads != 0 || numOutstandingWrites != 0) {
+            cancelled = true;
         }
         cancelOutstandingReads(registration, numOutstandingReads);
         cancelOutstandingWrites(registration, numOutstandingWrites);
+        return cancelled;
     }
 
     private boolean canCloseNow() {
@@ -1097,7 +1114,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         EventLoop eventLoop = executor();
         eventLoop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (IoRegistration) f.getNow();
+                registration = f.getNow();
                 promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
@@ -1107,9 +1124,24 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final void doDeregister(Promise<Void> promise) {
+        if (deregisterPromise != null) {
+            deregisterPromise.addHandler(promise);
+            return;
+        } else if (!isRegistered()) {
+            promise.setSuccess(null);
+            return;
+        }
         // Cancel all previous submitted ops.
-        cancelOps(connectPromise != null);
-        promise.setSuccess(null);
+        if (!cancelOps(connectPromise != null)) {
+            // It's possible that we never registered anything and so we did not submit any ASYNC_CANCEL.
+            // In this case directly call cancel as we will not receive any completion at all.
+            if (registration != null) {
+                registration.cancel();
+            }
+            promise.setSuccess(null);
+        } else {
+            deregisterPromise = promise;
+        }
     }
 
     @Override
