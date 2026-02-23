@@ -1598,12 +1598,12 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ByteBuf capacity(int newCapacity) {
+            checkNewCapacity(newCapacity);
             if (length <= newCapacity && newCapacity <= maxFastCapacity) {
                 ensureAccessible();
                 length = newCapacity;
                 return this;
             }
-            checkNewCapacity(newCapacity);
             if (newCapacity < capacity()) {
                 length = newCapacity;
                 trimIndicesToCapacity(newCapacity);
