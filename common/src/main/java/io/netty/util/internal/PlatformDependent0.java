@@ -336,11 +336,19 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
+            String unalignedProperty = SystemPropertyUtil.get("io.netty.unalignedAccess", "").trim();
+
             // using a known type to avoid loading new classes
             final AtomicLong maybeMaxMemory = new AtomicLong(-1);
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
+                    if ("true".equalsIgnoreCase(unalignedProperty)) {
+                        return Boolean.TRUE;
+                    }
+                    if ("false".equalsIgnoreCase(unalignedProperty)) {
+                        return Boolean.FALSE;
+                    }
                     try {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());

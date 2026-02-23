@@ -2081,6 +2081,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         String version = SSL.getVersion(ssl);
+        return toJavaCipherSuite(openSslCipherSuite, version);
+    }
+
+    private String toJavaCipherSuite(String openSslCipherSuite, String version) {
+        if (openSslCipherSuite == null) {
+            return null;
+        }
         String prefix = toJavaCipherSuitePrefix(version);
         return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
     }
@@ -2626,7 +2633,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // did not set it earlier via setSessionDetails(...)
                         this.creationTime = lastAccessed = creationTime;
                     }
-                    this.cipher = toJavaCipherSuite(cipher);
+                    this.cipher = toJavaCipherSuite(cipher, protocol);
                     this.protocol = protocol;
 
                     if (clientMode) {
