@@ -1275,6 +1275,8 @@ final class AdaptivePoolingAllocator {
     private static final class SizeClassedChunk extends Chunk {
         private static final int FREE_LIST_EMPTY = -1;
         private static final int AVAILABLE = -1;
+        // Integer.MIN_VALUE so that `DEALLOCATED + externalFreeList.size()` can never equal `segments`,
+        // making late-arriving releaseSegment calls on external threads arithmetically harmless.
         private static final int DEALLOCATED = Integer.MIN_VALUE;
         private static final AtomicIntegerFieldUpdater<SizeClassedChunk> STATE =
             AtomicIntegerFieldUpdater.newUpdater(SizeClassedChunk.class, "state");
@@ -1386,10 +1388,8 @@ final class AdaptivePoolingAllocator {
 
         private void updateStateOnLocalReleaseSegment(int previousLocalSize, IntStack localFreeList) {
             int newLocalSize = localFreeList.size();
-            if (!STATE.compareAndSet(this, previousLocalSize, newLocalSize)) {
-                // State was concurrently changed by an external markToDeallocate
-                return;
-            }
+            boolean alwaysTrue = STATE.compareAndSet(this, previousLocalSize, newLocalSize);
+            assert alwaysTrue : "this shouldn't happen unless double release in the local free list";
             deallocateIfNeeded(newLocalSize);
         }
 
