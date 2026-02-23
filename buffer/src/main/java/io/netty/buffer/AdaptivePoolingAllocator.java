@@ -1390,15 +1390,11 @@ final class AdaptivePoolingAllocator {
                 // implicit StoreLoad barrier from MPSC offer()
                 int state = this.state;
                 if (state != AVAILABLE) {
-                    handleStateOnExternalReleaseSegment(state);
+                    // localFreeListSize is the number of segments that were in the local free list when
+                    // markToDeallocate() was called. Check if all segments have been returned.
+                    deallocateIfNeeded(state);
                 }
             }
-        }
-
-        private void handleStateOnExternalReleaseSegment(int localFreeListSize) {
-            // localFreeListSize is the number of segments that were in the local free list when
-            // markToDeallocate() was called. Check if all segments have been returned.
-            deallocateIfNeeded(localFreeListSize);
         }
 
         private void updateStateOnLocalReleaseSegment(int previousLocalSize, IntStack localFreeList) {
