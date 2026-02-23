@@ -1346,30 +1346,23 @@ final class AdaptivePoolingAllocator {
             return startIndex;
         }
 
-        private int remainingCapacityOnFreeList() {
-            final int segmentSize = this.segmentSize;
-            int remainingCapacity = externalFreeList.size() * segmentSize;
-            IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null) {
-                assert Thread.currentThread() == ownerThread;
-                remainingCapacity += localFreeList.size() * segmentSize;
-            }
-            return remainingCapacity;
-        }
-
         @Override
         public int remainingCapacity() {
-            int remainingCapacity = super.remainingCapacity();
-            if (remainingCapacity > segmentSize) {
-                return remainingCapacity;
+            int remaining = super.remainingCapacity();
+            return remaining > segmentSize ? remaining : updateRemainingCapacity(remaining);
+        }
+
+        private int updateRemainingCapacity(int snapshotted) {
+            int freeSegments = externalFreeList.size();
+            IntStack localFreeList = this.localFreeList;
+            if (localFreeList != null) {
+                freeSegments += localFreeList.size();
             }
-            int updatedRemainingCapacity = remainingCapacityOnFreeList();
-            if (updatedRemainingCapacity == remainingCapacity) {
-                return remainingCapacity;
+            int updated = freeSegments * segmentSize;
+            if (updated != snapshotted) {
+                allocatedBytes = capacity() - updated;
             }
-            // update allocatedBytes based on what's available in the free list
-            allocatedBytes = capacity() - updatedRemainingCapacity;
-            return updatedRemainingCapacity;
+            return updated;
         }
 
         private void releaseSegmentOffsetIntoFreeList(int startIndex) {
@@ -1405,12 +1398,7 @@ final class AdaptivePoolingAllocator {
         private void handleStateOnExternalReleaseSegment(int localFreeListSize) {
             // localFreeListSize is the number of segments that were in the local free list when
             // markToDeallocate() was called. Check if all segments have been returned.
-            int totalFreeSegments = localFreeListSize + externalFreeList.size();
-            if (totalFreeSegments == segments) {
-                if (STATE.compareAndSet(this, localFreeListSize, DEALLOCATED)) {
-                    deallocate();
-                }
-            }
+            deallocateIfNeeded(localFreeListSize);
         }
 
         private void updateStateOnLocalReleaseSegment(int previousLocalSize, IntStack localFreeList) {
@@ -1420,10 +1408,14 @@ final class AdaptivePoolingAllocator {
                 // State was concurrently changed by another external releaseSegment that deallocated.
                 return;
             }
+            deallocateIfNeeded(newLocalSize);
+        }
+
+        private void deallocateIfNeeded(int localSize) {
             // Check if all segments have been returned.
-            int totalFreeSegments = newLocalSize + externalFreeList.size();
+            int totalFreeSegments = localSize + externalFreeList.size();
             if (totalFreeSegments == segments) {
-                if (STATE.compareAndSet(this, newLocalSize, DEALLOCATED)) {
+                if (STATE.compareAndSet(this, localSize, DEALLOCATED)) {
                     deallocate();
                 }
             }
@@ -1434,13 +1426,7 @@ final class AdaptivePoolingAllocator {
             IntStack localFreeList = this.localFreeList;
             int localSize = localFreeList != null ? localFreeList.size() : 0;
             STATE.set(this, localSize);
-            // Check if all segments have already been returned.
-            int totalFreeSegments = localSize + externalFreeList.size();
-            if (totalFreeSegments == segments) {
-                if (STATE.compareAndSet(this, localSize, DEALLOCATED)) {
-                    deallocate();
-                }
-            }
+            deallocateIfNeeded(localSize);
         }
     }
 
