@@ -1126,15 +1126,14 @@ final class AdaptivePoolingAllocator {
         /**
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
-        boolean releaseFromMagazine() {
+        void releaseFromMagazine() {
             // Chunks can be reused before they become empty.
             // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
             Magazine mag = magazine;
             detachFromMagazine();
             if (!mag.offerToQueue(this)) {
-                return release();
+                markToDeallocate();
             }
-            return false;
         }
 
         /**
@@ -1300,16 +1299,6 @@ final class AdaptivePoolingAllocator {
                 externalFreeList = controller.createEmptyFreeList();
                 localFreeList = controller.createLocalFreeList();
             }
-        }
-
-        @Override
-        boolean releaseFromMagazine() {
-            Magazine mag = magazine;
-            detachFromMagazine();
-            if (!mag.offerToQueue(this)) {
-                markToDeallocate();
-            }
-            return false;
         }
 
         @Override
