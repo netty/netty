@@ -66,7 +66,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        ChannelFuture channelFuture = serverBootstrap.bind(0).sync();
+        ChannelFuture channelFuture = serverBootstrap.bind("localhost", 0).sync();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
