@@ -16,7 +16,6 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
@@ -37,13 +36,10 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 public final class LazyX509Certificate extends X509Certificate {
-
-    private static final Queue<CertificateFactory> CERT_FACTORY = PlatformDependent.newFixedMpmcQueue(64);
 
     private final byte[] bytes;
     private volatile X509Certificate wrapped;
@@ -223,20 +219,16 @@ public final class LazyX509Certificate extends X509Certificate {
     private X509Certificate unwrap() {
         X509Certificate wrapped = this.wrapped;
         if (wrapped == null) {
-            CertificateFactory factory = CERT_FACTORY.poll();
             try {
-                if (factory == null) {
-                    try {
-                        factory = CertificateFactory.getInstance("X.509");
-                    } catch (CertificateException e) {
-                        throw new ExceptionInInitializerError(e);
-                    }
+                CertificateFactory factory;
+                try {
+                    factory = CertificateFactory.getInstance("X.509");
+                } catch (CertificateException e) {
+                    throw new ExceptionInInitializerError(e);
                 }
                 wrapped = this.wrapped = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
             } catch (CertificateException e) {
                 throw new IllegalStateException(e);
-            } finally {
-                CERT_FACTORY.offer(factory);
             }
         }
         return wrapped;
