@@ -247,7 +247,7 @@ final class AdaptivePoolingAllocator {
      *
      * @return A new multi-producer, multi-consumer queue.
      */
-    private static Queue<Chunk> createSharedChunkQueue() {
+    private static Queue<SizeClassedChunk> createSharedChunkQueue() {
         return PlatformDependent.newFixedMpmcQueue(CHUNK_REUSE_QUEUE);
     }
 
@@ -523,24 +523,23 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class ConcurrentQueueChunkCache implements ChunkCache {
-        private final Queue<Chunk> queue;
+        private final Queue<SizeClassedChunk> queue;
 
         private ConcurrentQueueChunkCache() {
             queue = createSharedChunkQueue();
         }
 
         @Override
-        public Chunk pollChunk(int size) {
-            int attemps = queue.size();
-            for (int i = 0; i < attemps; i++) {
-                Chunk chunk = queue.poll();
+        public SizeClassedChunk pollChunk(int size) {
+            // we really don't care about size here since the sized class chunk q
+            // just care about segments of fixed size!
+            Queue<SizeClassedChunk> queue = this.queue;
+            for (int i = 0; i < CHUNK_REUSE_QUEUE; i++) {
+                SizeClassedChunk chunk = queue.poll();
                 if (chunk == null) {
                     return null;
                 }
-                if (chunk.hasUnprocessedFreelistEntries()) {
-                    chunk.processFreelistEntries();
-                }
-                if (chunk.remainingCapacity() >= size) {
+                if (chunk.hasRemainingCapacity()) {
                     return chunk;
                 }
                 queue.offer(chunk);
@@ -550,7 +549,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public boolean offerChunk(Chunk chunk) {
-            return queue.offer(chunk);
+            return queue.offer((SizeClassedChunk) chunk);
         }
     }
 
@@ -1335,6 +1334,20 @@ final class AdaptivePoolingAllocator {
                 startIndex = externalFreeList.poll();
             }
             return startIndex;
+        }
+
+        // this can be used by the ConcurrentQueueChunkCache to find the first buffer to use:
+        // it doesn't update the remaining capacity and it's not consider a single segmentSize
+        // case as not suitable to be reused
+        public boolean hasRemainingCapacity() {
+            int remaining = super.remainingCapacity();
+            if (remaining > 0) {
+                return true;
+            }
+            if (localFreeList != null) {
+                return !localFreeList.isEmpty();
+            }
+            return externalFreeList.isEmpty();
         }
 
         @Override
