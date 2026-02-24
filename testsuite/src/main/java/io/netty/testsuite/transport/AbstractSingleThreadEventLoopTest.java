@@ -32,6 +32,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -46,6 +47,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,14 +61,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public abstract class AbstractSingleThreadEventLoopTest {
     protected static final int SCALING_MIN_THREADS = 1;
     protected static final int SCALING_MAX_THREADS = 2;
-    protected static final long SCALING_WINDOW_SECONDS = 100;
+    protected static final long SCALING_WINDOW = 100;
     protected static final TimeUnit SCALING_WINDOW_UNIT = MILLISECONDS;
     protected static final double SCALEDOWN_THRESHOLD = 0.2;
     protected static final double SCALEUP_THRESHOLD = 0.9;
     protected static final int SCALING_PATIENCE_CYCLES = 1;
 
     protected static final EventExecutorChooserFactory AUTO_SCALING_CHOOSER_FACTORY =
-            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
+            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW,
                                                        SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
                                                        SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES
     );
@@ -344,43 +346,85 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @Test
+    @RepeatedTest(11)
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
         if (group == null) {
             return;
         }
+
+        Future<?> keepAliveFuture = null;
+        final AtomicBoolean keepAliveRunning = new AtomicBoolean(true);
+
+        final AtomicBoolean wokenThreadKeepBusy = new AtomicBoolean(true);
+        Future<?> wokenThreadFuture = null;
+
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
                          "Group should start with max threads.");
 
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
             while (countActiveExecutors(group) > SCALING_MIN_THREADS && System.nanoTime() < deadline) {
                 Thread.sleep(100);
             }
             assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
                          "Group did not scale down to min threads in time.");
 
+            EventLoop activeLoop = null;
             EventLoop suspendedLoop = null;
             for (EventExecutor exec : group) {
-                if (exec.isSuspended()) {
+                if (!exec.isSuspended()) {
+                    activeLoop = (EventLoop) exec;
+                } else if (suspendedLoop == null) {
                     suspendedLoop = (EventLoop) exec;
-                    break;
                 }
             }
+            assertNotNull(activeLoop, "Could not find the single active executor.");
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            // Submit a task directly to the suspended loop, this should trigger the wake-up mechanism.
-            Future<?> future = suspendedLoop.submit(() -> { });
-            future.syncUninterruptibly();
+            // Start a continuous keep-alive task on the original active loop to guarantee
+            // it isn't suspended by the monitor during the test.
+            keepAliveFuture = activeLoop.submit(() -> {
+                while (keepAliveRunning.get()) {
+                    // Busy-wait to generate CPU utilization.
+                }
+                return null;
+            });
 
-            assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
-            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
-                         "Active executor count should increase after wake-up.");
+            final CountDownLatch taskStartedLatch = new CountDownLatch(1);
+
+            wokenThreadFuture = suspendedLoop.submit(() -> {
+                taskStartedLatch.countDown();
+                while (wokenThreadKeepBusy.get()) {
+                    // This busy-wait ensures the monitor sees this thread as utilized.
+                }
+                return null;
+            });
+
+            assertTrue(taskStartedLatch.await(5, TimeUnit.SECONDS), "Task did not start in time.");
+
+            final int expectedActiveCount = SCALING_MIN_THREADS + 1;
+            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (countActiveExecutors(group) < expectedActiveCount && System.nanoTime() < deadline) {
+                Thread.sleep(100);
+            }
+
+            assertEquals(expectedActiveCount, countActiveExecutors(group),
+                         "Active executor count should increase by one after wake-up.");
+            assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
         } finally {
-            group.shutdownGracefully().syncUninterruptibly();
+            keepAliveRunning.set(false);
+            wokenThreadKeepBusy.set(false);
+
+            if (keepAliveFuture != null) {
+                keepAliveFuture.sync();
+            }
+            if (wokenThreadFuture != null) {
+                wokenThreadFuture.sync();
+            }
+            group.shutdownGracefully().sync();
         }
     }
 
