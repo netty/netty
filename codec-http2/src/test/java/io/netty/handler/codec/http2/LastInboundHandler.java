@@ -109,7 +109,9 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        queue.add(msg);
+        synchronized (queue) {
+            queue.add(msg);
+        }
     }
 
     @Override
@@ -119,7 +121,9 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        queue.add(new UserEvent(evt));
+        synchronized (queue) {
+            queue.add(new UserEvent(evt));
+        }
     }
 
     @Override
@@ -142,11 +146,13 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @SuppressWarnings("unchecked")
     public <T> T readInbound() {
-        for (int i = 0; i < queue.size(); i++) {
-            Object o = queue.get(i);
-            if (!(o instanceof UserEvent)) {
-                queue.remove(i);
-                return (T) o;
+        synchronized (queue) {
+            for (int i = 0; i < queue.size(); i++) {
+                Object o = queue.get(i);
+                if (!(o instanceof UserEvent)) {
+                    queue.remove(i);
+                    return (T) o;
+                }
             }
         }
 
@@ -163,11 +169,13 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @SuppressWarnings("unchecked")
     public <T> T readUserEvent() {
-        for (int i = 0; i < queue.size(); i++) {
-            Object o = queue.get(i);
-            if (o instanceof UserEvent) {
-                queue.remove(i);
-                return (T) ((UserEvent) o).evt;
+        synchronized (queue) {
+            for (int i = 0; i < queue.size(); i++) {
+                Object o = queue.get(i);
+                if (o instanceof UserEvent) {
+                    queue.remove(i);
+                    return (T) ((UserEvent) o).evt;
+                }
             }
         }
 
@@ -179,14 +187,16 @@ public class LastInboundHandler extends ChannelDuplexHandler {
      */
     @SuppressWarnings("unchecked")
     public <T> T readInboundMessageOrUserEvent() {
-        if (queue.isEmpty()) {
-            return null;
+        synchronized (queue) {
+            if (queue.isEmpty()) {
+                return null;
+            }
+            Object o = queue.remove(0);
+            if (o instanceof UserEvent) {
+                return (T) ((UserEvent) o).evt;
+            }
+            return (T) o;
         }
-        Object o = queue.remove(0);
-        if (o instanceof UserEvent) {
-            return (T) ((UserEvent) o).evt;
-        }
-        return (T) o;
     }
 
     public void writeOutbound(Object... msgs) throws Exception {
