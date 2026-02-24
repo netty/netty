@@ -1134,12 +1134,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         // 2. Set up keyless KeyManagerFactory and certificate callback for certificate provision
         KeyManagerFactory keylessKmf = OpenSslX509KeyManagerFactory.newKeyless(keyCertChain);
         OpenSslKeyMaterialProvider keyMaterialProvider = providerFor(keylessKmf, "");
-
-        // Set up certificate callback for alternative keys - required for client certificates
-        OpenSslKeyMaterialManager materialManager =
-                new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys);
-        SSLContext.setCertificateCallback(ctx, toCallback.apply(materialManager));
-        return keyMaterialProvider;
+        try {
+            // Set up certificate callback for alternative keys - required for client certificates
+            OpenSslKeyMaterialManager materialManager =
+                    new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys);
+            SSLContext.setCertificateCallback(ctx, toCallback.apply(materialManager));
+            return keyMaterialProvider;
+        } catch (Throwable cause) {
+            // Destroy the provider in case of failure as otherwise we might leak memory.
+            keyMaterialProvider.destroy();
+            throw cause;
+        }
     }
 
     private static ReferenceCountedOpenSslEngine retrieveEngine(Map<Long, ReferenceCountedOpenSslEngine> engines,
