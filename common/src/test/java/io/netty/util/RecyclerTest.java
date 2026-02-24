@@ -15,11 +15,11 @@
 */
 package io.netty.util;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.MathUtil;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -43,16 +43,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class RecyclerTest {
 
     public enum OwnerType {
         NONE,
         PINNED,
-        FAST_THREAD_LOCAL,
+        FAST_THREAD_LOCAL;
+
+        public void assumeIsPooling() {
+            assumeTrue(isPooling());
+        }
+
+        public boolean isPooling() {
+            return this != FAST_THREAD_LOCAL || FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals();
+        }
     }
 
     public static Stream<Arguments> ownerTypeAndUnguarded() {
@@ -220,17 +230,16 @@ public class RecyclerTest {
 
     @ParameterizedTest
     @EnumSource(OwnerType.class)
-    public void testMultipleRecycle(OwnerType ownerType) {
+    public void testMultipleRecycle(OwnerType ownerType) throws Exception {
         // This test makes only sense for guarded recyclers
         Recycler<HandledObject> recycler = newRecycler(ownerType, false, 1024);
         final HandledObject object = recycler.get();
         object.recycle();
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                object.recycle();
-            }
-        });
+        if (ownerType.isPooling()) {
+            assertThrows(IllegalStateException.class, () -> object.recycle());
+        } else {
+            object.recycle(); // No-op because not pooling.
+        }
     }
 
     @Test
@@ -258,14 +267,11 @@ public class RecyclerTest {
         thread1.start();
         thread1.join();
 
-        final Thread thread2 = newThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    object.recycle();
-                } catch (IllegalStateException e) {
-                    exceptionStore.set(e);
-                }
+        final Thread thread2 = newThread(() -> {
+            try {
+                object.recycle();
+            } catch (IllegalStateException e) {
+                exceptionStore.set(e);
             }
         });
         thread2.start();
@@ -274,7 +280,11 @@ public class RecyclerTest {
         HandledObject b = recycler.get();
         assertNotSame(a, b);
         IllegalStateException exception = exceptionStore.get();
-        assertNotNull(exception);
+        if (ownerType.isPooling()) {
+            assertNotNull(exception);
+        } else {
+            assertNull(exception);
+        }
     }
 
     @ParameterizedTest
@@ -378,7 +388,11 @@ public class RecyclerTest {
             HandledObject b = recycler.get();
             assertNotSame(a, b);
             IllegalStateException exception = exceptionStore.get();
-            assertNotNull(exception); // Object got recycled twice, so at least one of the calls must throw.
+            if (ownerType.isPooling()) {
+                assertNotNull(exception); // Object got recycled twice, so at least one of the calls must throw.
+            } else {
+                assertNull(exception);
+            }
         } finally {
             thread1.join(1000);
         }
@@ -391,7 +405,11 @@ public class RecyclerTest {
         HandledObject object = recycler.get();
         object.recycle();
         HandledObject object2 = recycler.get();
-        assertSame(object, object2);
+        if (ownerType.isPooling()) {
+            assertSame(object, object2);
+        } else {
+            assertNotSame(object, object2);
+        }
         object2.recycle();
     }
 
@@ -409,6 +427,7 @@ public class RecyclerTest {
     @ParameterizedTest
     @MethodSource("ownerTypeAndUnguarded")
     public void testRecycleDisableDrop(OwnerType ownerType, boolean unguarded) {
+        ownerType.assumeIsPooling();
         Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024, 0, 16);
         HandledObject object = recycler.get();
         object.recycle();
@@ -454,6 +473,7 @@ public class RecyclerTest {
     @ParameterizedTest
     @MethodSource("notNoneOwnerAndUnguarded")
     public void testRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
+        ownerType.assumeIsPooling();
         final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 256, 2, 16);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
@@ -475,6 +495,7 @@ public class RecyclerTest {
     @ParameterizedTest
     @MethodSource("ownerTypeAndUnguarded")
     public void testRecycleAtTwoThreadsMulti(OwnerType ownerType, boolean unguarded) throws Exception {
+        ownerType.assumeIsPooling();
         final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 256);
         final HandledObject o = recycler.get();
 
@@ -518,6 +539,7 @@ public class RecyclerTest {
     @ParameterizedTest
     @MethodSource("notNoneOwnerAndUnguarded")
     public void testMaxCapacityWithRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
+        ownerType.assumeIsPooling();
         final int maxCapacity = 4;
         final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, maxCapacity, 4, 4);
 
