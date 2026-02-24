@@ -643,6 +643,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         @Override
         public void unregistered() {
             super.unregistered();
+            assert readBuffer == null;
             sendmsgHdrs.release();
             recvmsgHdrs.release();
         }
