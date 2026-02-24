@@ -1347,7 +1347,7 @@ final class AdaptivePoolingAllocator {
             if (localFreeList != null) {
                 return !localFreeList.isEmpty();
             }
-            return externalFreeList.isEmpty();
+            return !externalFreeList.isEmpty();
         }
 
         @Override
