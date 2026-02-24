@@ -797,7 +797,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (contentLength != -1) {
                 String lengthValue = contentLengthFields.get(0).trim();
                 if (contentLengthFields.size() > 1 || // don't unnecessarily re-order headers
-                        !isLengthEqual(lengthValue)) {
+                        !isLengthEqual(lengthValue, contentLength)) {
                     headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
                 }
             }
@@ -827,7 +827,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return State.READ_VARIABLE_LENGTH_CONTENT;
     }
 
-    private boolean isLengthEqual(String lengthValue) {
+    private static boolean isLengthEqual(String lengthValue, long contentLength) {
         try {
             return Long.parseLong(lengthValue) == contentLength;
         } catch (NumberFormatException e) {
