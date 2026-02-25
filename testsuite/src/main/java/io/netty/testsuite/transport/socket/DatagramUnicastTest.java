@@ -435,8 +435,14 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
                 ChannelFuture future = cc.writeAndFlush(
                         buf.retain().duplicate()).awaitUninterruptibly();
-                assertTrue(future.cause() instanceof NotYetConnectedException,
-                        "NotYetConnectedException expected, got: " + future.cause());
+                assertInstanceOf(NotYetConnectedException.class, future.cause());
+
+                // Connect again and try to write.
+                cc.connect(addr).sync();
+
+                ChannelFuture f = write(cc, buf, wrapType);
+                cc.flush();
+                f.sync();
             }
         } finally {
             // release as we used buf.retain() before

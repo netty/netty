@@ -128,6 +128,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
+    protected boolean isStreamSocket() {
+        return false;
+    }
+
+    @Override
     public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) super.remoteAddress();
     }
