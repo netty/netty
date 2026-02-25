@@ -21,9 +21,15 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class LazyX509CertificateTest {
 
@@ -79,7 +85,29 @@ public class LazyX509CertificateTest {
         assertArrayEquals(x509Certificate.getKeyUsage(), lazyX509Certificate.getKeyUsage());
         assertEquals(x509Certificate.getExtendedKeyUsage(), lazyX509Certificate.getExtendedKeyUsage());
         assertEquals(x509Certificate.getBasicConstraints(), lazyX509Certificate.getBasicConstraints());
-        assertEquals(x509Certificate.getSubjectAlternativeNames(), lazyX509Certificate.getSubjectAlternativeNames());
-        assertEquals(x509Certificate.getIssuerAlternativeNames(), lazyX509Certificate.getIssuerAlternativeNames());
+        assertEqualSans(x509Certificate.getSubjectAlternativeNames(), lazyX509Certificate.getSubjectAlternativeNames());
+        assertEqualSans(x509Certificate.getIssuerAlternativeNames(), lazyX509Certificate.getIssuerAlternativeNames());
+    }
+
+    private static void assertEqualSans(Collection<List<?>> expectedSans, Collection<List<?>> actualSans) {
+        Supplier<String> errMsgSans = () -> expectedSans + " != " + actualSans;
+        if (expectedSans == null) {
+            assertNull(actualSans, errMsgSans);
+            return;
+        }
+        assertEquals(expectedSans.size(), actualSans.size(), errMsgSans);
+        Iterator<List<?>> expectItr = expectedSans.iterator();
+        Iterator<List<?>> actualItr = actualSans.iterator();
+        while (expectItr.hasNext() && actualItr.hasNext()) {
+            List<?> expectedSan = expectItr.next();
+            List<?> actualSan = actualItr.next();
+            Supplier<String> errMsgSan = () -> expectedSan + " != " + actualSan;
+            assertEquals(2, expectedSan.size(), errMsgSan);
+            assertEquals(2, actualSan.size(), errMsgSan);
+            assertEquals(expectedSan.get(0), actualSan.get(0), errMsgSan);
+            assertEquals(expectedSan.get(1), actualSan.get(1), errMsgSan);
+        }
+        assertFalse(expectItr.hasNext(), errMsgSans);
+        assertFalse(actualItr.hasNext(), errMsgSans);
     }
 }

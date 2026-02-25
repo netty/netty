@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl.util;
 
+import io.netty.util.Recycler;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.ByteArrayInputStream;
@@ -40,18 +41,37 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 public final class LazyX509Certificate extends X509Certificate {
+    private static final Recycler<CertFactoryHandle> CERT_FACTORIES = new Recycler<CertFactoryHandle>() {
+        @Override
+        protected CertFactoryHandle newObject(Handle<CertFactoryHandle> handle) {
+            try {
+                return new CertFactoryHandle(CertificateFactory.getInstance("X.509"), handle);
+            } catch (CertificateException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    };
 
-    static final CertificateFactory X509_CERT_FACTORY;
-    static {
-        try {
-            X509_CERT_FACTORY = CertificateFactory.getInstance("X.509");
-        } catch (CertificateException e) {
-            throw new ExceptionInInitializerError(e);
+    private static final class CertFactoryHandle {
+        private final CertificateFactory factory;
+        private final Recycler.EnhancedHandle<CertFactoryHandle> handle;
+
+        private CertFactoryHandle(CertificateFactory factory, Recycler.Handle<CertFactoryHandle> handle) {
+            this.factory = factory;
+            this.handle = (Recycler.EnhancedHandle<CertFactoryHandle>) handle;
+        }
+
+        public X509Certificate generateCertificate(byte[] bytes) throws CertificateException {
+            return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
+        }
+
+        public void recycle() {
+            handle.unguardedRecycle(this);
         }
     }
 
     private final byte[] bytes;
-    private X509Certificate wrapped;
+    private volatile X509Certificate wrapped;
 
     /**
      * Creates a new instance which will lazy parse the given bytes. Be aware that the bytes will not be cloned.
@@ -228,11 +248,16 @@ public final class LazyX509Certificate extends X509Certificate {
     private X509Certificate unwrap() {
         X509Certificate wrapped = this.wrapped;
         if (wrapped == null) {
+            CertFactoryHandle factory = null;
             try {
-                wrapped = this.wrapped = (X509Certificate) X509_CERT_FACTORY.generateCertificate(
-                        new ByteArrayInputStream(bytes));
+                factory = CERT_FACTORIES.get();
+                wrapped = this.wrapped = factory.generateCertificate(bytes);
             } catch (CertificateException e) {
                 throw new IllegalStateException(e);
+            } finally {
+                if (factory != null) {
+                    factory.recycle();
+                }
             }
         }
         return wrapped;
