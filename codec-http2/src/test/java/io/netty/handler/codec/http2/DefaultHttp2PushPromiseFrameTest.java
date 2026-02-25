@@ -29,6 +29,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -67,7 +68,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        Future<Channel> channelFuture = serverBootstrap.bind(0).sync();
+        Future<Channel> channelFuture = serverBootstrap.bind(NetUtil.LOCALHOST, 0).sync();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
