@@ -90,7 +90,7 @@ public class LazyX509CertificateTest {
     }
 
     private static void assertEqualSans(Collection<List<?>> expectedSans, Collection<List<?>> actualSans) {
-        Supplier<String> errMsgSans = () -> expectedSans + " != " + actualSans;
+        String errMsgSans = expectedSans + " != " + actualSans;
         if (expectedSans == null) {
             assertNull(actualSans, errMsgSans);
             return;
@@ -101,7 +101,7 @@ public class LazyX509CertificateTest {
         while (expectItr.hasNext() && actualItr.hasNext()) {
             List<?> expectedSan = expectItr.next();
             List<?> actualSan = actualItr.next();
-            Supplier<String> errMsgSan = () -> expectedSan + " != " + actualSan;
+            String errMsgSan = expectedSan + " != " + actualSan;
             assertEquals(2, expectedSan.size(), errMsgSan);
             assertEquals(2, actualSan.size(), errMsgSan);
             assertEquals(expectedSan.get(0), actualSan.get(0), errMsgSan);
