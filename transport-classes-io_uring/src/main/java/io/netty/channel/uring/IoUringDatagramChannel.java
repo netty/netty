@@ -126,6 +126,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
+    protected boolean isStreamSocket() {
+        return false;
+    }
+
+    @Override
     protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }

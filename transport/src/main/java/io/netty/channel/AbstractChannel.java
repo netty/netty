@@ -127,6 +127,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (connectPromise != null) {
                 // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                 connectPromise.tryFailure(new ClosedChannelException());
+                this.connectPromise = null;
             }
 
             Future<?> future = connectTimeoutFuture;
@@ -676,6 +677,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Reset remoteAddress and localAddress
                 remoteAddress = null;
                 localAddress = null;
+                connectPromise = null;
                 if (wasActive && !isActive()) {
                     invokeLater(new Runnable() {
                         @Override

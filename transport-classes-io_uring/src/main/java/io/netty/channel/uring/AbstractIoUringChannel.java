@@ -145,6 +145,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         this.local = fd.localAddress();
     }
 
+    protected abstract boolean isStreamSocket();
+
     // Called once a Channel changed from AUTO_READ=true to AUTO_READ=false
     final void autoReadCleared() {
         if (!isRegistered()) {
@@ -850,8 +852,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
                 computeRemote();
 
-                // Register POLLRDHUP
-                schedulePollRdHup();
+                if (isStreamSocket()) {
+                    // Register POLLRDHUP
+                    schedulePollRdHup();
+                }
 
                 promise.setSuccess(null);
             } else {
@@ -972,7 +976,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 computeRemote();
 
                 // Register POLLRDHUP
-                schedulePollRdHup();
+                if (isStreamSocket()) {
+                    // Register POLLRDHUP
+                    schedulePollRdHup();
+                }
 
                 promise.setSuccess(null);
                 if (readPending) {

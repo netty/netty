@@ -91,6 +91,11 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
+    protected boolean isStreamSocket() {
+        return true;
+    }
+
+    @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
