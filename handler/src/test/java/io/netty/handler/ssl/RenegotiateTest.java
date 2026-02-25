@@ -99,7 +99,7 @@ public abstract class RenegotiateTest {
                             });
                         }
                     });
-            Channel channel = sb.bind(new LocalAddress("RenegotiateTest")).get();
+            Channel channel = sb.bind(new LocalAddress(getClass())).get();
 
             final SslContext clientContext = SslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
