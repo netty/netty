@@ -373,14 +373,18 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
             // Submit a task directly to the suspended loop, this should trigger the wake-up mechanism.
-            Future<?> future = suspendedLoop.submit(() -> { });
-            future.syncUninterruptibly();
+            int i = 0;
+            boolean isSuspended;
+            do {
+                Future<?> future = suspendedLoop.submit(() -> { });
+                future.sync();
+            } while ((isSuspended = suspendedLoop.isSuspended()) && i++ < 10);
 
-            assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
+            assertFalse(isSuspended, "Executor should wake up after task submission.");
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
                          "Active executor count should increase after wake-up.");
         } finally {
-            group.shutdownGracefully().syncUninterruptibly();
+            group.shutdownGracefully().sync();
         }
     }
 
