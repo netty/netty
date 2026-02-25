@@ -37,17 +37,17 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertInt(int value) {
-        return String.valueOf(value);
+        return Integer.toString(value);
     }
 
     @Override
     public CharSequence convertLong(long value) {
-        return String.valueOf(value);
+        return Long.toString(value);
     }
 
     @Override
     public CharSequence convertDouble(double value) {
-        return String.valueOf(value);
+        return Double.toString(value);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertFloat(float value) {
-        return String.valueOf(value);
+        return Float.toString(value);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertByte(byte value) {
-        return String.valueOf(value);
+        return Integer.toString(value);
     }
 
     @Override
@@ -90,7 +90,7 @@ public class CharSequenceValueConverter implements ValueConverter<CharSequence> 
 
     @Override
     public CharSequence convertShort(short value) {
-        return String.valueOf(value);
+        return Integer.toString(value);
     }
 
     @Override
