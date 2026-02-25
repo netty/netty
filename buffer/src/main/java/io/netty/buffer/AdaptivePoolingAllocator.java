@@ -1393,14 +1393,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         BuddyChunk(AbstractByteBuf delegate, Magazine magazine) {
             super(delegate, magazine);
-            int capacity = delegate.capacity();
-            int capFactor = capacity / MIN_BUDDY_SIZE;
-            int tree = (capFactor << 1) - 1;
-            int maxShift = Integer.numberOfTrailingZeros(capFactor);
+            freeListCapacity = delegate.capacity() / MIN_BUDDY_SIZE;
+            int maxShift = Integer.numberOfTrailingZeros(freeListCapacity);
             assert maxShift <= 30; // The top 2 bits are used for marking.
-            freeListCapacity = tree >> 1; // At most half of tree (all leaf nodes) can be freed.
-            freeList = new MpscAtomicIntegerArrayQueue(freeListCapacity, -1);
-            buddies = new byte[1 + tree];
+            freeList = new MpscAtomicIntegerArrayQueue(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
+            buddies = new byte[freeListCapacity << 1];
 
             // Generate the buddies entries.
             int index = 1;
