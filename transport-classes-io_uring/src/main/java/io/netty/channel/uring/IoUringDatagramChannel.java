@@ -415,37 +415,32 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
             assert byteBuf != null;
+            MsgHdrMemory hdr = recvmsgHdrs.hdr(data);
+            // Reset the id as this read was completed and so don't need to be cancelled later.
+            recvmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
+
             try {
-                recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
+                if (res < 0) {
+                    if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                        // If res is negative we should pass it to ioResult(...) which will either throw
+                        // or convert it to 0 if we could not read because the socket was not readable.
+                        allocHandle.lastBytesRead(ioResult("io_uring recvmsg", res));
+                    }
+                } else {
+                    allocHandle.lastBytesRead(res);
+                    if (hdr.hasPort(IoUringDatagramChannel.this)) {
+                        allocHandle.incMessagesRead(1);
+                        DatagramPacket packet = hdr.get(
+                                IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
+                        pipeline.fireChannelRead(packet);
+                    }
+                }
             } catch (Throwable t) {
                 Throwable e = (connected && t instanceof NativeIoException) ?
-                  translateForConnected((NativeIoException) t) : t;
+                        translateForConnected((NativeIoException) t) : t;
                 pipeline.fireExceptionCaught(e);
             }
-        }
 
-        private void recvmsgComplete(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
-                                      ByteBuf byteBuf, int res, int flags, int idx, int outstanding)
-                throws IOException {
-            MsgHdrMemory hdr = recvmsgHdrs.hdr(idx);
-            if (res < 0) {
-                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                    // If res is negative we should pass it to ioResult(...) which will either throw
-                    // or convert it to 0 if we could not read because the socket was not readable.
-                    allocHandle.lastBytesRead(ioResult("io_uring recvmsg", res));
-                }
-            } else {
-                allocHandle.lastBytesRead(res);
-                if (hdr.hasPort(IoUringDatagramChannel.this)) {
-                    allocHandle.incMessagesRead(1);
-                    DatagramPacket packet = hdr.get(
-                            IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
-                    pipeline.fireChannelRead(packet);
-                }
-            }
-
-            // Reset the id as this read was completed and so don't need to be cancelled later.
-            recvmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
             if (outstanding == 0) {
                 // There are no outstanding completion events, release the readBuffer and see if we need to schedule
                 // another one or if the user will do it.
@@ -650,6 +645,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             super.unregistered();
             sendmsgHdrs.release();
             recvmsgHdrs.release();
+            assert readBuffer == null;
         }
     }
 
