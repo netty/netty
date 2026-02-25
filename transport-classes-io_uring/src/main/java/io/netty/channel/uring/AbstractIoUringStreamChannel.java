@@ -59,6 +59,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
+    protected final boolean isStreamSocket() {
+        return true;
+    }
+
+    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }

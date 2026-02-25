@@ -411,6 +411,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false);
     }
 
+    protected abstract boolean isStreamSocket();
+
     private long schedulePollAdd(int ioMask, int mask, boolean multishot) {
         assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
@@ -670,8 +672,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
             computeRemote();
 
-            // Register POLLRDHUP
-            schedulePollRdHup();
+            if (isStreamSocket()) {
+                // Register POLLRDHUP
+                schedulePollRdHup();
+            }
 
             // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
