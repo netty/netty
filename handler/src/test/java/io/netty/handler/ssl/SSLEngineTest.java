@@ -51,7 +51,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.conscrypt.OpenSSLProvider;
@@ -4462,10 +4461,9 @@ public abstract class SSLEngineTest {
          * The JDK SSL engine master key retrieval relies on being able to set field access to true.
          * That is not available in JDK9+
          */
-        assumeFalse(sslServerProvider() == SslProvider.JDK);
-
-        String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-        System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());
+        if (sslServerProvider() == SslProvider.JDK) {
+            assumeTrue(SslMasterKeyHandler.isSunSslEngineAvailable());
+        }
 
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -4475,23 +4473,28 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .build());
 
-        try {
-            sb = new ServerBootstrap();
-            sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
-            sb.channel(NioServerSocketChannel.class);
+        sb = new ServerBootstrap();
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.channel(NioServerSocketChannel.class);
 
-            final Promise<SecretKey> promise = sb.config().group().next().newPromise();
-            serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel ch) {
-                    ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+        final Promise<SecretKey> promise = sb.config().group().next().newPromise();
+        serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
 
-                    SslHandler sslHandler = !param.delegate() ?
-                            serverSslCtx.newHandler(ch.alloc()) :
-                            serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                SslHandler sslHandler = !param.delegate() ?
+                        serverSslCtx.newHandler(ch.alloc()) :
+                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
 
                     ch.pipeline().addLast(sslHandler);
                     ch.pipeline().addLast(new SslMasterKeyHandler() {
+
+                        @Override
+                        protected boolean masterKeyHandlerEnabled() {
+                            return true;
+                        }
+
                         @Override
                         protected void accept(SecretKey masterKey, SSLSession session) {
                             promise.setSuccess(masterKey);
@@ -4501,25 +4504,18 @@ public abstract class SSLEngineTest {
                 }
             }).bind(new InetSocketAddress(0)).get();
 
-            int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
-            try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
-                OutputStream out = socket.getOutputStream();
-                out.write(1);
-                out.flush();
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
+        try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
+            OutputStream out = socket.getOutputStream();
+            out.write(1);
+            out.flush();
 
-                assertTrue(promise.await(10, TimeUnit.SECONDS));
-                SecretKey key = promise.get();
-                assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
-            }
-        } finally {
-            if (originalSystemPropertyValue != null) {
-                System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, originalSystemPropertyValue);
-            } else {
-                System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-            }
+            assertTrue(promise.await(10, TimeUnit.SECONDS));
+            SecretKey key = promise.get();
+            assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         }
     }
 
