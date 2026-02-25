@@ -531,7 +531,12 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         t.start();
 
         // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
-        cacheLatch.await();
+        try {
+            cacheLatch.await();
+        } catch (InterruptedException e) {
+            attachAsyncStackTrace(e, t);
+            throw e;
+        }
 
         return new ThreadCache() {
             @Override
@@ -541,16 +546,20 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                     task.get();
                     t.join();
                 } catch (InterruptedException e) {
-                    StackTraceElement[] stackTrace = t.getStackTrace();
-                    InterruptedException asyncIE = new InterruptedException(
-                            "Asynchronous interruption: " + t);
-                    t.interrupt();
-                    asyncIE.setStackTrace(stackTrace);
-                    e.addSuppressed(asyncIE);
+                    attachAsyncStackTrace(e, t);
                     throw e;
                 }
             }
         };
+    }
+
+    private static void attachAsyncStackTrace(Exception e, Thread thread) {
+        StackTraceElement[] stackTrace = thread.getStackTrace();
+        InterruptedException asyncIE = new InterruptedException(
+                "Asynchronous interruption: " + thread);
+        thread.interrupt();
+        asyncIE.setStackTrace(stackTrace);
+        e.addSuppressed(asyncIE);
     }
 
     private interface ThreadCache {
