@@ -28,4 +28,9 @@ module io.netty.common {
     exports io.netty.util;
     exports io.netty.util.collection;
     exports io.netty.util.concurrent;
+
+    exports io.netty.util.internal to
+            io.netty.buffer;
+    exports io.netty.util.internal.logging to
+            io.netty.buffer;
 }
