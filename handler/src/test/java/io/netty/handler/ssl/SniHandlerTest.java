@@ -31,7 +31,6 @@ import javax.net.ssl.SSLException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.util.concurrent.Future;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -70,14 +69,14 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
@@ -394,10 +393,19 @@ public class SniHandlerTest {
 
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
-    public void testSniWithApnHandler(SslProvider provider) throws Exception {
-        SslContext nettyContext = makeSslContext(provider, true);
-        SslContext sniContext = makeSslContext(provider, true);
-        final SslContext clientContext = makeSslClientContext(provider, true);
+    public void testSniWithAlpnHandler(SslProvider provider) throws Exception {
+        SslContext nettyContext = null;
+        SslContext sniContext = null;
+        final SslContext clientContext;
+        try {
+            nettyContext = makeSslContext(provider, true);
+            sniContext = makeSslContext(provider, true);
+            clientContext = makeSslClientContext(provider, true);
+        } catch (Exception e) {
+            ReferenceCountUtil.safeRelease(nettyContext);
+            ReferenceCountUtil.safeRelease(sniContext);
+            throw e;
+        }
         try {
             final AtomicBoolean serverApnCtx = new AtomicBoolean(false);
             final AtomicBoolean clientApnCtx = new AtomicBoolean(false);
@@ -455,8 +463,7 @@ public class SniHandlerTest {
 
                 serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
 
-                ChannelFuture ccf = cb.connect(serverChannel.localAddress());
-                assertTrue(ccf.awaitUninterruptibly().isSuccess());
+                ChannelFuture ccf = cb.connect(serverChannel.localAddress()).sync();
                 clientChannel = ccf.channel();
 
                 assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -472,7 +479,7 @@ public class SniHandlerTest {
                 if (clientChannel != null) {
                     clientChannel.close().sync();
                 }
-                group.shutdownGracefully(0, 0, TimeUnit.MICROSECONDS);
+                group.shutdownGracefully(100, 5000, TimeUnit.MILLISECONDS).sync();
             }
         } finally {
             releaseAll(clientContext, nettyContext, sniContext);
