@@ -1396,7 +1396,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             freeListCapacity = delegate.capacity() / MIN_BUDDY_SIZE;
             int maxShift = Integer.numberOfTrailingZeros(freeListCapacity);
             assert maxShift <= 30; // The top 2 bits are used for marking.
-            freeList = new MpscAtomicIntegerArrayQueue(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
+            // At most half of tree (all leaf nodes) can be freed.
+            freeList = new MpscAtomicIntegerArrayQueue(freeListCapacity, -1);
             buddies = new byte[freeListCapacity << 1];
 
             // Generate the buddies entries.
