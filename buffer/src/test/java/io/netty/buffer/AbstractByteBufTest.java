@@ -2906,9 +2906,9 @@ public abstract class AbstractByteBufTest {
                 return null;
             }
         };
-        List<FutureTask<Void>> tasks = new ArrayList<>();
+        List<FutureTask<Void>> tasks = new ArrayList<FutureTask<Void>>();
         for (int i = 0; i < 10; i++) {
-            FutureTask<Void> task = new FutureTask<>(callable);
+            FutureTask<Void> task = new FutureTask<Void>(callable);
             new Thread(task).start();
             tasks.add(task);
         }
