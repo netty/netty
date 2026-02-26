@@ -68,14 +68,14 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
@@ -387,9 +387,18 @@ public class SniHandlerTest {
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
     public void testSniWithAlpnHandler(SslProvider provider) throws Exception {
-        SslContext nettyContext = makeSslContext(provider, true);
-        SslContext sniContext = makeSslContext(provider, true);
-        final SslContext clientContext = makeSslClientContext(provider, true);
+        SslContext nettyContext = null;
+        SslContext sniContext = null;
+        final SslContext clientContext;
+        try {
+            nettyContext = makeSslContext(provider, true);
+            sniContext = makeSslContext(provider, true);
+            clientContext = makeSslClientContext(provider, true);
+        } catch (Exception e) {
+            ReferenceCountUtil.safeRelease(nettyContext);
+            ReferenceCountUtil.safeRelease(sniContext);
+            throw e;
+        }
         try {
             final AtomicBoolean serverAlpnCtx = new AtomicBoolean(false);
             final AtomicBoolean clientAlpnCtx = new AtomicBoolean(false);
@@ -447,8 +456,7 @@ public class SniHandlerTest {
 
                 serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
-                Future<Channel> ccf = cb.connect(serverChannel.localAddress());
-                assertTrue(ccf.awaitUninterruptibly().isSuccess());
+                Future<Channel> ccf = cb.connect(serverChannel.localAddress()).sync();
                 clientChannel = ccf.getNow();
 
                 assertTrue(serverAlpnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -464,7 +472,7 @@ public class SniHandlerTest {
                 if (clientChannel != null) {
                     clientChannel.close().sync();
                 }
-                group.shutdownGracefully(0, 0, TimeUnit.MICROSECONDS);
+                group.shutdownGracefully(100, 5000, TimeUnit.MILLISECONDS).sync();
             }
         } finally {
             releaseAll(clientContext, nettyContext, sniContext);
