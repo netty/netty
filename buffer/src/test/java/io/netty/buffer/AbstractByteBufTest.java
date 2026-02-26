@@ -57,6 +57,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,7 +75,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -2879,43 +2879,54 @@ public abstract class AbstractByteBufTest {
 
     static void testBytesInArrayMultipleThreads(
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
-        final CountDownLatch latch = new CountDownLatch(60000);
-        final CyclicBarrier barrier = new CyclicBarrier(11);
-        for (int i = 0; i < 10; i++) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (cause.get() == null && latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                            buf = buffer.slice();
-                        } else {
-                            buf = buffer.duplicate();
-                        }
-
-                        byte[] array = new byte[8];
-                        buf.readBytes(array);
-
-                        assertArrayEquals(expectedBytes, array);
-
-                        Arrays.fill(array, (byte) 0);
-                        buf.getBytes(0, array);
-                        assertArrayEquals(expectedBytes, array);
-
-                        latch.countDown();
+        final CyclicBarrier startBarrier = new CyclicBarrier(10);
+        final CyclicBarrier endBarrier = new CyclicBarrier(11);
+        Callable<Void> callable = new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                startBarrier.await();
+                for (int i = 0; i < 6000; i++) {
+                    ByteBuf buf;
+                    if (slice) {
+                        buf = buffer.slice();
+                    } else {
+                        buf = buffer.duplicate();
                     }
-                    try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
-                    }
+
+                    byte[] array = new byte[8];
+                    buf.readBytes(array);
+
+                    assertArrayEquals(expectedBytes, array);
+
+                    Arrays.fill(array, (byte) 0);
+                    buf.getBytes(0, array);
+                    assertArrayEquals(expectedBytes, array);
                 }
-            }).start();
+                endBarrier.await();
+                return null;
+            }
+        };
+        List<FutureTask<Void>> tasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            FutureTask<Void> task = new FutureTask<>(callable);
+            new Thread(task).start();
+            tasks.add(task);
         }
-        latch.await(10, TimeUnit.SECONDS);
-        barrier.await(5, TimeUnit.SECONDS);
-        assertNull(cause.get());
+        try {
+            endBarrier.await(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            for (FutureTask<Void> task : tasks) {
+                try {
+                    task.get(100, TimeUnit.MILLISECONDS);
+                } catch (Exception ex) {
+                    e.addSuppressed(ex);
+                }
+            }
+            throw e;
+        }
+        for (FutureTask<Void> task : tasks) {
+            task.get(1, TimeUnit.SECONDS);
+        }
     }
 
     public static Object[][] setCharSequenceCombinations() {
