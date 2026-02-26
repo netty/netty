@@ -19,14 +19,13 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SWARUtil;
 import io.netty.util.internal.StringUtil;
@@ -75,6 +74,7 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
+    private static final boolean SWAR_UNALIGNED = PlatformDependent.canUnalignedAccess();
 
     static {
         String allocType = SystemPropertyUtil.get(
@@ -577,10 +577,10 @@ public final class ByteBufUtil {
         }
         final int length = toIndex - fromIndex;
         buffer.checkIndex(fromIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
         }
-        assert PlatformDependent.isUnaligned();
+        assert SWAR_UNALIGNED;
         int offset = fromIndex;
         final int byteCount = length & 7;
         if (byteCount > 0) {
@@ -730,7 +730,7 @@ public final class ByteBufUtil {
         }
         final int length = fromIndex - toIndex;
         buffer.checkIndex(toIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearLastIndexOf(buffer, fromIndex, toIndex, value);
         }
         final int longCount = length >>> 3;
@@ -924,8 +924,7 @@ public final class ByteBufUtil {
             if (buffer.hasArray()) {
                 return safeArrayWriteUtf8(buffer.array(), buffer.arrayOffset() + writerIndex, seq, start, end);
             }
-            if (buffer.isDirect()) {
-                assert buffer.nioBufferCount() == 1;
+            if (buffer.isDirect() && buffer.nioBufferCount() == 1) {
                 final ByteBuffer internalDirectBuffer = buffer.internalNioBuffer(writerIndex, reservedBytes);
                 final int bufferPosition = internalDirectBuffer.position();
                 return safeDirectWriteUtf8(internalDirectBuffer, bufferPosition, seq, start, end);
@@ -1703,13 +1702,13 @@ public final class ByteBufUtil {
 
     static final class ThreadLocalUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
-        private static final ObjectPool<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
-                ObjectPool.newPool(new ObjectCreator<ThreadLocalUnsafeDirectByteBuf>() {
+        private static final Recycler<ThreadLocalUnsafeDirectByteBuf> RECYCLER =
+                new Recycler<ThreadLocalUnsafeDirectByteBuf>() {
                     @Override
-                    public ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
+                    protected ThreadLocalUnsafeDirectByteBuf newObject(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
                         return new ThreadLocalUnsafeDirectByteBuf(handle);
                     }
-                });
+                };
 
         static ThreadLocalUnsafeDirectByteBuf newInstance() {
             ThreadLocalUnsafeDirectByteBuf buf = RECYCLER.get();
@@ -1737,13 +1736,12 @@ public final class ByteBufUtil {
 
     static final class ThreadLocalDirectByteBuf extends UnpooledDirectByteBuf {
 
-        private static final ObjectPool<ThreadLocalDirectByteBuf> RECYCLER = ObjectPool.newPool(
-                new ObjectCreator<ThreadLocalDirectByteBuf>() {
+        private static final Recycler<ThreadLocalDirectByteBuf> RECYCLER = new Recycler<ThreadLocalDirectByteBuf>() {
             @Override
-            public ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
+            protected ThreadLocalDirectByteBuf newObject(Handle<ThreadLocalDirectByteBuf> handle) {
                 return new ThreadLocalDirectByteBuf(handle);
             }
-        });
+        };
 
         static ThreadLocalDirectByteBuf newInstance() {
             ThreadLocalDirectByteBuf buf = RECYCLER.get();

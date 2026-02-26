@@ -595,9 +595,10 @@ public final class Unpooled {
     private static ByteBuf copiedBufferUtf8(CharSequence string) {
         boolean release = true;
         // Mimic the same behavior as other copiedBuffer implementations.
-        ByteBuf buffer = ALLOC.heapBuffer(ByteBufUtil.utf8Bytes(string));
+        int byteLength = ByteBufUtil.utf8Bytes(string);
+        ByteBuf buffer = ALLOC.heapBuffer(byteLength);
         try {
-            ByteBufUtil.writeUtf8(buffer, string);
+            ByteBufUtil.reserveAndWriteUtf8(buffer, string, byteLength);
             release = false;
             return buffer;
         } finally {
@@ -694,10 +695,19 @@ public final class Unpooled {
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
         ByteOrder endianness = buffer.order();
         if (endianness == BIG_ENDIAN) {
-            return new ReadOnlyByteBuf(buffer);
+            return newReadyOnlyBuffer(buffer);
         }
 
-        return new ReadOnlyByteBuf(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+        return newReadyOnlyBuffer(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+    }
+
+    private static ReadOnlyByteBuf newReadyOnlyBuffer(ByteBuf buffer) {
+        // We can only use ReadOnlyAbstractByteBuf if we either have nothing to unwrap or the unwrapped buffer is of
+        // type AbstractByteBuf. Otherwise we will produce a CCE later.
+        return buffer instanceof AbstractByteBuf && (
+                buffer.unwrap() == null || buffer.unwrap() instanceof AbstractByteBuf) ?
+                new ReadOnlyAbstractByteBuf((AbstractByteBuf) buffer) :
+                new ReadOnlyByteBuf(buffer);
     }
 
     /**

@@ -39,6 +39,7 @@ import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.NativeInetAddress.address;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
+import static io.netty.util.internal.StringUtil.className;
 
 /**
  * Provides a JNI bridge to native socket operations.
@@ -349,7 +350,7 @@ public class Socket extends FileDescriptor {
             VSockAddress vSockAddress = (VSockAddress) socketAddress;
             res = connectVSock(fd, vSockAddress.getCid(), vSockAddress.getPort());
         } else {
-            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
+            throw new Error("Unexpected SocketAddress implementation: " + className(socketAddress));
         }
         if (res < 0) {
             return handleConnectErrno("connect", res);
@@ -394,7 +395,7 @@ public class Socket extends FileDescriptor {
                 throw newIOException("bind", res);
             }
         } else {
-            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
+            throw new Error("Unexpected SocketAddress implementation: " + className(socketAddress));
         }
     }
 

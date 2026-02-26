@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -96,12 +94,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // call retain on it so it can't be put back on the pool
             buf.writeBytes(data).retain();
 
-            ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    latch.countDown();
-                }
-            });
+            ctx.channel().writeAndFlush(buf).addListener(future -> latch.countDown());
         }
 
         @Override

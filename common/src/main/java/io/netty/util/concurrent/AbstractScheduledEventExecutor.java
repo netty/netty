@@ -192,13 +192,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         long nanoTime = getCurrentTimeNanos();
         for (;;) {
-            Runnable scheduledTask = pollScheduledTask(nanoTime);
+            ScheduledFutureTask scheduledTask = (ScheduledFutureTask) pollScheduledTask(nanoTime);
             if (scheduledTask == null) {
                 return true;
             }
+            if (scheduledTask.isCancelled()) {
+                continue;
+            }
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
+                scheduledTaskQueue.add(scheduledTask);
                 return false;
             }
         }
@@ -334,7 +337,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final void scheduleFromEventLoop(final ScheduledFutureTask<?> task) {
         // nextTaskId a long and so there is no chance it will overflow back to 0
-        scheduledTaskQueue().add(task.setId(++nextTaskId));
+        if (task.getId() == 0L) {
+            task.setId(++nextTaskId);
+        }
+        scheduledTaskQueue().add(task);
     }
 
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {

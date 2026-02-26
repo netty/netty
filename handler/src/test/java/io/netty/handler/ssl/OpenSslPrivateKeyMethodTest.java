@@ -25,11 +25,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
@@ -92,13 +93,13 @@ public class OpenSslPrivateKeyMethodTest {
     public static void init() throws Exception {
         checkShouldUseKeyManagerFactory();
 
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
         assumeCipherAvailable(SslProvider.OPENSSL);
         assumeCipherAvailable(SslProvider.JDK);
 
-        GROUP = new DefaultEventLoopGroup();
+        GROUP = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         CERT = new CertificateBuilder()
                 .rsa2048()
                 .subject("cn=localhost")
@@ -113,10 +114,10 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @AfterAll
-    public static void destroy() {
-        if (OpenSsl.isBoringSSL()) {
-            GROUP.shutdownGracefully();
-            EXECUTOR.shutdown();
+    public static void destroy() throws InterruptedException {
+        if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
+            GROUP.shutdownGracefully().sync();
+            assertTrue(EXECUTOR.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 

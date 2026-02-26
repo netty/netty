@@ -91,9 +91,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.channel.embedded.EmbeddedChannel$2",
+    "name": "io.netty.channel.embedded.EmbeddedChannel$1",
     "condition": {
-      "typeReachable": "io.netty.channel.embedded.EmbeddedChannel$2"
+      "typeReachable": "io.netty.channel.embedded.EmbeddedChannel$1"
     },
     "queryAllPublicMethods": true
   },

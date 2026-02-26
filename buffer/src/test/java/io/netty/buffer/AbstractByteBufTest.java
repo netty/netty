@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -24,6 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,12 +51,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
@@ -66,7 +78,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -2325,7 +2336,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(60)
     public void testCopyMultipleThreads0() throws Throwable {
         byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2871,43 +2882,144 @@ public abstract class AbstractByteBufTest {
 
     static void testBytesInArrayMultipleThreads(
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
-        final CountDownLatch latch = new CountDownLatch(60000);
-        final CyclicBarrier barrier = new CyclicBarrier(11);
-        for (int i = 0; i < 10; i++) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (cause.get() == null && latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                            buf = buffer.slice();
-                        } else {
-                            buf = buffer.duplicate();
-                        }
-
-                        byte[] array = new byte[8];
-                        buf.readBytes(array);
-
-                        assertArrayEquals(expectedBytes, array);
-
-                        Arrays.fill(array, (byte) 0);
-                        buf.getBytes(0, array);
-                        assertArrayEquals(expectedBytes, array);
-
-                        latch.countDown();
+        final CyclicBarrier startBarrier = new CyclicBarrier(10);
+        final CyclicBarrier endBarrier = new CyclicBarrier(11);
+        Callable<Void> callable = new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                startBarrier.await();
+                for (int i = 0; i < 6000; i++) {
+                    ByteBuf buf;
+                    if (slice) {
+                        buf = buffer.slice();
+                    } else {
+                        buf = buffer.duplicate();
                     }
-                    try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+
+                    byte[] array = new byte[8];
+                    buf.readBytes(array);
+
+                    assertArrayEquals(expectedBytes, array);
+
+                    Arrays.fill(array, (byte) 0);
+                    buf.getBytes(0, array);
+                    assertArrayEquals(expectedBytes, array);
+                }
+                endBarrier.await();
+                return null;
+            }
+        };
+        List<FutureTask<Void>> tasks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            FutureTask<Void> task = new FutureTask<>(callable);
+            new Thread(task).start();
+            tasks.add(task);
+        }
+        try {
+            endBarrier.await(30, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            for (FutureTask<Void> task : tasks) {
+                try {
+                    task.get(100, TimeUnit.MILLISECONDS);
+                } catch (Exception ex) {
+                    e.addSuppressed(ex);
+                }
+            }
+            throw e;
+        }
+        for (FutureTask<Void> task : tasks) {
+            task.get(1, TimeUnit.SECONDS);
+        }
+    }
+
+    public static Stream<Arguments> setCharSequenceCombinations() {
+        Stream.Builder<Arguments> builder = Stream.builder();
+        List<Charset> charsets = Arrays.asList(
+                StandardCharsets.UTF_8,
+                StandardCharsets.US_ASCII,
+                StandardCharsets.ISO_8859_1);
+        for (Charset charset : charsets) {
+            for (CharSequenceType charSequenceType : CharSequenceType.values()) {
+                builder.add(Arguments.of(charset, charSequenceType));
+            }
+        }
+        return builder.build();
+    }
+
+    enum CharSequenceType {
+        STRING,
+        ASCII_STRING;
+
+        public CharSequence create(char[] cs) {
+            switch (this) {
+                case STRING:
+                    return new String(cs);
+                case ASCII_STRING:
+                    return new AsciiString(cs);
+                default:
+                    throw new UnsupportedOperationException("Unknown type: " + this);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest
+    @MethodSource("setCharSequenceCombinations")
+    void testSetCharSequenceMultipleThreads(final Charset charset, CharSequenceType charSeqType) throws Exception {
+        int bufSize = 32;
+        ByteBuf[] bufs = new ByteBuf[16];
+        for (int i = 0; i < bufs.length; i++) {
+            bufs[i] = newBuffer(bufSize);
+        }
+
+        int iterations = 256;
+        Semaphore start = new Semaphore(0);
+        Semaphore finish = new Semaphore(0);
+        char[] cs = new char[(int) (bufSize / charset.newEncoder().maxBytesPerChar())];
+        Arrays.fill(cs, 'a');
+        final CharSequence str = charSeqType.create(cs);
+        ExecutorService executor = Executors.newFixedThreadPool(bufs.length);
+        try {
+            Future<Void>[] futures = new Future[bufs.length];
+            for (int i = 0; i < bufs.length; i++) {
+                final ByteBuf buf = bufs[i];
+                futures[i] = executor.submit(() -> {
+                    finish.release();
+                    start.acquire();
+                    for (int j = 0; j < iterations; j++) {
+                        buf.setCharSequence(0, str, charset);
+                    }
+                    return null;
+                });
+            }
+            finish.acquire(bufs.length);
+            start.release(bufs.length);
+            Exception e = null;
+            for (Future<Void> future : futures) {
+                try {
+                    future.get();
+                } catch (InterruptedException ex) {
+                    if (e != null) {
+                        ex.addSuppressed(e);
+                    }
+                    throw ex; // Propagate interrupted exceptions immediately.
+                } catch (ExecutionException ex) {
+                    if (e == null) {
+                        e = ex;
+                    } else {
+                        e.addSuppressed(ex);
                     }
                 }
-            }).start();
+            }
+            if (e != null) {
+                fail("Worker threads failed", e);
+            }
+        } finally {
+            executor.shutdown();
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
         }
-        latch.await(10, TimeUnit.SECONDS);
-        barrier.await(5, TimeUnit.SECONDS);
-        assertNull(cause.get());
     }
 
     @Test

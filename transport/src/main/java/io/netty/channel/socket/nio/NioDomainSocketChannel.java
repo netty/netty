@@ -327,7 +327,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     @Override
     protected void doFinishConnect() throws Exception {
         if (!javaChannel().finishConnect()) {
-            throw new Error();
+            throw new UnsupportedOperationException("finishConnect is not supported for " + getClass().getName());
         }
     }
 

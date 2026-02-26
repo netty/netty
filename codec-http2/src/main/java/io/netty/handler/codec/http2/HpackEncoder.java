@@ -329,7 +329,7 @@ final class HpackEncoder {
                 encodeInteger(out, 0x10, 4, nameIndexValid ? nameIndex : 0);
                 break;
             default:
-                throw new Error("should not reach here");
+                throw new Error("Unexpected index type: " + indexType);
         }
         if (!nameIndexValid) {
             encodeStringLiteral(out, name);

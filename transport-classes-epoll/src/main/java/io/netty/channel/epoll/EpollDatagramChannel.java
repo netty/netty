@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -37,6 +38,9 @@ import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -55,6 +59,9 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -65,6 +72,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.channel.epoll.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     /**
      * Returns {@code true} if {@link io.netty.channel.unix.SegmentedDatagramPacket} is supported natively.
@@ -114,6 +127,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private EpollDatagramChannel(LinuxSocket fd, boolean active) {
         super(null, fd, active, EpollIoOps.valueOf(0));
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
+        try {
+            fd.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException | ChannelException e) {
+            logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+        }
+
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -326,6 +347,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    protected void doRegister(ChannelPromise promise) {
+        super.doRegister(promise);
+        promise.addListener(f -> {
+            if (f.isSuccess() && isRegistered()) {
+                // As Datagram is connection-less we can submit the current ops once the registration itself was
+                // successful.
+                submitCurrentOps();
+            }
+        });
+    }
+
+    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
@@ -427,7 +460,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        try {
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        } catch (NativeIoException e) {
+            if (remoteAddress == null) {
+                throw translateForConnected(e);
+            }
+            throw e;
+        }
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {

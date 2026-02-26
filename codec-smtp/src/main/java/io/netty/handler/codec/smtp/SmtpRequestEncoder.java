@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Iterator;
@@ -33,8 +34,9 @@ import java.util.RandomAccess;
 public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
     private static final int CRLF_SHORT = ('\r' << 8) | '\n';
     private static final byte SP = ' ';
-    private static final ByteBuf DOT_CRLF_BUFFER = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(3).writeByte('.').writeByte('\r').writeByte('\n')).asReadOnly();
+    private static final ByteBuf DOT_CRLF_BUFFER = LeakPresenceDetector.staticInitializer(() ->
+            Unpooled.unreleasableBuffer(Unpooled.directBuffer(3)
+                    .writeByte('.').writeByte('\r').writeByte('\n')).asReadOnly());
 
     private boolean contentExpected;
 

@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
+
 /**
  * Utility class for heap buffers.
  */
@@ -25,10 +27,20 @@ final class HeapByteBufUtil {
     }
 
     static short getShort(byte[] memory, int index) {
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortBE(memory, index);
+        }
+        return getShort0(memory, index);
+    }
+
+    private static short getShort0(byte[] memory, int index) {
         return (short) (memory[index] << 8 | memory[index + 1] & 0xFF);
     }
 
     static short getShortLE(byte[] memory, int index) {
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortLE(memory, index);
+        }
         return (short) (memory[index] & 0xff | memory[index + 1] << 8);
     }
 
@@ -45,51 +57,87 @@ final class HeapByteBufUtil {
     }
 
     static int getInt(byte[] memory, int index) {
-        return  (memory[index]     & 0xff) << 24 |
-                (memory[index + 1] & 0xff) << 16 |
-                (memory[index + 2] & 0xff) <<  8 |
-                memory[index + 3] & 0xff;
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntBE(memory, index);
+        }
+        return getInt0(memory, index);
+    }
+
+    private static int getInt0(byte[] memory, int index) {
+        return (memory[index] & 0xFF) << 24 |
+               (memory[index + 1] & 0xFF) << 16 |
+               (memory[index + 2] & 0xFF) << 8 |
+               (memory[index + 3] & 0xFF);
     }
 
     static int getIntLE(byte[] memory, int index) {
-        return  memory[index]      & 0xff        |
-                (memory[index + 1] & 0xff) << 8  |
-                (memory[index + 2] & 0xff) << 16 |
-                (memory[index + 3] & 0xff) << 24;
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntLE(memory, index);
+        }
+        return getIntLE0(memory, index);
+    }
+
+    private static int getIntLE0(byte[] memory, int index) {
+        return (memory[index] & 0xFF) |
+               (memory[index + 1] & 0xFF) << 8 |
+               (memory[index + 2] & 0xFF) << 16 |
+               (memory[index + 3] & 0xFF) << 24;
     }
 
     static long getLong(byte[] memory, int index) {
-        return  ((long) memory[index]     & 0xff) << 56 |
-                ((long) memory[index + 1] & 0xff) << 48 |
-                ((long) memory[index + 2] & 0xff) << 40 |
-                ((long) memory[index + 3] & 0xff) << 32 |
-                ((long) memory[index + 4] & 0xff) << 24 |
-                ((long) memory[index + 5] & 0xff) << 16 |
-                ((long) memory[index + 6] & 0xff) <<  8 |
-                (long) memory[index + 7] & 0xff;
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongBE(memory, index);
+        }
+        return getLong0(memory, index);
+    }
+
+    private static long getLong0(byte[] memory, int index) {
+        return ((long) memory[index] & 0xFF) << 56 |
+               ((long) memory[index + 1] & 0xFF) << 48 |
+               ((long) memory[index + 2] & 0xFF) << 40 |
+               ((long) memory[index + 3] & 0xFF) << 32 |
+               ((long) memory[index + 4] & 0xFF) << 24 |
+               ((long) memory[index + 5] & 0xFF) << 16 |
+               ((long) memory[index + 6] & 0xFF) << 8 |
+               ((long) memory[index + 7] & 0xFF);
     }
 
     static long getLongLE(byte[] memory, int index) {
-        return  (long) memory[index]      & 0xff        |
-                ((long) memory[index + 1] & 0xff) <<  8 |
-                ((long) memory[index + 2] & 0xff) << 16 |
-                ((long) memory[index + 3] & 0xff) << 24 |
-                ((long) memory[index + 4] & 0xff) << 32 |
-                ((long) memory[index + 5] & 0xff) << 40 |
-                ((long) memory[index + 6] & 0xff) << 48 |
-                ((long) memory[index + 7] & 0xff) << 56;
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongLE(memory, index);
+        }
+        return getLongLE0(memory, index);
+    }
+
+    private static long getLongLE0(byte[] memory, int index) {
+        return ((long) memory[index] & 0xFF) |
+               ((long) memory[index + 1] & 0xFF) << 8 |
+               ((long) memory[index + 2] & 0xFF) << 16 |
+               ((long) memory[index + 3] & 0xFF) << 24 |
+               ((long) memory[index + 4] & 0xFF) << 32 |
+               ((long) memory[index + 5] & 0xFF) << 40 |
+               ((long) memory[index + 6] & 0xFF) << 48 |
+               ((long) memory[index + 7] & 0xFF) << 56;
     }
 
     static void setByte(byte[] memory, int index, int value) {
-        memory[index] = (byte) value;
+        memory[index] = (byte) (value & 0xFF);
     }
 
     static void setShort(byte[] memory, int index, int value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortBE(memory, index, value);
+            return;
+        }
         memory[index]     = (byte) (value >>> 8);
         memory[index + 1] = (byte) value;
     }
 
     static void setShortLE(byte[] memory, int index, int value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortLE(memory, index, value);
+            return;
+        }
         memory[index]     = (byte) value;
         memory[index + 1] = (byte) (value >>> 8);
     }
@@ -107,6 +155,14 @@ final class HeapByteBufUtil {
     }
 
     static void setInt(byte[] memory, int index, int value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntBE(memory, index, value);
+            return;
+        }
+        setInt0(memory, index, value);
+    }
+
+    private static void setInt0(byte[] memory, int index, int value) {
         memory[index]     = (byte) (value >>> 24);
         memory[index + 1] = (byte) (value >>> 16);
         memory[index + 2] = (byte) (value >>> 8);
@@ -114,6 +170,14 @@ final class HeapByteBufUtil {
     }
 
     static void setIntLE(byte[] memory, int index, int value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntLE(memory, index, value);
+            return;
+        }
+        setIntLE0(memory, index, value);
+    }
+
+    private static void setIntLE0(byte[] memory, int index, int value) {
         memory[index]     = (byte) value;
         memory[index + 1] = (byte) (value >>> 8);
         memory[index + 2] = (byte) (value >>> 16);
@@ -121,6 +185,14 @@ final class HeapByteBufUtil {
     }
 
     static void setLong(byte[] memory, int index, long value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongBE(memory, index, value);
+            return;
+        }
+        setLong0(memory, index, value);
+    }
+
+    private static void setLong0(byte[] memory, int index, long value) {
         memory[index]     = (byte) (value >>> 56);
         memory[index + 1] = (byte) (value >>> 48);
         memory[index + 2] = (byte) (value >>> 40);
@@ -132,6 +204,14 @@ final class HeapByteBufUtil {
     }
 
     static void setLongLE(byte[] memory, int index, long value) {
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongLE(memory, index, value);
+            return;
+        }
+        setLongLE0(memory, index, value);
+    }
+
+    private static void setLongLE0(byte[] memory, int index, long value) {
         memory[index]     = (byte) value;
         memory[index + 1] = (byte) (value >>> 8);
         memory[index + 2] = (byte) (value >>> 16);

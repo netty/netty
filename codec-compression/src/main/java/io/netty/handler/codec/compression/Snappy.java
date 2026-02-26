@@ -25,7 +25,7 @@ import java.util.Arrays;
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
  * output {@link ByteBuf}.
- *
+ * <p>
  * See <a href="https://github.com/google/snappy/blob/master/format_description.txt">snappy format</a>.
  */
 public final class Snappy {
@@ -123,7 +123,7 @@ public final class Snappy {
 
                     // equivalent to Short.toUnsignedInt
                     // use unsigned short cast to avoid loss precision when 32767 <= length <= 65355
-                    candidate = baseIndex + ((int) table[hash]) & 0xffff;
+                    candidate = baseIndex + (table[hash] & 0xffff);
 
                     table[hash] = (short) (inIndex - baseIndex);
                 }
@@ -148,7 +148,7 @@ public final class Snappy {
                     int prevHash = hash(in, insertTail, shift);
                     table[prevHash] = (short) (inIndex - baseIndex - 1);
                     int currentHash = hash(in, insertTail + 1, shift);
-                    candidate = baseIndex + table[currentHash];
+                    candidate = baseIndex + (table[currentHash] & 0xFFFF);
                     table[currentHash] = (short) (inIndex - baseIndex);
                 }
                 while (in.getInt(insertTail + 1) == in.getInt(candidate));
@@ -708,7 +708,7 @@ public final class Snappy {
 
     /**
      * From the spec:
-     *
+     * <p>
      * "Checksums are not stored directly, but masked, as checksumming data and
      * then its own checksum can be problematic. The masking is the same as used
      * in Apache Hadoop: Rotate the checksum by 15 bits, then add the constant

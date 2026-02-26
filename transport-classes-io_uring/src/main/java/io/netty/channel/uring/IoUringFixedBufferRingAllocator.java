@@ -15,19 +15,30 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
 
 /**
  * {@link IoUringBufferRingAllocator} implementation which uses a fixed size for the buffers that are returned by
  * {@link #allocate()}.
  */
-public final class IoUringFixedBufferRingAllocator implements IoUringBufferRingAllocator {
-    private final ByteBufAllocator allocator;
+public final class IoUringFixedBufferRingAllocator extends AbstractIoUringBufferRingAllocator {
     private final int bufferSize;
+
+    /**
+     * Create a new instance
+     *
+     * @param allocator         the {@link ByteBufAllocator} to use.
+     * @param largeAllocation   {@code true} if we should do a large allocation for the whole buffer ring
+     *                          and then slice out the buffers or {@code false} if we should do one allocation
+     *                          per buffer.
+     * @param bufferSize        the size of the buffers that are allocated.
+     */
+    public IoUringFixedBufferRingAllocator(ByteBufAllocator allocator, boolean largeAllocation, int bufferSize) {
+        super(allocator, largeAllocation);
+        this.bufferSize = ObjectUtil.checkPositive(bufferSize, "bufferSize");
+    }
 
     /**
      * Create a new instance
@@ -36,8 +47,7 @@ public final class IoUringFixedBufferRingAllocator implements IoUringBufferRingA
      * @param bufferSize    the size of the buffers that are allocated.
      */
     public IoUringFixedBufferRingAllocator(ByteBufAllocator allocator, int bufferSize) {
-        this.allocator = Objects.requireNonNull(allocator, "allocator");
-        this.bufferSize = ObjectUtil.checkPositive(bufferSize, "bufferSize");
+        this(allocator, false, bufferSize);
     }
 
     /**
@@ -50,12 +60,7 @@ public final class IoUringFixedBufferRingAllocator implements IoUringBufferRingA
     }
 
     @Override
-    public ByteBuf allocate() {
-        return allocator.directBuffer(bufferSize);
-    }
-
-    @Override
-    public void lastBytesRead(int attempted, int actual) {
-        // NOOP.
+    protected int nextBufferSize() {
+        return bufferSize;
     }
 }

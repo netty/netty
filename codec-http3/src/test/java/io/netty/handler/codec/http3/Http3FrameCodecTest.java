@@ -127,7 +127,7 @@ public class Http3FrameCodecTest {
                         Http3RequestStreamDecodeStateValidator decStateValidator =
                                 new Http3RequestStreamDecodeStateValidator();
                         ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder,
-                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator));
+                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator, (id, v) -> false));
                         ch.pipeline().addLast(encStateValidator);
                         ch.pipeline().addLast(decStateValidator);
                     }
@@ -271,7 +271,10 @@ public class Http3FrameCodecTest {
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL, 0L);
+        settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L);
         // Ensure we can encode and decode all sizes correctly.
+        // unknown settings id/key will be ignored
         settingsFrame.put(63, 63L);
         settingsFrame.put(16383, 16383L);
         settingsFrame.put(1073741823, 1073741823L);

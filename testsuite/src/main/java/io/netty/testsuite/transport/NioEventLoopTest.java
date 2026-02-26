@@ -16,11 +16,15 @@
 package io.netty.testsuite.transport;
 
 import io.netty.channel.Channel;
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+
+import java.nio.channels.spi.SelectorProvider;
+import java.util.concurrent.Executor;
 
 public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
@@ -32,6 +36,12 @@ public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new NioEventLoopGroup();
+    }
+
+    @Override
+    protected EventLoopGroup newAutoScalingEventLoopGroup() {
+        return new NioEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
+                                     SelectorProvider.provider(), DefaultSelectStrategyFactory.INSTANCE);
     }
 
     @Override

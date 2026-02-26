@@ -53,7 +53,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.conscrypt.OpenSSLProvider;
@@ -65,11 +64,9 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.opentest4j.AssertionFailedError;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -317,7 +314,7 @@ public abstract class SSLEngineTest {
                 return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
-                throw new Error();
+                throw new Error("Unexpected buffer type: " + type);
         }
     }
 
@@ -342,7 +339,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -357,7 +354,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -373,7 +370,7 @@ public abstract class SSLEngineTest {
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -434,7 +431,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -450,7 +447,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -550,7 +547,7 @@ public abstract class SSLEngineTest {
         if (clientGroupShutdownFuture != null) {
             clientGroupShutdownFuture.sync();
         }
-        delegatingExecutor.shutdown();
+        assertTrue(delegatingExecutor.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         serverException = null;
         clientException = null;
     }
@@ -632,11 +629,7 @@ public abstract class SSLEngineTest {
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Set the server to only support a single TLSv1.2 cipher
-            final String serverCipher =
-                    // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
-                    // See https://www.java.com/en/configure_crypto.html
-                    PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
-                            "TLS_RSA_WITH_AES_128_CBC_SHA";
+            final String serverCipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
             serverEngine.setEnabledCipherSuites(new String[] { serverCipher });
 
             // Set the client to only support a single TLSv1.3 cipher
@@ -955,7 +948,7 @@ public abstract class SSLEngineTest {
 
     protected static void rethrowIfNotNull(Throwable error) {
         if (error != null) {
-            throw new AssertionFailedError("Expected no error", error);
+            fail("Expected no error", error);
         }
     }
 
@@ -1392,9 +1385,9 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
-            assertTrue(session.isValid());
+            assertTrue(session.isValid(), () -> "session should be valid: " + session);
             session.invalidate();
-            assertFalse(session.isValid());
+            assertFalse(session.isValid(), () -> "session should be invalid: " + session);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
@@ -1832,24 +1825,35 @@ public abstract class SSLEngineTest {
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
     protected void cleanupClientSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
     }
 
     /**
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
     protected void cleanupServerSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
     }
 
     /**
      * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
      */
     protected void cleanupClientSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(unwrapEngine(engine));
     }
 
     /**
      * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
      */
     protected void cleanupServerSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(unwrapEngine(engine));
+    }
+
+    private static SSLEngine unwrapEngine(SSLEngine engine) {
+        if (engine instanceof JdkSslEngine) {
+            return ((JdkSslEngine) engine).getWrappedEngine();
+        }
+        return engine;
     }
 
     protected void setupHandlers(SSLEngineTestParam param, ApplicationProtocolConfig apn)
@@ -2260,11 +2264,7 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher =
-                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
-                // See https://www.java.com/en/configure_crypto.html
-                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
-                "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
@@ -2297,11 +2297,7 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher =
-                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
-                // See https://www.java.com/en/configure_crypto.html
-                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
-                        "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
@@ -4533,10 +4529,9 @@ public abstract class SSLEngineTest {
          * The JDK SSL engine master key retrieval relies on being able to set field access to true.
          * That is not available in JDK9+
          */
-        assumeFalse(sslServerProvider() == SslProvider.JDK && PlatformDependent.javaVersion() > 8);
-
-        String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-        System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());
+        if (sslServerProvider() == SslProvider.JDK) {
+            assumeTrue(SslMasterKeyHandler.isSunSslEngineAvailable());
+        }
 
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -4546,51 +4541,49 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .build());
 
-        try {
-            sb = new ServerBootstrap();
-            sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
-            sb.channel(NioServerSocketChannel.class);
+        sb = new ServerBootstrap();
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.channel(NioServerSocketChannel.class);
 
-            final Promise<SecretKey> promise = sb.config().group().next().newPromise();
-            serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel ch) {
-                    ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
+        final Promise<SecretKey> promise = sb.config().group().next().newPromise();
+        serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), param.type()));
 
-                    SslHandler sslHandler = !param.delegate() ?
-                            serverSslCtx.newHandler(ch.alloc()) :
-                            serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                SslHandler sslHandler = !param.delegate() ?
+                        serverSslCtx.newHandler(ch.alloc()) :
+                        serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
 
-                    ch.pipeline().addLast(sslHandler);
-                    ch.pipeline().addLast(new SslMasterKeyHandler() {
-                        @Override
-                        protected void accept(SecretKey masterKey, SSLSession session) {
-                            promise.setSuccess(masterKey);
-                        }
-                    });
-                    serverConnectedChannel = ch;
-                }
-            }).bind(new InetSocketAddress(0)).sync().channel();
+                ch.pipeline().addLast(sslHandler);
+                ch.pipeline().addLast(new SslMasterKeyHandler() {
 
-            int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+                    @Override
+                    protected boolean masterKeyHandlerEnabled() {
+                        return true;
+                    }
 
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
-            try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
-                OutputStream out = socket.getOutputStream();
-                out.write(1);
-                out.flush();
-
-                assertTrue(promise.await(10, TimeUnit.SECONDS));
-                SecretKey key = promise.get();
-                assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
+                    @Override
+                    protected void accept(SecretKey masterKey, SSLSession session) {
+                        promise.setSuccess(masterKey);
+                    }
+                });
+                serverConnectedChannel = ch;
             }
-        } finally {
-            if (originalSystemPropertyValue != null) {
-                System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, originalSystemPropertyValue);
-            } else {
-                System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-            }
+        }).bind(new InetSocketAddress(0)).sync().channel();
+
+        int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
+        try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
+            OutputStream out = socket.getOutputStream();
+            out.write(1);
+            out.flush();
+
+            assertTrue(promise.await(10, TimeUnit.SECONDS));
+            SecretKey key = promise.get();
+            assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
         }
     }
 

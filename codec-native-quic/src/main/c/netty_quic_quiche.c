@@ -311,6 +311,10 @@ static jint netty_quiche_err_crypto_buffer_exceeded(JNIEnv* env, jclass clazz) {
     return QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED;
 }
 
+static jint netty_quiche_err_invalid_dcid_initialization(JNIEnv* env, jclass clazz) {
+    return QUICHE_ERR_INVALID_DCID_INITIALIZATION;
+}
+
 static jint netty_quiche_cc_reno(JNIEnv* env, jclass clazz) {
     return QUICHE_CC_RENO;
 }
@@ -320,7 +324,7 @@ static jint netty_quiche_cc_cubic(JNIEnv* env, jclass clazz) {
 }
 
 static jint netty_quiche_cc_bbr(JNIEnv* env, jclass clazz) {
-    return QUICHE_CC_BBR;
+    return QUICHE_CC_BBR2_GCONGESTION;
 }
 
 static jint netty_quiche_path_event_type_new(JNIEnv* env, jclass clazz) {
@@ -396,6 +400,24 @@ static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong sci
                                  local_pointer, (socklen_t) local_len,
                                  peer_pointer, (socklen_t) peer_len,
                                  (quiche_config *) config, (void*) ssl, isServer == JNI_TRUE ? true : false);
+    if (conn == NULL) {
+        return -1;
+    }
+    return (jlong) conn;
+}
+
+static jlong netty_quiche_conn_new_with_tls_and_client_dcid(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong odcid, jint odcid_len, jlong local, jint local_len, jlong peer, jint peer_len, jlong config, jlong ssl) {
+    const uint8_t * odcid_pointer = NULL;
+    if (odcid_len != -1) {
+        odcid_pointer = (const uint8_t *) odcid;
+    }
+    const struct sockaddr *local_pointer = (const struct sockaddr*) local;
+    const struct sockaddr *peer_pointer = (const struct sockaddr*) peer;
+    quiche_conn *conn = quiche_conn_new_with_tls_and_client_dcid((const uint8_t *) scid, (size_t) scid_len,
+                                 odcid_pointer, (size_t) odcid_len,
+                                 local_pointer, (socklen_t) local_len,
+                                 peer_pointer, (socklen_t) peer_len,
+                                 (quiche_config *) config, (void*) ssl);
     if (conn == NULL) {
         return -1;
     }
@@ -490,9 +512,8 @@ static jint netty_quiche_conn_stream_priority(JNIEnv* env, jclass clazz, jlong c
     return (jint) quiche_conn_stream_priority((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t) urgency, incremental == JNI_TRUE ? true : false);
 }
 
-static jint netty_quiche_conn_stream_recv(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong out, int buf_len, jlong finAddr) {
-    uint64_t error_code;
-    return (jint) quiche_conn_stream_recv((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) out, (size_t) buf_len, (bool *) finAddr, &error_code);
+static jint netty_quiche_conn_stream_recv(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong out, int buf_len, jlong finAddr, jlong error_codeAddr) {
+    return (jint) quiche_conn_stream_recv((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) out, (size_t) buf_len, (bool *) finAddr, (uint64_t *) error_codeAddr);
 }
 
 static jint netty_quiche_conn_stream_send(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong buf, int buf_len, jboolean fin) {
@@ -579,7 +600,8 @@ static jlongArray netty_quiche_conn_peer_transport_params(JNIEnv* env, jclass cl
         (jlong)params.peer_initial_max_streams_bidi,
         (jlong)params.peer_initial_max_streams_uni,
         (jlong)params.peer_ack_delay_exponent,
-        (jlong)params.peer_disable_active_migration ? 1: 0,
+        (jlong)params.peer_max_ack_delay,
+        (jlong)(params.peer_disable_active_migration == true ? 1: 0),
         (jlong)params.peer_active_conn_id_limit,
         (jlong)params.peer_max_datagram_frame_size
     };
@@ -725,7 +747,7 @@ static jobject netty_new_socket_address(JNIEnv* env, const struct sockaddr_stora
 static jobjectArray netty_quiche_conn_path_stats(JNIEnv* env, jclass clazz, jlong conn, jlong idx) {
     quiche_path_stats stats = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     if (quiche_conn_path_stats((quiche_conn *) conn, idx, &stats) != 0) {
-        // The idx is not valid. 
+        // The idx is not valid.
         return NULL;
     }
 
@@ -1008,6 +1030,10 @@ static void netty_quiche_config_enable_hystart(JNIEnv* env, jclass clazz, jlong 
     quiche_config_enable_hystart((quiche_config*) config, value == JNI_TRUE ? true : false);
 }
 
+static void netty_quiche_config_discover_pmtu(JNIEnv* env, jclass clazz, jlong config, jboolean value) {
+    quiche_config_discover_pmtu((quiche_config*) config, value == JNI_TRUE ? true : false);
+}
+
 static void netty_quiche_config_set_active_connection_id_limit(JNIEnv* env, jclass clazz, jlong config, jlong value) {
     quiche_config_set_active_connection_id_limit((quiche_config*) config, (uint64_t) value);
 }
@@ -1151,6 +1177,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "quiche_err_out_of_identifiers", "()I", (void *) netty_quiche_err_out_of_identifiers },
   { "quiche_err_key_update", "()I", (void *) netty_quiche_err_key_update },
   { "quiche_err_crypto_buffer_exceeded", "()I", (void *) netty_quiche_err_crypto_buffer_exceeded },
+  { "quiche_err_invalid_dcid_initialization", "()I", (void *) netty_quiche_err_invalid_dcid_initialization },
   { "quiche_cc_reno", "()I", (void *) netty_quiche_cc_reno },
   { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic },
   { "quiche_cc_bbr", "()I", (void *) netty_quiche_cc_bbr },
@@ -1174,6 +1201,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_source_id", "(J)[B", (void *) netty_quiche_conn_source_id },
   { "quiche_conn_destination_id", "(J)[B", (void *) netty_quiche_conn_destination_id },
   { "quiche_conn_new_with_tls", "(JIJIJIJIJJZ)J", (void *) netty_quiche_conn_new_with_tls },
+  { "quiche_conn_new_with_tls_and_client_dcid", "(JIJIJIJIJJ)J", (void *) netty_quiche_conn_new_with_tls_and_client_dcid },
   { "quiche_conn_recv", "(JJIJ)I", (void *) netty_quiche_conn_recv },
   { "quiche_conn_send", "(JJIJ)I", (void *) netty_quiche_conn_send },
   { "quiche_conn_free", "(J)V", (void *) netty_quiche_conn_free },
@@ -1181,7 +1209,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_peer_streams_left_bidi", "(J)J", (void *) netty_quiche_conn_peer_streams_left_bidi },
   { "quiche_conn_peer_streams_left_uni", "(J)J", (void *) netty_quiche_conn_peer_streams_left_uni },
   { "quiche_conn_stream_priority", "(JJBZ)I", (void *) netty_quiche_conn_stream_priority },
-  { "quiche_conn_stream_recv", "(JJJIJ)I", (void *) netty_quiche_conn_stream_recv },
+  { "quiche_conn_stream_recv", "(JJJIJJ)I", (void *) netty_quiche_conn_stream_recv },
   { "quiche_conn_stream_send", "(JJJIZ)I", (void *) netty_quiche_conn_stream_send },
   { "quiche_conn_stream_shutdown", "(JJIJ)I", (void *) netty_quiche_conn_stream_shutdown },
   { "quiche_conn_stream_capacity", "(JJ)J", (void *) netty_quiche_conn_stream_capacity },
@@ -1226,6 +1254,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_set_cc_algorithm", "(JI)V", (void *) netty_quiche_config_set_cc_algorithm },
   { "quiche_config_set_initial_congestion_window_packets", "(JI)V", (void *) netty_quiche_config_set_initial_congestion_window_packets },
   { "quiche_config_enable_hystart", "(JZ)V", (void *) netty_quiche_config_enable_hystart },
+  { "quiche_config_discover_pmtu", "(JZ)V", (void *) netty_quiche_config_discover_pmtu },
   { "quiche_config_set_active_connection_id_limit", "(JJ)V", (void *) netty_quiche_config_set_active_connection_id_limit },
   { "quiche_config_set_stateless_reset_token", "(J[B)V", (void *) netty_quiche_config_set_stateless_reset_token },
   { "quiche_config_free", "(J)V", (void *) netty_quiche_config_free },

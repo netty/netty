@@ -24,6 +24,7 @@ import io.netty.channel.FileRegion;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.StringUtil;
@@ -58,10 +59,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     static final int CRLF_SHORT = (CR << 8) | LF;
     private static final int ZERO_CRLF_MEDIUM = ('0' << 16) | CRLF_SHORT;
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
-    private static final ByteBuf CRLF_BUF = unreleasableBuffer(
-            directBuffer(2).writeByte(CR).writeByte(LF)).asReadOnly();
-    private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(
-            directBuffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF)).asReadOnly();
+    private static final ByteBuf CRLF_BUF = LeakPresenceDetector.staticInitializer(() -> unreleasableBuffer(
+            directBuffer(2).writeByte(CR).writeByte(LF)).asReadOnly());
+    private static final ByteBuf ZERO_CRLF_CRLF_BUF = LeakPresenceDetector.staticInitializer(() -> unreleasableBuffer(
+            directBuffer(ZERO_CRLF_CRLF.length).writeBytes(ZERO_CRLF_CRLF)).asReadOnly());
     private static final float HEADERS_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_WEIGHT_HISTORICAL = 1 - HEADERS_WEIGHT_NEW;
     private static final float TRAILERS_WEIGHT_NEW = HEADERS_WEIGHT_NEW;
@@ -223,7 +224,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
     }
 
@@ -394,7 +395,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     encodedChunkedFileRegionContent(ctx, msg, out);
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected http object encoder state: " + state);
             }
         } finally {
             msg.release();
@@ -438,7 +439,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 out.add(ZERO_CRLF_CRLF_BUF.duplicate());
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
         return ST_INIT;
     }
@@ -481,7 +482,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
     }
 
@@ -560,11 +561,22 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     private static void addEncodedLengthHex(ChannelHandlerContext ctx, long contentLength, List<Object> out) {
-        String lengthHex = Long.toHexString(contentLength);
-        ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
-        buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
+        // logic is from Long.toHexString() but we want to avoid creating a String
+        int hexLen = contentLength == 0 ? 1 : (Long.SIZE - Long.numberOfLeadingZeros(contentLength) + 3) >>> 2;
+        ByteBuf buf = ctx.alloc().buffer(hexLen + 2); // +2 for CRLF
+        writeHexAscii(buf, contentLength, hexLen);
         ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
         out.add(buf);
+    }
+
+    private static final byte[] HEX = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+    private static void writeHexAscii(ByteBuf out, long contentLength, int hexLen) {
+        for (int shift = (hexLen - 1) << 2; shift >= 0; shift -= 4) {
+            out.writeByte(HEX[(int) ((contentLength >>> shift) & 0xF)]);
+        }
     }
 
     /**

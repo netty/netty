@@ -17,9 +17,9 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
@@ -59,9 +59,7 @@ public final class KQueueIoHandler implements IoHandler {
     // https://man.freebsd.org/cgi/man.cgi?query=kevent&apropos=0&sektion=0&manpath=FreeBSD+6.1-RELEASE&format=html#end
     private static final int KQUEUE_MAX_TIMEOUT_SECONDS = 86399; // 24 hours - 1 second
 
-    static {
-        // Ensure JNI is initialized by the time this class is loaded by this time!
-        // We use unix-common methods in this class which are backed by JNI methods.
+    {
         KQueue.ensureAvailability();
     }
 
@@ -116,9 +114,20 @@ public final class KQueueIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
+        KQueue.ensureAvailability();
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return executor -> new KQueueIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new KQueueIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 
     private KQueueIoHandler(ThreadAwareExecutor executor, int maxEvents, SelectStrategy strategy) {
@@ -213,6 +222,9 @@ public final class KQueueIoHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
+                    if (context.shouldReportActiveIoTime()) {
+                        context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                    }
                     return 0;
 
                 case SelectStrategy.BUSY_WAIT:
@@ -258,7 +270,17 @@ public final class KQueueIoHandler implements IoHandler {
 
             if (strategy > 0) {
                 handled = strategy;
-                processReady(strategy);
+                if (context.shouldReportActiveIoTime()) {
+                    // The Timer starts after the blocking kqueueWait() call returns with events.
+                    long activeIoStartTimeNanos = System.nanoTime();
+                    processReady(strategy);
+                    long activeIoEndTimeNanos = System.nanoTime();
+                    context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+                } else {
+                    processReady(strategy);
+                }
+            } else if (context.shouldReportActiveIoTime()) {
+                context.reportActiveIoTime(0);
             }
 
             if (allowGrowing && strategy == eventList.capacity()) {
@@ -287,6 +309,7 @@ public final class KQueueIoHandler implements IoHandler {
             if (removed.isHandleForChannel()) {
                 numChannels--;
             }
+            removed.handle.unregistered();
         }
     }
 
@@ -372,10 +395,10 @@ public final class KQueueIoHandler implements IoHandler {
             registrations.put(old.id, old);
             throw new IllegalStateException();
         }
-
         if (registration.isHandleForChannel()) {
             numChannels++;
         }
+        handle.registered();
         return registration;
     }
 

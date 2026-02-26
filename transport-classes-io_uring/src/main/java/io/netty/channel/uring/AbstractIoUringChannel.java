@@ -47,6 +47,7 @@ import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -66,6 +67,7 @@ import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.className;
 
 
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
@@ -162,7 +164,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (!isRegistered()) {
             return;
         }
-        readPending = false;
         IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
@@ -180,14 +181,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
-        }
-        if ((ioState & POLL_IN_SCHEDULED) != 0) {
-            // There was a POLLIN scheduled, let's cancel it so we are not notified of any more reads for now.
-            assert pollInId != 0;
-            long id = registration.submit(
-                    IoUringIoOps.newAsyncCancel((byte) 0, pollInId, Native.IORING_OP_POLL_ADD));
-            assert id != 0;
-            ioState &= ~POLL_IN_SCHEDULED;
         }
         // Also cancel all outstanding reads as the user did signal there is no more desire to read.
         cancelOutstandingReads(registration(), numOutstandingReads);
@@ -316,7 +309,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         } else {
             // This one was never registered just use a syscall to close.
             socket.close();
-            ioUringUnsafe().freeResourcesNowIfNeeded(null);
+            ioUringUnsafe().unregistered();
         }
     }
 
@@ -418,6 +411,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false);
     }
 
+    protected abstract boolean isStreamSocket();
+
     private long schedulePollAdd(int ioMask, int mask, boolean multishot) {
         assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
@@ -439,8 +434,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
-        private boolean freed;
         private boolean socketIsEmpty;
+        private ChannelPromise deregisterPromise;
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
@@ -473,6 +468,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SENDMSG:
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
+                case Native.IORING_OP_SEND_ZC:
+                case Native.IORING_OP_SENDMSG_ZC:
                     writeComplete(op, res, flags, data);
                     break;
                 case Native.IORING_OP_POLL_ADD:
@@ -504,28 +501,22 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // was a close that needs to be done now.
             handleDelayedClosed();
 
-            if (ioState == 0 && closed) {
-                freeResourcesNowIfNeeded(registration);
+            if (ioState == 0 && (closed || !isRegistered())) {
+                // Cancel the registration now.
+                registration.cancel();
             }
         }
 
-        private void freeResourcesNowIfNeeded(IoRegistration reg) {
-            if (!freed) {
-                freed = true;
-                freeResourcesNow(reg);
-            }
-        }
-
-        /**
-         * Free all resources now. No new IO will be submitted for this channel via io_uring
-         *
-         * @param reg   the {@link IoRegistration} or {@code null} if it was never registered
-         */
-        protected void freeResourcesNow(IoRegistration reg) {
+        @Override
+        public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            if (reg != null) {
-                reg.cancel();
+
+            // Check if we need to notify about the deregistration.
+            if (deregisterPromise != null) {
+                ChannelPromise promise = deregisterPromise;
+                deregisterPromise = null;
+                promise.setSuccess();
             }
         }
 
@@ -592,43 +583,56 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        private void cancelOps(boolean cancelConnect) {
+        private boolean cancelOps(boolean cancelConnect) {
             if (registration == null || !registration.isValid()) {
-                return;
+                return false;
             }
+            boolean cancelled = false;
             byte flags = (byte) 0;
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
                 pollRdhupId = 0;
+                cancelled = true;
             }
             if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
                 pollInId = 0;
+                cancelled = true;
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
                 pollOutId = 0;
+                cancelled = true;
             }
             if (cancelConnect && connectId != 0) {
                 // Best effort to cancel the already submitted connect request.
                 long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
                 assert id != 0;
                 connectId = 0;
+                cancelled = true;
+            }
+            if (numOutstandingReads != 0 || numOutstandingWrites != 0) {
+                cancelled = true;
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
+            return cancelled;
         }
 
         private boolean canCloseNow() {
             // Currently there are is no WRITE and READ scheduled, we can close the channel now without
             // problems related to re-ordering of completions.
-            return (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+            return canCloseNow0() && (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+        }
+
+        protected boolean canCloseNow0() {
+            return true;
         }
 
         private void closeNow() {
@@ -668,8 +672,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
             computeRemote();
 
-            // Register POLLRDHUP
-            schedulePollRdHup();
+            if (isStreamSocket()) {
+                // Register POLLRDHUP
+                schedulePollRdHup();
+            }
 
             // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
             // We still need to ensure we call fireChannelActive() in this case.
@@ -982,8 +988,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
                 return;
             }
-            assert numOutstandingWrites > 0;
-            --numOutstandingWrites;
+
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                assert numOutstandingWrites > 0;
+                --numOutstandingWrites;
+            }
 
             boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
@@ -1134,7 +1143,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
                     submitConnect(unixDomainSocketAddress);
                 } else {
-                    throw new Error("Unexpected SocketAddress implementation " + remoteAddress);
+                    throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
                 }
 
                 if (connectId != 0) {
@@ -1176,6 +1185,26 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
             });
         }
+
+        @Override
+        public final void deregister(ChannelPromise promise) {
+            if (deregisterPromise != null) {
+                // A deregistration is already in progress.
+                PromiseNotifier.cascade(deregisterPromise, promise);
+            } else if (!isRegistered()) {
+                promise.setSuccess();
+            } else {
+                // We need to store a reference to the original promise as we should only notify it once we
+                // have handles all pending completions.
+                deregisterPromise = promise;
+                super.deregister(newPromise().addListener(f -> {
+                    if (!f.isSuccess()) {
+                        this.deregisterPromise = null;
+                        promise.setFailure(f.cause());
+                    }
+                }));
+            }
+        }
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
@@ -1198,11 +1227,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void submitConnect(DomainSocketAddress unixDomainSocketAddress) {
         cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_UN);
         remoteAddressMemory = cleanable.buffer();
-        SockaddrIn.setUds(remoteAddressMemory, unixDomainSocketAddress);
+        int addrLen = SockaddrIn.setUds(remoteAddressMemory, unixDomainSocketAddress);
         int fd = fd().intValue();
         IoRegistration registration = registration();
         long addr = Buffer.memoryAddress(remoteAddressMemory);
-        IoUringIoOps ops = IoUringIoOps.newConnect(fd, (byte) 0, addr, Native.SIZEOF_SOCKADDR_UN, nextOpsId());
+        IoUringIoOps ops = IoUringIoOps.newConnect(fd, (byte) 0, addr, addrLen, nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.
@@ -1216,7 +1245,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
-        throw new UnsupportedOperationException("unsupported message type");
+        throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
     }
 
     @Override
@@ -1235,7 +1264,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected final void doDeregister() {
         // Cancel all previous submitted ops.
-        ioUringUnsafe().cancelOps(connectPromise != null);
+        if (!ioUringUnsafe().cancelOps(connectPromise != null)) {
+            // It's possible that we never registered anything and so we did not submit any ASYNC_CANCEL.
+            // In this case directly call cancel as we will not receive any completion at all.
+            if (registration != null) {
+                registration.cancel();
+            }
+        }
     }
 
     @Override

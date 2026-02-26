@@ -52,7 +52,7 @@ public enum SslProvider {
             case OPENSSL_REFCNT:
                 return OpenSsl.isAlpnSupported();
             default:
-                throw new Error("Unknown SslProvider: " + provider);
+                throw new Error("Unexpected SslProvider: " + provider);
         }
     }
 
@@ -76,7 +76,7 @@ public enum SslProvider {
             case OPENSSL_REFCNT:
                 return OpenSsl.isTlsv13Supported();
             default:
-                throw new Error("Unknown SslProvider: " + sslProvider);
+                throw new Error("Unexpected SslProvider: " + sslProvider);
         }
     }
 
@@ -93,7 +93,7 @@ public enum SslProvider {
             case OPENSSL_REFCNT:
                 return OpenSsl.isOptionSupported(option);
             default:
-                throw new Error("Unknown SslProvider: " + sslProvider);
+                throw new Error("Unexpected SslProvider: " + sslProvider);
         }
     }
 
@@ -109,7 +109,7 @@ public enum SslProvider {
             case OPENSSL_REFCNT:
                 return OpenSsl.isTlsv13Supported();
             default:
-                throw new Error("Unknown SslProvider: " + sslProvider);
+                throw new Error("Unexpected SslProvider: " + sslProvider);
         }
     }
 }

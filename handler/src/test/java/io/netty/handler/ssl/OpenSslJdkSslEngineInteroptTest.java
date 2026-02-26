@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
@@ -180,6 +182,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     @ParameterizedTest
     @Override
     public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        assumeFalse(PlatformDependent.javaVersion() == 26, "Fails on JDK26, possible JDK bug?");
         checkShouldUseKeyManagerFactory();
         super.testRSASSAPSS(param);
     }

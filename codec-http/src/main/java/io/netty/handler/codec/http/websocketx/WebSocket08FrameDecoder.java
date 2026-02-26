@@ -385,7 +385,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             }
             return;
         default:
-            throw new Error("Shouldn't reach here.");
+            throw new Error("Shouldn't reach here (state: " + state + ")");
         }
     }
 

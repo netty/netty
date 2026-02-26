@@ -42,11 +42,9 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.min;
-import static java.lang.System.nanoTime;
 
 /**
  * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
@@ -56,14 +54,12 @@ public class EpollIoHandler implements IoHandler {
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty.channel.epoll.epollWaitThreshold", 10);
 
-    static {
-        // Ensure JNI is initialized by the time this class is loaded by this time!
-        // We use unix-common methods in this class which are backed by JNI methods.
+    {
         Epoll.ensureAvailability();
     }
 
     // Pick a number that no task could have previously used.
-    private long prevDeadlineNanos = nanoTime() - 1;
+    private long prevDeadlineNanos = NONE;
     private FileDescriptor epollFd;
     private FileDescriptor eventFd;
     private FileDescriptor timerFd;
@@ -108,9 +104,20 @@ public class EpollIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
+        Epoll.ensureAvailability();
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return executor -> new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 
     // Package-private for testing
@@ -219,9 +226,19 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    private final class DefaultEpollIoRegistration implements IoRegistration {
+    private enum RegistrationState {
+        // Was not added via EPOLL_CTL_ADD
+        Pending,
+        // Was added via EPOLL_CTL_ADD
+        Added,
+        // Was canceled an so removed via EPOLL_CTL_DEL
+        Cancelled
+    }
+
+    private final class DefaultEpollIoRegistration
+            implements IoRegistration {
         private final ThreadAwareExecutor executor;
-        private final AtomicBoolean canceled = new AtomicBoolean();
+        private RegistrationState state = RegistrationState.Pending;
         final EpollIoHandle handle;
 
         DefaultEpollIoRegistration(ThreadAwareExecutor executor, EpollIoHandle handle) {
@@ -239,25 +256,37 @@ public class EpollIoHandler implements IoHandler {
         public long submit(IoOps ops) {
             EpollIoOps epollIoOps = cast(ops);
             try {
-                if (!isValid()) {
-                    return -1;
+                synchronized (this) {
+                    switch (state) {
+                        case Cancelled:
+                            return -1;
+                        case Pending:
+                            Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                            state = RegistrationState.Added;
+                        case Added:
+                            Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                            return epollIoOps.value;
+                        default:
+                            throw new IllegalStateException();
+                    }
                 }
-                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
-                return epollIoOps.value;
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         }
 
         @Override
-        public boolean isValid() {
-            return !canceled.get();
+        public synchronized boolean isValid() {
+            return state != RegistrationState.Cancelled;
         }
 
         @Override
         public boolean cancel() {
-            if (!canceled.compareAndSet(false, true)) {
-                return false;
+            synchronized (this) {
+                if (state == RegistrationState.Cancelled) {
+                    return false;
+                }
+                state = RegistrationState.Cancelled;
             }
             if (executor.isExecutorThread(Thread.currentThread())) {
                 cancel0();
@@ -287,6 +316,7 @@ public class EpollIoHandler implements IoHandler {
                         logger.debug("Unable to remove fd {} from epoll {}", fd, epollFd.intValue());
                     }
                 }
+                handle.unregistered();
             }
         }
 
@@ -314,7 +344,6 @@ public class EpollIoHandler implements IoHandler {
         final EpollIoHandle epollHandle = cast(handle);
         DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(executor, epollHandle);
         int fd = epollHandle.fd().intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, EpollIoOps.EPOLLERR.value);
         DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration
@@ -324,6 +353,7 @@ public class EpollIoHandler implements IoHandler {
         if (epollHandle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
             numChannels++;
         }
+        handle.registered();
         return registration;
     }
 
@@ -386,6 +416,9 @@ public class EpollIoHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
+                    if (context.shouldReportActiveIoTime()) {
+                        context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                    }
                     return 0;
 
                 case SelectStrategy.BUSY_WAIT:
@@ -441,10 +474,22 @@ public class EpollIoHandler implements IoHandler {
             }
             if (strategy > 0) {
                 handled = strategy;
-                if (processReady(events, strategy)) {
-                    prevDeadlineNanos = NONE;
+                if (context.shouldReportActiveIoTime()) {
+                    long activeIoStartTimeNanos = System.nanoTime();
+                    if (processReady(events, strategy)) {
+                        prevDeadlineNanos = NONE;
+                    }
+                    long activeIoEndTimeNanos = System.nanoTime();
+                    context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+                } else {
+                    if (processReady(events, strategy)) {
+                        prevDeadlineNanos = NONE;
+                    }
                 }
+            } else if (context.shouldReportActiveIoTime()) {
+                context.reportActiveIoTime(0);
             }
+
             if (allowGrowing && strategy == events.length()) {
                 //increase the size of the array as we needed the whole space for the events
                 events.increase();

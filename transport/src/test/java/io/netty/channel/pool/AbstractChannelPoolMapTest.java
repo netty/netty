@@ -25,7 +25,6 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -158,14 +157,11 @@ public class AbstractChannelPoolMapTest {
         @Override
         public Future<Void> closeAsync() {
             Future<Void> poolClose = super.closeAsync();
-            poolClose.addListener(new GenericFutureListener<Future<? super Void>>() {
-                @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
-                    if (future.isSuccess()) {
-                        closeFuture.setSuccess(null);
-                    } else {
-                        closeFuture.setFailure(future.cause());
-                    }
+            poolClose.addListener(future -> {
+                if (future.isSuccess()) {
+                    closeFuture.setSuccess(null);
+                } else {
+                    closeFuture.setFailure(future.cause());
                 }
             });
             return poolClose;

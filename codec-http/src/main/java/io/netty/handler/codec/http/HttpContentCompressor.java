@@ -15,12 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -30,16 +26,18 @@ import io.netty.handler.codec.compression.BrotliOptions;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibEncoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
-import io.netty.handler.codec.compression.SnappyFrameEncoder;
-import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.internal.ObjectUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
 
@@ -60,7 +58,21 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     private final int contentSizeThreshold;
     private ChannelHandlerContext ctx;
-    private final Map<String, CompressionEncoderFactory> factories;
+
+    private static final CompressionOptions[] DEFAULT_COMPRESSION_OPTIONS;
+    static {
+        List<CompressionOptions> options = new ArrayList<>(5);
+        options.add(StandardCompressionOptions.gzip());
+        options.add(StandardCompressionOptions.deflate());
+        options.add(StandardCompressionOptions.snappy());
+        if (Brotli.isAvailable()) {
+            options.add(StandardCompressionOptions.brotli());
+        }
+        if (Zstd.isAvailable()) {
+            options.add(StandardCompressionOptions.zstd());
+        }
+        DEFAULT_COMPRESSION_OPTIONS = options.toArray(new CompressionOptions[0]);
+    }
 
     /**
      * Creates a new handler with {@link StandardCompressionOptions#brotli()} (if supported) ,
@@ -180,8 +192,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         ZstdOptions zstdOptions = null;
         SnappyOptions snappyOptions = null;
         if (compressionOptions == null || compressionOptions.length == 0) {
-            compressionOptions = defaultCompressionOptions(
-                    StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate());
+            compressionOptions = DEFAULT_COMPRESSION_OPTIONS;
         }
 
         ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
@@ -213,29 +224,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
         this.brotliOptions = brotliOptions;
         this.zstdOptions = zstdOptions;
         this.snappyOptions = snappyOptions;
-
-        this.factories = new HashMap<String, CompressionEncoderFactory>();
-
-        if (this.gzipOptions != null) {
-            this.factories.put("gzip", new GzipEncoderFactory());
-        }
-        if (this.deflateOptions != null) {
-            this.factories.put("deflate", new DeflateEncoderFactory());
-        }
-        if (Brotli.isAvailable() && this.brotliOptions != null) {
-            this.factories.put("br", new BrEncoderFactory());
-        }
-        if (this.zstdOptions != null) {
-            this.factories.put("zstd", new ZstdEncoderFactory());
-        }
-        if (this.snappyOptions != null) {
-            this.factories.put("snappy", new SnappyEncoderFactory());
-        }
     }
 
+    @Deprecated
     private static CompressionOptions[] defaultCompressionOptions(
             GzipOptions gzipOptions, DeflateOptions deflateOptions) {
-        List<CompressionOptions> options = new ArrayList<CompressionOptions>(5);
+        List<CompressionOptions> options = new ArrayList<>(5);
         options.add(gzipOptions);
         options.add(deflateOptions);
         options.add(StandardCompressionOptions.snappy());
@@ -275,15 +269,60 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
-
-        if (encoderFactory == null) {
-            throw new IllegalStateException("Couldn't find CompressionEncoderFactory: " + targetContentEncoding);
-        }
-
+        Channel channel = ctx.channel();
         return new Result(targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), encoderFactory.createEncoder()));
+                EmbeddedChannel.builder()
+                        .channelId(channel.id())
+                        .hasDisconnect(channel.metadata().hasDisconnect())
+                        .config(channel.config())
+                        .handlers(createEncoderFor(targetContentEncoding))
+                        .build());
+    }
+
+    private MessageToByteEncoder<ByteBuf> createEncoderFor(String targetContentEncoding) {
+        switch (targetContentEncoding) {
+            case "br":
+                if (brotliOptions == null || !Brotli.isAvailable()) {
+                    throw new IllegalStateException("Brotli not configured");
+                }
+                return new BrotliEncoder(brotliOptions.parameters());
+            case "zstd":
+                if (zstdOptions == null) {
+                    throw new IllegalStateException("Zstd not configured");
+                }
+                return new ZstdEncoder(
+                        zstdOptions.compressionLevel(),
+                        zstdOptions.blockSize(),
+                        zstdOptions.maxEncodeSize()
+                );
+            case "snappy":
+                if (snappyOptions == null) {
+                    throw new IllegalStateException("Snappy not configured");
+                }
+                return new SnappyFrameEncoder();
+            case "gzip":
+                if (gzipOptions == null) {
+                    throw new IllegalStateException("Gzip not configured");
+                }
+                return ZlibCodecFactory.newZlibEncoder(
+                        ZlibWrapper.GZIP,
+                        gzipOptions.compressionLevel(),
+                        gzipOptions.windowBits(),
+                        gzipOptions.memLevel()
+                );
+            case "deflate":
+                if (deflateOptions == null) {
+                    throw new IllegalStateException("Deflate not configured");
+                }
+                return ZlibCodecFactory.newZlibEncoder(
+                        ZlibWrapper.ZLIB,
+                        deflateOptions.compressionLevel(),
+                        deflateOptions.windowBits(),
+                        deflateOptions.memLevel()
+                );
+            default:
+                throw new IllegalStateException("Unknown encoding: " + targetContentEncoding);
+        }
     }
 
     @SuppressWarnings("FloatingPointEquality")
@@ -294,7 +333,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
         float snappyQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
-        for (String encoding : acceptEncoding.split(",")) {
+
+        int start = 0;
+        int length = acceptEncoding.length();
+        while (start < length) {
+            int comma = acceptEncoding.indexOf(',', start);
+            if (comma == -1) {
+                comma = length;
+            }
+            String encoding = acceptEncoding.substring(start, comma);
             float q = 1.0f;
             int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {
@@ -318,6 +365,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
+            start = comma + 1;
         }
         if (brQ > 0.0f || zstdQ > 0.0f || snappyQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
             if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {
@@ -395,68 +443,4 @@ public class HttpContentCompressor extends HttpContentEncoder {
         return null;
     }
 
-    /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
-     * used to compress http content for gzip content encoding
-     */
-    private final class GzipEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return ZlibCodecFactory.newZlibEncoder(
-                    ZlibWrapper.GZIP, gzipOptions.compressionLevel(),
-                    gzipOptions.windowBits(), gzipOptions.memLevel());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory that creates {@link ZlibEncoder}s
-     * used to compress http content for deflate content encoding
-     */
-    private final class DeflateEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return ZlibCodecFactory.newZlibEncoder(
-                    ZlibWrapper.ZLIB, deflateOptions.compressionLevel(),
-                    deflateOptions.windowBits(), deflateOptions.memLevel());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory that creates {@link BrotliEncoder}s
-     * used to compress http content for br content encoding
-     */
-    private final class BrEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return new BrotliEncoder(brotliOptions.parameters());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory for create {@link ZstdEncoder}
-     * used to compress http content for zstd content encoding
-     */
-    private final class ZstdEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return new ZstdEncoder(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize());
-        }
-    }
-
-    /**
-     * Compression Encoder Factory for create {@link SnappyFrameEncoder}
-     * used to compress http content for snappy content encoding
-     */
-    private static final class SnappyEncoderFactory implements CompressionEncoderFactory {
-
-        @Override
-        public MessageToByteEncoder<ByteBuf> createEncoder() {
-            return new SnappyFrameEncoder();
-        }
-    }
 }

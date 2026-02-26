@@ -30,6 +30,8 @@ import javax.net.ssl.SSLHandshakeException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static io.netty.handler.codec.quic.QuicheError.STREAM_RESET;
+
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
     private static final boolean TRACE_LOGGING_ENABLED = logger.isTraceEnabled();
@@ -277,6 +279,9 @@ final class Quiche {
     static final int QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED =
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_crypto_buffer_exceeded();
 
+    static final int QUICHE_ERR_INVALID_DCID_INITIALIZATION =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_invalid_dcid_initialization();
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L176">
      *     QUICHE_CC_RENO</a>.
@@ -337,6 +342,11 @@ final class Quiche {
                                                 long localAddr, int localLen,
                                                 long peerAddr, int peerLen,
                                                 long configAddr, long ssl, boolean isServer);
+
+    static native long quiche_conn_new_with_tls_and_client_dcid(long scidAddr, int scidLen, long odcidAddr,
+                                                                int odcidLen, long localAddr, int localLen,
+                                                                long peerAddr, int peerLen,
+                                                                long configAddr, long ssl);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/master/include/quiche.h#L248">
@@ -401,9 +411,11 @@ final class Quiche {
     static native byte[] quiche_conn_destination_id(long connAddr);
 
     /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.24.5/quiche/include/quiche.h#L397">
+     *     quiche_conn_stream_recv</a>.
      */
-    static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr);
+    static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr,
+                                              long outErrorCodeAddr);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_stream_send</a>.
@@ -704,6 +716,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.discover_pmtu">
+     *     quiche_config_discover_pmtu</a>.
+     */
+    static native void quiche_config_discover_pmtu(long configAddr, boolean value);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L187">
      *     quiche_config_enable_dgram</a>.
      */
@@ -892,13 +911,24 @@ final class Quiche {
                 new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_STREAM_STOPPED"));
         ERROR_MAPPINGS.put(QUICHE_ERR_OUT_OF_IDENTIFIERS,
                 new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_OUT_OF_IDENTIFIERS"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_DCID_INITIALIZATION, new QuicTransportErrorHolder(
+                QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_DCID_INITIALIZATION"));
     }
 
     static Exception convertToException(int result) {
+        return convertToException(result, -1);
+    }
+
+    static Exception convertToException(int result, long code) {
         QuicTransportErrorHolder holder = ERROR_MAPPINGS.get(result);
         if (holder == null) {
             // There is no mapping to a transport error, it's something internal so throw it directly.
-            return new QuicException(QuicheError.valueOf(result).message());
+            QuicheError error = QuicheError.valueOf(result);
+            if (error == STREAM_RESET) {
+                return new QuicStreamResetException(error.message(), code);
+            } else {
+                return new QuicException(error.message());
+            }
         }
         Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);
         if (result == QUICHE_ERR_TLS_FAIL) {

@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -107,4 +109,54 @@ public class HttpVersionParsingTest {
         );
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "HTTP ",
+            " HTTP",
+            "H TTP",
+            " HTTP ",
+            "HTTP\r",
+            "HTTP\n",
+            "HTTP\r\n",
+            "HTT\rP",
+            "HTT\nP",
+            "HTT\r\nP",
+            "\rHTTP",
+            "\nHTTP",
+            "\r\nHTTP",
+            " \r\nHTTP",
+            "\r \nHTTP",
+            "\r\n HTTP",
+            "\r\nHTTP ",
+            "\nHTTP ",
+            "\rHTTP ",
+            "\r HTTP",
+            " \rHTTP",
+            "\nHTTP ",
+            "\n HTTP",
+            " \nHTTP",
+            "HTTP \n",
+            "HTTP \r",
+            " HTTP\r",
+            " HTTP\r",
+            "HTTP \n",
+            " HTTP\n",
+            " HTTP\n",
+            "HTT\nTP",
+            "HTT\rTP",
+            " HTT\rP",
+            " HTT\rP",
+            "HTT\nTP",
+            " HTT\nP",
+            " HTT\nP",
+    })
+    void httpVersionMustRejectIllegalTokens(String protocol) {
+        try {
+            HttpVersion httpVersion = new HttpVersion(protocol, 1, 0, true);
+            // If no exception is thrown, then the version must have been sanitized and made safe.
+            assertTrue(HttpUtil.isEncodingSafeStartLineToken(httpVersion.text()));
+        } catch (IllegalArgumentException ignore) {
+            // Throwing is good.
+        }
+    }
 }

@@ -34,6 +34,7 @@ public final class HttpDecoderConfig implements Cloneable {
     private int maxInitialLineLength = HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
     private int maxHeaderSize = HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
     private int initialBufferSize = HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE;
+    private boolean strictLineParsing = HttpObjectDecoder.DEFAULT_STRICT_LINE_PARSING;
 
     public int getInitialBufferSize() {
         return initialBufferSize;
@@ -214,6 +215,35 @@ public final class HttpDecoderConfig implements Cloneable {
     public HttpDecoderConfig setTrailersFactory(HttpHeadersFactory trailersFactory) {
         checkNotNull(trailersFactory, "trailersFactory");
         this.trailersFactory = trailersFactory;
+        return this;
+    }
+
+    public boolean isStrictLineParsing() {
+        return strictLineParsing;
+    }
+
+    /**
+     * The RFC 9112 specification for the HTTP protocol says that the initial start-line, and the following header
+     * field-lines, must be separated by a Carriage Return (CR) and Line Feed (LF) octet pair, but also offers that
+     * implementations "MAY" accept just a Line Feed octet as a separator.
+     * <p>
+     * Parsing leniencies can increase compatibility with a wider range of implementations, but can also cause
+     * security vulnerabilities, when multiple systems disagree on the meaning of leniently parsed messages.
+     * <p>
+     * When <em>strict line parsing</em> is enabled ({@code true}), then Netty will enforce that start- and header
+     * field-lines MUST be separated by a CR LF octet pair, and will produce messagas with failed
+     * {@link io.netty.handler.codec.DecoderResult}s.
+     * <p>
+     * When <em>strict line parsing</em> is disabled ({@code false}), then Netty will accept lone LF octets as line
+     * seperators for the start- and header field-lines.
+     * <p>
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-message-format">RFC 9112 Section 2.1</a>.
+     * @param strictLineParsing Whether <em>strict line parsing</em> should be enabled ({@code true}),
+     * or not ({@code false}).
+     * @return This decoder config.
+     */
+    public HttpDecoderConfig setStrictLineParsing(boolean strictLineParsing) {
+        this.strictLineParsing = strictLineParsing;
         return this;
     }
 

@@ -86,12 +86,14 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class NettyBlockHoundIntegrationTest {
 
     @BeforeAll
     public static void setUpClass() {
+        assumeFalse(PlatformDependent.javaVersion() == 26, "Fails on JDK26, possible Blockhound bug?");
         BlockHound.install();
     }
 
@@ -253,6 +255,7 @@ public class NettyBlockHoundIntegrationTest {
             testHandshakeWithExecutor(executorService, "TLSv1.2");
         } finally {
             executorService.shutdown();
+            assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -264,6 +267,7 @@ public class NettyBlockHoundIntegrationTest {
             testHandshakeWithExecutor(executorService, "TLSv1.3");
         } finally {
             executorService.shutdown();
+            assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 

@@ -15,6 +15,8 @@
  */
 package io.netty.util;
 
+import org.jetbrains.annotations.Nullable;
+
 public interface ResourceLeakTracker<T>  {
 
     /**
@@ -36,4 +38,15 @@ public interface ResourceLeakTracker<T>  {
      * @return {@code true} if called first time, {@code false} if called already
      */
     boolean close(T trackedObject);
+
+    /**
+     * Get a {@link Throwable} representing the stack trace of the original {@link #close(Object)} call.
+     * If this tracker hasn't been cloesd, or close tracking isn't supported or enabled,
+     * then this method returns {@code null}.
+     *
+     * @return A throwable with the stack trace of the successful close call, or {@code null}.
+     */
+    default @Nullable Throwable getCloseStackTraceIfAny() {
+        return null;
+    }
 }

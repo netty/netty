@@ -38,21 +38,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
     static final short BGID = 0;
-    static final EventLoopGroup IO_URING_GROUP = new MultiThreadIoEventLoopGroup(
-            NUM_THREADS, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
+    static final EventLoopGroup IO_URING_GROUP = newGroup(false);
     static final EventLoopGroup IO_URING_INCREMENTAL_GROUP = newGroup(true);
 
     static IoUringIoHandlerConfig buildConfig(boolean incremental) {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         if (IoUring.isRegisterBufferRingSupported()) {
             config.setBufferRingConfig(
-                    new IoUringBufferRingConfig(BGID, (short) 16, 8, 16 * 16,
-                            incremental, new IoUringFixedBufferRingAllocator(1024)));
+                    IoUringBufferRingConfig.builder()
+                            .bufferGroupId(BGID)
+                            .bufferRingSize((short) 16)
+                            .batchSize(8)
+                            .incremental(incremental)
+                            .allocator(new IoUringFixedBufferRingAllocator(1024))
+                            // Ensure we test both variants
+                            .batchAllocation(ThreadLocalRandom.current().nextBoolean())
+                            .build()
+            );
         }
         return config;
     }
@@ -130,8 +138,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @Override
-    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+    List<BootstrapFactory<Bootstrap>> clientSocketIoUringOnly() {
         List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<>();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
@@ -150,6 +157,12 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                         }
                     });
         }
+        return toReturn;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+        List<BootstrapFactory<Bootstrap>> toReturn = clientSocketIoUringOnly();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
@@ -260,8 +273,25 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    @Override
+    public List<BootstrapFactory<Bootstrap>> datagramSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_GROUP).channel(IoUringDatagramChannel.class);
+                    }
+                }
+        );
+    }
+
     public static DomainSocketAddress newDomainSocketAddress() {
         return UnixTestUtils.newDomainSocketAddress();
+    }
+
+    public static DomainSocketAddress newAbstractSocketAddress() {
+        // Abstract namespace sockets start with a null byte followed by a unique name
+        return new DomainSocketAddress("\0netty_test_abstract_" + System.nanoTime());
     }
 
 }

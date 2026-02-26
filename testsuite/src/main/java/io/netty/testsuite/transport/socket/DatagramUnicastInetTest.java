@@ -164,7 +164,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
             case NONE:
                 return cc.write(new DatagramPacket(buf.retain(), (InetSocketAddress) remote));
             default:
-                throw new Error("unknown wrap type: " + wrapType);
+                throw new Error("Unexpected wrap type: " + wrapType);
         }
     }
 }

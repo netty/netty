@@ -84,6 +84,12 @@ final class CleanerJava25 implements Cleaner {
 
                 // ofShared.type() = ()Arena
                 MethodHandle ofShared = lookup.findStatic(arenaCls, "ofShared", methodType(arenaCls));
+
+                // Try to access shared Arena which might fail on GraalVM 25.0.0 if not enabled
+                // See https://github.com/netty/netty/issues/15762
+                Object shared = ofShared.invoke();
+                ((AutoCloseable) shared).close();
+
                 // allocate.type() = (Arena,long)MemorySegment
                 MethodHandle allocate = lookup.findVirtual(arenaCls, "allocate", methodType(memsegCls, long.class));
                 // asByteBuffer.type() = (MemorySegment)ByteBuffer

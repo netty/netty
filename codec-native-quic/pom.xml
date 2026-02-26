@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.11.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -32,7 +32,7 @@
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
-    <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
+    <fragmentHost>io.netty.codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
@@ -51,7 +51,7 @@
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Lets use what we use in netty-tcnative-boringssl-static -->
     <boringsslBranch>main</boringsslBranch>
-    <boringsslCommitSha>cccf8525db8a57153d3cb3e22efed2db4b71a8ab</boringsslCommitSha>
+    <boringsslCommitSha>0226f30467f540a3f62ef48d453f93927da199b6</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -60,7 +60,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>70d6d3e233568e906e66179a56c93cf9b0616899</quicheCommitSha>
+    <quicheCommitSha>4f347477006bf7f928335d28f05056013f70b87e</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -330,18 +330,21 @@
                     <itemWithProperty>
                       <name>arm64-v8a</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86_64</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
@@ -763,7 +766,7 @@
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}" />
+                    <delete dir="${boringsslSourceDir}" failonerror="false" />
                   </else>
                 </if>
               </target>
@@ -817,7 +820,7 @@
                       <equals arg1="${platform}" arg2="android" />
                       <then>
                         <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg line="ndk ${cargoTarget} -p ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
+                          <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
                           <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
@@ -828,7 +831,7 @@
                           <equals arg1="${os.detected.name}" arg2="windows" />
                           <then>
                             <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                              <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <arg value="${cargoTarget}" />
                               <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                               <env key="DEBUG" value="true" />
@@ -840,7 +843,7 @@
                             <equals arg1="${crossCompile}" arg2="linux" />
                             <then>
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                                <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                                <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <arg value="${cargoTarget}" />
                                 <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
@@ -853,7 +856,7 @@
                             <equals arg1="${crossCompile}" arg2="mac" />
                             <then>
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                                <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                                <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <env key="CFLAGS" value="${extraCflags}" />
                                 <env key="CXXFLAGS" value="${extraCxxflags}" />
                                 <arg value="${cargoTarget}" />
@@ -866,7 +869,7 @@
                           </elseif>
                           <else>
                             <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="build -p quiche --features &quot;ffi qlog&quot; --release" />
+                              <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <env key="CFLAGS" value="${extraCflags}" />
                               <env key="CXXFLAGS" value="${extraCxxflags}" />
                               <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
@@ -886,7 +889,7 @@
                     </copy>
 
                     <!-- Delete quiche source directory after build to free up space -->
-                    <delete dir="${quicheSourceDir}" />
+                    <delete dir="${quicheSourceDir}" failonerror="false" />
                   </else>
                 </if>
               </target>
@@ -1022,23 +1025,10 @@
               </target>
             </configuration>
           </execution>
-          <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
-          <execution>
-            <id>copy-manifest</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
-              </target>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
-      <!-- always produce osgi bundles -->
+
+      <!-- always produce osgi bundles: the first execution is for main artifact, the second for native library -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -1061,6 +1051,29 @@
                 <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
                 <Quiche-Branch>${quicheBranch}</Quiche-Branch>
               </instructions>
+            </configuration>
+          </execution>
+          <execution>
+            <id>native-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
+              <instructions>
+                <Fragment-Host>${fragmentHost}</Fragment-Host>
+                <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
+                <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
+                <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
+                <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
+                <Quiche-Branch>${quicheBranch}</Quiche-Branch>
+              </instructions>
+              <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
             </configuration>
           </execution>
         </executions>
@@ -1151,7 +1164,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
@@ -1168,8 +1180,20 @@
                   <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
               </archive>
+            </configuration>
+          </execution>
+          <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
             </configuration>
           </execution>
           <!-- Generate the JAR that contains the native library in it. -->
@@ -1186,11 +1210,9 @@
                 </manifest>
                 <manifestEntries>
                   <Multi-Release>true</Multi-Release>
-                  <Fragment-Host>${fragmentHost}</Fragment-Host>
-                  <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.directory}/manifests/MANIFEST-native.MF</manifestFile>
+                <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
               </archive>
               <classifier>${jni.classifier}</classifier>
             </configuration>

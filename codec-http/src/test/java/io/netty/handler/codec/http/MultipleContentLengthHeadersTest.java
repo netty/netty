@@ -26,11 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -53,13 +48,9 @@ public class MultipleContentLengthHeadersTest {
     }
 
     private static EmbeddedChannel newChannel(boolean allowDuplicateContentLengths) {
-        HttpRequestDecoder decoder = new HttpRequestDecoder(
-                DEFAULT_MAX_INITIAL_LINE_LENGTH,
-                DEFAULT_MAX_HEADER_SIZE,
-                DEFAULT_MAX_CHUNK_SIZE,
-                DEFAULT_VALIDATE_HEADERS,
-                DEFAULT_INITIAL_BUFFER_SIZE,
-                allowDuplicateContentLengths);
+        HttpDecoderConfig config = new HttpDecoderConfig()
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths);
+        HttpRequestDecoder decoder = new HttpRequestDecoder(config);
         return new EmbeddedChannel(decoder);
     }
 
@@ -109,7 +100,7 @@ public class MultipleContentLengthHeadersTest {
         EmbeddedChannel channel = newChannel(false);
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                             "Content-Length: 1,\r\n" +
-                            "Connection: close\n\n" +
+                            "Connection: close\r\n\r\n" +
                             "ab";
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();

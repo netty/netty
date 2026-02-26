@@ -195,7 +195,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
             out.add(ctx.alloc().buffer(8).order(byteOrder).writeLong(length));
             break;
         default:
-            throw new Error("should not reach here");
+            throw new Error("Unexpected length field length: " + lengthFieldLength);
         }
         out.add(msg.retain());
     }

@@ -17,8 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -249,12 +247,7 @@ public class WebSocketHandshakeHandOverTest {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-                    ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            clientForceClosed = true;
-                        }
-                    });
+                    ctx.channel().closeFuture().addListener(future -> clientForceClosed = true);
                     handshaker.close(ctx.channel(), new CloseWebSocketFrame());
                 }
             }

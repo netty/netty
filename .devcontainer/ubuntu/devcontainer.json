@@ -6,6 +6,10 @@
   "build": {
     "dockerfile": "Dockerfile",
   },
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1.5.0": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+  },
   "securityOpt": [ "seccomp=unconfined" ],
   "runArgs": [
     "--privileged"

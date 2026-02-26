@@ -90,6 +90,11 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     @Override
+    protected final boolean isStreamSocket() {
+        return true;
+    }
+
+    @Override
     public final ChannelMetadata metadata() {
         return METADATA;
     }
@@ -277,8 +282,8 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void freeResourcesNow(IoRegistration reg) {
-            super.freeResourcesNow(reg);
+        public void unregistered() {
+            super.unregistered();
             if (acceptedAddressMemory != null) {
                 acceptedAddressMemory.free();
             }

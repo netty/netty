@@ -5,6 +5,9 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1.5.0": {}
+  },
   "securityOpt": [ "seccomp=unconfined" ],
   "runArgs": [
     "--privileged"

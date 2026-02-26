@@ -48,16 +48,17 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
+              long handle, int offset, int length, int maxLength, PoolThreadCache cache, boolean threadLocal) {
+        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache, true, threadLocal);
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
-        init0(chunk, null, 0, 0, length, length, null);
+        init0(chunk, null, 0, 0, length, length, null, false,
+                false /* unpooled buffers are never allocated out of the thread-local cache */);
     }
 
-    private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
-                       long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+    private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int offset, int length, int maxLength,
+                       PoolThreadCache cache, boolean pooled, boolean threadLocal) {
         assert handle >= 0;
         assert chunk != null;
         assert !PoolChunk.isSubpage(handle) ||
@@ -74,6 +75,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
+        PooledByteBufAllocator.onAllocateBuffer(this, pooled, threadLocal);
     }
 
     /**
@@ -120,6 +122,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
+        PooledByteBufAllocator.onReallocateBuffer(this, newCapacity);
         chunk.arena.reallocate(this, newCapacity);
         return this;
     }
@@ -170,6 +173,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @Override
     protected final void deallocate() {
         if (handle >= 0) {
+            PooledByteBufAllocator.onDeallocateBuffer(this);
             final long handle = this.handle;
             this.handle = -1;
             memory = null;

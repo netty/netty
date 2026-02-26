@@ -102,7 +102,7 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
             case Trailers:
                 return null;
             default:
-                throw new Error();
+                throw new Error("Unexpected frame state: " + state);
         }
     }
 

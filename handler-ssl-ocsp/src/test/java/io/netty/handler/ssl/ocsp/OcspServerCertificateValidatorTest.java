@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class OcspServerCertificateValidatorTest {
+class OcspServerCertificateValidatorTest extends AbstractOcspTest {
 
     @Test
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
@@ -60,7 +60,7 @@ class OcspServerCertificateValidatorTest {
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(sslContext.newHandler(ch.alloc(), "netty.io", 443));
-                            pipeline.addLast(new OcspServerCertificateValidator(false));
+                            pipeline.addLast(new OcspServerCertificateValidator(false, createDefaultTransport()));
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 protected void channelRead0(ChannelHandlerContext ctx, Object msg) {

@@ -15,55 +15,37 @@
  */
 package io.netty.util;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import io.netty.util.internal.ReferenceCountUpdater;
+import io.netty.util.internal.RefCnt;
 
 /**
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.
  */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
-    private static final long REFCNT_FIELD_OFFSET =
-            ReferenceCountUpdater.getUnsafeOffset(AbstractReferenceCounted.class, "refCnt");
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> AIF_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
 
-    private static final ReferenceCountUpdater<AbstractReferenceCounted> updater =
-            new ReferenceCountUpdater<AbstractReferenceCounted>() {
-        @Override
-        protected AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater() {
-            return AIF_UPDATER;
-        }
-        @Override
-        protected long unsafeOffset() {
-            return REFCNT_FIELD_OFFSET;
-        }
-    };
-
-    // Value might not equal "real" reference count, all access should be via the updater
-    @SuppressWarnings({"unused", "FieldMayBeFinal"})
-    private volatile int refCnt = updater.initialValue();
+    private final RefCnt refCnt = new RefCnt();
 
     @Override
     public int refCnt() {
-        return updater.refCnt(this);
+        return RefCnt.refCnt(refCnt);
     }
 
     /**
-     * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
+     * An unsafe operation intended for use by a subclass that sets the reference count of the object directly
      */
-    protected final void setRefCnt(int refCnt) {
-        updater.setRefCnt(this, refCnt);
+    protected void setRefCnt(int refCnt) {
+        RefCnt.setRefCnt(this.refCnt, refCnt);
     }
 
     @Override
     public ReferenceCounted retain() {
-        return updater.retain(this);
+        RefCnt.retain(refCnt);
+        return this;
     }
 
     @Override
     public ReferenceCounted retain(int increment) {
-        return updater.retain(this, increment);
+        RefCnt.retain(refCnt, increment);
+        return this;
     }
 
     @Override
@@ -73,12 +55,12 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public boolean release() {
-        return handleRelease(updater.release(this));
+        return handleRelease(RefCnt.release(refCnt));
     }
 
     @Override
     public boolean release(int decrement) {
-        return handleRelease(updater.release(this, decrement));
+        return handleRelease(RefCnt.release(refCnt, decrement));
     }
 
     private boolean handleRelease(boolean result) {

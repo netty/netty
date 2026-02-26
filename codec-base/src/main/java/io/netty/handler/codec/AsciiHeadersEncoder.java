@@ -90,7 +90,7 @@ public final class AsciiHeadersEncoder {
                 buf.setByte(offset ++, ' ');
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected separator type: " + separatorType);
         }
 
         writeAscii(buf, offset, value);
@@ -105,7 +105,7 @@ public final class AsciiHeadersEncoder {
                 buf.setByte(offset ++, '\n');
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected newline type: " + newlineType);
         }
 
         buf.writerIndex(offset);

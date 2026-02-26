@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -31,6 +30,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPECT;
 import static io.netty.handler.codec.http.HttpUtil.getContentLength;
+import static io.netty.util.internal.StringUtil.className;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -96,10 +96,10 @@ public class HttpObjectAggregator
         HttpVersion.HTTP_1_1, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, Unpooled.EMPTY_BUFFER);
 
     static {
-        EXPECTATION_FAILED.headers().set(CONTENT_LENGTH, 0);
-        TOO_LARGE.headers().set(CONTENT_LENGTH, 0);
+        EXPECTATION_FAILED.headers().setInt(CONTENT_LENGTH, 0);
+        TOO_LARGE.headers().setInt(CONTENT_LENGTH, 0);
 
-        TOO_LARGE_CLOSE.headers().set(CONTENT_LENGTH, 0);
+        TOO_LARGE_CLOSE.headers().setInt(CONTENT_LENGTH, 0);
         TOO_LARGE_CLOSE.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
     }
 
@@ -158,14 +158,14 @@ public class HttpObjectAggregator
         }
     }
 
-    private static Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
+    private Object continueResponse(HttpMessage start, int maxContentLength, ChannelPipeline pipeline) {
         if (HttpUtil.isUnsupportedExpectation(start)) {
             // if the request contains an unsupported expectation, we return 417
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
             return EXPECTATION_FAILED.retainedDuplicate();
         } else if (HttpUtil.is100ContinueExpected(start)) {
             // if the request contains 100-continue but the content-length is too large, we return 413
-            if (getContentLength(start, -1L) <= maxContentLength) {
+            if (!isContentLengthInvalid(start, maxContentLength)) {
                 return CONTINUE.retainedDuplicate();
             }
             pipeline.fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
@@ -206,15 +206,13 @@ public class HttpObjectAggregator
 
         HttpUtil.setTransferEncodingChunked(start, false);
 
-        AggregatedFullHttpMessage ret;
         if (start instanceof HttpRequest) {
-            ret = new AggregatedFullHttpRequest((HttpRequest) start, content, null);
+            return new AggregatedFullHttpRequest((HttpRequest) start, content, null);
         } else if (start instanceof HttpResponse) {
-            ret = new AggregatedFullHttpResponse((HttpResponse) start, content, null);
+            return new AggregatedFullHttpResponse((HttpResponse) start, content, null);
         } else {
-            throw new Error();
+            throw new Error("Unexpected http message type: " + className(start));
         }
-        return ret;
     }
 
     @Override
@@ -234,9 +232,9 @@ public class HttpObjectAggregator
         //
         // See rfc2616 14.13 Content-Length
         if (!HttpUtil.isContentLengthSet(aggregated)) {
-            aggregated.headers().set(
+            aggregated.headers().setInt(
                     CONTENT_LENGTH,
-                    String.valueOf(aggregated.content().readableBytes()));
+                    aggregated.content().readableBytes());
         }
     }
 
@@ -250,23 +248,17 @@ public class HttpObjectAggregator
             if (oversized instanceof FullHttpMessage ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
                 ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
-                        }
-                        ctx.close();
+                future.addListener(f -> {
+                    if (!f.isSuccess()) {
+                        logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());
                     }
+                    ctx.close();
                 });
             } else {
-                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
-                            ctx.close();
-                        }
+                ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
+                        ctx.close();
                     }
                 });
             }

@@ -17,14 +17,20 @@ package io.netty.testsuite.transport;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.EventExecutorChooserFactory;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,6 +63,11 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Override
+    protected EventLoopGroup newAutoScalingEventLoopGroup() {
+        return new AutoScalingDefaultEventLoopGroup(SCALING_MAX_THREADS, AUTO_SCALING_CHOOSER_FACTORY);
+    }
+
+    @Override
     protected Channel newChannel() {
         return new LocalChannel();
     }
@@ -64,5 +75,44 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected Class<? extends ServerChannel> serverChannelClass() {
         return LocalServerChannel.class;
+    }
+
+    private static final class SuspendableDefaultEventLoop extends SingleThreadEventLoop {
+        SuspendableDefaultEventLoop(EventLoopGroup parent, Executor executor) {
+            super(parent, executor, true, true, DEFAULT_MAX_PENDING_TASKS,
+                  RejectedExecutionHandlers.reject());
+        }
+
+        @Override
+        protected void run() {
+            for (;;) {
+                Runnable task = takeTask();
+                if (task != null) {
+                    runTask(task);
+                    updateLastExecutionTime();
+                }
+
+                // Check if a suspend is requested and we have no more tasks. If so,
+                // exit the run() method to allow the suspension to complete.
+                if (canSuspend()) {
+                    break;
+                }
+
+                if (confirmShutdown()) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private static final class AutoScalingDefaultEventLoopGroup extends MultithreadEventLoopGroup {
+        AutoScalingDefaultEventLoopGroup(int nThreads, EventExecutorChooserFactory chooserFactory) {
+            super(nThreads, (Executor) null, chooserFactory);
+        }
+
+        @Override
+        protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+            return new SuspendableDefaultEventLoop(this, executor);
+        }
     }
 }

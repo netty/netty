@@ -381,15 +381,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
 
-        final ByteBuf buf;
+        final AbstractByteBuf buf;
         if (heapArena != null) {
             buf = heapArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             buf = PlatformDependent.hasUnsafe() ?
                     new UnpooledUnsafeHeapByteBuf(this, initialCapacity, maxCapacity) :
                     new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            onAllocateBuffer(buf, false, false);
         }
-
         return toLeakAwareBuffer(buf);
     }
 
@@ -398,15 +398,15 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
 
-        final ByteBuf buf;
+        final AbstractByteBuf buf;
         if (directArena != null) {
             buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
             buf = PlatformDependent.hasUnsafe() ?
                     UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
                     new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+            onAllocateBuffer(buf, false, false);
         }
-
         return toLeakAwareBuffer(buf);
     }
 
@@ -799,5 +799,61 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         return buf.toString();
+    }
+
+    static void onAllocateBuffer(AbstractByteBuf buf, boolean pooled, boolean threadLocal) {
+        if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.isEventEnabled()) {
+            AllocateBufferEvent event = new AllocateBufferEvent();
+            if (event.shouldCommit()) {
+                event.fill(buf, PooledByteBufAllocator.class);
+                event.chunkPooled = pooled;
+                event.chunkThreadLocal = threadLocal;
+                event.commit();
+            }
+        }
+    }
+
+    static void onDeallocateBuffer(AbstractByteBuf buf) {
+        if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.isEventEnabled()) {
+            FreeBufferEvent event = new FreeBufferEvent();
+            if (event.shouldCommit()) {
+                event.fill(buf, PooledByteBufAllocator.class);
+                event.commit();
+            }
+        }
+    }
+
+    static void onReallocateBuffer(AbstractByteBuf buf, int newCapacity) {
+        if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.isEventEnabled()) {
+            ReallocateBufferEvent event = new ReallocateBufferEvent();
+            if (event.shouldCommit()) {
+                event.fill(buf, PooledByteBufAllocator.class);
+                event.newCapacity = newCapacity;
+                event.commit();
+            }
+        }
+    }
+
+    static void onAllocateChunk(ChunkInfo chunk, boolean pooled) {
+        if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
+            AllocateChunkEvent event = new AllocateChunkEvent();
+            if (event.shouldCommit()) {
+                event.fill(chunk, PooledByteBufAllocator.class);
+                event.pooled = pooled;
+                event.threadLocal = false; // Chunks in the pooled allocator are always shared.
+                event.commit();
+            }
+        }
+    }
+
+    static void onDeallocateChunk(ChunkInfo chunk, boolean pooled) {
+        if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.isEventEnabled()) {
+            FreeChunkEvent event = new FreeChunkEvent();
+            if (event.shouldCommit()) {
+                event.fill(chunk, PooledByteBufAllocator.class);
+                event.pooled = pooled;
+                event.commit();
+            }
+        }
     }
 }

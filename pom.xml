@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.3.Final-SNAPSHOT</version>
+  <version>4.2.11.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -99,11 +99,11 @@
             <configuration>
               <legacyMode>true</legacyMode>
               <skippedModules>
-                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
+                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,testsuite-common,netty-testsuite-http2,
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
                 netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
                 netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
-                netty-dev-tools,netty-example,testsuite-jpms
+                netty-dev-tools,netty-example,testsuite-jpms,netty-jfr-stub,netty-varhandle-stub
               </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
@@ -198,6 +198,26 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java26</id>
+      <activation>
+        <jdk>26</jdk>
+      </activation>
+      <properties>
+        <argLine.java9.extras />
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -578,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.76.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -678,8 +698,8 @@
       <properties>
         <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-        <argLine.java9/>
-        <argLine.java9.extras/>
+        <argLine.java9 />
+        <argLine.java9.extras />
       </properties>
     </profile>
   </profiles>
@@ -695,14 +715,15 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.80</bouncycastle.version>
+    <bouncycastle.version>1.83</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
-    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <!-- This default enables leak presence detection. The leak profile replaces this with normal paranoid leak detection. -->
+    <argLine.leak>-Djunit.jupiter.extensions.autodetection.enabled=true</argLine.leak>
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <jacoco.argLine />
@@ -716,7 +737,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.72.Final</tcnative.version>
+    <tcnative.version>2.0.75.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -732,7 +753,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>warn</logging.logLevel>
-    <log4j2.version>2.23.1</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.12.1</junit.version>
     <skipTests>false</skipTests>
@@ -743,6 +764,8 @@
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.16.0</brotli4j.version>
+    <aalto.version>1.3.3</aalto.version>
+    <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -798,8 +821,10 @@
     <module>testsuite</module>
     <module>pkitesting</module>
     <module>testsuite-autobahn</module>
+    <module>testsuite-common</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
+    <module>testsuite-karaf</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native</module>
@@ -809,6 +834,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>jfr-stub</module>
+    <module>varhandle-stub</module>
     <module>bom</module>
   </modules>
 
@@ -817,7 +843,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.9.Final</version>
+        <version>0.0.10.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
@@ -892,67 +918,19 @@
         <scope>test</scope>
       </dependency>
 
-      <!--
-        Bouncy Castle - completely optional, only needed when:
-        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
-        - you don't use the JDK which doesn't provide sun.security.x509 package.
-      -->
+      <!-- Bouncy Castle BOM. Controlling the versions of our other Bouncy Castle dependencies. -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk18on</artifactId>
+        <artifactId>bc-jdk18on-bom</artifactId>
         <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional and only needed for OCSP stapling to construct and
-        parse OCSP requests and responses.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional integration of netty-handler with Bouncy Castle.
-
-        In particular, BouncyCastleAlpnSslUtils is using
-        org.bouncycastle.jsse.{BCApplicationProtocolSelector,BCSSLEngine}
-        via reflection, loading them via Class.forName(String).
-
-        This method of use leads to zero bytecode-level traces of this
-        dependency and works for plain Java without any further reference to
-        bctls.
-
-        maven-bundle-plugin recognizes the invocation of Class.forName() parses
-        its argument to recognize the call requires the org.bouncycastle.jsse
-        to succeed. It generates an Import-Package stanza for it, resulting in
-        a bundle which does not resolve without bctls.
-
-        This declaration, along with its corresponding dependency declaration
-        in netty-handler, provides the additional information about our use.
-        Its presence allows maven-bundle-plugin to observe
-        'org.bouncycastle.jsse' to live in an optional dependency, which is
-        enough for it to also add ';resolution=optional' and thus netty-handler
-        will resolve successfully even when bctls is not present, matching our
-        intent.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
-        <version>1.3.3</version>
+        <version>${aalto.version}</version>
       </dependency>
 
       <dependency>
@@ -963,12 +941,12 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.0.3</version>
+        <version>1.2.0</version>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.8.0</version>
+        <version>1.10.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1058,7 +1036,7 @@
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
+        <version>${rxtx.version}</version>
       </dependency>
 
       <dependency>
@@ -1141,13 +1119,13 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.18.0</version>
+        <version>3.27.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>3.6.28</version>
+        <version>4.11.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1195,7 +1173,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.26.0</version>
+        <version>1.28.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1203,7 +1181,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.14.0</version>
+        <version>2.20.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1226,7 +1204,7 @@
       <dependency>
         <groupId>org.apache.directory.server</groupId>
         <artifactId>apacheds-protocol-dns</artifactId>
-        <version>1.5.7</version>
+        <version>2.0.0.AM27</version>
         <scope>test</scope>
       </dependency>
 
@@ -1242,7 +1220,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.13.RELEASE</version>
+        <version>1.0.16.RELEASE</version>
       </dependency>
 
       <dependency>
@@ -1366,6 +1344,13 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
+                  <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
+                  <justification>Be able to directly construct class</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>interface org.jboss.marshalling.ClassNameTransformer</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
@@ -1375,6 +1360,28 @@
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.modifierChanged</code>
+                  <old>final class io.netty.channel.ManualIoEventLoop</old>
+                  <new>class io.netty.channel.ManualIoEventLoop</new>
+                  <justification>ManualIoEventLoop was made non-final to allow subclassing.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Several methods were intentionally made final; these API changes are acceptable for
+                   this class.
+                  </justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Final methods added to an inheritable class are intentional and safe in this context.
+                  </justification>
                 </item>
               </differences>
             </revapi.differences>
@@ -1556,25 +1563,11 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
@@ -1825,6 +1818,17 @@
           <publishingServerId>central</publishingServerId>
           <skipPublishing>true</skipPublishing>
           <autoPublish>false</autoPublish>
+          <!-- Exclude testsuite modules -->
+          <excludeArtifacts>
+            <artifact>netty-testsuite-autobahn</artifact>
+            <artifact>netty-testsuite-http2</artifact>
+            <artifact>netty-testsuite-karaf</artifact>
+            <artifact>netty-testsuite-native-image</artifact>
+            <artifact>netty-testsuite-native-image-client</artifact>
+            <artifact>netty-testsuite-native-image-client-runtime-init</artifact>
+            <artifact>netty-testsuite-osgi</artifact>
+            <artifact>netty-testsuite-shading</artifact>
+          </excludeArtifacts>
         </configuration>
       </plugin>
       <plugin>
@@ -2024,7 +2028,7 @@
         <plugin>
           <groupId>io.github.dmlloyd.module-info</groupId>
           <artifactId>module-info</artifactId>
-          <version>2.1</version>
+          <version>2.2</version>
           <executions>
             <execution>
               <id>module-info</id>
@@ -2032,6 +2036,7 @@
               <configuration>
                 <moduleName>${javaModuleName}</moduleName>
                 <outputDirectory>${project.build.outputDirectory}/META-INF/versions/11/</outputDirectory>
+                <detectProvides>false</detectProvides>
               </configuration>
               <goals>
                 <goal>generate</goal>

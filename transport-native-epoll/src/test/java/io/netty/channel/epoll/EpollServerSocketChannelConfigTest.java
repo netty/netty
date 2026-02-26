@@ -20,6 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ public class EpollServerSocketChannelConfigTest {
 
     @BeforeAll
     public static void before() {
-        group = new EpollEventLoopGroup(1);
+        group = new MultiThreadIoEventLoopGroup(1,  EpollIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)

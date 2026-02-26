@@ -20,8 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -43,7 +41,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -60,7 +57,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -185,13 +181,10 @@ public class ParameterizedSslHandlerTest {
                                                 buf.writerIndex(buf.writerIndex() + singleComponentSize);
                                                 content.addComponent(true, buf);
                                             }
-                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
-                                                @Override
-                                                public void operationComplete(ChannelFuture future) throws Exception {
-                                                    writeCause = future.cause();
-                                                    if (writeCause == null) {
-                                                        sentData = true;
-                                                    }
+                                            ctx.writeAndFlush(content).addListener(future -> {
+                                                writeCause = future.cause();
+                                                if (writeCause == null) {
+                                                    sentData = true;
                                                 }
                                             });
                                         } else {
@@ -440,13 +433,10 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), serverPromise);
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (!future.isSuccess()) {
-                                        // Something bad happened during handshake fail the promise!
-                                        serverPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (!future.isSuccess()) {
+                                    // Something bad happened during handshake fail the promise!
+                                    serverPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);
@@ -478,16 +468,13 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             PromiseNotifier.cascade(handler.sslCloseFuture(), clientPromise);
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (future.isSuccess()) {
-                                        closeSent.compareAndSet(false, true);
-                                        future.getNow().close();
-                                    } else {
-                                        // Something bad happened during handshake fail the promise!
-                                        clientPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (future.isSuccess()) {
+                                    closeSent.compareAndSet(false, true);
+                                    future.getNow().close();
+                                } else {
+                                    // Something bad happened during handshake fail the promise!
+                                    clientPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);

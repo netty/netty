@@ -15,10 +15,10 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.resolver.AddressResolver;
@@ -43,7 +43,8 @@ public class DnsAddressResolverGroupTest {
     public void testUseConfiguredEventLoop() throws InterruptedException {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         final EventLoop loop = group.next();
-        DefaultEventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(1);
+
+        EventLoopGroup defaultEventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
                 .eventLoop(loop).datagramChannelType(NioDatagramChannel.class);
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
@@ -52,16 +53,13 @@ public class DnsAddressResolverGroupTest {
             AddressResolver<?> resolver = resolverGroup.getResolver(defaultEventLoopGroup.next());
             resolver.resolve(new SocketAddress() {
                 private static final long serialVersionUID = 3169703458729818468L;
-            }).addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) {
-                    try {
-                        assertInstanceOf(UnsupportedAddressTypeException.class, future.cause());
-                        assertTrue(loop.inEventLoop());
-                        promise.setSuccess(null);
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
-                    }
+            }).addListener((FutureListener<Object>) future -> {
+                try {
+                    assertInstanceOf(UnsupportedAddressTypeException.class, future.cause());
+                    assertTrue(loop.inEventLoop());
+                    promise.setSuccess(null);
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
             }).await();
             promise.sync();
@@ -79,7 +77,7 @@ public class DnsAddressResolverGroupTest {
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
                 .eventLoop(loop).datagramChannelType(NioDatagramChannel.class);
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
-        DefaultEventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(2);
+        EventLoopGroup defaultEventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         EventLoop eventLoop1 = defaultEventLoopGroup.next();
         EventLoop eventLoop2 = defaultEventLoopGroup.next();
         try {
@@ -103,14 +101,11 @@ public class DnsAddressResolverGroupTest {
                                 final Promise<InetSocketAddress> promise)
             throws InterruptedException, ExecutionException {
         resolver.resolve(socketAddress)
-                .addListener(new FutureListener<InetSocketAddress>() {
-                    @Override
-                    public void operationComplete(Future<InetSocketAddress> future) {
-                        try {
-                            promise.setSuccess(future.get());
-                        } catch (Throwable cause) {
-                            promise.setFailure(cause);
-                        }
+                .addListener((FutureListener<InetSocketAddress>) future -> {
+                    try {
+                        promise.setSuccess(future.get());
+                    } catch (Throwable cause) {
+                        promise.setFailure(cause);
                     }
                 }).await();
         promise.sync();

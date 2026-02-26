@@ -18,16 +18,13 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.security.Principal;
@@ -36,6 +33,12 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -126,18 +129,18 @@ public class SslContextBuilderTest {
 
     @Test
     public void testUnsupportedPrivateKeyFailsFastForServer() {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         testUnsupportedPrivateKeyFailsFast(true);
     }
 
     @Test
     public void testUnsupportedPrivateKeyFailsFastForClient() {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         testUnsupportedPrivateKeyFailsFast(false);
     }
 
     private static void testUnsupportedPrivateKeyFailsFast(boolean server) {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String cert = "-----BEGIN CERTIFICATE-----\n" +
                 "MIICODCCAY2gAwIBAgIEXKTrajAKBggqhkjOPQQDBDBUMQswCQYDVQQGEwJVUzEM\n" +
                 "MAoGA1UECAwDTi9hMQwwCgYDVQQHDANOL2ExDDAKBgNVBAoMA04vYTEMMAoGA1UE\n" +
@@ -218,6 +221,8 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     @Test
@@ -247,6 +252,30 @@ public class SslContextBuilderTest {
     }
 
     @Test
+    void openSslCredentialApiIsNotAvailableWithJdkProvider() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+        X509Bundle bundle = new CertificateBuilder()
+                .subject("cn=netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        OpenSslCredential credential = OpenSslCredentialBuilder.forX509(
+                bundle.getKeyPair().getPrivate(), bundle.getCertificatePath())
+                .build();
+        try {
+            SslContextBuilder clientBuilder = SslContextBuilder.forClient();
+            SslContextBuilder serverBuilder = SslContextBuilder.forServer(bundle.toKeyManagerFactory());
+            clientBuilder.sslProvider(SslProvider.JDK);
+            serverBuilder.sslProvider(SslProvider.JDK);
+            clientBuilder.addCredential(credential);
+            serverBuilder.addCredential(credential);
+            assertThrows(IllegalArgumentException.class, () -> clientBuilder.build());
+            assertThrows(IllegalArgumentException.class, () -> serverBuilder.build());
+        } finally {
+            credential.release();
+        }
+    }
+
+    @Test
     public void testServerContextWithSecureRandom() throws Exception {
         testServerContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
     }
@@ -265,6 +294,8 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testInvalidCipher(SslProvider provider) throws Exception {
@@ -276,7 +307,9 @@ public class SslContextBuilderTest {
                         cert.privateKey())
                 .trustManager(cert.certificate());
         SslContext context = builder.build();
-        context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
@@ -293,6 +326,8 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContext(SslProvider provider) throws Exception {
@@ -308,6 +343,8 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContextFromFile(SslProvider provider) throws Exception {
@@ -322,6 +359,8 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContext(SslProvider provider) throws Exception {
@@ -336,6 +375,8 @@ public class SslContextBuilderTest {
         assertTrue(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContextWithSecureRandom(SslProvider provider,
@@ -353,6 +394,8 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContextWithSecureRandom(SslProvider provider,
@@ -371,6 +414,8 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testContextFromManagers(SslProvider provider) throws Exception {
@@ -461,6 +506,7 @@ public class SslContextBuilderTest {
         assertFalse(client_engine.getNeedClientAuth());
         client_engine.closeInbound();
         client_engine.closeOutbound();
+        ReferenceCountUtil.release(client_engine);
         SslContextBuilder server_builder = SslContextBuilder.forServer(customKeyManager)
                                                      .sslProvider(provider)
                                                      .trustManager(customTrustManager)
@@ -471,6 +517,9 @@ public class SslContextBuilderTest {
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();
         server_engine.closeOutbound();
+        ReferenceCountUtil.release(server_engine);
+        ReferenceCountUtil.release(client_context);
+        ReferenceCountUtil.release(server_context);
     }
 
     private static final class SpySecureRandom extends SecureRandom {

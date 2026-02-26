@@ -22,6 +22,8 @@ import io.netty.handler.codec.memcache.MemcacheContent;
 import io.netty.handler.codec.memcache.MemcacheObject;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.util.internal.StringUtil.className;
+
 /**
  * An object aggregator for the memcache binary protocol.
  *
@@ -51,7 +53,7 @@ public class BinaryMemcacheObjectAggregator extends AbstractMemcacheObjectAggreg
         }
 
         // Should not reach here.
-        throw new Error();
+        throw new Error("Unexpected memcache message type: " + className(start));
     }
 
     private static FullBinaryMemcacheRequest toFullRequest(BinaryMemcacheRequest request, ByteBuf content) {

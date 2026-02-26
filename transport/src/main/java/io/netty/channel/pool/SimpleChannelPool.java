@@ -178,12 +178,7 @@ public class SimpleChannelPool implements ChannelPool {
                 if (f.isDone()) {
                     notifyConnect(f, promise);
                 } else {
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            notifyConnect(future, promise);
-                        }
-                    });
+                    f.addListener((ChannelFutureListener) future -> notifyConnect(future, promise));
                 }
             } else {
                 EventLoop loop = ch.eventLoop();
@@ -229,12 +224,7 @@ public class SimpleChannelPool implements ChannelPool {
             if (f.isDone()) {
                 notifyHealthCheck(f, channel, promise);
             } else {
-                f.addListener(new FutureListener<Boolean>() {
-                    @Override
-                    public void operationComplete(Future<Boolean> future) {
-                        notifyHealthCheck(future, channel, promise);
-                    }
-                });
+                f.addListener((FutureListener<Boolean>) future -> notifyHealthCheck(future, channel, promise));
             }
         } catch (Throwable cause) {
             closeAndFail(channel, cause, promise);
@@ -321,12 +311,7 @@ public class SimpleChannelPool implements ChannelPool {
         if (f.isDone()) {
             releaseAndOfferIfHealthy(channel, promise, f);
         } else {
-            f.addListener(new FutureListener<Boolean>() {
-                @Override
-                public void operationComplete(Future<Boolean> future) throws Exception {
-                    releaseAndOfferIfHealthy(channel, promise, f);
-                }
-            });
+            f.addListener((FutureListener<Boolean>) future -> releaseAndOfferIfHealthy(channel, promise, f));
         }
     }
 

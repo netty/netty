@@ -60,7 +60,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<State> {
                 break;
             }
             default: {
-                throw new Error();
+                throw new Error("Unexpected request decoder type: " + state());
             }
         }
         ctx.pipeline().remove(this);

@@ -28,6 +28,7 @@ import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,6 +48,12 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new EpollEventLoopGroup();
+    }
+
+    @Override
+    protected EventLoopGroup newAutoScalingEventLoopGroup() {
+        return new EpollEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
+                                       DefaultSelectStrategyFactory.INSTANCE);
     }
 
     @Override

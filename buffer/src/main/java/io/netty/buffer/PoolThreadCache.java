@@ -17,14 +17,11 @@
 package io.netty.buffer;
 
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.buffer.PoolArena.SizeClass;
+import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -34,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Acts a Thread cache for allocations. This implementation is moduled after
@@ -194,7 +193,7 @@ final class PoolThreadCache {
         case Small:
             return cacheForSmall(area, sizeIdx);
         default:
-            throw new Error();
+            throw new Error("Unexpected size class: " + sizeClass);
         }
     }
 
@@ -288,7 +287,7 @@ final class PoolThreadCache {
     }
 
     private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int sizeIdx) {
-        if (cache == null || sizeIdx > cache.length - 1) {
+        if (cache == null || sizeIdx >= cache.length) {
             return null;
         }
         return cache[sizeIdx];
@@ -306,7 +305,7 @@ final class PoolThreadCache {
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
                 PoolThreadCache threadCache) {
-            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache, true);
         }
     }
 
@@ -322,7 +321,7 @@ final class PoolThreadCache {
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
                 PoolThreadCache threadCache) {
-            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache);
+            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache, true);
         }
     }
 
@@ -463,13 +462,13 @@ final class PoolThreadCache {
         }
 
         @SuppressWarnings("rawtypes")
-        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
-            @SuppressWarnings("unchecked")
+        private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
             @Override
-            public Entry newObject(Handle<Entry> handle) {
+            @SuppressWarnings("unchecked")
+            protected Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
-        });
+        };
     }
 
     private static final class FreeOnFinalize {
@@ -485,8 +484,6 @@ final class PoolThreadCache {
         @Override
         protected void finalize() throws Throwable {
             try {
-                super.finalize();
-            } finally {
                 PoolThreadCache cache = this.cache;
                 // this can race with a non-finalizer thread calling free: regardless who wins, the cache will be
                 // null out
@@ -494,6 +491,8 @@ final class PoolThreadCache {
                 if (cache != null) {
                     cache.free(true);
                 }
+            } finally {
+                super.finalize();
             }
         }
     }

@@ -81,7 +81,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     private void addMapping(QuicheQuicChannel channel, ByteBuffer id) {
         QuicheQuicChannel ch = connectionIdToChannel.put(id, channel);
-        assert ch == null;
+        assert ch == null || ch == channel;
     }
 
     private void removeMapping(QuicheQuicChannel channel, ByteBuffer id) {

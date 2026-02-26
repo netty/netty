@@ -167,6 +167,51 @@ public class DefaultDnsRecordDecoderTest {
     }
 
     @Test
+    public void testDecodeCompressionRDataPointerMX() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        byte[] compressionPointer = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
+                0, 10,          // preference = 10
+                (byte) 0xC0, 0  // record is a pointer to netty.io
+        };
+
+        byte[] expected = {
+                0, 10, // pref = 10
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0
+        };
+        ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
+        DefaultDnsRawRecord mxRecord = null;
+        ByteBuf expectedBuf = null;
+        try {
+            mxRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    "mail.example.com",
+                    DnsRecordType.MX,
+                    DnsRecord.CLASS_IN,
+                    60,
+                    buffer,
+                    10,
+                    4);
+
+            expectedBuf = Unpooled.wrappedBuffer(expected);
+
+            assertEquals(0, ByteBufUtil.compare(expectedBuf, mxRecord.content()),
+                         "The rdata of MX-type record should be decompressed in advance");
+            assertEquals(10, mxRecord.content().getUnsignedShort(0));
+
+            ByteBuf exchangerName = mxRecord.content().duplicate().setIndex(2, mxRecord.content().writerIndex());
+            assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(exchangerName));
+        } finally {
+            buffer.release();
+            if (expectedBuf != null) {
+                expectedBuf.release();
+            }
+            if (mxRecord != null) {
+                mxRecord.release();
+            }
+        }
+    }
+
+    @Test
     public void testDecodeMessageCompression() throws Exception {
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
         DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();

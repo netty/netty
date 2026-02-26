@@ -44,7 +44,7 @@ public class CompleteChannelFutureTest {
         ChannelFutureListener l = Mockito.mock(ChannelFutureListener.class);
         future.removeListener(l);
         Mockito.verifyNoMoreInteractions(l);
-        Mockito.verifyZeroInteractions(channel);
+        Mockito.verifyNoInteractions(channel);
     }
 
     @Test
@@ -60,7 +60,7 @@ public class CompleteChannelFutureTest {
         assertSame(future, future.awaitUninterruptibly());
         assertTrue(future.awaitUninterruptibly(1));
         assertTrue(future.awaitUninterruptibly(1, TimeUnit.NANOSECONDS));
-        Mockito.verifyZeroInteractions(channel);
+        Mockito.verifyNoInteractions(channel);
     }
 
     private static class CompleteChannelFutureImpl extends CompleteChannelFuture {
@@ -71,22 +71,22 @@ public class CompleteChannelFutureTest {
 
         @Override
         public Throwable cause() {
-            throw new Error();
+            throw new UnsupportedOperationException("cause is not supported for " + getClass().getName());
         }
 
         @Override
         public boolean isSuccess() {
-            throw new Error();
+            throw new UnsupportedOperationException("isSuccess is not supported for " + getClass().getName());
         }
 
         @Override
-        public ChannelFuture sync() throws InterruptedException {
-            throw new Error();
+        public ChannelFuture sync() {
+            throw new UnsupportedOperationException("sync is not supported for " + getClass().getName());
         }
 
         @Override
         public ChannelFuture syncUninterruptibly() {
-            throw new Error();
+            throw new UnsupportedOperationException("syncUninterruptibly is not supported for " + getClass().getName());
         }
     }
 }

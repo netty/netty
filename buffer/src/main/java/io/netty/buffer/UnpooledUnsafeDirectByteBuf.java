@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,8 @@ import java.nio.ByteBuffer;
  * {@link Unpooled#wrappedBuffer(ByteBuffer)} instead of calling the constructor explicitly.}
  */
 public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
+
+    private static final boolean USE_VAR_HANDLE = PlatformDependent.useVarHandleForMultiByteAccess();
 
     long memoryAddress;
 
@@ -58,6 +61,25 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         //
         // We also call slice() explicitly here to preserve behaviour with previous netty releases.
         super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, /* slice = */ true);
+    }
+
+    /**
+     * Creates a new direct ByteBuf by wrapping the specified initial buffer.
+     * Allows subclasses to control if initialBuffer.slice() should be invoked.
+     *
+     *  Attention: this is a dangerous API and should only be used by someone
+     *  who really knows the possible consequences.
+     *  It allows to disable a protective slicing for the provided ByteBuffer instance
+     *  and can cause sharing of this ByteBuffer instance between several UnpooledUnsafeDirectByteBuf objects,
+     *  as a result modifications would be racy and unsafe.
+     *
+     * @param slice true means slice() should be called for the provided initialBuffer
+     * @param maxCapacity the maximum capacity of the underlying direct buffer
+     */
+    @UnstableApi
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, boolean slice,
+                                          ByteBuffer initialBuffer, int maxCapacity) {
+        super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, slice);
     }
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
@@ -106,11 +128,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected short _getShort(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getShortBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShort(addr(index));
     }
 
     @Override
     protected short _getShortLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getShortLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getShortLE(addr(index));
     }
 
@@ -138,11 +166,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected int _getInt(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getIntBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getInt(addr(index));
     }
 
     @Override
     protected int _getIntLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getIntLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getIntLE(addr(index));
     }
 
@@ -154,11 +188,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected long _getLong(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getLongBE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLong(addr(index));
     }
 
     @Override
     protected long _getLongLE(int index) {
+        if (USE_VAR_HANDLE) {
+            return VarHandleByteBufferAccess.getLongLE(buffer, index);
+        }
         return UnsafeByteBufUtil.getLongLE(addr(index));
     }
 
@@ -199,11 +239,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setShortBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShort(addr(index), value);
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setShortLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setShortLE(addr(index), value);
     }
 
@@ -233,11 +281,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setIntBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setInt(addr(index), value);
     }
 
     @Override
     protected void _setIntLE(int index, int value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setIntLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setIntLE(addr(index), value);
     }
 
@@ -250,11 +306,19 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setLongBE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLong(addr(index), value);
     }
 
     @Override
     protected void _setLongLE(int index, long value) {
+        if (USE_VAR_HANDLE) {
+            VarHandleByteBufferAccess.setLongLE(buffer, index, value);
+            return;
+        }
         UnsafeByteBufUtil.setLongLE(addr(index), value);
     }
 

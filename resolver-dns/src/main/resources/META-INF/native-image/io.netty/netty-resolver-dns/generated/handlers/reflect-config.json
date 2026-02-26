@@ -28,9 +28,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.resolver.dns.DnsQueryContext$5$1",
+    "name": "io.netty.resolver.dns.DnsQueryContext$4",
     "condition": {
-      "typeReachable": "io.netty.resolver.dns.DnsQueryContext$5$1"
+      "typeReachable": "io.netty.resolver.dns.DnsQueryContext$4"
     },
     "queryAllPublicMethods": true
   }

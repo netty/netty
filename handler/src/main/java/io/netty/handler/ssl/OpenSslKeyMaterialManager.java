@@ -23,10 +23,6 @@ import javax.security.auth.x500.X500Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 
 /**
@@ -47,17 +43,11 @@ final class OpenSslKeyMaterialManager {
     static final String KEY_TYPE_EC_EC = "EC_EC";
     static final String KEY_TYPE_EC_RSA = "EC_RSA";
 
-    // key type mappings for types.
-    private static final Map<String, String> KEY_TYPES = new HashMap<String, String>();
-    static {
-        KEY_TYPES.put("RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("DHE_RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("ECDHE_RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("ECDHE_ECDSA", KEY_TYPE_EC);
-        KEY_TYPES.put("ECDH_RSA", KEY_TYPE_EC_RSA);
-        KEY_TYPES.put("ECDH_ECDSA", KEY_TYPE_EC_EC);
-        KEY_TYPES.put("DH_RSA", KEY_TYPE_DH_RSA);
-    }
+    private static final int TYPE_RSA     = 1;      // 00001
+    private static final int TYPE_DH_RSA  = 1 << 1; // 00010
+    private static final int TYPE_EC      = 1 << 2; // 00100
+    private static final int TYPE_EC_EC   = 1 << 3; // 01000
+    private static final int TYPE_EC_RSA  = 1 << 4; // 10000
 
     private final OpenSslKeyMaterialProvider provider;
     private final boolean hasTmpDhKeys;
@@ -76,24 +66,60 @@ final class OpenSslKeyMaterialManager {
         // authMethods may contain duplicates or may result in the same type
         // but call chooseServerAlias(...) may be expensive. So let's ensure
         // we filter out duplicates.
-        Set<String> typeSet = new HashSet<String>(KEY_TYPES.size());
+
+        int seenTypes = 0;
         for (String authMethod : authMethods) {
-            String type = KEY_TYPES.get(authMethod);
-            if (type != null && typeSet.add(type)) {
-                String alias = chooseServerAlias(engine, type);
-                if (alias != null) {
-                    // We found a match... let's set the key material and return.
-                    setKeyMaterial(engine, alias);
-                    return;
-                }
+            int typeBit = resolveKeyTypeBit(authMethod);
+            if (typeBit == 0 || (seenTypes & typeBit) != 0) {
+                continue;
+            }
+
+            seenTypes |= typeBit; // mark as seen
+
+            String keyType = keyTypeString(typeBit);
+            String alias = chooseServerAlias(engine, keyType);
+            if (alias != null) {
+                setKeyMaterial(engine, alias);
+                return;
             }
         }
+
         if (hasTmpDhKeys && authMethods.length == 1 &&
                 ("DH_anon".equals(authMethods[0]) || "ECDH_anon".equals(authMethods[0]))) {
             return; // These auth methods don't require certificates.
         }
         throw new SSLHandshakeException("Unable to find key material for auth method(s): "
                 + Arrays.toString(authMethods));
+    }
+
+    private static int resolveKeyTypeBit(String authMethod) {
+        switch (authMethod) {
+            case "RSA":
+            case "DHE_RSA":
+            case "ECDHE_RSA":
+                return TYPE_RSA;
+            case "DH_RSA":
+                return TYPE_DH_RSA;
+            case "ECDHE_ECDSA":
+                return TYPE_EC;
+            case "ECDH_ECDSA":
+                return TYPE_EC_EC;
+            case "ECDH_RSA":
+                return TYPE_EC_RSA;
+            default:
+                return 0;
+        }
+    }
+
+    private static String keyTypeString(int typeBit) {
+        switch (typeBit) {
+            case TYPE_RSA: return KEY_TYPE_RSA;
+            case TYPE_DH_RSA: return KEY_TYPE_DH_RSA;
+            case TYPE_EC: return KEY_TYPE_EC;
+            case TYPE_EC_EC: return KEY_TYPE_EC_EC;
+            case TYPE_EC_RSA: return KEY_TYPE_EC_RSA;
+            default: return null;
+        }
     }
 
     void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
