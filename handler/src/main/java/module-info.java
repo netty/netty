@@ -38,5 +38,4 @@ module io.netty5.handler {
     exports io.netty.handler.stream;
     exports io.netty.handler.timeout;
     exports io.netty.handler.traffic;
-
 }
