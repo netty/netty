@@ -12,19 +12,8 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-module io.netty5.transport {
-    requires io.netty5.resolver;
-    requires io.netty5.common;
-    requires io.netty5.buffer;
 
-    requires static io.netty5.nativeimage.metadatagen;
-
-    exports io.netty.bootstrap;
-    exports io.netty.channel;
-    exports io.netty.channel.embedded;
-    exports io.netty.channel.local;
-    exports io.netty.channel.nio;
-    exports io.netty.channel.pool;
-    exports io.netty.channel.socket;
-    exports io.netty.channel.socket.nio;
-}
+/**
+ * Native image metadata generator. See {@link io.netty.nativeimage.ChannelHandlerMetadataUtil} class documentation.
+ */
+package io.netty.nativeimage;

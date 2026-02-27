@@ -27,7 +27,6 @@
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty.handler</javaModuleName>
     <!-- Needed for SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
   </properties>
@@ -137,19 +136,10 @@
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport</artifactId>
+      <artifactId>netty5-nativeimage-metadata-gen</artifactId>
       <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

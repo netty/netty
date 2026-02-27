@@ -18,9 +18,6 @@ package io.netty.nativeimage;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.NativeImageHandlerMetadataTest;
-import org.junit.jupiter.api.Assertions;
 import org.reflections.Reflections;
 import org.reflections.util.ConfigurationBuilder;
 
@@ -39,18 +36,27 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Generates native-image reflection metadata for subtypes of {@link io.netty.channel.ChannelHandler}.
+ * Generates native-image reflection metadata for subtypes of {@code ChannelHandler}.
  * <p>
  * To use, create a JUnit test in the desired Netty module and invoke {@link #generateMetadata(String...)} with a list
  * of packages present in the target Netty module that may contain subtypes of the ChannelHandler.
  * <p>
- * See {@link NativeImageHandlerMetadataTest}
+ * See {@code NativeImageHandlerMetadataTest} in netty-transport tests.
  */
 public final class ChannelHandlerMetadataUtil {
 
     private static final Type HANDLER_METADATA_LIST_TYPE = new TypeToken<List<HandlerMetadata>>() {
     }.getType();
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    private static final Class<?> CHANNEL_HANDLER;
+    static {
+        try {
+            CHANNEL_HANDLER = Class.forName("io.netty.channel.ChannelHandler");
+        } catch (ClassNotFoundException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     private ChannelHandlerMetadataUtil() {
     }
@@ -59,11 +65,11 @@ public final class ChannelHandlerMetadataUtil {
         String projectGroupId = System.getProperty("nativeImage.handlerMetadataGroupId");
         String projectArtifactId = System.getProperty("nativeimage.handlerMetadataArtifactId");
 
-        Set<Class<? extends ChannelHandler>> subtypes = findChannelHandlerSubclasses(packageNames);
+        Set<Class<?>> subtypes = findChannelHandlerSubclasses(packageNames);
 
         if (Arrays.asList(packageNames).contains("io.netty.channel")) {
             // We want the metadata for the ChannelHandler itself too
-            subtypes.add(ChannelHandler.class);
+            subtypes.add(CHANNEL_HANDLER);
         }
 
         Set<HandlerMetadata> handlerMetadata = new HashSet<HandlerMetadata>();
@@ -86,7 +92,7 @@ public final class ChannelHandlerMetadataUtil {
                     "\nPlease create this file with the following content: \n" +
                     getMetadataJsonString(handlerMetadata) +
                     "\n";
-            Assertions.fail(message);
+            throw new AssertionError(message);
         }
 
         List<HandlerMetadata> existingMetadata = null;
@@ -94,7 +100,7 @@ public final class ChannelHandlerMetadataUtil {
             FileReader reader = new FileReader(existingMetadataFile);
             existingMetadata = gson.fromJson(reader, HANDLER_METADATA_LIST_TYPE);
         } catch (IOException e) {
-            Assertions.fail("Failed to open the native-image metadata file at: " + existingMetadataPath, e);
+            throw new AssertionError("Failed to open the native-image metadata file at: " + existingMetadataPath, e);
         }
 
         Set<HandlerMetadata> newMetadata = new HashSet<HandlerMetadata>(handlerMetadata);
@@ -123,19 +129,20 @@ public final class ChannelHandlerMetadataUtil {
             builder.append("Expected metadata file contents:\n\n")
                     .append(getMetadataJsonString(handlerMetadata))
                     .append("\n");
-            Assertions.fail(builder.toString());
+            throw new AssertionError(builder.toString());
         }
     }
 
-    private static Set<Class<? extends ChannelHandler>> findChannelHandlerSubclasses(String... packageNames) {
+    @SuppressWarnings("unchecked")
+    private static Set<Class<?>> findChannelHandlerSubclasses(String... packageNames) {
         Reflections reflections = new Reflections(
                 new ConfigurationBuilder()
                         .forPackages(packageNames));
 
-        Set<Class<? extends ChannelHandler>> allSubtypes = reflections.getSubTypesOf(ChannelHandler.class);
-        Set<Class<? extends ChannelHandler>> targetSubtypes = new HashSet<Class<? extends ChannelHandler>>();
+        Set<Class<?>> allSubtypes = reflections.getSubTypesOf((Class<Object>) CHANNEL_HANDLER);
+        Set<Class<?>> targetSubtypes = new HashSet<Class<?>>();
 
-        for (Class<? extends ChannelHandler> subtype : allSubtypes) {
+        for (Class<?> subtype : allSubtypes) {
             if (isTestClass(subtype)) {
                 continue;
             }
@@ -156,7 +163,7 @@ public final class ChannelHandlerMetadataUtil {
         return targetSubtypes;
     }
 
-    private static boolean isTestClass(Class<? extends ChannelHandler> clazz) {
+    private static boolean isTestClass(Class<?> clazz) {
         String[] parts = clazz.getName().split("\\.");
         if (parts.length > 0) {
             URL classFile = clazz.getResource(parts[parts.length - 1] + ".class");

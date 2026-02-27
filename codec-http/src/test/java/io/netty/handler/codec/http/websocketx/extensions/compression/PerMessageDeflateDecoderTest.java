@@ -52,7 +52,7 @@ public class PerMessageDeflateDecoderTest {
     @Test
     public void testCompressedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
@@ -112,7 +112,7 @@ public class PerMessageDeflateDecoderTest {
     @Test
     public void testFragmentedFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
@@ -162,7 +162,7 @@ public class PerMessageDeflateDecoderTest {
     @Test
     public void testMultiCompressedPayloadWithinFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
@@ -204,7 +204,7 @@ public class PerMessageDeflateDecoderTest {
     @Test
     public void testDecompressionSkipForBinaryFrame() throws Exception {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
@@ -236,7 +236,7 @@ public class PerMessageDeflateDecoderTest {
             }
         };
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter, 0));
 
@@ -282,7 +282,7 @@ public class PerMessageDeflateDecoderTest {
         };
 
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         final EmbeddedChannel decoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter, 0));
 
@@ -345,7 +345,7 @@ public class PerMessageDeflateDecoderTest {
                          "62667963626b687a726d676e646263776e67797264706d6c6863626577616967706a78636a72697464756e627" +
                          "977616f79736475676f76736f7178746a7a7479626c64636b6b6778637768746c62";
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         ByteBuf originPayload = Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(hexDump));

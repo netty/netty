@@ -12,19 +12,16 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-module io.netty5.transport {
-    requires io.netty5.resolver;
+module io.netty5.codec.compression {
     requires io.netty5.common;
     requires io.netty5.buffer;
+    requires io.netty5.transport;
+    requires io.netty5.codec;
 
-    requires static io.netty5.nativeimage.metadatagen;
+    requires static com.github.luben.zstd_jni;
+    requires static com.aayushatharva.brotli4j;
+    requires static com.ning.compress.lzf;
+    requires static org.lz4.java;
 
-    exports io.netty.bootstrap;
-    exports io.netty.channel;
-    exports io.netty.channel.embedded;
-    exports io.netty.channel.local;
-    exports io.netty.channel.nio;
-    exports io.netty.channel.pool;
-    exports io.netty.channel.socket;
-    exports io.netty.channel.socket.nio;
+    exports io.netty.handler.codec.compression;
 }

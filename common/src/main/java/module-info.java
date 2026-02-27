@@ -32,9 +32,10 @@ module io.netty5.common {
     exports io.netty.util.internal to
             io.netty5.buffer,
             io.netty5.resolver,
-            io.netty5.transport;
+            io.netty5.transport,
+            io.netty5.pkitesting, io.netty5.handler, io.netty5.codec, io.netty5.codec.compression, io.netty5.codec.protobuf, io.netty5.codec.dns, io.netty5.codec.haproxy, io.netty5.transport.unix.common, io.netty5.codec.http;
     exports io.netty.util.internal.logging to
             io.netty5.buffer,
             io.netty5.resolver,
-            io.netty5.transport;
+            io.netty5.transport, io.netty5.handler, io.netty5.codec.compression, io.netty5.codec.http;
 }

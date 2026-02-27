@@ -16,7 +16,6 @@
 package io.netty.handler.codec.protobuf;
 
 import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.nano.CodedInputByteBufferNano;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -38,7 +37,6 @@ import java.util.List;
  * </pre>
  *
  * @see CodedInputStream
- * @see CodedInputByteBufferNano
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 
