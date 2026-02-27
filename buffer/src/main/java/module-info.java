@@ -18,4 +18,7 @@ module io.netty.buffer {
 
     // For tests:
     requires static java.management;
+
+    exports io.netty.buffer;
+    exports io.netty.buffer.search;
 }
