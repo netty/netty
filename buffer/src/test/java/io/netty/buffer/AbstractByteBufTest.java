@@ -20,6 +20,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -2293,7 +2294,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testToStringMultipleThreads() throws Throwable {
         buffer.clear();
         buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
@@ -2303,7 +2304,7 @@ public abstract class AbstractByteBufTest {
     static void testToStringMultipleThreads0(final ByteBuf buffer) throws Throwable {
         final String expected = buffer.toString(CharsetUtil.ISO_8859_1);
 
-        final AtomicInteger counter = new AtomicInteger(30000);
+        final CyclicBarrier startBarrier = new CyclicBarrier(10);
         final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
         List<Thread> threads = new ArrayList<Thread>();
         for (int i = 0; i < 10; i++) {
@@ -2311,11 +2312,15 @@ public abstract class AbstractByteBufTest {
                 @Override
                 public void run() {
                     try {
-                        while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                        startBarrier.await(10, TimeUnit.SECONDS);
+                        int counter = 3000;
+                        while (errorRef.get() == null && counter-- > 0) {
                             assertEquals(expected, buffer.toString(CharsetUtil.ISO_8859_1));
                         }
                     } catch (Throwable cause) {
-                        errorRef.compareAndSet(null, cause);
+                        if (!errorRef.compareAndSet(null, cause)) {
+                            ThrowableUtil.addSuppressed(errorRef.get(), cause);
+                        }
                     }
                 }
             });
@@ -2325,13 +2330,22 @@ public abstract class AbstractByteBufTest {
             thread.start();
         }
 
-        for (Thread thread : threads) {
-            thread.join();
-        }
+        try {
+            for (Thread thread : threads) {
+                thread.join();
+            }
 
-        Throwable error = errorRef.get();
-        if (error != null) {
-            throw error;
+            Throwable error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
+        } catch (Throwable e) {
+            for (Thread thread : threads) {
+                if (thread.isAlive()) {
+                    ThrowableUtil.interruptAndAttachAsyncStackTrace(thread, e);
+                }
+            }
+            throw e;
         }
     }
 
