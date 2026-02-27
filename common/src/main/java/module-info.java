@@ -30,7 +30,11 @@ module io.netty5.common {
     exports io.netty.util.concurrent;
 
     exports io.netty.util.internal to
-            io.netty5.buffer;
+            io.netty5.buffer,
+            io.netty5.resolver,
+            io.netty5.transport;
     exports io.netty.util.internal.logging to
-            io.netty5.buffer;
+            io.netty5.buffer,
+            io.netty5.resolver,
+            io.netty5.transport;
 }
