@@ -20,6 +20,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -534,7 +535,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         try {
             cacheLatch.await();
         } catch (InterruptedException e) {
-            attachAsyncStackTrace(e, t);
+            ThrowableUtil.interruptAndAttachAsyncStackTrace(t, e);
             throw e;
         }
 
@@ -546,20 +547,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                     task.get();
                     t.join();
                 } catch (InterruptedException e) {
-                    attachAsyncStackTrace(e, t);
+                    ThrowableUtil.interruptAndAttachAsyncStackTrace(t, e);
                     throw e;
                 }
             }
         };
-    }
-
-    private static void attachAsyncStackTrace(Exception e, Thread thread) {
-        StackTraceElement[] stackTrace = thread.getStackTrace();
-        InterruptedException asyncIE = new InterruptedException(
-                "Asynchronous interruption: " + thread);
-        thread.interrupt();
-        asyncIE.setStackTrace(stackTrace);
-        e.addSuppressed(asyncIE);
     }
 
     private interface ThreadCache {
