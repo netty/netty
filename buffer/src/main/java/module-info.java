@@ -12,8 +12,8 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-module io.netty.buffer {
-    requires io.netty.common;
+module io.netty5.buffer {
+    requires io.netty5.common;
     requires static jdk.jfr;
 
     // For tests:

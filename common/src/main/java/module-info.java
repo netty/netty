@@ -12,7 +12,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-module io.netty.common {
+module io.netty5.common {
     requires jdk.unsupported;
     requires java.logging;
     requires static org.jctools.core;
@@ -30,7 +30,7 @@ module io.netty.common {
     exports io.netty.util.concurrent;
 
     exports io.netty.util.internal to
-            io.netty.buffer;
+            io.netty5.buffer;
     exports io.netty.util.internal.logging to
-            io.netty.buffer;
+            io.netty5.buffer;
 }

@@ -14,8 +14,8 @@
  * under the License.
  */
 module io.netty.testsuite_jpms.main {
-    requires io.netty.common;
-    requires io.netty.buffer;
+    requires io.netty5.common;
+    requires io.netty5.buffer;
     requires io.netty.codec;
     requires io.netty.codec.http;
     requires io.netty.handler;
