@@ -66,7 +66,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      * renders the connection unusable.
      */
     private boolean readError;
-    private byte frameType;
+    private short frameType;
     private int streamId;
     private Http2Flags flags;
     private int payloadLength;
@@ -197,7 +197,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
-        frameType = in.readByte();
+        frameType = in.readUnsignedByte();
         flags = new Http2Flags(in.readUnsignedByte());
         streamId = readUnsignedInt(in);
         readingHeaders = false;

@@ -242,7 +242,7 @@ public class Http2FrameCodecTest {
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
         new Http2FrameCodec(enc, dec, new Http2Settings(), false, true) {
             @Override
-            protected Http2StreamFrame newHttp2UnknownFrame(byte frameType,
+            protected Http2StreamFrame newHttp2UnknownFrame(short frameType,
                                                       int streamId,
                                                       Http2Flags flags,
                                                       ByteBuf payload) {
@@ -405,7 +405,7 @@ public class Http2FrameCodecTest {
         // handle the case where unknown frames are sent before a stream is created,
         // for example: HTTP/2 GREASE testing
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 0, new Http2Flags(), debugData);
         channel.flush();
 
         assertEquals(0, debugData.refCnt());
@@ -415,7 +415,7 @@ public class Http2FrameCodecTest {
     @Test
     public void unknownFrameOnMissingStream() throws Exception {
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 101, new Http2Flags(), debugData);
         channel.flush();
 
         assertEquals(0, debugData.refCnt());
@@ -450,7 +450,7 @@ public class Http2FrameCodecTest {
         frameInboundWriter.writeInboundSettings(new Http2Settings());
 
         ByteBuf debugData = bb("debug");
-        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        frameInboundWriter.writeInboundFrame((short) 0xb, 101, new Http2Flags(), debugData);
 
         channel.pipeline().remove("combine");
         channel.flushInbound();
@@ -632,8 +632,8 @@ public class Http2FrameCodecTest {
         final Http2FrameStream stream = frameCodec.newStream();
 
         ByteBuf buffer = Unpooled.buffer().writeByte(1);
-        DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
-                (byte) 20, new Http2Flags().ack(true), buffer);
+    DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
+            (short) 20, new Http2Flags().ack(true), buffer);
         unknownFrame.stream(stream);
         channel.write(unknownFrame);
 

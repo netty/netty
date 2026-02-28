@@ -469,7 +469,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public void writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+    public void writeFrame(ChannelHandlerContext ctx, short frameType, int streamId,
                            Http2Flags flags, ByteBuf payload, Promise<Void> promise) {
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());

@@ -29,7 +29,7 @@ public class Http2DefaultFramesTest {
         // in this case, 'goAwayFrame' and 'unknownFrame' will also have an EMPTY_BUFFER data
         // so we want to check that 'dflt' will not consider them equal.
         DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1);
-        DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame((byte) 1, new Http2Flags((short) 1));
+        DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame((short) 1, new Http2Flags((short) 1));
         DefaultByteBufHolder dflt = new DefaultByteBufHolder(Unpooled.EMPTY_BUFFER);
         try {
             // not using 'assertNotEquals' to be explicit about which object we are calling .equals() on
