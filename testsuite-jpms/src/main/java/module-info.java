@@ -16,15 +16,15 @@
 module io.netty.testsuite_jpms.main {
     requires io.netty5.common;
     requires io.netty5.buffer;
-    requires io.netty.codec;
-    requires io.netty.codec.http;
-    requires io.netty.handler;
-    requires transitive io.netty.pkitesting;
+    requires io.netty5.codec;
+    requires io.netty5.codec.http;
+    requires io.netty5.handler;
+    requires transitive io.netty5.pkitesting;
     requires io.netty5.transport;
-    requires io.netty.transport.classes.kqueue;
-    requires io.netty.transport.classes.epoll;
-    requires io.netty.transport.classes.io_uring;
+    requires io.netty5.transport.classes.kqueue;
+    requires io.netty5.transport.classes.epoll;
+    requires io.netty5.transport.classes.io_uring;
     requires io.netty.tcnative.classes.openssl;
-    requires io.netty.codec.http3;
-    requires io.netty.codec.classes.quic;
+    requires io.netty5.codec.http3;
+    requires io.netty5.codec.classes.quic;
 }

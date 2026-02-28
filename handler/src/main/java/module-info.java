@@ -25,7 +25,7 @@ module io.netty5.handler {
     requires static org.bouncycastle.pkix;
     requires static org.bouncycastle.provider;
     requires static org.conscrypt;
-    requires static transitive io.netty5.pkitesting;
+    requires static io.netty5.pkitesting;
 
     exports io.netty.handler.address;
     exports io.netty.handler.flow;

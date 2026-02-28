@@ -12,16 +12,13 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-module io.netty5.codec.classes.quic {
+module io.netty5.handler.proxy {
     requires io.netty5.common;
     requires io.netty5.buffer;
     requires io.netty5.transport;
     requires io.netty5.codec;
-    requires io.netty5.handler;
-    requires io.netty5.transport.unix.common;
+    requires io.netty5.codec.socks;
+    requires io.netty5.codec.http;
 
-    requires static io.netty5.transport.classes.epoll;
-    requires static org.jetbrains.annotations;
-
-    exports io.netty.handler.codec.quic;
+    exports io.netty.handler.proxy;
 }

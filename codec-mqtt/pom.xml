@@ -28,10 +28,6 @@
 
   <name>Netty/Codec/MQTT</name>
 
-  <properties>
-    <javaModuleName>io.netty.codec.mqtt</javaModuleName>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -92,19 +88,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
 </project>

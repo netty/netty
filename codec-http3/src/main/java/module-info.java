@@ -20,6 +20,7 @@ module io.netty5.codec.http3 {
     requires io.netty5.codec.http;
     requires io.netty5.handler;
     requires io.netty5.codec.classes.quic;
+    requires static org.jetbrains.annotations;
 
     exports io.netty.handler.codec.http3;
 }
