@@ -922,7 +922,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     if (logger.isDebugEnabled()) {
                         logger.debug("{} Sent GOAWAY: lastStreamId '{}', errorCode '{}', " +
                                      "debugData '{}'. Forcing shutdown of the connection.",
-                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8), future.cause());
+                                     ctx.channel(), lastStreamId, errorCode, debugData.toString(UTF_8));
                     }
                     ctx.close();
                 }
