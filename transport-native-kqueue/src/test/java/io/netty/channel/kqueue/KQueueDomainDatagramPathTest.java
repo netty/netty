@@ -42,7 +42,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             public void run(Bootstrap bootstrap) {
                 CompletionException e = assertThrows(CompletionException.class,
                         () -> bootstrap.handler(new ChannelInboundHandler() { })
-                        .connect(KQueueSocketTestPermutation.newSocketAddress()).get());
+                        .connect(KQueueSocketTestPermutation.newSocketAddress()).sync());
                 assertInstanceOf(FileNotFoundException.class, e.getCause());
             }
         });
