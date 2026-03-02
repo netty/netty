@@ -19,6 +19,7 @@ import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoRegistration;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -75,7 +76,7 @@ public class NioIoHandlerTest {
         // Open a ServerSocketChannel that we can connect to.
         ServerSocketChannel channel = SelectorProvider.provider().openServerSocketChannel();
         channel.configureBlocking(false);
-        channel.bind(new InetSocketAddress(0));
+        channel.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0));
         // Do the connect in another thread so we don't block our io execution loop.
         Thread t = new Thread(new Runnable() {
             @Override
