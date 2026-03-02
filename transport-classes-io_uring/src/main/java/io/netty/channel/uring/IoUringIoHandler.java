@@ -179,18 +179,21 @@ public final class IoUringIoHandler implements IoHandler {
         if (context.shouldReportActiveIoTime()) {
             // Timer starts after the blocking wait, around the processing of completions.
             long activeIoStartTimeNanos = System.nanoTime();
-            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processed = processCompletionsAndHandleOverflow(context, submissionQueue, completionQueue, this::handle);
             long activeIoEndTimeNanos = System.nanoTime();
             context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } else {
-            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processed = processCompletionsAndHandleOverflow(context, submissionQueue, completionQueue, this::handle);
         }
         return processed;
     }
 
-    private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
-                                         CompletionCallback callback) {
+    private int processCompletionsAndHandleOverflow(IoHandlerContext context, SubmissionQueue submissionQueue,
+                                                    CompletionQueue completionQueue, CompletionCallback callback) {
         int processed = 0;
+        if (context != null) {
+            context.beforeIoTasks();
+        }
         // Bound the maximum number of times this will loop before we return and so execute some non IO stuff.
         // 128 here is just some sort of bound and another number might be ok as well.
         for (int i = 0; i < 128; i++) {
@@ -208,6 +211,9 @@ public final class IoUringIoHandler implements IoHandler {
                 break;
             }
             processed += p;
+            if (context != null) {
+                context.afterIoTask();
+            }
         }
         return processed;
     }
@@ -364,7 +370,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.submitAndGet();
 
         while (completionQueue.hasCompletions()) {
-            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processCompletionsAndHandleOverflow(null, submissionQueue, completionQueue, this::handle);
             if (submissionQueue.count() > 0) {
                 submissionQueue.submitAndGetNow();
             }
@@ -431,7 +437,7 @@ public final class IoUringIoHandler implements IoHandler {
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
                 submissionQueue.submitAndGet();
-                processCompletionsAndHandleOverflow(submissionQueue, completionQueue, handler);
+                processCompletionsAndHandleOverflow(null ,submissionQueue, completionQueue, handler);
             }
         }
         // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never

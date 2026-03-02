@@ -32,6 +32,14 @@ public interface IoHandlerContext {
      */
     boolean canBlock();
 
+    default void beforeIoTasks() {
+        // no-op
+    }
+
+    default void afterIoTask() {
+        // no-op
+    }
+
     /**
      * Returns the amount of time left until the scheduled task with the closest deadline should run.
      *

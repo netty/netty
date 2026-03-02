@@ -481,11 +481,11 @@ public final class NioIoHandler implements IoHandler {
             if (context.shouldReportActiveIoTime()) {
                 // We start the timer after the blocking select() call has returned.
                 long activeIoStartTimeNanos = System.nanoTime();
-                handled = processSelectedKeys();
+                handled = processSelectedKeys(context);
                 long activeIoEndTimeNanos = System.nanoTime();
                 context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
             } else {
-                handled = processSelectedKeys();
+                handled = processSelectedKeys(context);
             }
         } catch (Error e) {
             throw e;
@@ -507,11 +507,11 @@ public final class NioIoHandler implements IoHandler {
         }
     }
 
-    private int processSelectedKeys() {
+    private int processSelectedKeys(IoHandlerContext context) {
         if (selectedKeys != null) {
-            return processSelectedKeysOptimized();
+            return processSelectedKeysOptimized(context);
         } else {
-            return processSelectedKeysPlain(selector.selectedKeys());
+            return processSelectedKeysPlain(context, selector.selectedKeys());
         }
     }
 
@@ -524,7 +524,7 @@ public final class NioIoHandler implements IoHandler {
         }
     }
 
-    private int processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
+    private int processSelectedKeysPlain(IoHandlerContext context, Set<SelectionKey> selectedKeys) {
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -532,6 +532,7 @@ public final class NioIoHandler implements IoHandler {
             return 0;
         }
 
+        context.beforeIoTasks();
         Iterator<SelectionKey> i = selectedKeys.iterator();
         int handled = 0;
         for (;;) {
@@ -540,6 +541,8 @@ public final class NioIoHandler implements IoHandler {
 
             processSelectedKey(k);
             ++handled;
+
+            context.afterIoTask();
 
             if (!i.hasNext()) {
                 break;
@@ -560,8 +563,9 @@ public final class NioIoHandler implements IoHandler {
         return handled;
     }
 
-    private int processSelectedKeysOptimized() {
+    private int processSelectedKeysOptimized(IoHandlerContext context) {
         int handled = 0;
+        context.beforeIoTasks();
         for (int i = 0; i < selectedKeys.size; ++i) {
             final SelectionKey k = selectedKeys.keys[i];
             // null out entry in the array to allow to have it GC'ed once the Channel close
@@ -579,6 +583,7 @@ public final class NioIoHandler implements IoHandler {
                 selectAgain();
                 i = -1;
             }
+            context.afterIoTask();
         }
         return handled;
     }

@@ -476,13 +476,13 @@ public class EpollIoHandler implements IoHandler {
                 handled = strategy;
                 if (context.shouldReportActiveIoTime()) {
                     long activeIoStartTimeNanos = System.nanoTime();
-                    if (processReady(events, strategy)) {
+                    if (processReady(context, events, strategy)) {
                         prevDeadlineNanos = NONE;
                     }
                     long activeIoEndTimeNanos = System.nanoTime();
                     context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
                 } else {
-                    if (processReady(events, strategy)) {
+                    if (processReady(context, events, strategy)) {
                         prevDeadlineNanos = NONE;
                     }
                 }
@@ -518,8 +518,9 @@ public class EpollIoHandler implements IoHandler {
     }
 
     // Returns true if a timerFd event was encountered
-    private boolean processReady(EpollEventArray events, int ready) {
+    private boolean processReady(IoHandlerContext context, EpollEventArray events, int ready) {
         boolean timerFired = false;
+        context.beforeIoTasks();
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
@@ -543,6 +544,7 @@ public class EpollIoHandler implements IoHandler {
                         // deleted before or the file descriptor was closed before.
                     }
                 }
+                context.afterIoTask();
             }
         }
         return timerFired;
