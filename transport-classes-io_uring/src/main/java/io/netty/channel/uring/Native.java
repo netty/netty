@@ -228,6 +228,7 @@ final class Native {
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_CQE32 = 1 << 11;
 
+    static final int IORING_SETUP_TASKRUN_FLAG = 1 << 9;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
@@ -375,6 +376,7 @@ final class Native {
             // IORING_SETUP_DEFER_TASKRUN also requires IORING_SETUP_SINGLE_ISSUER.
             if (IoUring.isSetupDeferTaskrunSupported()) {
                 flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+                flags |= Native.IORING_SETUP_TASKRUN_FLAG;
             }
         }
         // liburing uses IORING_SETUP_NO_SQARRAY by default these days, we should do the same by default if possible.
