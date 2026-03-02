@@ -28,4 +28,6 @@ module io.netty5.transport {
     exports io.netty.channel.socket;
     exports io.netty.channel.socket.nio;
     exports io.netty.channel.internal;
+
+    uses io.netty.bootstrap.ChannelInitializerExtension;
 }
