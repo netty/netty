@@ -89,7 +89,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof SingleThreadEventLoop ||
-                (loop instanceof IoEventLoopGroup && ((IoEventLoopGroup) loop).isCompatible(LocalServerUnsafe.class));
+                (loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(LocalServerUnsafe.class));
     }
 
     @Override
@@ -238,12 +238,18 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void registered() {
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            }
         }
 
         @Override
         public void unregistered() {
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            }
         }
 
         @Override
