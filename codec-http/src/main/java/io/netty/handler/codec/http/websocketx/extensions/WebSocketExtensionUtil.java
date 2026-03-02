@@ -39,21 +39,20 @@ public final class WebSocketExtensionUtil {
     static boolean isWebsocketUpgrade(HttpHeaders headers) {
         //this contains check does not allocate an iterator, and most requests are not upgrades
         //so we do the contains check first before checking for specific values
-        return headers.contains(HttpHeaderNames.UPGRADE) &&
-                headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
-                headers.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+        return headers.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true) &&
+               headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true);
     }
 
     public static List<WebSocketExtensionData> extractExtensions(String extensionHeader) {
         String[] rawExtensions = extensionHeader.split(EXTENSION_SEPARATOR);
         if (rawExtensions.length > 0) {
-            List<WebSocketExtensionData> extensions = new ArrayList<WebSocketExtensionData>(rawExtensions.length);
+            List<WebSocketExtensionData> extensions = new ArrayList<>(rawExtensions.length);
             for (String rawExtension : rawExtensions) {
                 String[] extensionParameters = rawExtension.split(PARAMETER_SEPARATOR);
                 String name = extensionParameters[0].trim();
                 Map<String, String> parameters;
                 if (extensionParameters.length > 1) {
-                    parameters = new LinkedHashMap<String, String>(extensionParameters.length - 1);
+                    parameters = new LinkedHashMap<>(extensionParameters.length - 1);
                     for (int i = 1; i < extensionParameters.length; i++) {
                         String parameter = extensionParameters[i].trim();
                         Matcher parameterMatcher = PARAMETER.matcher(parameter);
@@ -93,7 +92,7 @@ public final class WebSocketExtensionUtil {
                 extraExtensions.add(userDefined);
             } else {
                 // merge with higher precedence to user defined parameters
-                Map<String, String> mergedParameters = new LinkedHashMap<String, String>(matchingExtra.parameters());
+                Map<String, String> mergedParameters = new LinkedHashMap<>(matchingExtra.parameters());
                 mergedParameters.putAll(userDefined.parameters());
                 extraExtensions.set(i, new WebSocketExtensionData(matchingExtra.name(), mergedParameters));
             }
