@@ -745,7 +745,7 @@ public class HttpObjectAggregatorTest {
     }
 
     @Test
-    public void testOversizedRequestWithAutoReadFalse() {
+    public void testOversizedRequestWithAutoReadFalse() throws Exception {
         EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4));
         embedder.config().setAutoRead(false);
         assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
