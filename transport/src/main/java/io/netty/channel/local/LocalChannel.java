@@ -32,7 +32,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -462,12 +461,6 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private final class LocalIoHandleImpl implements LocalIoHandle {
-        private final Runnable shutdownHook = new Runnable() {
-            @Override
-            public void run() {
-                closeNow();
-            }
-        };
 
         @Override
         public void close() {
@@ -509,13 +502,6 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-            ((SingleThreadEventExecutor) executor()).addShutdownHook(shutdownHook);
-        }
-
-        @Override
-        public void unregistered() {
-            // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-            ((SingleThreadEventExecutor) executor()).removeShutdownHook(shutdownHook);
         }
 
         @Override
