@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.protobuf;
 
-import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
@@ -89,10 +88,6 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
      */
     public ProtobufDecoder(MessageLite prototype) {
         this(prototype, null);
-    }
-
-    public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
-        this(prototype, (ExtensionRegistryLite) extensionRegistry);
     }
 
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
