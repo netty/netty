@@ -66,7 +66,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     protected final LinuxSocket socket;
-    private final EpollIoOps inital;
+    private final EpollIoOps initial;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -94,7 +94,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             this.local = fd.localAddress();
             this.remote = fd.remoteAddress();
         }
-        this.inital = initialOps;
+        this.initial = initialOps;
         this.ops = initialOps;
     }
 
@@ -106,7 +106,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
-        this.inital = initialOps;
+        this.initial = initialOps;
         this.ops = initialOps;
     }
 
@@ -234,7 +234,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void doDeregister() throws Exception {
         IoRegistration registration = this.registration;
         if (registration != null) {
-            ops = inital;
+            ops = initial;
             registration.cancel();
         }
     }
