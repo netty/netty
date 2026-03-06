@@ -68,11 +68,12 @@ public class DefaultAttributeMap implements AttributeMap {
         int i;
         for (i = srcLength - 1; i >= 0; i--) {
             DefaultAttribute attribute = sortedSrc[i];
-            assert attribute.key.id() != id;
-            if (attribute.key.id() < id) {
+            int attributeKeyId = attribute.key.id();
+            assert attributeKeyId != id;
+            if (attributeKeyId < id) {
                 break;
             }
-            copy[i + 1] = sortedSrc[i];
+            copy[i + 1] = attribute;
         }
         copy[i + 1] = toInsert;
         final int toCopy = i + 1;
@@ -153,7 +154,6 @@ public class DefaultAttributeMap implements AttributeMap {
         }
     }
 
-    @SuppressWarnings("serial")
     private static final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
 
         private static final AtomicReferenceFieldUpdater<DefaultAttribute, DefaultAttributeMap> MAP_UPDATER =
