@@ -139,6 +139,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     final ClientAuth clientAuth;
     private final boolean server;
+    private final String endpointIdentificationAlgorithm;
     @SuppressWarnings("deprecation")
     private final ApplicationProtocolNegotiator apn;
     private long sessionCacheSize;
@@ -156,9 +157,11 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          @Nullable KeyManagerFactory keyManagerFactory, String password,
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
-                         String[] applicationProtocols, Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
+                         String[] applicationProtocols, String endpointIdentificationAlgorithm,
+                         Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         final X509TrustManager trustManager;
         if (trustManagerFactory == null) {
@@ -412,12 +415,12 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     @Override
     public QuicSslEngine newEngine(ByteBufAllocator alloc) {
-        return new QuicheQuicSslEngine(this, null, -1);
+        return new QuicheQuicSslEngine(this, null, -1, endpointIdentificationAlgorithm);
     }
 
     @Override
     public QuicSslEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return new QuicheQuicSslEngine(this, peerHost, peerPort);
+        return new QuicheQuicSslEngine(this, peerHost, peerPort, endpointIdentificationAlgorithm);
     }
 
     @Override
