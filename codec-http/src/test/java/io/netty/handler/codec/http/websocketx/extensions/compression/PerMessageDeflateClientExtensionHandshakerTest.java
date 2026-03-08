@@ -243,4 +243,42 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         assertFalse(decoderChannel.finish());
     }
+
+    @Test
+    public void testClientMaxWindowWithNoValue() {
+        // Test that client handles client_max_window_bits with no value (null)
+        // RFC 7692: client_max_window_bits may have no value
+        PerMessageDeflateClientExtensionHandshaker handshaker =
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, null); // No value specified
+
+        // Should not throw NumberFormatException
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        // Handshake should succeed, using MAX_WINDOW_SIZE (15) as default
+        assertNotNull(extension);
+        assertEquals(RSV1, extension.rsv());
+        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
+        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+    }
+
+    @Test
+    public void testClientMaxWindowWithInvalidValue() {
+        // Test that client handles invalid client_max_window_bits value
+        PerMessageDeflateClientExtensionHandshaker handshaker =
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, "invalid");
+
+        // Should handle NumberFormatException gracefully
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        // Handshake should fail due to invalid value
+        assertNull(extension);
+    }
 }

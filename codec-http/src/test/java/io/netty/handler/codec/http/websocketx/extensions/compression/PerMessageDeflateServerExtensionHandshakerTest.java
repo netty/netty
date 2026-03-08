@@ -173,4 +173,40 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().isEmpty());
     }
+
+    @Test
+    public void testClientMaxWindowWithValue() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, "12");
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNotNull(extension);
+        assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
+
+        WebSocketExtensionData data = extension.newReponseData();
+        assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
+        // Server should use the client's requested value (12) not the preferred (10)
+        assertTrue(data.parameters().containsKey(CLIENT_MAX_WINDOW));
+        assertEquals("12", data.parameters().get(CLIENT_MAX_WINDOW));
+    }
+
+    @Test
+    public void testClientMaxWindowWithInvalidValue() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, "7"); // Below MIN_WINDOW_SIZE (8)
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        // Handshake should fail when client_max_window_bits is out of range
+        assertNull(extension);
+    }
 }
