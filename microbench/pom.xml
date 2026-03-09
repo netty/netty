@@ -223,6 +223,13 @@
           <excludes>
             <exclude>**/Http2FrameWriterBenchmark.java</exclude>
           </excludes>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>
