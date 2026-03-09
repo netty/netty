@@ -34,12 +34,13 @@ final class DatagramDnsQueryContext extends DnsQueryContext {
     DatagramDnsQueryContext(Channel channel,
                             InetSocketAddress nameServerAddr,
                             DnsQueryContextManager queryContextManager,
+                            DnsQueryLifecycleObserver queryLifecycleObserver,
                             int maxPayLoadSize, boolean recursionDesired,
                             long queryTimeoutMillis,
                             DnsQuestion question, DnsRecord[] additionals,
                             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise,
                             Bootstrap socketBootstrap, boolean retryWithTcpOnTimeout) {
-        super(channel, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
+        super(channel, nameServerAddr, queryContextManager, queryLifecycleObserver, maxPayLoadSize, recursionDesired,
                 queryTimeoutMillis, question, additionals, promise, socketBootstrap, retryWithTcpOnTimeout);
     }
 

@@ -15,10 +15,11 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.local.LocalIoHandler;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Callable;
@@ -32,7 +33,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testExpire() throws Throwable {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -66,7 +67,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -80,7 +81,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testMultipleCnamesForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -96,7 +97,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testAddSameCnameForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -112,7 +113,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testClear() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

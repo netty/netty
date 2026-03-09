@@ -22,9 +22,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
@@ -58,7 +60,7 @@ public final class QuicServerSoReusePortExample {
                 .applicationProtocols("http/0.9").build();
         // We will bind one socket to each EventLoopGroup.
         int numCores = NettyRuntime.availableProcessors();
-        EpollEventLoopGroup group = new EpollEventLoopGroup(numCores);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(numCores, EpollIoHandler.newFactory());
         try {
             Bootstrap bs = new Bootstrap().group(group)
                     .channel(EpollDatagramChannel.class)

@@ -204,6 +204,10 @@ final class LinuxSocket extends Socket {
         setIpRecvOrigDestAddr(intValue(), enabled ? 1 : 0);
     }
 
+    void setIpMulticastAll(boolean enabled) throws IOException {
+        setIpMulticastAll(intValue(), ipv6, enabled ? 1 : 0);
+    }
+
     int getTimeToLive() throws IOException {
         return getTimeToLive(intValue());
     }
@@ -263,6 +267,10 @@ final class LinuxSocket extends Socket {
 
     boolean isIpRecvOrigDestAddr() throws IOException {
         return isIpRecvOrigDestAddr(intValue()) != 0;
+    }
+
+    boolean isIpMulticastAll() throws IOException {
+        return isIpMulticastAll(intValue(), ipv6) != 0;
     }
 
     PeerCredentials getPeerCredentials() throws IOException {
@@ -350,6 +358,7 @@ final class LinuxSocket extends Socket {
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
+    private static native int isIpMulticastAll(int fd, boolean ipv6) throws IOException;
     private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
     private static native int isTcpFastOpenConnect(int fd) throws IOException;
@@ -368,6 +377,7 @@ final class LinuxSocket extends Socket {
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;
+    private static native void setIpMulticastAll(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTcpMd5Sig(
             int fd, boolean ipv6, byte[] address, int scopeId, byte[] key) throws IOException;
     private static native void setInterface(

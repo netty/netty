@@ -36,6 +36,7 @@ final class QuicheConfig {
                  @Nullable Long maxAckDelay,
                  @Nullable Boolean disableActiveMigration,
                  @Nullable Boolean enableHystart,
+                 @Nullable Boolean discoverPmtu,
                  @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  @Nullable Integer initialCongestionWindowPackets,
                  @Nullable Integer recvQueueLen,
@@ -85,6 +86,9 @@ final class QuicheConfig {
             }
             if (enableHystart != null) {
                 Quiche.quiche_config_enable_hystart(config, enableHystart);
+            }
+            if (discoverPmtu != null) {
+                Quiche.quiche_config_discover_pmtu(config, discoverPmtu);
             }
             if (congestionControlAlgorithm != null) {
                 switch (congestionControlAlgorithm) {

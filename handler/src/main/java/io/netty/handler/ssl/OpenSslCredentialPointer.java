@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Netty Project
+ * Copyright 2026 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.handler.ssl;
+
+import io.netty.util.IllegalReferenceCountException;
 
 /**
- * SVM substitutions for classes that will cause trouble while compiling
- * into native image.
+ * Non-public interface that adds a method to get the raw pointer to the underlying credential object.
  */
-package io.netty.buffer.svm;
+interface OpenSslCredentialPointer extends OpenSslCredential {
+    /**
+     * Returns the native {@code SSL_CREDENTIAL} pointer address.
+     *
+     * @return the native pointer address
+     * @throws IllegalReferenceCountException if the reference count is 0
+     */
+    long credentialAddress();
+}

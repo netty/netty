@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,7 +47,7 @@ public class KQueueSocketChannelConfigTest {
     @BeforeAll
     public static void beforeClass() {
         rand = new Random();
-        group = new KQueueEventLoopGroup(1);
+        group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
     }
 
     @AfterAll

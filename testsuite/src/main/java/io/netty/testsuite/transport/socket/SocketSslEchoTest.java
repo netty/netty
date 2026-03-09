@@ -39,7 +39,6 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -386,6 +385,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         clientChannel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
         delegatedTaskExecutor.shutdown();
+        assertTrue(delegatedTaskExecutor.awaitTermination(5, TimeUnit.SECONDS));
 
         if (serverException.get() != null && !(serverException.get() instanceof IOException)) {
             throw serverException.get();
@@ -515,13 +515,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         @Override
         public void handlerAdded(final ChannelHandlerContext ctx) {
             if (!autoRead) {
-                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
-                        new GenericFutureListener<Future<? super Channel>>() {
-                            @Override
-                            public void operationComplete(Future<? super Channel> future) {
-                                ctx.read();
-                            }
-                        });
+                ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(future -> ctx.read());
             }
         }
 

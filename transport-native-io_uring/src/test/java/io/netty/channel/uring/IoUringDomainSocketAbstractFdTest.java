@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.MessageToByteEncoder;
+import java.net.SocketAddress;
 
-/**
- * Compression Encoder Factory for create {@link MessageToByteEncoder}
- * used to compress http content
- */
-interface CompressionEncoderFactory {
-    MessageToByteEncoder<ByteBuf> createEncoder();
+public class IoUringDomainSocketAbstractFdTest extends IoUringDomainSocketFdTest {
+    @Override
+    protected SocketAddress newSocketAddress() {
+        return IoUringSocketTestPermutation.newAbstractSocketAddress();
+    }
 }

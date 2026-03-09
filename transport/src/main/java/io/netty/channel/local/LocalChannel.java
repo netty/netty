@@ -74,10 +74,10 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
+    private final Runnable finishReadTask = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(unsafe().voidPromise());
+            finishPeerRead0(LocalChannel.this);
         }
     };
 
@@ -419,21 +419,19 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private void runFinishPeerReadTask(final LocalChannel peer) {
+    private void runFinishTask0() {
         // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
         // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
-        final Runnable finishPeerReadTask = new Runnable() {
-            @Override
-            public void run() {
-                finishPeerRead0(peer);
-            }
-        };
+        if (writeInProgress) {
+            finishReadFuture = eventLoop().submit(finishReadTask);
+        } else {
+            eventLoop().execute(finishReadTask);
+        }
+    }
+
+    private void runFinishPeerReadTask(final LocalChannel peer) {
         try {
-            if (peer.writeInProgress) {
-                peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
-            } else {
-                peer.eventLoop().execute(finishPeerReadTask);
-            }
+            peer.runFinishTask0();
         } catch (Throwable cause) {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
             close();
@@ -472,6 +470,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
+
+        private final Runnable shutdownHook = this::closeNow;
 
         @Override
         public void close() {
@@ -516,13 +516,18 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            }
         }
 
         @Override
         public void unregistered() {
-            // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            }
         }
 
         @Override
@@ -540,7 +545,6 @@ public class LocalChannel extends AbstractChannel {
             if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
                 safeSetFailure(promise, cause);
-                pipeline().fireExceptionCaught(cause);
                 return;
             }
 

@@ -316,7 +316,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
             // Payload
             for (MqttTopicSubscription topic : payload.topicSubscriptions()) {
-                writeUnsafeUTF8String(buf, topic.topicName());
+                writeEagerUTF8String(buf, topic.topicName());
                 if (mqttVersion == MqttVersion.MQTT_3_1_1 || mqttVersion == MqttVersion.MQTT_3_1) {
                     buf.writeByte(topic.qualityOfService().value());
                 } else {
@@ -376,7 +376,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
             // Payload
             for (String topicName : payload.topics()) {
-                writeUnsafeUTF8String(buf, topicName);
+                writeEagerUTF8String(buf, topicName);
             }
 
             return buf;
@@ -746,15 +746,6 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         final int startUtf8String = writerIndex + 2;
         buf.writerIndex(startUtf8String);
         final int utf8Length = s != null? reserveAndWriteUtf8(buf, s, maxUtf8Length) : 0;
-        buf.setShort(writerIndex, utf8Length);
-    }
-
-    private static void writeUnsafeUTF8String(ByteBuf buf, String s) {
-        final int writerIndex = buf.writerIndex();
-        final int startUtf8String = writerIndex + 2;
-        // no need to reserve any capacity here, already done earlier: that's why is Unsafe
-        buf.writerIndex(startUtf8String);
-        final int utf8Length = s != null? reserveAndWriteUtf8(buf, s, 0) : 0;
         buf.setShort(writerIndex, utf8Length);
     }
 

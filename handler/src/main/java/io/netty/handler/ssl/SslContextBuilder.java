@@ -37,6 +37,7 @@ import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.deepCheckNotNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -201,6 +203,7 @@ public final class SslContextBuilder {
     private PrivateKey key;
     private String keyPassword;
     private KeyManagerFactory keyManagerFactory;
+    private List<OpenSslCredential> credentials;
     private Iterable<String> ciphers;
     private CipherSuiteFilter cipherFilter = IdentityCipherSuiteFilter.INSTANCE;
     private ApplicationProtocolConfig apn;
@@ -498,6 +501,87 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Adds a single {@link OpenSslCredential} to this context.
+     *
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
+     *
+     * @param credential the credential to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder addCredential(OpenSslCredential credential) {
+        checkNotNull(credential, "credential");
+        if (credentials == null) {
+            credentials = new ArrayList<>();
+        }
+        credentials.add(credential);
+        return this;
+    }
+
+    /**
+     * Adds multiple {@link OpenSslCredential}s to this context.
+     *
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
+     *
+     * @param credentials the credentials to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder addCredentials(OpenSslCredential... credentials) {
+        deepCheckNotNull("credentials", credentials);
+        if (this.credentials == null) {
+            this.credentials = new ArrayList<>(credentials.length);
+        }
+        Collections.addAll(this.credentials, credentials);
+        return this;
+    }
+
+    /**
+     * Adds multiple {@link OpenSslCredential}s to this context.
+     *
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>Credential instances are built with the {@link OpenSslCredentialBuilder}.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
+     *
+     * @param credentials the credentials to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder addCredentials(Iterable<? extends OpenSslCredential> credentials) {
+        checkNotNull(credentials, "credentials");
+        // Validate all credentials before adding any of them to avoid partial state
+        for (OpenSslCredential credential : credentials) {
+            checkNotNull(credential, "credential");
+        }
+        if (this.credentials == null) {
+            this.credentials = new ArrayList<>();
+        }
+        for (OpenSslCredential credential : credentials) {
+            this.credentials.add(credential);
+        }
+        return this;
+    }
+
+    /**
      * A single key manager managing the identity information of this host.
      * This is helpful when custom implementation of {@link KeyManager} is needed.
      * Internally, a wrapper of {@link KeyManagerFactory} that only produces this specified
@@ -674,13 +758,14 @@ public final class SslContextBuilder {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
+                enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES),
+                credentials);
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                     sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
         }
     }
 

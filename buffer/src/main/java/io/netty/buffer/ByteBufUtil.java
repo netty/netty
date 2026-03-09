@@ -74,6 +74,7 @@ public final class ByteBufUtil {
 
     static final int WRITE_CHUNK_SIZE = 8192;
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
+    private static final boolean SWAR_UNALIGNED = PlatformDependent.canUnalignedAccess();
 
     static {
         String allocType = SystemPropertyUtil.get(
@@ -576,10 +577,10 @@ public final class ByteBufUtil {
         }
         final int length = toIndex - fromIndex;
         buffer.checkIndex(fromIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearFirstIndexOf(buffer, fromIndex, toIndex, value);
         }
-        assert PlatformDependent.isUnaligned();
+        assert SWAR_UNALIGNED;
         int offset = fromIndex;
         final int byteCount = length & 7;
         if (byteCount > 0) {
@@ -729,7 +730,7 @@ public final class ByteBufUtil {
         }
         final int length = fromIndex - toIndex;
         buffer.checkIndex(toIndex, length);
-        if (!PlatformDependent.isUnaligned()) {
+        if (!SWAR_UNALIGNED) {
             return linearLastIndexOf(buffer, fromIndex, toIndex, value);
         }
         final int longCount = length >>> 3;
@@ -923,8 +924,7 @@ public final class ByteBufUtil {
             if (buffer.hasArray()) {
                 return safeArrayWriteUtf8(buffer.array(), buffer.arrayOffset() + writerIndex, seq, start, end);
             }
-            if (buffer.isDirect()) {
-                assert buffer.nioBufferCount() == 1;
+            if (buffer.isDirect() && buffer.nioBufferCount() == 1) {
                 final ByteBuffer internalDirectBuffer = buffer.internalNioBuffer(writerIndex, reservedBytes);
                 final int bufferPosition = internalDirectBuffer.position();
                 return safeDirectWriteUtf8(internalDirectBuffer, bufferPosition, seq, start, end);

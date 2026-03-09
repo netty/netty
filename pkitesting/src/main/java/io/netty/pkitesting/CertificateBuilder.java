@@ -113,6 +113,7 @@ public final class CertificateBuilder {
     static final String OID_PKIX_KP_EMAIL_PROTECTION = OID_PKIX_KP + ".4";
     static final String OID_PKIX_KP_TIME_STAMPING = OID_PKIX_KP + ".8";
     static final String OID_PKIX_KP_OCSP_SIGNING = OID_PKIX_KP + ".9";
+    static final String OID_PKIX_PE_ACME_IDENTIFIER = "1.3.6.1.5.5.7.1.31";
     static final String OID_KERBEROS_KEY_PURPOSE_CLIENT_AUTH = "1.3.6.1.5.2.3.4";
     static final String OID_MICROSOFT_SMARTCARD_LOGIN = "1.3.6.1.4.1.311.20.2.2";
     private static final GeneralName[] EMPTY_GENERAL_NAMES = new GeneralName[0];
@@ -133,7 +134,7 @@ public final class CertificateBuilder {
     X500Principal subject;
     boolean isCertificateAuthority;
     OptionalInt pathLengthConstraint = OptionalInt.empty();
-    PublicKey publicKey;
+    KeyPair keyPair;
     Set<String> extendedKeyUsage = new TreeSet<>();
     Extension keyUsage;
 
@@ -163,7 +164,7 @@ public final class CertificateBuilder {
         copy.subject = subject;
         copy.isCertificateAuthority = isCertificateAuthority;
         copy.pathLengthConstraint = pathLengthConstraint;
-        copy.publicKey = publicKey;
+        copy.keyPair = keyPair;
         copy.keyUsage = keyUsage;
         copy.extendedKeyUsage = new TreeSet<>(extendedKeyUsage);
         copy.provider = provider;
@@ -453,11 +454,42 @@ public final class CertificateBuilder {
      * <p>
      * If the given public key is {@code null} (the default) then a new key-pair will be generated instead.
      *
-     * @param key The public key to wrap in a certificate.
+     * @param publicKey The public key to wrap in a certificate.
      * @return This certificate builder.
      */
-    public CertificateBuilder publicKey(PublicKey key) {
-        publicKey = key;
+    public CertificateBuilder publicKey(PublicKey publicKey) {
+        if (publicKey == null) {
+            keyPair = null;
+        } else {
+            keyPair = new KeyPair(publicKey, null);
+        }
+        return this;
+    }
+
+    /**
+     * Instruct the certificate builder to not generate its own key pair, but to instead create a certificate that
+     * uses the given key pair.
+     * <p>
+     * This method is useful if you want to use an existing key-pair, e.g. to emulate a certificate authority
+     * responding to a Certificate Signing Request (CSR), or when creating cross-signed certificates.
+     * <p>
+     * Cross-signing is when two certificates have the same subject and public key, but are signed by different keys.
+     * In effect, it's the same logical certificate, but manifest as two different "concrete" certificate objects, i.e.
+     * two different {@link X509Bundle} objects. Cross-signing can be done to both leaf certificates and to issuers,
+     * and can create complicated certificate graphs. The technique is used for introducing new roots and issuers
+     * to a PKI system, in a backwards compatible way where certificates can be trusted by peers that aren't familiar
+     * with the new roots or issuers.
+     * <p>
+     * If the given key pair is {@code null} (the default) then a new key-pair will be generated instead.
+     *
+     * @param keyPair The key pair to use when creating a certificate.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder keyPair(KeyPair keyPair) {
+        if (keyPair != null && keyPair.getPublic() == null) {
+            throw new IllegalArgumentException("The given key pair must have a public key");
+        }
+        this.keyPair = keyPair;
         return this;
     }
 
@@ -527,6 +559,31 @@ public final class CertificateBuilder {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Add an {@code acmeIdentifier} extension marked {@code critical}, with the given authorization SHA-256 value.
+     * <p>
+     * The {@code acmeIdentifier} extension is specified by
+     * <a href="https://datatracker.ietf.org/doc/html/rfc8737">RFC 8737</a>,
+     * which specify the TLS-ALPN-01 challenge type.
+     * See the <a href="https://letsencrypt.org/docs/challenge-types/#tls-alpn-01">Let's Encrypt documentation</a>
+     * for a short summary of this ACME challenge method.
+     * <p>
+     * To use this challenge method, the server must accept TLS connections with an ALPN protocol name of
+     * {@code acme-tls/1} and an SNI extension for the hostname being challenged.
+     * The server must then offer a self-signed certificate that include both this extension,
+     * and a {@linkplain #addSanDnsName(String) dNSName SAN} with the hostname that is being challenged.
+     * <p>
+     * The extension value must be the SHA-256 of the key authorization challenge.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc8555#section-8.1">RFC 8555</a> for details on key
+     * authorizations.
+     *
+     * @param sha256 The SHA-256 of the key authorization.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder addAcmeIdentifierExtension(byte[] sha256) {
+        return addExtension(OID_PKIX_PE_ACME_IDENTIFIER, true, requireNonNull(sha256, "sha256"));
     }
 
     /**
@@ -671,8 +728,8 @@ public final class CertificateBuilder {
      * @throws Exception If something went wrong in the process.
      */
     public X509Bundle buildSelfSigned() throws Exception {
-        if (publicKey != null) {
-            throw new IllegalStateException("Cannot create a self-signed certificate with a public key from a CSR.");
+        if (keyPair != null && (keyPair.getPublic() == null || keyPair.getPrivate() == null)) {
+            throw new IllegalStateException("Cannot create a self-signed certificate with an incomplete key pair.");
         }
         if (!algorithm.supportSigning()) {
             throw new IllegalStateException("Cannot create a self-signed certificate with a " +
@@ -709,10 +766,10 @@ public final class CertificateBuilder {
      */
     public X509Bundle buildIssuedBy(X509Bundle issuerBundle, String signAlg) throws Exception {
         final KeyPair keyPair;
-        if (publicKey == null) {
+        if (this.keyPair == null) {
             keyPair = generateKeyPair(provider);
         } else {
-            keyPair = new KeyPair(publicKey, null);
+            keyPair = this.keyPair;
         }
 
         X500Principal issuerPrincipal = issuerBundle.getCertificate().getSubjectX500Principal();
@@ -972,7 +1029,7 @@ public final class CertificateBuilder {
         /**
          * The ML-KEM-512 algorithm is the NIST FIPS 203 version of the post-quantum Kyber algorithm.
          * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
-         * quantum security strength (equivalent to finding the key for an AES-1128 block).
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
          * <p>
          * This algorithm was added in Java 24, and may not be supported everywhere.
          */
@@ -992,7 +1049,104 @@ public final class CertificateBuilder {
          * <p>
          * This algorithm was added in Java 24, and may not be supported everywhere.
          */
-        mlKem1024("ML-KEM", namedParameterSpec("ML-KEM-1024"), UNSUPPORTED_SIGN);
+        mlKem1024("ML-KEM", namedParameterSpec("ML-KEM-1024"), UNSUPPORTED_SIGN),
+        /**
+         * The SLH-DSA-SHA2-128s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_128s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-128s"), "SLH-DSA-SHA2-128s"),
+        /**
+         * The SLH-DSA-SHA2-128f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_128f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-128f"), "SLH-DSA-SHA2-128f"),
+        /**
+         * The SLH-DSA-SHAKE-128s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_128s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-128s"), "SLH-DSA-SHAKE-128s"),
+        /**
+         * The SLH-DSA-SHAKE-128f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_128f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-128f"), "SLH-DSA-SHAKE-128f"),
+        /**
+         * The SLH-DSA-SHA2-192 algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_192s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-192s"), "SLH-DSA-SHA2-192s"),
+        /**
+         * The SLH-DSA-SHA2-192f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_192f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-192f"), "SLH-DSA-SHA2-192f"),
+        /**
+         * The SLH-DSA-SHAKE-192s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_192s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-192s"), "SLH-DSA-SHAKE-192s"),
+        /**
+         * The SLH-DSA-SHAKE-192f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_192f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-192f"), "SLH-DSA-SHAKE-192f"),
+        /**
+         * The SLH-DSA-SHA2-256s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_256s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-256s"), "SLH-DSA-SHA2-256s"),
+        /**
+         * The SLH-DSA-SHA2-256f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_256f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-256f"), "SLH-DSA-SHA2-256f"),
+        /**
+         * The SLH-DSA-SHAKE-256s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_256s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-256s"), "SLH-DSA-SHAKE-256s"),
+        /**
+         * The SLH-DSA-SHAKE-256f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_256f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-256f"), "SLH-DSA-SHAKE-256f"),
+        ;
 
         final String keyType;
         final AlgorithmParameterSpec parameterSpec;

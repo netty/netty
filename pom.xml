@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.8.Final-SNAPSHOT</version>
+  <version>4.2.11.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -598,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.75.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.76.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -715,7 +715,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.80</bouncycastle.version>
+    <bouncycastle.version>1.83</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -737,7 +737,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.74.Final</tcnative.version>
+    <tcnative.version>2.0.75.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -753,7 +753,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>warn</logging.logLevel>
-    <log4j2.version>2.23.1</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.12.1</junit.version>
     <skipTests>false</skipTests>
@@ -918,61 +918,13 @@
         <scope>test</scope>
       </dependency>
 
-      <!--
-        Bouncy Castle - completely optional, only needed when:
-        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
-        - you don't use the JDK which doesn't provide sun.security.x509 package.
-      -->
+      <!-- Bouncy Castle BOM. Controlling the versions of our other Bouncy Castle dependencies. -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk18on</artifactId>
+        <artifactId>bc-jdk18on-bom</artifactId>
         <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional and only needed for OCSP stapling to construct and
-        parse OCSP requests and responses.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional integration of netty-handler with Bouncy Castle.
-
-        In particular, BouncyCastleAlpnSslUtils is using
-        org.bouncycastle.jsse.{BCApplicationProtocolSelector,BCSSLEngine}
-        via reflection, loading them via Class.forName(String).
-
-        This method of use leads to zero bytecode-level traces of this
-        dependency and works for plain Java without any further reference to
-        bctls.
-
-        maven-bundle-plugin recognizes the invocation of Class.forName() parses
-        its argument to recognize the call requires the org.bouncycastle.jsse
-        to succeed. It generates an Import-Package stanza for it, resulting in
-        a bundle which does not resolve without bctls.
-
-        This declaration, along with its corresponding dependency declaration
-        in netty-handler, provides the additional information about our use.
-        Its presence allows maven-bundle-plugin to observe
-        'org.bouncycastle.jsse' to live in an optional dependency, which is
-        enough for it to also add ';resolution=optional' and thus netty-handler
-        will resolve successfully even when bctls is not present, matching our
-        intent.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <dependency>
@@ -989,12 +941,12 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.0.3</version>
+        <version>1.2.0</version>
       </dependency>
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.8.0</version>
+        <version>1.10.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1167,13 +1119,13 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.18.0</version>
+        <version>3.27.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>3.6.28</version>
+        <version>4.11.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1221,7 +1173,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.26.0</version>
+        <version>1.28.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1229,7 +1181,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.14.0</version>
+        <version>2.20.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1268,7 +1220,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.15.RELEASE</version>
+        <version>1.0.16.RELEASE</version>
       </dependency>
 
       <dependency>
@@ -1408,6 +1360,28 @@
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.modifierChanged</code>
+                  <old>final class io.netty.channel.ManualIoEventLoop</old>
+                  <new>class io.netty.channel.ManualIoEventLoop</new>
+                  <justification>ManualIoEventLoop was made non-final to allow subclassing.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Several methods were intentionally made final; these API changes are acceptable for
+                   this class.
+                  </justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Final methods added to an inheritable class are intentional and safe in this context.
+                  </justification>
                 </item>
               </differences>
             </revapi.differences>
@@ -2054,7 +2028,7 @@
         <plugin>
           <groupId>io.github.dmlloyd.module-info</groupId>
           <artifactId>module-info</artifactId>
-          <version>2.1</version>
+          <version>2.2</version>
           <executions>
             <execution>
               <id>module-info</id>
@@ -2062,6 +2036,7 @@
               <configuration>
                 <moduleName>${javaModuleName}</moduleName>
                 <outputDirectory>${project.build.outputDirectory}/META-INF/versions/11/</outputDirectory>
+                <detectProvides>false</detectProvides>
               </configuration>
               <goals>
                 <goal>generate</goal>

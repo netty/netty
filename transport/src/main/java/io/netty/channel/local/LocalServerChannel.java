@@ -44,12 +44,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
 
     private IoRegistration registration;
 
@@ -89,7 +83,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     @Override
     protected boolean isCompatible(EventLoop loop) {
         return loop instanceof SingleThreadEventLoop ||
-                (loop instanceof IoEventLoopGroup && ((IoEventLoopGroup) loop).isCompatible(LocalServerUnsafe.class));
+                (loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(LocalServerUnsafe.class));
     }
 
     @Override
@@ -221,6 +215,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
+        private final Runnable shutdownHook = this::closeNow;
+
         @Override
         public void close() {
             close(voidPromise());
@@ -238,12 +234,18 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void registered() {
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            }
         }
 
         @Override
         public void unregistered() {
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            }
         }
 
         @Override

@@ -23,11 +23,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -181,7 +182,7 @@ public class HttpProxyHandlerTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            group = new DefaultEventLoopGroup(1);
+            group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
             final LocalAddress addr = new LocalAddress("a");
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
             ChannelFuture sf =

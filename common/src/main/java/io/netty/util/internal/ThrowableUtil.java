@@ -45,7 +45,7 @@ public final class ThrowableUtil {
         cause.printStackTrace(pout);
         pout.flush();
         try {
-            return new String(out.toByteArray());
+            return out.toString();
         } finally {
             try {
                 out.close();
@@ -61,7 +61,9 @@ public final class ThrowableUtil {
     }
 
     public static void addSuppressed(Throwable target, Throwable suppressed) {
-        target.addSuppressed(suppressed);
+        if (suppressed != null) {
+            target.addSuppressed(suppressed);
+        }
     }
 
     public static void addSuppressedAndClear(Throwable target, List<Throwable> suppressed) {
@@ -77,5 +79,20 @@ public final class ThrowableUtil {
 
     public static Throwable[] getSuppressed(Throwable source) {
         return source.getSuppressed();
+    }
+
+    /**
+     * Capture the stack trace of the given thread, interrupt it, and attach the stack trace as a suppressed exception
+     * to the given cause.
+     * @param thread The thread to interrupt.
+     * @param cause The cause to attach a stack trace to.
+     */
+    public static void interruptAndAttachAsyncStackTrace(Thread thread, Throwable cause) {
+        StackTraceElement[] stackTrace = thread.getStackTrace();
+        InterruptedException asyncIE = new InterruptedException(
+                "Asynchronous interruption: " + thread);
+        thread.interrupt();
+        asyncIE.setStackTrace(stackTrace);
+        addSuppressed(cause, asyncIE);
     }
 }

@@ -1,0 +1,130 @@
+name: Auto-port to 4.1
+on:
+  pull_request_target:
+    types:
+      - closed
+      - labeled
+    branches:
+      - '4.2'
+      - '5.0'
+
+jobs:
+  autoport:
+    name: "Auto-porting to 4.1"
+    concurrency:
+      group: port-41-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'needs-cherry-pick-4.1')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          fetch-depth: '0' # Cherry-pick needs full history
+
+      - name: Setup git configuration
+        run: |
+          git config --global user.email "netty-project-bot@users.noreply.github.com"
+          git config --global user.name "Netty Project Bot"
+
+      - name: Create auto-port PR branch and cherry-pick
+        id: cherry-pick
+        run: |
+          MERGE_COMMIT="${{ github.event.pull_request.merge_commit_sha }}"
+          echo "Auto-porting commit: $MERGE_COMMIT"
+          
+          PORT_BRANCH="auto-port-pr-${{ github.event.pull_request.number }}-to-4.1"
+          if [[ $(git branch --show-current) != '4.1' ]]; then
+            git fetch origin 4.1:4.1
+          fi
+          git checkout -b "$PORT_BRANCH" 4.1
+          
+          if git cherry-pick -x "$MERGE_COMMIT"; then
+            echo "Cherry-pick successful"
+          else
+            echo "Cherry-pick failed - conflicts detected"
+            git cherry-pick --abort
+            exit 1
+          fi
+          echo "branch=$PORT_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Push auto-port branch
+        id: push
+        if: steps.cherry-pick.outcome == 'success'
+        run: |
+          if ! git push origin "${{ steps.cherry-pick.outputs.branch }}"; then
+            echo "Auto-port branch push failed"
+            exit 1
+          fi
+          
+      - name: Create pull request
+        id: create-pr
+        if: steps.cherry-pick.outcome == 'success'
+        uses: actions/github-script@v8
+        with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Auto-port 4.1: ${context.payload.pull_request.title}`,
+              head: '${{ steps.cherry-pick.outputs.branch }}',
+              base: '4.1',
+              body: `Auto-port of #${context.payload.pull_request.number} to 4.1\n` +
+                    `Cherry-picked commit: ${context.payload.pull_request.merge_commit_sha}\n\n---\n` +
+                    `${context.payload.pull_request.body || ''}`
+            });
+            console.log(`Created auto-port PR: ${pr.html_url}`);
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Auto-port PR for 4.1: #${pr.number}`
+            });
+
+      # Important: This script MUST run with the default GITHUB_TOKEN to avoid triggering other actions.
+      - name: Remove triggering label
+        if: steps.create-pr.outcome == 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              name: 'needs-cherry-pick-4.1'
+            });
+
+      - name: Report cherry-pick conflicts
+        if: failure() && steps.cherry-pick.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create auto-port PR.\nGot conflicts when cherry-picking onto 4.1.`
+            });
+
+      - name: Report auto-port branch push failure
+        if: failure() && steps.push.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          github-token: '${{ secrets.PAT_TOKEN_READ_WRITE_PR }}'
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `Could not create auto-port PR.\n`+
+                    `I could cherry-pick onto 4.1 just fine, but pushing the new branch failed.`
+            });
+
+      - name: Remove branch on PR create failure
+        if: failure() && steps.cherry-pick.outputs.branch
+        run: |
+          git push -d origin "${{ steps.cherry-pick.outputs.branch }}"

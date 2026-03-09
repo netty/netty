@@ -20,8 +20,6 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -55,8 +53,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
-    private final Queue<List<WebSocketServerExtension>> validExtensions =
-            new ArrayDeque<List<WebSocketServerExtension>>(4);
+    private final Queue<List<WebSocketServerExtension>> validExtensions = new ArrayDeque<>(4);
 
     /**
      * Constructor
@@ -218,39 +215,31 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             if (validExtensionsList != null && !validExtensionsList.isEmpty()) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
                 List<WebSocketExtensionData> extraExtensions =
-                  new ArrayList<WebSocketExtensionData>(extensionHandshakers.size());
+                  new ArrayList<>(extensionHandshakers.size());
                 for (WebSocketServerExtension extension : validExtensionsList) {
                     extraExtensions.add(extension.newReponseData());
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        if (future.isSuccess()) {
-                            for (WebSocketServerExtension extension : validExtensionsList) {
-                                WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
-                                WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                                String name = ctx.name();
-                                ctx.pipeline()
-                                    .addAfter(name, decoder.getClass().getName(), decoder)
-                                    .addAfter(name, encoder.getClass().getName(), encoder);
-                            }
+                promise.addListener(future -> {
+                    if (future.isSuccess()) {
+                        for (WebSocketServerExtension extension : validExtensionsList) {
+                            WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
+                            WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
+                            String name = ctx.name();
+                            ctx.pipeline()
+                                .addAfter(name, decoder.getClass().getName(), decoder)
+                                .addAfter(name, encoder.getClass().getName(), encoder);
                         }
                     }
                 });
 
-                if (newHeaderValue != null) {
-                    headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
-                }
+                headers.set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, newHeaderValue);
             }
 
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
-                    }
+            promise.addListener(future -> {
+                if (future.isSuccess()) {
+                    ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                 }
             });
         }

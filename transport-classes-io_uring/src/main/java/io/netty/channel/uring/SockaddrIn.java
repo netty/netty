@@ -131,19 +131,44 @@ final class SockaddrIn {
         }
     }
 
+    /**
+     * <pre>{@code
+     * struct sockaddr_un {
+     *      sa_family_t sun_family;  // AF_UNIX
+     *      char sun_path[108];      // Pathname
+     * }
+     * }</pre>
+     */
     static int setUds(ByteBuffer memory, DomainSocketAddress address) {
         byte[] path = address.path().getBytes(StandardCharsets.UTF_8);
-        if (path.length + 1 > Native.MAX_SUN_PATH_LEN) {
+
+        // Check if this is an abstract namespace socket (starts with '\0')
+        boolean isAbstract = path.length > 0 && path[0] == 0;
+
+        // For pathname sockets, we need space for the null terminator
+        // For abstract sockets, we don't add a null terminator
+        int requiredLength = isAbstract ? path.length : path.length + 1;
+
+        if (requiredLength > Native.MAX_SUN_PATH_LEN) {
             throw new IllegalArgumentException("path too long: " + address.path());
         }
+
         int position = memory.position();
         memory.mark();
         try {
             memory.putShort(position + Native.SOCKADDR_UN_OFFSETOF_SUN_FAMILY, Native.AF_UNIX);
             memory.position(position + Native.SOCKADDR_UN_OFFSETOF_SUN_PATH);
             memory.put(path);
-            memory.put((byte) 0);
-            return Native.SIZEOF_SOCKADDR_UN;
+
+            // Only add null terminator for pathname sockets, not for abstract sockets
+            if (!isAbstract) {
+                memory.put((byte) 0);
+            }
+
+            // Return the actual address length:
+            // - For pathname sockets: offsetof(sun_path) + strlen(path) + 1
+            // - For abstract sockets: offsetof(sun_path) + name_length
+            return Native.SOCKADDR_UN_OFFSETOF_SUN_PATH + requiredLength;
         } finally {
             memory.reset();
         }

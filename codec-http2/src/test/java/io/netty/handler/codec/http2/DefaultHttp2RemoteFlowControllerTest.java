@@ -53,7 +53,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -140,7 +140,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_C));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_D));
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -151,7 +151,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_B));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_C));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_D));
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -159,10 +159,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         FakeFlowControlled data = new FakeFlowControlled(5);
         sendData(STREAM_A, data);
         data.assertNotWritten();
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -172,7 +172,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         data.assertNotWritten();
         controller.writePendingBytes();
         data.assertFullyWritten();
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -238,7 +238,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         sendData(STREAM_A, moreData);
         controller.writePendingBytes();
         moreData.assertNotWritten();
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -260,7 +260,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         connection.stream(STREAM_A).close();
         data.assertError(Http2Error.STREAM_CLOSED);
         moreData.assertError(Http2Error.STREAM_CLOSED);
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test
@@ -748,7 +748,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         verify(flowControlled, never()).writeComplete();
 
         assertEquals(90, windowBefore - window(STREAM_A));
-        verifyZeroInteractions(listener);
+        verifyNoInteractions(listener);
     }
 
     @Test

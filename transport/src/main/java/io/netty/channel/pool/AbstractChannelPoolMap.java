@@ -16,7 +16,6 @@
 package io.netty.channel.pool;
 
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ReadOnlyIterator;
@@ -80,14 +79,11 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
         P pool =  map.remove(checkNotNull(key, "key"));
         if (pool != null) {
             final Promise<Boolean> removePromise = GlobalEventExecutor.INSTANCE.newPromise();
-            poolCloseAsyncIfSupported(pool).addListener(new GenericFutureListener<Future<? super Void>>() {
-                @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
-                    if (future.isSuccess()) {
-                        removePromise.setSuccess(Boolean.TRUE);
-                    } else {
-                        removePromise.setFailure(future.cause());
-                    }
+            poolCloseAsyncIfSupported(pool).addListener(future -> {
+                if (future.isSuccess()) {
+                    removePromise.setSuccess(Boolean.TRUE);
+                } else {
+                    removePromise.setFailure(future.cause());
                 }
             });
             return removePromise;
