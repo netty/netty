@@ -1907,9 +1907,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // We didn't notify before about channelActive... Update state and fire the event.
                 state = ChannelState.ACTIVE;
 
+                fireDatagramExtensionEvent(conn);
                 pipeline().fireChannelActive();
                 notifyAboutHandshakeCompletionIfNeeded(conn, null);
-                fireDatagramExtensionEvent(conn);
             }
         } else if (connectPromise != null && Quiche.quiche_conn_is_established(conn.address())) {
             Promise<Void> promise = connectPromise;
