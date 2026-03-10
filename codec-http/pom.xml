@@ -46,7 +46,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-base</artifactId>
+      <artifactId>netty5-codec</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

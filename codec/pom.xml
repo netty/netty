@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2012 The Netty Project
+  ~ Copyright 2024 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,11 +28,6 @@
 
   <name>Netty/Codec</name>
 
-  <properties>
-    <javaModuleName>io.netty.codec.unused</javaModuleName>
-    <maven.javadoc.skip>true</maven.javadoc.skip>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -49,87 +44,46 @@
       <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-base</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-compression</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-protobuf</artifactId>
-      <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.protobuf.nano</groupId>
-          <artifactId>protobuf-javanano</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
 
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+
+    <!-- Test dependency for Bzip2 compression codec -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-nativeimage-metadata-gen</artifactId>
+      <version>${project.version}</version>
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf.nano</groupId>
-      <artifactId>protobuf-javanano</artifactId>
-      <optional>true</optional>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <!-- Empty module -->
-      <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- We must generate a -javadoc and -sources JAR file to publish on Maven Central -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>empty-javadoc-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <classifier>javadoc</classifier>
-              <classesDirectory>${basedir}/javadoc</classesDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>empty-sources-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <classifier>sources</classifier>
-              <classesDirectory>${basedir}/src/main/java</classesDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
 </project>
 

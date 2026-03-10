@@ -488,10 +488,9 @@
     <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
-    <module>codec-base</module>
+    <module>codec</module>
     <module>codec-compression</module>
     <module>codec-protobuf</module>
-    <module>codec</module>
     <module>codec-dns</module>
     <module>codec-haproxy</module>
     <module>codec-http</module>
