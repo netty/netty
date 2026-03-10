@@ -28,7 +28,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <fallbackModuleName>io.netty.transport.io_uring</fallbackModuleName>
+    <fallbackModuleName>io.netty5.transport.io_uring</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <unix.common.lib.name>netty5-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>

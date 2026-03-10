@@ -28,7 +28,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <fallbackModuleName>io.netty.transport.epoll</fallbackModuleName>
+    <fallbackModuleName>io.netty5.transport.epoll</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>

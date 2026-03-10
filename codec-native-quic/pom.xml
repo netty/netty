@@ -29,9 +29,9 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
+    <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fragmentHost>io.netty.codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
