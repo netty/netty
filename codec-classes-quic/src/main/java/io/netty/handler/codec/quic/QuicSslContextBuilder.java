@@ -180,9 +180,7 @@ public final class QuicSslContextBuilder {
     private QuicSslContextBuilder(boolean forServer) {
         this.forServer = forServer;
         if (!forServer) {
-            // Todo : initialize like we do for regular context
-            // but this requires exposing package private SslUtils
-            // this.endpointIdentificationAlgorithm = SslUtils.defaultEndpointVerificationAlgorithm;
+             this.endpointIdentificationAlgorithm = QuicheQuicSslContext.defaultEndpointVerificationAlgorithm;
         }
     }
 

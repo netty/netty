@@ -29,6 +29,9 @@ import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -94,6 +97,22 @@ import javax.net.ssl.TrustManagerFactory;
  * </pre>
  */
 public abstract class SslContext {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SslContext.class);
+
+    private static final String DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY =
+            "io.netty.handler.ssl.defaultEndpointVerificationAlgorithm";
+
+    /**
+     * Endpoint verification is enabled by default from Netty 4.2 onward, but it wasn't in Netty 4.1 and earlier.
+     * The {@value #DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY} can be set to one of the following
+     * values to control this behavior:
+     * <ul>
+     *     <li>{@code "HTTPS"} — verify subject by DNS hostnames; this is the Netty 4.2 default.</li>
+     *     <li>{@code "LDAP"} — verify subject by LDAP identity.</li>
+     *     <li>{@code "NONE"} — don't enable endpoint verification by default; this is the Netty 4.1 behavior.</li>
+     * </ul>
+     */
+    protected static final String defaultEndpointVerificationAlgorithm;
     static final String ALIAS = "key";
 
     static final CertificateFactory X509_CERT_FACTORY;
@@ -102,6 +121,22 @@ public abstract class SslContext {
             X509_CERT_FACTORY = CertificateFactory.getInstance("X.509");
         } catch (CertificateException e) {
             throw new IllegalStateException("unable to instance X.509 CertificateFactory", e);
+        }
+
+        String defaultEndpointVerification = SystemPropertyUtil.get(DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY);
+        if ("LDAP".equalsIgnoreCase(defaultEndpointVerification)) {
+            defaultEndpointVerificationAlgorithm = "LDAP";
+        } else if ("NONE".equalsIgnoreCase(defaultEndpointVerification)) {
+            logger.info("Default SSL endpoint verification has been disabled:  -D{}=\"{}\"",
+                    DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY, defaultEndpointVerification);
+            defaultEndpointVerificationAlgorithm = null;
+        } else {
+            if (defaultEndpointVerification != null && !"HTTPS".equalsIgnoreCase(defaultEndpointVerification)) {
+                logger.warn("Unknown default SSL endpoint verification algorithm: -D{}=\"{}\", " +
+                                "will use \"HTTPS\" instead.",
+                        DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY, defaultEndpointVerification);
+            }
+            defaultEndpointVerificationAlgorithm = "HTTPS";
         }
     }
 
@@ -816,7 +851,7 @@ public abstract class SslContext {
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
                                             apn, null, sessionCacheSize, sessionTimeout, false,
                                             null, KeyStore.getDefaultType(),
-                                            SslUtils.defaultEndpointVerificationAlgorithm,
+                                            defaultEndpointVerificationAlgorithm,
                                             Collections.emptyList(), null, null);
         } catch (Exception e) {
             if (e instanceof SSLException) {

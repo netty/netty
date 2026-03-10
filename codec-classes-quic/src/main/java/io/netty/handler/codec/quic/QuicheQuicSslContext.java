@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
@@ -68,6 +69,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
     // See https://www.java.com/en/configure_crypto.html for ordering
     private static final String[] DEFAULT_NAMED_GROUPS = { "x25519", "secp256r1", "secp384r1", "secp521r1" };
     private static final String[] NAMED_GROUPS;
+
+    static final String defaultEndpointVerificationAlgorithm = SslContext.defaultEndpointVerificationAlgorithm;
 
     static {
         String[] namedGroups = DEFAULT_NAMED_GROUPS;
