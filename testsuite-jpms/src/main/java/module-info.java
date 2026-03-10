@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-module io.netty.testsuite_jpms.main {
+module io.netty5.testsuite_jpms.main {
     requires io.netty5.common;
     requires io.netty5.buffer;
     requires io.netty5.codec;
