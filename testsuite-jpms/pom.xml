@@ -350,10 +350,10 @@
                 <addModules>
                   <addModule>jdk.jdwp.agent</addModule>
                   <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
-                  <addModule>io.netty.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
+                  <addModule>io.netty5.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
                 </addModules>
                 <ignoreSigningInformation>true</ignoreSigningInformation>
-                <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
+                <launcher>http=io.netty5.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
               </configuration>
             </plugin>
             <plugin>

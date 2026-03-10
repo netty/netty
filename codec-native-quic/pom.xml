@@ -29,9 +29,8 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
+    <fallbackModuleName>io.netty5.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
-    <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fragmentHost>io.netty.codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
@@ -404,8 +403,8 @@
                 <id>fallback-module-info</id>
                 <phase>process-classes</phase>
                 <configuration>
-                  <moduleName>${fallbackModuleName}</moduleName>
-                  <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+                  <moduleName>${javaModuleName}</moduleName>
+                  <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
                 </configuration>
                 <goals>
                   <goal>generate</goal>
@@ -447,7 +446,7 @@
                     <!-- Add the ant tasks from ant-contrib -->
                     <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
 
-                    <filter token="JAVA_MODULE_NAME" value="${javaModuleNameWithClassifier}" />
+                    <filter token="JAVA_MODULE_NAME" value="${javaModuleName}" />
                     <filter token="MIN_SDK_VERSION" value="${androidMinSdkVersion}" />
 
                     <copy file="src/main/AndroidManifest.xml" todir="${project.build.directory}/android-build/" filtering="true" />
@@ -1155,8 +1154,8 @@
             <id>fallback-module-info</id>
             <phase>process-classes</phase>
             <configuration>
-              <moduleName>${fallbackModuleName}</moduleName>
-              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+              <moduleName>${javaModuleName}</moduleName>
+              <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
             </configuration>
             <goals>
               <goal>generate</goal>
