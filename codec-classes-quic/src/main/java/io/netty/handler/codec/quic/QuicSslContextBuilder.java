@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
@@ -174,9 +175,13 @@ public final class QuicSslContextBuilder {
     private Boolean earlyData;
     private BoringSSLKeylog keylog;
     private Mapping<? super String, ? extends QuicSslContext> mapping;
+    private String endpointIdentificationAlgorithm;
 
     private QuicSslContextBuilder(boolean forServer) {
         this.forServer = forServer;
+        if (!forServer) {
+             this.endpointIdentificationAlgorithm = QuicheQuicSslContext.defaultEndpointVerificationAlgorithm;
+        }
     }
 
     /**
@@ -410,6 +415,21 @@ public final class QuicSslContextBuilder {
     }
 
     /**
+     * Specify the endpoint identification algorithm (aka. hostname verification algorithm) that clients will use as
+     * part of authenticating servers.
+     * <p>
+     * See <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#jssenames">
+     *     Java Security Standard Names</a> for a list of supported algorithms.
+     *
+     * @param algorithm either {@code "HTTPS"}, {@code "LDAPS"}, or {@code null} (disables hostname verification).
+     * @see SSLParameters#setEndpointIdentificationAlgorithm(String)
+     */
+    public QuicSslContextBuilder endpointIdentificationAlgorithm(String algorithm) {
+        endpointIdentificationAlgorithm = algorithm;
+        return this;
+    }
+
+    /**
      * Create new {@link QuicSslContext} instance with configured settings that can be used for {@code QUIC}.
      *
      */
@@ -417,11 +437,11 @@ public final class QuicSslContextBuilder {
         if (forServer) {
             return new QuicheQuicSslContext(true, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog,
-                    applicationProtocols, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    applicationProtocols, null, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return new QuicheQuicSslContext(false, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog,
-                    applicationProtocols, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    applicationProtocols, endpointIdentificationAlgorithm, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
