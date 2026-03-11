@@ -36,7 +36,9 @@ jobs:
           echo "Auto-porting commit: $MERGE_COMMIT"
           
           PORT_BRANCH="auto-port-pr-${{ github.event.pull_request.number }}-to-5.0"
-          git fetch origin 5.0:5.0
+          if [[ $(git branch --show-current) != '5.0' ]]; then
+            git fetch origin 5.0:5.0
+          fi
           git checkout -b "$PORT_BRANCH" 5.0
           
           if git cherry-pick -x "$MERGE_COMMIT"; then
