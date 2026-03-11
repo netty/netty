@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -267,18 +268,17 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
     @Test
     public void testClientMaxWindowWithInvalidValue() {
-        // Test that client handles invalid client_max_window_bits value
+        // Test that client throws NumberFormatException for invalid client_max_window_bits value
         PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
 
         Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "invalid");
 
-        // Should handle NumberFormatException gracefully
-        WebSocketClientExtension extension = handshaker.handshakeExtension(
+        // Should throw NumberFormatException
+        assertThrows(NumberFormatException.class, () -> {
+            handshaker.handshakeExtension(
                 new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
-
-        // Handshake should fail due to invalid value
-        assertNull(extension);
+        });
     }
 }
