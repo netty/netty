@@ -18,6 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
@@ -68,6 +69,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
     // See https://www.java.com/en/configure_crypto.html for ordering
     private static final String[] DEFAULT_NAMED_GROUPS = { "x25519", "secp256r1", "secp384r1", "secp521r1" };
     private static final String[] NAMED_GROUPS;
+
+    static final String defaultEndpointVerificationAlgorithm = SslContext.defaultEndpointVerificationAlgorithm;
 
     static {
         String[] namedGroups = DEFAULT_NAMED_GROUPS;
@@ -139,6 +142,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     final ClientAuth clientAuth;
     private final boolean server;
+    private final String endpointIdentificationAlgorithm;
     @SuppressWarnings("deprecation")
     private final ApplicationProtocolNegotiator apn;
     private long sessionCacheSize;
@@ -156,9 +160,11 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          @Nullable KeyManagerFactory keyManagerFactory, String password,
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
-                         String[] applicationProtocols, Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
+                         String[] applicationProtocols, String endpointIdentificationAlgorithm,
+                         Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         final X509TrustManager trustManager;
         if (trustManagerFactory == null) {
@@ -412,12 +418,12 @@ final class QuicheQuicSslContext extends QuicSslContext {
 
     @Override
     public QuicSslEngine newEngine(ByteBufAllocator alloc) {
-        return new QuicheQuicSslEngine(this, null, -1);
+        return new QuicheQuicSslEngine(this, null, -1, endpointIdentificationAlgorithm);
     }
 
     @Override
     public QuicSslEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return new QuicheQuicSslEngine(this, peerHost, peerPort);
+        return new QuicheQuicSslEngine(this, peerHost, peerPort, endpointIdentificationAlgorithm);
     }
 
     @Override
