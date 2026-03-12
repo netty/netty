@@ -145,10 +145,20 @@ static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, ji
     af.af_name[0] = af.af_arg[0] ='\0';
 
     tmpString = (*env)->GetStringUTFChars(env, afName, NULL);
+    if (tmpString == NULL) {
+       // if NULL is returned it failed due OOME
+       netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
+       return;
+    }
     strncat(af.af_name, tmpString, sizeof(af.af_name) / sizeof(af.af_name[0]));
     (*env)->ReleaseStringUTFChars(env, afName, tmpString);
 
     tmpString = (*env)->GetStringUTFChars(env, afArg, NULL);
+    if (tmpString == NULL) {
+        // if NULL is returned it failed due OOME
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
+        return;
+    }
     strncat(af.af_arg, tmpString, sizeof(af.af_arg) / sizeof(af.af_arg[0]));
     (*env)->ReleaseStringUTFChars(env, afArg, tmpString);
 
