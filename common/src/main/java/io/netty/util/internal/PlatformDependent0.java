@@ -542,7 +542,8 @@ final class PlatformDependent0 {
             ABSOLUTE_PUT_ARRAY = null;
         }
         if (javaVersion() >= 22) {
-            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = (MethodHandle) AccessController.doPrivileged(
+                    new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
@@ -798,7 +799,6 @@ final class PlatformDependent0 {
     static long directBufferAddress(ByteBuffer buffer) {
         if (hasUnsafe()) {
             return getLong(buffer, ADDRESS_FIELD_OFFSET);
-
         }
         if (hasMemorySegmentAddressOfBuffer()) {
             try {
