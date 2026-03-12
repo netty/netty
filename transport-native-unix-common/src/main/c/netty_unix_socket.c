@@ -699,8 +699,10 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     if (accept4)  {
         return socketFd;
     }
+    // accept4 was not present so need two more sys-calls ...
     if (fcntl(socketFd, F_SETFD, FD_CLOEXEC) == -1 || fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
-        // accept4 was not present so need two more sys-calls ...
+        // close the fd before report the error so we don't leak it.
+        close(socketFd);
         return -errno;
     }
     return socketFd;
