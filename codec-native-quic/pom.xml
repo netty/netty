@@ -393,26 +393,6 @@
             </executions>
           </plugin>
           <plugin>
-            <groupId>io.github.dmlloyd.module-info</groupId>
-            <artifactId>module-info</artifactId>
-            <executions>
-              <execution>
-                <id>module-info</id>
-              </execution>
-              <execution>
-                <id>fallback-module-info</id>
-                <phase>process-classes</phase>
-                <configuration>
-                  <moduleName>${javaModuleName}</moduleName>
-                  <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
-                </configuration>
-                <goals>
-                  <goal>generate</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <execution>
@@ -1144,26 +1124,6 @@
       </plugin>
 
       <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-          <execution>
-            <id>fallback-module-info</id>
-            <phase>process-classes</phase>
-            <configuration>
-              <moduleName>${javaModuleName}</moduleName>
-              <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
-            </configuration>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
@@ -1254,6 +1214,12 @@
       <artifactId>netty5-codec-classes-quic</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-codec</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

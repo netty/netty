@@ -33,10 +33,7 @@
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <maven.javadoc.skip>true</maven.javadoc.skip>
-    <javaModuleName>io.netty.testsuite_jpms</javaModuleName>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <maven.compiler.release>11</maven.compiler.release>
+    <javaModuleName>io.netty5.testsuite_jpms</javaModuleName>
     <useTestModulePath>true</useTestModulePath>
     <packaging.type>pom</packaging.type>
   </properties>

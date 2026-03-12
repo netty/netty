@@ -167,7 +167,7 @@
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
-    <javaModuleName>io.netty.transport_blockhound_tests</javaModuleName>
+    <javaModuleName>io.netty5.transport_blockhound_tests</javaModuleName>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 

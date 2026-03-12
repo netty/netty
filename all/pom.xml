@@ -29,7 +29,7 @@
   <name>Netty/All-in-One</name>
 
   <properties>
-    <javaModuleName>io.netty.all</javaModuleName>
+    <javaModuleName>io.netty5.all</javaModuleName>
     <generatedSourceDir>${project.build.directory}/src</generatedSourceDir>
     <dependencyVersionsDir>${project.build.directory}/versions</dependencyVersionsDir>
   </properties>
