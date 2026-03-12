@@ -455,10 +455,11 @@ public final class KQueueIoHandler implements IoHandler {
             short filter = kQueueIoOps.filter();
             short flags = kQueueIoOps.flags();
             int fflags = kQueueIoOps.fflags();
+            long data = kQueueIoOps.data();
             if (executor.isExecutorThread(Thread.currentThread())) {
-                evSet(filter, flags, fflags);
+                evSet(filter, flags, fflags, data);
             } else {
-                executor.execute(() -> evSet(filter, flags, fflags));
+                executor.execute(() -> evSet(filter, flags, fflags, data));
             }
             return 0;
         }
@@ -472,12 +473,12 @@ public final class KQueueIoHandler implements IoHandler {
             handle.handle(this, event);
         }
 
-        private void evSet(short filter, short flags, int fflags) {
+        private void evSet(short filter, short flags, int fflags, long data) {
             if (cancellationPending) {
                 // This registration was already cancelled but not removed from the map yet, just ignore.
                 return;
             }
-            changeList.evSet(handle.ident(), filter, flags, fflags, 0, id);
+            changeList.evSet(handle.ident(), filter, flags, fflags, data, id);
         }
 
         @Override
