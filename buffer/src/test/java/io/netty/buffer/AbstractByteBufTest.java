@@ -75,6 +75,7 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -6474,4 +6475,22 @@ public abstract class AbstractByteBufTest {
         assertNotSame(capacity, buffer.capacity());
         buffer.release();
     }
+
+    @Test
+    public void test_internalNioBuffer() {
+        ByteBuf buf = buffer(8, 16);
+        ByteBuf buffer = buf;
+        if (buf instanceof SimpleLeakAwareByteBuf) {
+            buffer = buf.unwrap();
+        }
+        assumeThat(buffer).isInstanceOf(AbstractByteBuf.class);
+        try {
+            ByteBuffer nioBuffer = ((AbstractByteBuf) buffer)._internalNioBuffer();
+            assertEquals(0, nioBuffer.position());
+            assertThat(nioBuffer.remaining()).isGreaterThanOrEqualTo(8);
+        } finally {
+            buf.release();
+        }
+    }
+
 }
