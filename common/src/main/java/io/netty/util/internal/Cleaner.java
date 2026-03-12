@@ -38,4 +38,14 @@ interface Cleaner {
      */
     @Deprecated
     void freeDirectBuffer(ByteBuffer buffer);
+
+    /**
+     * Check if the clean operation is "relatively expensive".
+     * Expensive clean operations are fine for pooling allocators, but should be avoided for unpooled buffers.
+     * @return {@code true} if this Cleaner has an expensive clean
+     * (i.e. {@link CleanableDirectBuffer#clean()}) operation.
+     */
+    default boolean hasExpensiveClean() {
+        return false;
+    }
 }

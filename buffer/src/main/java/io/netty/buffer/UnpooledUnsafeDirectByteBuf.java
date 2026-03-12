@@ -45,6 +45,11 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         super(alloc, initialCapacity, maxCapacity);
     }
 
+    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
+                                boolean permitExpensiveClean) {
+        super(alloc, initialCapacity, maxCapacity, permitExpensiveClean);
+    }
+
     /**
      * Creates a new direct buffer by wrapping the specified initial buffer.
      *

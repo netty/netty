@@ -597,6 +597,22 @@ public final class PlatformDependent {
      * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
      */
     public static CleanableDirectBuffer allocateDirect(int capacity) {
+        return allocateDirect(capacity, false);
+    }
+
+    /**
+     * Allocate a direct {@link ByteBuffer} of the given capacity, and return it alongside its deallocation mechanism.
+     * @param capacity The desired capacity of the direct byte buffer.
+     * @param permitExpensiveClean Whether to allow expensive clean operations or not. If expensive clean operations
+     * are not permitted ({@code false}), then the buffer cleaning may instead be delegated to the GC and reference
+     * processing. Pooling allocators would typically permit expensive clean operations, while unpooled buffers
+     * would not.
+     * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
+     */
+    public static CleanableDirectBuffer allocateDirect(int capacity, boolean permitExpensiveClean) {
+        if (!permitExpensiveClean && CLEANER.hasExpensiveClean()) {
+            return NOOP.allocate(capacity);
+        }
         return CLEANER.allocate(capacity);
     }
 
