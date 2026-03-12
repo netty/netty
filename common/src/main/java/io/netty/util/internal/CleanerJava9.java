@@ -92,6 +92,11 @@ final class CleanerJava9 implements Cleaner {
         freeDirectBufferStatic(buffer);
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     private static void freeDirectBufferStatic(ByteBuffer buffer) {
         // Try to minimize overhead when there is no SecurityManager present.
         // See https://bugs.openjdk.java.net/browse/JDK-8191053.

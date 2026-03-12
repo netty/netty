@@ -45,7 +45,5 @@ interface Cleaner {
      * @return {@code true} if this Cleaner has an expensive clean
      * (i.e. {@link CleanableDirectBuffer#clean()}) operation.
      */
-    default boolean hasExpensiveClean() {
-        return false;
-    }
+    boolean hasExpensiveClean();
 }

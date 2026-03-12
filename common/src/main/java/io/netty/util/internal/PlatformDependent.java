@@ -164,6 +164,11 @@ public final class PlatformDependent {
         public void freeDirectBuffer(ByteBuffer buffer) {
             // NOOP
         }
+
+        @Override
+        public boolean hasExpensiveClean() {
+            return false;
+        }
     };
 
     static {
