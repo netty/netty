@@ -273,7 +273,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         final PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
 
-        Map<String, String> parameters = new HashMap<String, String>();
+        final Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "invalid");
 
         // Should throw NumberFormatException
