@@ -179,6 +179,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private void submit(KQueueIoOps ops) {
+        if (!isOpen()) {
+            // If the channel was closed in the meantime we should just drop the ops as otherwise we might end up
+            // affected another channel that re-used the fd.
+            return;
+        }
         try {
             registration.submit(ops);
         } catch (Exception e) {

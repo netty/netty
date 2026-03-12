@@ -666,6 +666,64 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testMultiLineTrailingHeader() {
+        // Regression: folded trailer values previously threw UnsupportedOperationException
+        // because trailingHeaders().getAll() returns an AbstractList that does not implement set().
+        // Note: obs-fold in trailers is permitted as trailers are field-lines per
+        // https://www.rfc-editor.org/rfc/rfc9112#section-5.2
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "0\r\n" +
+                "X-Long: part1\r\n" +
+                "        part2\r\n" +
+                "\t\t\t  part3\r\n" +
+                "X-Short: value\r\n" +
+                "\r\n";
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(response, CharsetUtil.US_ASCII)));
+        HttpResponse res = ch.readInbound();
+        assertFalse(res.decoderResult().isFailure());
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.OK, res.status());
+
+        LastHttpContent last = ch.readInbound();
+        assertFalse(last.decoderResult().isFailure());
+        assertEquals("part1 part2 part3", last.trailingHeaders().get(of("X-Long")));
+        assertEquals("value", last.trailingHeaders().get(of("X-Short")));
+        last.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testForbiddenTrailingHeadersAreDropped() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "0\r\n" +
+                HttpHeaderNames.CONTENT_LENGTH + ": 5\r\n" +
+                HttpHeaderNames.TRANSFER_ENCODING + ": chunked\r\n" +
+                "X-Custom: keep\r\n" +
+                HttpHeaderNames.TRAILER + ": X-Checksum\r\n" + // covering post-loop flush path
+                "\r\n";
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(response, CharsetUtil.US_ASCII)));
+        HttpResponse res = ch.readInbound();
+        assertFalse(res.decoderResult().isFailure());
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.OK, res.status());
+
+        LastHttpContent last = ch.readInbound();
+        assertFalse(last.decoderResult().isFailure());
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.CONTENT_LENGTH));
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.TRANSFER_ENCODING));
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.TRAILER));
+        assertEquals("keep", last.trailingHeaders().get(of("X-Custom")));
+        last.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testResponseWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer(
