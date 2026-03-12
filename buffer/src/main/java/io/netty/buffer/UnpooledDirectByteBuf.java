@@ -122,7 +122,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
-        return allocateDirectBuffer(capacity, false);
+        return PlatformDependent.allocateDirect(capacity, false);
     }
 
     protected CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean permitExpensiveClean) {
