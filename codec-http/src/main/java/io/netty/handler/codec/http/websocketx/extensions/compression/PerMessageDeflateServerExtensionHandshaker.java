@@ -220,8 +220,18 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
             Entry<String, String> parameter = parametersIterator.next();
 
             if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
-             // use preferred clientWindowSize because client is compatible with customization
-                clientWindowSize = preferredClientWindowSize;
+                // RFC 7692: client_max_window_bits may have a value or no value
+                String value = parameter.getValue();
+                if (value != null) {
+                    // Let NumberFormatException bubble up if value is invalid
+                    clientWindowSize = Integer.parseInt(value);
+                    if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                        deflateEnabled = false;
+                    }
+                } else {
+                    // No value specified, use preferred client window size
+                    clientWindowSize = preferredClientWindowSize;
+                }
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                 // use provided windowSize if it is allowed
                 if (allowServerWindowSize) {
