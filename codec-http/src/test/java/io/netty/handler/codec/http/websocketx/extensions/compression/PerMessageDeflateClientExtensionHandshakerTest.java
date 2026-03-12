@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 public class PerMessageDeflateClientExtensionHandshakerTest {
 
@@ -269,16 +270,19 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     @Test
     public void testClientMaxWindowWithInvalidValue() {
         // Test that client throws NumberFormatException for invalid client_max_window_bits value
-        PerMessageDeflateClientExtensionHandshaker handshaker =
+        final PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
 
         Map<String, String> parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "invalid");
 
         // Should throw NumberFormatException
-        assertThrows(NumberFormatException.class, () -> {
-            handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+        assertThrows(NumberFormatException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                handshaker.handshakeExtension(
+                        new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+            }
         });
     }
 }
