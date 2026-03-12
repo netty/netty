@@ -232,10 +232,16 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
             if (CLIENT_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                 // allowed client_window_size_bits
                 if (allowClientWindowSize) {
-                    clientWindowSize = Integer.parseInt(parameter.getValue());
-                    if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
-                        succeed = false;
+                    // RFC 7692: client_max_window_bits may have a value or no value
+                    String value = parameter.getValue();
+                    if (value != null) {
+                        // Let NumberFormatException bubble up if value is invalid
+                        clientWindowSize = Integer.parseInt(value);
+                        if (clientWindowSize > MAX_WINDOW_SIZE || clientWindowSize < MIN_WINDOW_SIZE) {
+                            succeed = false;
+                        }
                     }
+                    // If value is null, keep MAX_WINDOW_SIZE (default)
                 } else {
                     succeed = false;
                 }
