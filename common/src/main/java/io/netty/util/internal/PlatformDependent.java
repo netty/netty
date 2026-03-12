@@ -147,6 +147,16 @@ public final class PlatformDependent {
                 public void clean() {
                     // NOOP
                 }
+
+                @Override
+                public boolean hasMemoryAddress() {
+                    return hasDirectByteBufferAddress(byteBuffer);
+                }
+
+                @Override
+                public long memoryAddress() {
+                    return directBufferAddress(byteBuffer);
+                }
             };
         }
 
@@ -629,6 +639,21 @@ public final class PlatformDependent {
         LEGACY_CLEANER.freeDirectBuffer(buffer);
     }
 
+    /**
+     * Check if it is possible to call {@link #directBufferAddress(ByteBuffer)} on the given buffer.
+     * @param buffer The specific buffer instance to check for.
+     * @return {@code true} if {@link #directBufferAddress(ByteBuffer)} can be called on the given buffer,
+     * otherwise {@code false}.
+     */
+    public static boolean hasDirectByteBufferAddress(ByteBuffer buffer) {
+        return PlatformDependent0.hasDirectByteBufferAdderss(buffer);
+    }
+
+    /**
+     * Obtain the native memory address of the given direct byte buffer, or throw an exception if it's not possible.
+     * @param buffer The buffer to get the native memory address for.
+     * @return The native memory address of the give buffer.
+     */
     public static long directBufferAddress(ByteBuffer buffer) {
         return PlatformDependent0.directBufferAddress(buffer);
     }

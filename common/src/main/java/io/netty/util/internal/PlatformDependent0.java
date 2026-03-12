@@ -52,6 +52,7 @@ final class PlatformDependent0 {
     private static final MethodHandle OFFSET_SLICE;
     private static final MethodHandle ABSOLUTE_PUT_BUFFER;
     private static final MethodHandle ABSOLUTE_PUT_ARRAY;
+    private static final MethodHandle MEMORY_SEGMENT_ADDRESS_OF_BUFFER;
     private static final boolean IS_ANDROID = isAndroid0();
     private static final int JAVA_VERSION = javaVersion0();
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
@@ -540,6 +541,28 @@ final class PlatformDependent0 {
         } else {
             ABSOLUTE_PUT_ARRAY = null;
         }
+        if (javaVersion() >= 22) {
+            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        // We're recreating the following code snippet:
+                        // (long) MemorySegment.ofBuffer((Buffer) arg1).address();
+                        Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
+                        MethodType ofBufferType = methodType(memsegCls, Buffer.class);
+                        MethodType addressType = methodType(long.class);
+                        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+                        MethodHandle ofBuffer = lookup.findStatic(memsegCls, "ofBuffer", ofBufferType);
+                        MethodHandle address = lookup.findVirtual(memsegCls, "address", addressType);
+                        return MethodHandles.filterArguments(address, 0, ofBuffer);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = null;
+        }
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
@@ -649,6 +672,10 @@ final class PlatformDependent0 {
 
     static Throwable getUnsafeUnavailabilityCause() {
         return UNSAFE_UNAVAILABILITY_CAUSE;
+    }
+
+    static boolean hasMemorySegmentAddressOfBuffer() {
+        return MEMORY_SEGMENT_ADDRESS_OF_BUFFER != null;
     }
 
     static boolean unalignedAccess() {
@@ -764,8 +791,25 @@ final class PlatformDependent0 {
         }
     }
 
+    static boolean hasDirectByteBufferAdderss(ByteBuffer buffer) {
+        return buffer.isDirect() && (hasUnsafe() || hasMemorySegmentAddressOfBuffer());
+    }
+
     static long directBufferAddress(ByteBuffer buffer) {
-        return getLong(buffer, ADDRESS_FIELD_OFFSET);
+        if (hasUnsafe()) {
+            return getLong(buffer, ADDRESS_FIELD_OFFSET);
+
+        }
+        if (hasMemorySegmentAddressOfBuffer()) {
+            try {
+                return (long) MEMORY_SEGMENT_ADDRESS_OF_BUFFER.invokeExact((Buffer) buffer);
+            } catch (Throwable e) {
+                LinkageError error = new LinkageError("Failed to call MemorySegment.ofBuffer(arg1).address()");
+                error.initCause(e);
+                throw error;
+            }
+        }
+        throw new IllegalStateException("No address access method");
     }
 
     static long byteArrayBaseOffset() {
