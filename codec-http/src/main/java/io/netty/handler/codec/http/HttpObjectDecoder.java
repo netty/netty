@@ -875,7 +875,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
 
-        CharSequence lastHeader = null;
         if (trailer == null) {
             trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, trailersFactory);
         }
@@ -883,29 +882,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             final byte[] lineContent = line.array();
             final int startLine = line.arrayOffset() + line.readerIndex();
             final byte firstChar = lineContent[startLine];
-            if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                List<String> current = trailer.trailingHeaders().getAll(lastHeader);
-                if (!current.isEmpty()) {
-                    int lastPos = current.size() - 1;
-                    //please do not make one line from below code
-                    //as it breaks +XX:OptimizeStringConcat optimization
-                    String lineTrimmed = langAsciiString(lineContent, startLine, line.readableBytes()).trim();
-                    String currentLastPos = current.get(lastPos);
-                    current.set(lastPos, currentLastPos + lineTrimmed);
-                }
+            if (name != null && (firstChar == ' ' || firstChar == '\t')) {
+                //please do not make one line from below code
+                //as it breaks +XX:OptimizeStringConcat optimization
+                String trimmedLine = langAsciiString(lineContent, startLine, lineLength).trim();
+                String valueStr = value;
+                value = valueStr + ' ' + trimmedLine;
             } else {
-                splitHeader(lineContent, startLine, lineLength);
-                AsciiString headerName = name;
-                if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
-                    trailer.trailingHeaders().add(headerName, value);
+                if (name != null && isPermittedTrailingHeader(name)) {
+                    trailer.trailingHeaders().add(name, value);
                 }
-                lastHeader = name;
-                // reset name and value fields
-                name = null;
-                value = null;
+                splitHeader(lineContent, startLine, lineLength);
             }
+
             line = headerParser.parse(buffer, defaultStrictCRLFCheck);
             if (line == null) {
                 return null;
@@ -913,8 +902,26 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             lineLength = line.readableBytes();
         }
 
+        // Add the last trailer
+        if (name != null && isPermittedTrailingHeader(name)) {
+            trailer.trailingHeaders().add(name, value);
+        }
+
+        // reset name and value fields
+        name = null;
+        value = null;
+
         this.trailer = null;
         return trailer;
+    }
+
+    /**
+     * Checks whether the given trailer field name is permitted per RFC 9110 section 6.5
+     */
+    private static boolean isPermittedTrailingHeader(final AsciiString name) {
+        return !HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name) &&
+               !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name) &&
+               !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name);
     }
 
     protected abstract boolean isDecodingRequest();
