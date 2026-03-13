@@ -128,6 +128,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+    private static final boolean IGNORE_EXPENSIVE_CLEAN =
+            SystemPropertyUtil.getBoolean("io.netty.ignoreExpensiveClean", false);
 
     private static final boolean JFR;
     private static final boolean VAR_HANDLE;
@@ -625,7 +627,7 @@ public final class PlatformDependent {
      * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
      */
     public static CleanableDirectBuffer allocateDirect(int capacity, boolean permitExpensiveClean) {
-        if (!permitExpensiveClean && CLEANER.hasExpensiveClean()) {
+        if (!IGNORE_EXPENSIVE_CLEAN && !permitExpensiveClean && CLEANER.hasExpensiveClean()) {
             return NOOP.allocate(capacity);
         }
         return CLEANER.allocate(capacity);
