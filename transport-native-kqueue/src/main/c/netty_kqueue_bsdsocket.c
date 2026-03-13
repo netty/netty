@@ -144,14 +144,28 @@ static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, ji
     const char* tmpString = NULL;
     af.af_name[0] = af.af_arg[0] ='\0';
 
+    jsize len = (*env)->GetStringUTFLength(env, afName);
+    if (len > sizeof(af.af_name)) {
+         // Too large and so can't be stored
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EOVERFLOW);
+        return;
+    }
     tmpString = (*env)->GetStringUTFChars(env, afName, NULL);
     if (tmpString == NULL) {
        // if NULL is returned it failed due OOME
        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
        return;
     }
-    strncat(af.af_name, tmpString, sizeof(af.af_name) / sizeof(af.af_name[0]));
+
+    strlcat(af.af_name, tmpString, sizeof(af.af_name));
     (*env)->ReleaseStringUTFChars(env, afName, tmpString);
+
+    len = (*env)->GetStringUTFLength(env, afArg);
+    if (len > sizeof(af.af_arg)) {
+         // Too large and so can't be stored
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EOVERFLOW);
+        return;
+    }
 
     tmpString = (*env)->GetStringUTFChars(env, afArg, NULL);
     if (tmpString == NULL) {
@@ -159,7 +173,7 @@ static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, ji
         netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
         return;
     }
-    strncat(af.af_arg, tmpString, sizeof(af.af_arg) / sizeof(af.af_arg[0]));
+    strlcat(af.af_arg, tmpString, sizeof(af.af_arg));
     (*env)->ReleaseStringUTFChars(env, afArg, tmpString);
 
     netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af));
