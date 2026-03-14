@@ -620,7 +620,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 #ifdef IP_RECVORIGDSTADDR
     int readLocalAddr = 0;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
-            &readLocalAddr, sizeof(readLocalAddr)) < 0) {
+            &readLocalAddr, sizeof(readLocalAddr)) != -1 && readLocalAddr != 0) {
         cntrlbuf = malloc(sizeof(char) * storageSize * len);
     }
 #endif // IP_RECVORIGDSTADDR
