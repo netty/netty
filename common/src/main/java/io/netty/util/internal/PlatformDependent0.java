@@ -435,29 +435,22 @@ final class PlatformDependent0 {
         } else {
             ABSOLUTE_PUT_ARRAY = null;
         }
+        MethodHandle handle = null;
         if (javaVersion() >= 22) {
-            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = (MethodHandle) AccessController.doPrivileged(
-                    new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        // We're recreating the following code snippet:
-                        // (long) MemorySegment.ofBuffer((Buffer) arg1).address();
-                        Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
-                        MethodType ofBufferType = methodType(memsegCls, Buffer.class);
-                        MethodType addressType = methodType(long.class);
-                        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-                        MethodHandle ofBuffer = lookup.findStatic(memsegCls, "ofBuffer", ofBufferType);
-                        MethodHandle address = lookup.findVirtual(memsegCls, "address", addressType);
-                        return MethodHandles.filterArguments(address, 0, ofBuffer);
-                    } catch (Throwable e) {
-                        return null;
-                    }
-                }
-            });
-        } else {
-            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = null;
+            try {
+                // We're recreating the following code snippet:
+                // (long) MemorySegment.ofBuffer((Buffer) arg1).address();
+                Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
+                MethodType ofBufferType = methodType(memsegCls, Buffer.class);
+                MethodType addressType = methodType(long.class);
+                MethodHandle ofBuffer = lookup.findStatic(memsegCls, "ofBuffer", ofBufferType);
+                MethodHandle address = lookup.findVirtual(memsegCls, "address", addressType);
+                handle = MethodHandles.filterArguments(address, 0, ofBuffer);
+            } catch (Throwable ignore) {
+                // ignore
+            }
         }
+        MEMORY_SEGMENT_ADDRESS_OF_BUFFER = handle;
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
