@@ -68,6 +68,7 @@ import org.apache.directory.server.dns.store.DnsAttribute;
 import org.apache.directory.server.dns.store.RecordStore;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -3492,8 +3493,8 @@ public class DnsNameResolverTest {
                 serverSocket.close();
                 if (i == 10) {
                     // We tried 10 times without success
-                    throw new IllegalStateException(
-                            "Unable to bind TestDnsServer and ServerSocket to the same address", e);
+                    Assumptions.abort("Unable to bind TestDnsServer and ServerSocket to the same address: " +
+                            e.getMessage());
                 }
                 // We could not start the DnsServer which is most likely because the localAddress was already used,
                 // let's retry
