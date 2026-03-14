@@ -484,8 +484,6 @@ final class PoolThreadCache {
         @Override
         protected void finalize() throws Throwable {
             try {
-                super.finalize();
-            } finally {
                 PoolThreadCache cache = this.cache;
                 // this can race with a non-finalizer thread calling free: regardless who wins, the cache will be
                 // null out
@@ -493,6 +491,8 @@ final class PoolThreadCache {
                 if (cache != null) {
                     cache.free(true);
                 }
+            } finally {
+                super.finalize();
             }
         }
     }

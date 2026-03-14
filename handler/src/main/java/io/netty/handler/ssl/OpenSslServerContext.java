@@ -21,6 +21,7 @@ import java.io.File;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.KeyManager;
@@ -30,6 +31,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 import static io.netty.handler.ssl.ReferenceCountedOpenSslServerContext.newSessionContext;
+import static io.netty.util.internal.EmptyArrays.EMPTY_MAP_ENTRY;
 
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -324,7 +326,7 @@ public final class OpenSslServerContext extends OpenSslContext {
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter,
                 apn, sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false, false, KeyStore.getDefaultType(),
-                null);
+                null, EMPTY_MAP_ENTRY, null);
     }
 
     OpenSslServerContext(
@@ -337,7 +339,7 @@ public final class OpenSslServerContext extends OpenSslContext {
             throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options);
+                enableOcsp, keyStore, resumptionController, options, null);
     }
 
     @SuppressWarnings("deprecation")
@@ -347,10 +349,11 @@ public final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options)
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, null, resumptionController, options);
+                clientAuth, protocols, startTls, enableOcsp, null, resumptionController, options, credentials);
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;

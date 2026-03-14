@@ -142,8 +142,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         }
 
         HttpHeaders reqHeaders = req.headers();
-        if (!reqHeaders.contains(HttpHeaderNames.CONNECTION) ||
-            !reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+        if (!reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
             throw new WebSocketServerHandshakeException(
                     "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
         }

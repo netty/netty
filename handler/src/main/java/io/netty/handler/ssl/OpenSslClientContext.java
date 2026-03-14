@@ -31,6 +31,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 import static io.netty.handler.ssl.ReferenceCountedOpenSslClientContext.newSessionContext;
+import static io.netty.util.internal.EmptyArrays.EMPTY_MAP_ENTRY;
 
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -180,7 +181,7 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, KeyStore.getDefaultType(), null, null, null);
+                sessionTimeout, false, KeyStore.getDefaultType(), null, null, null, EMPTY_MAP_ENTRY, null);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -190,10 +191,11 @@ public final class OpenSslClientContext extends OpenSslContext {
                          long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
                          String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
                          ResumptionController resumptionController,
-                         Map.Entry<SslContextOption<?>, Object>... options)
+                         Map.Entry<SslContextOption<?>, Object>[] options,
+                         List<OpenSslCredential> credentials)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
-                endpointIdentificationAlgorithm, enableOcsp, serverNames, resumptionController, options);
+                endpointIdentificationAlgorithm, enableOcsp, serverNames, resumptionController, options, credentials);
         boolean success = false;
         boolean supportJdkSignatureFallback = isJdkSignatureFallbackEnabled(options);
         try {

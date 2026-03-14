@@ -127,7 +127,7 @@ public class Http3FrameCodecTest {
                         Http3RequestStreamDecodeStateValidator decStateValidator =
                                 new Http3RequestStreamDecodeStateValidator();
                         ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder,
-                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator));
+                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator, (id, v) -> false));
                         ch.pipeline().addLast(encStateValidator);
                         ch.pipeline().addLast(decStateValidator);
                     }

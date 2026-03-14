@@ -270,6 +270,92 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testSingleTrailingHeader() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String request = "POST / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "5\r\n" +
+                "hello\r\n" +
+                "0\r\n" +
+                "X-Checksum: abc123\r\n" +
+                "\r\n";
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertFalse(req.decoderResult().isFailure());
+        HttpContent body = channel.readInbound();
+        body.release();
+        LastHttpContent last = channel.readInbound();
+        assertFalse(last.decoderResult().isFailure());
+        assertEquals("abc123", last.trailingHeaders().get(of("X-Checksum")));
+        last.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMultiLineTrailingHeader() {
+        // Regression: folded trailer values previously threw UnsupportedOperationException
+        // because trailingHeaders().getAll() returns an AbstractList that does not implement set().
+        // Note: obs-fold in trailers is permitted as trailers are field-lines per
+        // https://www.rfc-editor.org/rfc/rfc9112#section-5.2
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String request = "POST / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "5\r\n" +
+                "hello\r\n" +
+                "0\r\n" +
+                "X-Long: part1\r\n" +
+                "        part2\r\n" +
+                "\t\t\t  part3\r\n" +
+                "X-Short: value\r\n" +
+                "\r\n";
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertFalse(req.decoderResult().isFailure());
+        HttpContent body = channel.readInbound();
+        body.release();
+        LastHttpContent last = channel.readInbound();
+        assertFalse(last.decoderResult().isFailure());
+        assertEquals("part1 part2 part3", last.trailingHeaders().get(of("X-Long")));
+        assertEquals("value", last.trailingHeaders().get(of("X-Short")));
+        last.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testForbiddenTrailingHeadersAreDropped() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String request = "POST / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "5\r\n" +
+                "hello\r\n" +
+                "0\r\n" +
+                HttpHeaderNames.CONTENT_LENGTH + ": 5\r\n" +
+                HttpHeaderNames.TRANSFER_ENCODING + ": chunked\r\n" +
+                "X-Custom: keep\r\n" +
+                HttpHeaderNames.TRAILER + ": X-Checksum\r\n" + // covering post-loop flush path
+                "\r\n";
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertFalse(req.decoderResult().isFailure());
+        HttpContent body = channel.readInbound();
+        body.release();
+        LastHttpContent last = channel.readInbound();
+        assertFalse(last.decoderResult().isFailure());
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.CONTENT_LENGTH));
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.TRANSFER_ENCODING));
+        assertNull(last.trailingHeaders().get(HttpHeaderNames.TRAILER));
+        assertEquals("keep", last.trailingHeaders().get(of("X-Custom")));
+        last.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void test100Continue() {
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         EmbeddedChannel channel = new EmbeddedChannel(decoder);

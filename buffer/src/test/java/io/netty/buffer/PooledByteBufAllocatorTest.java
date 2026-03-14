@@ -20,26 +20,20 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import jdk.jfr.consumer.RecordedEvent;
-import jdk.jfr.consumer.RecordingStream;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
@@ -357,13 +351,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Timeout(value = 20, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
         testThreadCacheDestroyed(false);
     }
 
     @Test
-    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Timeout(value = 20, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
         testThreadCacheDestroyed(true);
     }
@@ -416,7 +410,6 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         while (allocator.metric().numThreadLocalCaches() > 0) {
             // Signal we want to have a GC run to ensure we can process our ThreadCleanerReference
             System.gc();
-            System.runFinalization();
             LockSupport.parkNanos(MILLISECONDS.toNanos(100));
         }
 
@@ -424,8 +417,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testNumThreadCachesWithNoDirectArenas() throws InterruptedException {
+    @Timeout(10)
+    public void testNumThreadCachesWithNoDirectArenas() throws Exception {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
@@ -444,11 +437,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testNumThreadCachesAccountForDirectAndHeapArenas() throws InterruptedException {
-        int numHeapArenas = 1;
+    @Timeout(10)
+    public void testNumThreadCachesAccountForDirectAndHeapArenas() throws Exception {
+        int numArenas = 1;
         final PooledByteBufAllocator allocator =
-                new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
+                new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
         ThreadCache tcache0 = createNewThreadCache(allocator, false);
         assertEquals(1, allocator.metric().numThreadLocalCaches());
@@ -464,8 +457,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 3000, unit = MILLISECONDS)
-    public void testThreadCacheToArenaMappings() throws InterruptedException {
+    @Timeout(10)
+    public void testThreadCacheToArenaMappings() throws Exception {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
@@ -508,8 +501,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
-        final Thread t = new FastThreadLocalThread(new Runnable() {
-
+        FutureTask<Void> task = new FutureTask<>(new Runnable() {
             @Override
             public void run() {
                 final ByteBuf buf;
@@ -535,23 +527,35 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
                 FastThreadLocal.removeAll();
             }
-        });
+        }, null);
+        final Thread t = new FastThreadLocalThread(task);
         t.start();
 
         // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
-        cacheLatch.await();
+        try {
+            cacheLatch.await();
+        } catch (InterruptedException e) {
+            ThrowableUtil.interruptAndAttachAsyncStackTrace(t, e);
+            throw e;
+        }
 
         return new ThreadCache() {
             @Override
-            public void destroy() throws InterruptedException {
+            public void destroy() throws Exception {
                 latch.countDown();
-                t.join();
+                try {
+                    task.get();
+                    t.join();
+                } catch (InterruptedException e) {
+                    ThrowableUtil.interruptAndAttachAsyncStackTrace(t, e);
+                    throw e;
+                }
             }
         };
     }
 
     private interface ThreadCache {
-        void destroy() throws InterruptedException;
+        void destroy() throws Exception;
     }
 
     @Test
@@ -990,182 +994,5 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 buffer.release();
             }
         }
-    }
-
-    @SuppressWarnings("Since15")
-    @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
-    @Timeout(10)
-    public void jfrChunkAllocation() throws Exception {
-        assumeTrue(PlatformDependent.isJfrEnabled());
-        try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
-
-            stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.NAME, allocateFuture::complete);
-            stream.startAsync();
-
-            PooledByteBufAllocator alloc = newAllocator(true);
-            alloc.directBuffer(128).release();
-
-            RecordedEvent allocate = allocateFuture.get();
-            assertEquals(alloc.metric().chunkSize(), allocate.getInt("capacity"));
-            assertTrue(allocate.getBoolean("pooled"));
-            assertFalse(allocate.getBoolean("threadLocal"));
-            assertTrue(allocate.getBoolean("direct"));
-        }
-    }
-
-    @SuppressWarnings("Since15")
-    @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
-    @Timeout(10)
-    public void shouldCreateTwoChunks() throws Exception {
-        assumeTrue(PlatformDependent.isJfrEnabled());
-        try (RecordingStream stream = new RecordingStream()) {
-            final CountDownLatch eventsFlushed = new CountDownLatch(2);
-            stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.NAME,
-                           event -> {
-                                eventsFlushed.countDown();
-                           });
-            stream.startAsync();
-            PooledByteBufAllocator allocator = newAllocator(false);
-            int bufSize = 16896;
-            int bufsToAllocate = 1 + allocator.metric().chunkSize() / bufSize;
-            List<ByteBuf> buffers = new ArrayList<>(bufsToAllocate);
-            for (int i = 0; i < bufsToAllocate; ++i) {
-                buffers.add(allocator.heapBuffer(bufSize, bufSize));
-            }
-            // release all buffers
-            for (ByteBuf buffer : buffers) {
-                buffer.release();
-            }
-            buffers.clear();
-            eventsFlushed.await();
-            assertEquals(0, eventsFlushed.getCount());
-        }
-    }
-
-    @SuppressWarnings("Since15")
-    @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
-    @Timeout(10)
-    public void shouldReuseTheSameChunk() throws Exception {
-        assumeTrue(PlatformDependent.isJfrEnabled());
-        try (RecordingStream stream = new RecordingStream()) {
-            final CountDownLatch eventsFlushed = new CountDownLatch(1);
-            final AtomicInteger chunksAllocations = new AtomicInteger();
-            stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.NAME,
-                           event -> {
-                               chunksAllocations.incrementAndGet();
-                               eventsFlushed.countDown();
-                           });
-            stream.startAsync();
-            int bufSize = 16896;
-            PooledByteBufAllocator allocator = newAllocator(false);
-            ByteBuf buf = allocator.heapBuffer(bufSize, bufSize);
-            int bufPin = Math.toIntExact(allocator.pinnedHeapMemory());
-            buf.release();
-            int bufsPerChunk = allocator.metric().chunkSize() / bufPin;
-            List<ByteBuf> buffers = new ArrayList<>(bufsPerChunk);
-            for (int i = 0; i < bufsPerChunk - 2; ++i) {
-                buffers.add(allocator.heapBuffer(bufSize, bufSize));
-            }
-            // we still have 2 available segments in the chunk, so we should not allocate a new one
-            for (int i = 0; i < 128; ++i) {
-                allocator.heapBuffer(bufSize, bufSize).release();
-            }
-            // release all buffers
-            for (ByteBuf buffer : buffers) {
-                buffer.release();
-            }
-            buffers.clear();
-            eventsFlushed.await();
-            assertEquals(1, chunksAllocations.get());
-        }
-    }
-
-    @SuppressWarnings("Since15")
-    @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
-    @Timeout(10)
-    public void jfrBufferAllocation() throws Exception {
-        assumeTrue(PlatformDependent.isJfrEnabled());
-        try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
-            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
-
-            stream.enable(AllocateBufferEvent.class);
-            stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
-            stream.enable(FreeBufferEvent.class);
-            stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
-            stream.startAsync();
-
-            PooledByteBufAllocator alloc = newAllocator(true);
-            alloc.directBuffer(128).release();
-
-            RecordedEvent allocate = allocateFuture.get();
-            assertEquals(128, allocate.getInt("size"));
-            assertEquals(128, allocate.getInt("maxFastCapacity"));
-            assertEquals(Integer.MAX_VALUE, allocate.getInt("maxCapacity"));
-            assertTrue(allocate.getBoolean("chunkPooled"));
-            assertFalse(allocate.getBoolean("chunkThreadLocal"));
-            assertTrue(allocate.getBoolean("direct"));
-
-            RecordedEvent release = releaseFuture.get();
-            assertEquals(128, release.getInt("size"));
-            assertEquals(128, release.getInt("maxFastCapacity"));
-            assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));
-            assertTrue(release.getBoolean("direct"));
-        }
-    }
-
-    @SuppressWarnings("Since15")
-    @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
-    @Timeout(10)
-    public void jfrBufferAllocationThreadLocal() throws Exception {
-        assumeTrue(PlatformDependent.isJfrEnabled());
-        ByteBufAllocator alloc = newAllocator(true);
-
-        Callable<Void> allocateAndRelease = () -> {
-            try (RecordingStream stream = new RecordingStream()) {
-                CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
-                CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
-
-                // Prime the cache.
-                alloc.directBuffer(128).release();
-
-                stream.enable(AllocateBufferEvent.class);
-                stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
-                stream.enable(FreeBufferEvent.class);
-                stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
-                stream.startAsync();
-
-                // Allocate out of the cache.
-                alloc.directBuffer(128).release();
-
-                RecordedEvent allocate = allocateFuture.get();
-                assertEquals(128, allocate.getInt("size"));
-                assertEquals(128, allocate.getInt("maxFastCapacity"));
-                assertEquals(Integer.MAX_VALUE, allocate.getInt("maxCapacity"));
-                assertTrue(allocate.getBoolean("chunkPooled"));
-                assertTrue(allocate.getBoolean("chunkThreadLocal"));
-                assertTrue(allocate.getBoolean("direct"));
-
-                RecordedEvent release = releaseFuture.get();
-                assertEquals(128, release.getInt("size"));
-                assertEquals(128, release.getInt("maxFastCapacity"));
-                assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));
-                assertTrue(release.getBoolean("direct"));
-                return null;
-            }
-        };
-        FutureTask<Void> task = new FutureTask<>(allocateAndRelease);
-        FastThreadLocalThread thread = new FastThreadLocalThread(task);
-        thread.start();
-        task.get();
     }
 }

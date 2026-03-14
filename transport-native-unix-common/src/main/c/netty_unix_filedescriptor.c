@@ -97,6 +97,9 @@ static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) 
 
 static jint netty_unix_filedescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
+    if (f_path == NULL) {
+        return -ENOMEM;
+    }
 
     int res = open(f_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     (*env)->ReleaseStringUTFChars(env, path, f_path);

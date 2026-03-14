@@ -74,13 +74,6 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
-
     private final Runnable finishReadTask = new Runnable() {
         @Override
         public void run() {
@@ -478,6 +471,8 @@ public class LocalChannel extends AbstractChannel {
 
     private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
 
+        private final Runnable shutdownHook = this::closeNow;
+
         @Override
         public void close() {
             close(voidPromise());
@@ -521,13 +516,18 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            }
         }
 
         @Override
         public void unregistered() {
-            // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            EventLoop loop = eventLoop();
+            if (!(loop instanceof IoEventLoop) && loop instanceof SingleThreadEventExecutor) {
+                ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            }
         }
 
         @Override

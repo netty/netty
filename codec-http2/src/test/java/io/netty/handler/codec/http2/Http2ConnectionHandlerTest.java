@@ -81,7 +81,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -306,9 +306,11 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(false);
         when(channel.isActive()).thenReturn(false);
         handler = newHandler();
+        verify(ctx, never()).flush();
         when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
         verify(ctx).write(eq(connectionPrefaceBuf()));
+        verify(ctx).flush();
     }
 
     @Test
@@ -316,9 +318,29 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         when(channel.isActive()).thenReturn(false);
         handler = newHandler();
+        verify(ctx, never()).flush();
         when(channel.isActive()).thenReturn(true);
         handler.channelActive(ctx);
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
+        verify(ctx).flush();
+    }
+
+    @Test
+    public void clientShouldSendClientPrefaceStringWhenAddedAfterActive() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        when(channel.isActive()).thenReturn(true);
+        handler = newHandler();
+        verify(ctx).write(eq(connectionPrefaceBuf()));
+        verify(ctx).flush();
+    }
+
+    @Test
+    public void serverShouldNotSendClientPrefaceStringWhenAddedAfterActive() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        when(channel.isActive()).thenReturn(true);
+        handler = newHandler();
+        verify(ctx, never()).write(eq(connectionPrefaceBuf()));
+        verify(ctx).flush();
     }
 
     @Test
@@ -733,7 +755,8 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void channelReadCompleteTriggersFlush() throws Exception {
-        handler = newHandler();
+        // Create the handler in a way that it will flush the preface by itself
+        handler = newHandler(false);
         handler.channelReadComplete(ctx);
         verify(ctx, times(1)).flush();
     }
@@ -765,7 +788,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         when(channel.isActive()).thenReturn(true);
         handler.close(ctx, promise);
-        verifyZeroInteractions(frameWriter);
+        verifyNoInteractions(frameWriter);
     }
 
     @Test

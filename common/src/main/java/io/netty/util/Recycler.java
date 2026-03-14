@@ -305,8 +305,7 @@ public abstract class Recycler<T> {
         if (localPool != null) {
             return localPool.getWith(this);
         } else {
-            if (PlatformDependent.isVirtualThread(Thread.currentThread()) &&
-                !FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
+            if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
                 return newObject((Handle<T>) NOOP_HANDLE);
             }
             return threadLocalPool.get().getWith(this);
@@ -345,8 +344,7 @@ public abstract class Recycler<T> {
         if (localPool != null) {
             return localPool.size();
         } else {
-            if (PlatformDependent.isVirtualThread(Thread.currentThread()) &&
-                !FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
+            if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
                 return 0;
             }
             final LocalPool<?, T> pool = threadLocalPool.getIfExists();
@@ -548,7 +546,7 @@ public abstract class Recycler<T> {
         }
 
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
-            this(!BATCH_FAST_TL_ONLY || FastThreadLocalThread.currentThreadHasFastThreadLocal()
+            this(!BATCH_FAST_TL_ONLY || FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()
                          ? Thread.currentThread() : null, maxCapacity, ratioInterval, chunkSize);
         }
 

@@ -61,11 +61,13 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
                                          boolean enableOcsp, String keyStore, String endpointIdentificationAlgorithm,
-                                         List<SNIServerName> serverNames, ResumptionController resumptionController,
-                                         Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+                                         List<SNIServerName> serverNames,
+                                         ResumptionController resumptionController,
+                                         Map.Entry<SslContextOption<?>, Object>[] options,
+                                         List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
               ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
-                serverNames, resumptionController, options);
+                serverNames, resumptionController, options, credentials);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
