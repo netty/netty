@@ -53,6 +53,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        this(alloc, initialCapacity, maxCapacity, false);
+    }
+
+    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity, boolean permitExpensiveClean) {
         super(maxCapacity);
         ObjectUtil.checkNotNull(alloc, "alloc");
         checkPositiveOrZero(initialCapacity, "initialCapacity");
@@ -63,7 +67,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = alloc;
-        setByteBuffer(allocateDirectBuffer(initialCapacity), false);
+        setByteBuffer(allocateDirectBuffer(initialCapacity, permitExpensiveClean), false);
     }
 
     /**
@@ -118,7 +122,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
-        return PlatformDependent.allocateDirect(capacity);
+        return PlatformDependent.allocateDirect(capacity, false);
+    }
+
+    CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean permitExpensiveClean) {
+        return PlatformDependent.allocateDirect(capacity, permitExpensiveClean);
     }
 
     void setByteBuffer(CleanableDirectBuffer cleanableDirectBuffer, boolean tryFree) {

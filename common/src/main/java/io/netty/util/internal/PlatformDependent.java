@@ -126,6 +126,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+    private static final boolean IGNORE_EXPENSIVE_CLEAN =
+            SystemPropertyUtil.getBoolean("io.netty.ignoreExpensiveClean", false);
 
     private static final boolean JFR;
     private static final boolean VAR_HANDLE;
@@ -145,12 +147,27 @@ public final class PlatformDependent {
                 public void clean() {
                     // NOOP
                 }
+
+                @Override
+                public boolean hasMemoryAddress() {
+                    return hasDirectByteBufferAddress(byteBuffer);
+                }
+
+                @Override
+                public long memoryAddress() {
+                    return directBufferAddress(byteBuffer);
+                }
             };
         }
 
         @Override
         public void freeDirectBuffer(ByteBuffer buffer) {
             // NOOP
+        }
+
+        @Override
+        public boolean hasExpensiveClean() {
+            return false;
         }
     };
 
@@ -588,6 +605,22 @@ public final class PlatformDependent {
      * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
      */
     public static CleanableDirectBuffer allocateDirect(int capacity) {
+        return allocateDirect(capacity, false);
+    }
+
+    /**
+     * Allocate a direct {@link ByteBuffer} of the given capacity, and return it alongside its deallocation mechanism.
+     * @param capacity The desired capacity of the direct byte buffer.
+     * @param permitExpensiveClean Whether to allow expensive clean operations or not. If expensive clean operations
+     * are not permitted ({@code false}), then the buffer cleaning may instead be delegated to the GC and reference
+     * processing. Pooling allocators would typically permit expensive clean operations, while unpooled buffers
+     * would not.
+     * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
+     */
+    public static CleanableDirectBuffer allocateDirect(int capacity, boolean permitExpensiveClean) {
+        if (!IGNORE_EXPENSIVE_CLEAN && !permitExpensiveClean && CLEANER.hasExpensiveClean()) {
+            return NOOP.allocate(capacity);
+        }
         return CLEANER.allocate(capacity);
     }
 
@@ -604,6 +637,21 @@ public final class PlatformDependent {
         LEGACY_CLEANER.freeDirectBuffer(buffer);
     }
 
+    /**
+     * Check if it is possible to call {@link #directBufferAddress(ByteBuffer)} on the given buffer.
+     * @param buffer The specific buffer instance to check for.
+     * @return {@code true} if {@link #directBufferAddress(ByteBuffer)} can be called on the given buffer,
+     * otherwise {@code false}.
+     */
+    public static boolean hasDirectByteBufferAddress(ByteBuffer buffer) {
+        return PlatformDependent0.hasDirectByteBufferAdderss(buffer);
+    }
+
+    /**
+     * Obtain the native memory address of the given direct byte buffer, or throw an exception if it's not possible.
+     * @param buffer The buffer to get the native memory address for.
+     * @return The native memory address of the give buffer.
+     */
     public static long directBufferAddress(ByteBuffer buffer) {
         return PlatformDependent0.directBufferAddress(buffer);
     }

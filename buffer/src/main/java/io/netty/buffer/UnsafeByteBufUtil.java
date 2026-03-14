@@ -719,14 +719,21 @@ final class UnsafeByteBufUtil {
         return toZero;
     }
 
-    static UnpooledUnsafeDirectByteBuf newUnsafeDirectByteBuf(
-            ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-        if (PlatformDependent.useDirectBufferNoCleaner()) {
-            return new UnpooledUnsafeNoCleanerDirectByteBuf(
-                    alloc, initialCapacity, maxCapacity);
+    /**
+     * Allocates direct buffers for chunks used in the pooling allocators.
+     * @param alloc The allocator we're creating a chunk for.
+     * @param initialCapacity The initial capacity.
+     * @param maxCapacity The max capacity.
+     * @return The {@link UnpooledDirectByteBuf} with the chunk memory.
+     */
+    static UnpooledDirectByteBuf newDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        if (PlatformDependent.hasUnsafe()) {
+            if (PlatformDependent.useDirectBufferNoCleaner()) {
+                return new UnpooledUnsafeNoCleanerDirectByteBuf(alloc, initialCapacity, maxCapacity);
+            }
+            return new UnpooledUnsafeDirectByteBuf(alloc, initialCapacity, maxCapacity, true);
         }
-        return new UnpooledUnsafeDirectByteBuf(
-                alloc, initialCapacity, maxCapacity);
+        return new UnpooledDirectByteBuf(alloc, initialCapacity, maxCapacity, true);
     }
 
     private UnsafeByteBufUtil() { }

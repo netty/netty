@@ -28,6 +28,11 @@ final class DirectCleaner implements Cleaner {
         PlatformDependent.freeDirectNoCleaner(buffer);
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     CleanableDirectBuffer reallocate(CleanableDirectBuffer buffer, int capacity) {
         ByteBuffer newByteBuffer = PlatformDependent.reallocateDirectNoCleaner(buffer.buffer(), capacity);
         return new CleanableDirectBufferImpl(newByteBuffer);

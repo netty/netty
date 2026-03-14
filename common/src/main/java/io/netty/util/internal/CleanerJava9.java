@@ -79,6 +79,11 @@ final class CleanerJava9 implements Cleaner {
         freeDirectBufferStatic(buffer);
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     private static void freeDirectBufferStatic(ByteBuffer buffer) {
         try {
             INVOKE_CLEANER.invokeExact(buffer);

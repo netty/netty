@@ -203,6 +203,11 @@ public class CleanerJava24Linker implements Cleaner {
         throw new UnsupportedOperationException("Cannot clean arbitrary ByteBuffer instances");
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     static long malloc(int capacity) {
         final long addr;
         try {
