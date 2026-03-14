@@ -487,6 +487,11 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
     for (i = 0; i < len; i++) {
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        if (packet == NULL) {
+            // This should never happen but just handle it and return early. This way if GetObjectArrayElement(...)
+            // did put an exception on the stack we will see it and not crash.
+            return -1;
+        }
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetRecipientAddrFieldId);
         jint addrLen = (*env)->GetIntField(env, packet, packetRecipientAddrLenFieldId);
         jint packetSegmentSize = (*env)->GetIntField(env, packet, packetSegmentSizeFieldId);
@@ -624,6 +629,11 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
     for (i = 0; i < len; i++) {
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        if (packet == NULL) {
+            // This should never happen but just handle it and return early. This way if GetObjectArrayElement(...)
+            // did put an exception on the stack we will see it and not crash.
+            return -1;
+        }
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
 
