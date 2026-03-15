@@ -175,7 +175,7 @@ final class AdaptivePoolingAllocator {
         for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
             int sizeClass = SIZE_CLASSES[i];
             //noinspection ConstantValue
-            assert (sizeClass & 5) == 0 : "Size class must be a multiple of 32";
+            assert (sizeClass & 31) == 0 : "Size class must be a multiple of 32";
             int sizeIndex = sizeIndexOf(sizeClass);
             Arrays.fill(SIZE_INDEXES, lastIndex + 1, sizeIndex + 1, (byte) i);
             lastIndex = sizeIndex;
