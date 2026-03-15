@@ -179,7 +179,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
             return;
         }
 
-        final boolean directAllocation = params.getBenchmark().contains("Direct");
+        final boolean directAllocation = params.getBenchmark().contains("direct");
 
         int perThreadIterations = pollutionIterations / 2;
 
