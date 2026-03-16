@@ -38,8 +38,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
 import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
 
 /**
- * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link SocketChannel} implementation that uses linux EPOLL.
  */
 public final class EpollSocketChannel extends AbstractEpollStreamChannel implements SocketChannel {
 

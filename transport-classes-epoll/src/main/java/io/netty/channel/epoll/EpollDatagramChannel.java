@@ -55,8 +55,7 @@ import java.nio.channels.UnresolvedAddressException;
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 
 /**
- * {@link DatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link DatagramChannel} implementation that uses linux EPOLL.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
