@@ -45,8 +45,7 @@ import static io.netty.channel.unix.NativeInetAddress.address;
 import static io.netty.channel.unix.Socket.isIPv6Preferred;
 
 /**
- * {@link ServerSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link ServerSocketChannel} implementation that uses linux EPOLL.
  */
 public final class EpollServerSocketChannel extends AbstractEpollChannel implements ServerSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
