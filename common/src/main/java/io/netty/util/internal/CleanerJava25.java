@@ -183,6 +183,13 @@ final class CleanerJava25 implements Cleaner {
         throw new UnsupportedOperationException("Cannot clean arbitrary ByteBuffer instances");
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        // Closing shared arenas can be fairly expensive if we do it a lot,
+        // because it relies on inter-thread handshakes.
+        return true;
+    }
+
     private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {
         private final AutoCloseable closeable;
         private final ByteBuffer buffer;
