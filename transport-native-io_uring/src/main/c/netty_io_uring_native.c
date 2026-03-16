@@ -883,14 +883,14 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
             statically_referenced_fixed_method_table_size) != 0) {
         goto done;
     }
-    nativeRegistered = 1;
+    staticallyRegistered = 1;
 
     if (netty_jni_util_register_natives(env, packagePrefix,
                                        NATIVE_CLASSNAME,
                                        method_table, method_table_size) != 0) {
         goto done;
     }
-    staticallyRegistered = 1;
+    nativeRegistered = 1;
 
     if (netty_io_uring_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
@@ -921,11 +921,11 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
-        if (nativeRegistered == 1) {
-            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
-        }
         if (staticallyRegistered == 1) {
             netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+        }
+        if (nativeRegistered == 1) {
+            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
         }
         if (linuxsocketOnLoadCalled == 1) {
             netty_io_uring_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
