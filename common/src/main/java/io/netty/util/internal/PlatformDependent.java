@@ -244,6 +244,8 @@ public final class PlatformDependent {
             logger.debug("-Dio.netty.noPreferDirect: {}", EXPLICIT_NO_PREFER_DIRECT);
         }
 
+        logger.debug("-Dio.netty.ignoreExpensiveClean: {}", IGNORE_EXPENSIVE_CLEAN);
+
         /*
          * We do not want to log this message if unsafe is explicitly disabled. Do not remove the explicit no unsafe
          * guard.
