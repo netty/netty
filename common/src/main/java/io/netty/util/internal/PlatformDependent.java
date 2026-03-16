@@ -653,7 +653,7 @@ public final class PlatformDependent {
      * otherwise {@code false}.
      */
     public static boolean hasDirectByteBufferAddress(ByteBuffer buffer) {
-        return PlatformDependent0.hasDirectByteBufferAdderss(buffer);
+        return PlatformDependent0.hasDirectByteBufferAddress(buffer);
     }
 
     /**
