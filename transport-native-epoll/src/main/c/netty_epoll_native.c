@@ -638,7 +638,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
 
         msg[i].msg_hdr.msg_name = addr + i;
-        msg[i].msg_hdr.msg_namelen = (socklen_t) addrSize;
+        msg[i].msg_hdr.msg_namelen = (socklen_t) storageSize;
 
         if (cntrlbuf != NULL) {
             msg[i].msg_hdr.msg_control =  cntrlbuf + i * storageSize;
