@@ -94,7 +94,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             ctx.close(handler);
         } else {
             if (closeSent == null) {
-                write(ctx, new CloseWebSocketFrame(closeStatus), CompletionHandler.ignore());
+                write(ctx, new CloseWebSocketFrame(closeStatus, ctx.alloc()), CompletionHandler.ignore());
             }
             flush(ctx);
             applyCloseSentTimeout(ctx);
