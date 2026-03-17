@@ -1206,6 +1206,9 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
     }
 
     alpn_data* data = SSL_CTX_get_ex_data(ssl_ctx, alpn_data_idx);
+    if (data != NULL) {
+        OPENSSL_free(data->proto_data);
+    }
     OPENSSL_free(data);
 
     jobject sessionTicketCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, sessionTicketCallbackIdx);
