@@ -16,7 +16,9 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -41,6 +43,17 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public CloseWebSocketFrame(WebSocketCloseStatus status) {
         this(requireValidStatusCode(status.code()), status.reasonText());
+    }
+
+    /**
+     * Creates a new empty close frame with closing status code and reason text, using the provided ByteBuf allocator.
+     *
+     * @param status
+     *            Status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            example, <tt>1000</tt> indicates normal closure.
+     */
+    public CloseWebSocketFrame(WebSocketCloseStatus status, ByteBufAllocator allocator) {
+        this(true, 0, allocator, requireValidStatusCode(status.code()), status.reasonText());
     }
 
     /**
@@ -95,15 +108,35 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        super(finalFragment, rsv, newBinaryData(requireValidStatusCode(statusCode), reasonText));
+        this(finalFragment, rsv, UnpooledByteBufAllocator.DEFAULT, statusCode, reasonText);
     }
 
-    private static ByteBuf newBinaryData(int statusCode, String reasonText) {
+    /**
+     * Creates a new close frame with closing status code and reason text
+     *
+     * @param finalFragment
+     *            flag indicating if this frame is the final fragment
+     * @param rsv
+     *            reserved bits used for protocol extensions
+     * @param allocator
+     *            the ByteBuf allocator to use to build the binary data.
+     * @param statusCode
+     *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            example, <tt>1000</tt> indicates normal closure.
+     * @param reasonText
+     *            Reason text. Set to null if no text.
+     */
+    public CloseWebSocketFrame(boolean finalFragment, int rsv, ByteBufAllocator allocator,
+                               int statusCode, String reasonText) {
+        super(finalFragment, rsv, newBinaryData(allocator, requireValidStatusCode(statusCode), reasonText));
+    }
+
+    private static ByteBuf newBinaryData(ByteBufAllocator allocator, int statusCode, String reasonText) {
         if (reasonText == null) {
             reasonText = StringUtil.EMPTY_STRING;
         }
 
-        ByteBuf binaryData = Unpooled.buffer(2 + reasonText.length());
+        ByteBuf binaryData = allocator.buffer(2 + reasonText.length());
         binaryData.writeShort(statusCode);
         if (!reasonText.isEmpty()) {
             binaryData.writeCharSequence(reasonText, CharsetUtil.UTF_8);
