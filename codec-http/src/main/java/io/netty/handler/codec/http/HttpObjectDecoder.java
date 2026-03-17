@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
@@ -168,6 +169,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             throw new InvalidLineSeparatorException();
         }
     };
+
+    /**
+     * TLS record content type for Handshake (ClientHello), as defined in
+     * <a href="https://tools.ietf.org/html/rfc5246#section-6.2.1">RFC 5246, Section 6.2.1</a>.
+     */
+    private static final byte TLS_CONTENT_TYPE_HANDSHAKE = 0x16;
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
@@ -1263,6 +1270,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         private boolean skipControlChars(ByteBuf buffer, int readableBytes, int readerIndex) {
             assert currentState == State.SKIP_CONTROL_CHARS;
+            checkForTlsHandshake(buffer, readerIndex);
             final int maxToSkip = Math.min(maxLength, readableBytes);
             final int firstNonControlIndex = buffer.forEachByte(readerIndex, maxToSkip, SKIP_CONTROL_CHARS_BYTES);
             if (firstNonControlIndex == -1) {
@@ -1304,4 +1312,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static boolean isControlOrWhitespaceAsciiChar(byte b) {
         return ISO_CONTROL_OR_WHITESPACE[128 + b];
     }
+
+    private static void checkForTlsHandshake(final ByteBuf buffer, final int readerIndex) {
+        if (buffer.getByte(readerIndex) == TLS_CONTENT_TYPE_HANDSHAKE) {
+            throw new DecoderException(
+                    "Received a TLS/SSL ClientHello (0x" + Integer.toHexString(TLS_CONTENT_TYPE_HANDSHAKE) + ") while " +
+                            "parsing control chars, this indicates a client attempting to connect via HTTPS on a " +
+                            "plaintext HTTP port");
+        }
+    }
+
+
 }

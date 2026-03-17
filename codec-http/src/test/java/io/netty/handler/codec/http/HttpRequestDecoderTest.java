@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
@@ -487,6 +488,27 @@ public class HttpRequestDecoderTest {
         assertEquals("/some/path", req.uri());
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testTlsClientHelloOnPlaintextConnection() {
+        assertTlsOnPlaintext(new byte[] {0x16, 0x03, 0x01, 0x00, 0x05});
+    }
+
+    @Test
+    public void testTlsClientHelloSingleByteOnPlaintextConnection() {
+        assertTlsOnPlaintext(new byte[] {0x16});
+    }
+
+    private static void assertTlsOnPlaintext(final byte[] input) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(input)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertInstanceOf(DecoderException.class, request.decoderResult().cause());
+        assertThat(request.decoderResult().cause().getMessage())
+                .startsWith("Received a TLS/SSL ClientHello (0x16) while parsing control chars");
+        assertFalse(channel.finish());
     }
 
     @Test

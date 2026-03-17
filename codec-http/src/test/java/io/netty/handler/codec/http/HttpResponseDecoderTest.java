@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
@@ -1287,6 +1288,21 @@ public class HttpResponseDecoderTest {
         assertInstanceOf(IllegalArgumentException.class, response.decoderResult().cause());
         assertTrue(response.decoderResult().isFailure());
         ReferenceCountUtil.release(response);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTlsRecordOnPlaintextConnection() {
+        // this case is very unlikely, but to ensure parity with the request decoder
+        // we keep one regression test in here.
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        byte[] clientHelloStart = {0x16, 0x03, 0x01, 0x00, 0x05};
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(clientHelloStart)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertInstanceOf(DecoderException.class, response.decoderResult().cause());
+        assertThat(response.decoderResult().cause().getMessage())
+                .startsWith("Received a TLS/SSL ClientHello (0x16) while parsing control chars");
         assertFalse(channel.finish());
     }
 }
