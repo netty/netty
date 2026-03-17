@@ -471,8 +471,10 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
 
 static jint netty_create_file(JNIEnv *env, jclass class, jstring filename) {
     const char *file = (*env)->GetStringUTFChars(env, filename, 0);
-
-    int fd =  open(file, O_RDWR | O_TRUNC | O_CREAT, 0644);
+    if (file == NULL) {
+        return -1;
+    }
+    int fd = open(file, O_RDWR | O_TRUNC | O_CREAT, 0644);
     (*env)->ReleaseStringUTFChars(env, filename, file);
     return fd;
 }
