@@ -725,7 +725,8 @@ int BoringSSL_callback_alpn_select_proto(SSL* ssl, const unsigned char **out, un
         }
 
         // increment len and pointers.
-        i += target_proto_len;
+        // +1 accounts for the one-byte length prefix that was consumed above via ++supported_protos.
+        i += target_proto_len + 1;
         supported_protos += target_proto_len;
     }
     return SSL_TLSEXT_ERR_NOACK;
