@@ -63,8 +63,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.util.internal.StringUtil.className;
 
 /**
- * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link SocketChannel} implementation that uses linux EPOLL.
  */
 public final class EpollSocketChannel extends AbstractEpollChannel implements SocketChannel {
 
