@@ -1212,7 +1212,7 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
     OPENSSL_free(data);
 
     jobject sessionTicketCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, sessionTicketCallbackIdx);
-    if (sessionCallbackRef != NULL) {
+    if (sessionTicketCallbackRef != NULL) {
         (*env)->DeleteGlobalRef(env, sessionTicketCallbackRef);
     }
 
