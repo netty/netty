@@ -283,7 +283,10 @@ static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) 
     jintArray array = NULL;
     struct io_uring_probe *probe;
     size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
-    probe = malloc(mallocLen);
+    if ((probe = malloc(mallocLen)) == NULL) {
+        netty_unix_errors_throwOutOfMemoryError(env);
+        goto cleanup;
+    }
     memset(probe, 0, mallocLen);
 
     if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
