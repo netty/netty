@@ -22,7 +22,7 @@ import java.nio.channels.ClosedChannelException;
 /**
  * Cheap {@link ClosedChannelException} that does not fill in the stacktrace.
  */
-final class StacklessClosedChannelException extends ClosedChannelException {
+public final class StacklessClosedChannelException extends ClosedChannelException {
 
     private static final long serialVersionUID = -2214806025529435136L;
 
@@ -37,7 +37,7 @@ final class StacklessClosedChannelException extends ClosedChannelException {
     /**
      * Creates a new {@link StacklessClosedChannelException} which has the origin of the given {@link Class} and method.
      */
-    static StacklessClosedChannelException newInstance(Class<?> clazz, String method) {
+    public static StacklessClosedChannelException newInstance(Class<?> clazz, String method) {
         return ThrowableUtil.unknownStackTrace(new StacklessClosedChannelException(), clazz, method);
     }
 }
