@@ -679,7 +679,7 @@ final class PlatformDependent0 {
         }
     }
 
-    static boolean hasDirectByteBufferAdderss(ByteBuffer buffer) {
+    static boolean hasDirectByteBufferAddress(ByteBuffer buffer) {
         return buffer.isDirect() && (hasUnsafe() || hasMemorySegmentAddressOfBuffer());
     }
 
