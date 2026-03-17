@@ -108,7 +108,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            Reason text. Set to null if no text.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv, int statusCode, String reasonText) {
-        this(finalFragment, rsv, UnpooledByteBufAllocator.DEFAULT, statusCode, reasonText);
+        this(finalFragment, rsv, null, statusCode, reasonText);
     }
 
     /**
@@ -120,6 +120,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            reserved bits used for protocol extensions
      * @param allocator
      *            the ByteBuf allocator to use to build the binary data.
+     *            <code>null</code> indicates to use an unpooled heap buffer.
      * @param statusCode
      *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
      *            example, <tt>1000</tt> indicates normal closure.
@@ -136,7 +137,10 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonText = StringUtil.EMPTY_STRING;
         }
 
-        ByteBuf binaryData = allocator.buffer(2 + reasonText.length());
+        int bufferInitialCapacity = 2 + reasonText.length();
+        ByteBuf binaryData = allocator == null
+                ? Unpooled.buffer(bufferInitialCapacity)
+                : allocator.buffer(bufferInitialCapacity);
         binaryData.writeShort(statusCode);
         if (!reasonText.isEmpty()) {
             binaryData.writeCharSequence(reasonText, CharsetUtil.UTF_8);
