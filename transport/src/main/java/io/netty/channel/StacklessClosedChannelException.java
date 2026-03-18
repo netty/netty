@@ -16,12 +16,14 @@
 package io.netty.channel;
 
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.nio.channels.ClosedChannelException;
 
 /**
  * Cheap {@link ClosedChannelException} that does not fill in the stacktrace.
  */
+@UnstableApi
 public final class StacklessClosedChannelException extends ClosedChannelException {
 
     private static final long serialVersionUID = -2214806025529435136L;
