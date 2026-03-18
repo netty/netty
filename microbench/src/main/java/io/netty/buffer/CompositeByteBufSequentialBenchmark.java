@@ -70,6 +70,8 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
     @Setup
     public void setup() {
         buffer = bufferType.newBuffer(size);
+        // Pre-fill so readByte benchmarks have readable content
+        buffer.writerIndex(buffer.capacity());
     }
 
     @TearDown
@@ -103,6 +105,25 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
             }
         }
         return 1;
+    }
+
+    @Benchmark
+    public int sequentialReadBytes() {
+        buffer.readerIndex(0);
+        int result = 0;
+        for (int i = 0, l = buffer.readableBytes(); i < l; i++) {
+            result += buffer.readByte();
+        }
+        return result;
+    }
+
+    @Benchmark
+    public int sequentialGetBytes() {
+        int result = 0;
+        for (int i = 0, l = buffer.capacity(); i < l; i++) {
+            result += buffer.getByte(i);
+        }
+        return result;
     }
 
     private static ByteBuf newBufferSmallChunks(int length) {
