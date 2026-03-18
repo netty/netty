@@ -68,6 +68,12 @@ final class WebSocketUtil {
         return digest(MD5, data);
     }
 
+    static MessageDigest sha1() {
+        MessageDigest digest = SHA1.get();
+        digest.reset();
+        return digest;
+    }
+
     /**
      * Performs a SHA-1 hash on the specified data
      *
