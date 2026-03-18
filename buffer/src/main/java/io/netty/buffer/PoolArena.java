@@ -764,7 +764,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         private static CleanableDirectBuffer allocateDirect(int capacity) {
-            return PlatformDependent.allocateDirect(capacity);
+            return PlatformDependent.allocateDirect(capacity, true);
         }
 
         @Override

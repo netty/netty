@@ -189,6 +189,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
+        protected CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean permitExpensiveClean) {
+            CleanableDirectBuffer buffer = super.allocateDirectBuffer(capacity, permitExpensiveClean);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
+        }
+
+        @Override
         CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
             int capacity = oldBuffer.buffer().capacity();
             CleanableDirectBuffer buffer = super.reallocateDirect(oldBuffer, initialCapacity);
@@ -205,6 +211,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
             CleanableDirectBuffer buffer = super.allocateDirectBuffer(capacity);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
+        }
+
+        @Override
+        protected CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean permitExpensiveClean) {
+            CleanableDirectBuffer buffer = super.allocateDirectBuffer(capacity, permitExpensiveClean);
             return new DecrementingCleanableDirectBuffer(alloc(), buffer);
         }
 
@@ -228,6 +240,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected CleanableDirectBuffer allocateDirectBuffer(int initialCapacity) {
             CleanableDirectBuffer buffer = super.allocateDirectBuffer(initialCapacity);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
+        }
+
+        @Override
+        protected CleanableDirectBuffer allocateDirectBuffer(int initialCapacity, boolean permitExpensiveClean) {
+            CleanableDirectBuffer buffer = super.allocateDirectBuffer(initialCapacity, permitExpensiveClean);
             return new DecrementingCleanableDirectBuffer(alloc(), buffer);
         }
 

@@ -31,6 +31,11 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
     }
 
     @Override
+    protected CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean ignorePermitExpensiveClean) {
+        return PlatformDependent.allocateDirectBufferNoCleaner(capacity);
+    }
+
+    @Override
     protected ByteBuffer allocateDirect(int initialCapacity) {
         throw new UnsupportedOperationException();
     }

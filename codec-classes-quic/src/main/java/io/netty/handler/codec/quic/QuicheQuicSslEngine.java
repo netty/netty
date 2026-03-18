@@ -48,6 +48,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     QuicheQuicSslContext ctx;
     private final String peerHost;
     private final int peerPort;
+    private final String endpointIdentificationAlgorithm;
     private final QuicheQuicSslSession session = new QuicheQuicSslSession();
     private volatile Certificate[] localCertificateChain;
     private List<SNIServerName> sniHostNames;
@@ -59,10 +60,12 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
 
     volatile Consumer<String> sniSelectedCallback;
 
-    QuicheQuicSslEngine(QuicheQuicSslContext ctx, @Nullable String peerHost, int peerPort) {
+    QuicheQuicSslEngine(QuicheQuicSslContext ctx, @Nullable String peerHost, int peerPort,
+                        String endpointIdentificationAlgorithm) {
         this.ctx = ctx;
         this.peerHost = peerHost;
         this.peerPort = peerPort;
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         // Use SNI if peerHost was specified and a valid hostname
         // See https://github.com/netty/netty/issues/4746
         if (ctx.isClient() && isValidHostNameForSNI(peerHost)) {
@@ -109,6 +112,9 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     public SSLParameters getSSLParameters() {
         SSLParameters parameters = super.getSSLParameters();
         parameters.setServerNames(sniHostNames);
+        if (endpointIdentificationAlgorithm != null) {
+            parameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+        }
         return parameters;
     }
 

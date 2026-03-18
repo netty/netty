@@ -137,7 +137,7 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
     sq->ring_sz = p->sq_off.array + p->sq_entries * sizeof(unsigned);
     cq->ring_sz = p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
 
-    if ((p->features & IORING_FEAT_SINGLE_MMAP) == 1) {
+    if ((p->features & IORING_FEAT_SINGLE_MMAP) != 0) {
         if (cq->ring_sz > sq->ring_sz) {
             sq->ring_sz = cq->ring_sz;
         }
@@ -148,7 +148,7 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
         return -errno;
     }
 
-    if ((p->features & IORING_FEAT_SINGLE_MMAP) == 1) {
+    if ((p->features & IORING_FEAT_SINGLE_MMAP) != 0) {
         cq->ring_ptr = sq->ring_ptr;
     } else {
         cq->ring_ptr = mmap(0, cq->ring_sz, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_CQ_RING);
@@ -283,7 +283,10 @@ static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) 
     jintArray array = NULL;
     struct io_uring_probe *probe;
     size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
-    probe = malloc(mallocLen);
+    if ((probe = malloc(mallocLen)) == NULL) {
+        netty_unix_errors_throwOutOfMemoryError(env);
+        goto cleanup;
+    }
     memset(probe, 0, mallocLen);
 
     if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
@@ -350,7 +353,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
     if (ret != 0) {
         // Close ring fd before return.
         close(ring_fd);
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer: ", ret);
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer: ", -ret);
         return NULL;
     }
 
@@ -439,8 +442,7 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
     reg.flags |= (__u16) flags;
 
     int registerRes = sys_io_uring_register(ringFd, IORING_REGISTER_PBUF_RING, &reg, 1);
-
-    if (registerRes) {
+    if (registerRes < 0) {
         munmap(br, ring_size);
         return registerRes;
     }
@@ -457,7 +459,7 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
                                         jint nentries, jshort bgid) {
     struct io_uring_buf_reg reg = { .bgid = (__u16) bgid };
     int registerRes = sys_io_uring_register(ringFd, IORING_UNREGISTER_PBUF_RING, &reg, 1);
-    if (registerRes) {
+    if (registerRes < 0) {
         return registerRes;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
@@ -471,8 +473,10 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
 
 static jint netty_create_file(JNIEnv *env, jclass class, jstring filename) {
     const char *file = (*env)->GetStringUTFChars(env, filename, 0);
-
-    int fd =  open(file, O_RDWR | O_TRUNC | O_CREAT, 0644);
+    if (file == NULL) {
+        return -1;
+    }
+    int fd = open(file, O_RDWR | O_TRUNC | O_CREAT, 0644);
     (*env)->ReleaseStringUTFChars(env, filename, file);
     return fd;
 }
@@ -883,14 +887,14 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
             statically_referenced_fixed_method_table_size) != 0) {
         goto done;
     }
-    nativeRegistered = 1;
+    staticallyRegistered = 1;
 
     if (netty_jni_util_register_natives(env, packagePrefix,
                                        NATIVE_CLASSNAME,
                                        method_table, method_table_size) != 0) {
         goto done;
     }
-    staticallyRegistered = 1;
+    nativeRegistered = 1;
 
     if (netty_io_uring_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
         goto done;
@@ -921,11 +925,11 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
-        if (nativeRegistered == 1) {
-            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
-        }
         if (staticallyRegistered == 1) {
             netty_jni_util_unregister_natives(env, packagePrefix, STATICALLY_CLASSNAME);
+        }
+        if (nativeRegistered == 1) {
+            netty_jni_util_unregister_natives(env, packagePrefix, NATIVE_CLASSNAME);
         }
         if (linuxsocketOnLoadCalled == 1) {
             netty_io_uring_linuxsocket_JNI_OnUnLoad(env, packagePrefix);
@@ -937,6 +941,7 @@ done:
 static void netty_iouring_native_JNI_OnUnload(JNIEnv* env) {
     netty_jni_util_unregister_natives(env, staticPackagePrefix, NATIVE_CLASSNAME);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STATICALLY_CLASSNAME);
+    netty_io_uring_linuxsocket_JNI_OnUnLoad(env, staticPackagePrefix);
     netty_io_uring_native_JNI_OnUnLoad(env, staticPackagePrefix);
 
     if (register_unix_called == 1) {

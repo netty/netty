@@ -188,6 +188,12 @@ public final class IoUringIoHandler implements IoHandler {
         return processed;
     }
 
+    private boolean needSubmit(int sqFlags) {
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        return submissionQueue.count() > 0
+                || (sqFlags & (Native.IORING_SQ_CQ_OVERFLOW | Native.IORING_SQ_TASKRUN)) != 0;
+    }
+
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
                                          CompletionCallback callback) {
         int processed = 0;
@@ -195,17 +201,16 @@ public final class IoUringIoHandler implements IoHandler {
         // 128 here is just some sort of bound and another number might be ok as well.
         for (int i = 0; i < 128; i++) {
             int p = completionQueue.process(callback);
-            if ((submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW) != 0) {
+            int sqFlags = submissionQueue.flags();
+            if ((sqFlags & Native.IORING_SQ_CQ_OVERFLOW) != 0) {
                 logger.warn("CompletionQueue overflow detected, consider increasing size: {} ",
                         completionQueue.ringEntries);
-                submitAndClearNow(submissionQueue);
-            } else if (p == 0 &&
-                    // Check if there are any more submissions pending, if not break the loop.
-                    (submissionQueue.count() == 0 ||
-                    // Let's try to submit again and check if there are new completions to handle.
-                    // Only break the loop if there was nothing submitted and there are no new completions.
-                    (submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()))) {
-                break;
+            }
+            if (p == 0) {
+                if (!needSubmit(sqFlags)) {
+                    break;
+                }
+                submitAndClearNow0(submissionQueue);
             }
             processed += p;
         }
@@ -213,6 +218,14 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private int submitAndClearNow(SubmissionQueue submissionQueue) {
+        if (needSubmit(submissionQueue.flags())) {
+            return submitAndClearNow0(submissionQueue);
+        }
+        return 0;
+    }
+
+    private int submitAndClearNow0(SubmissionQueue submissionQueue) {
+
         int submitted = submissionQueue.submitAndGetNow();
 
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:

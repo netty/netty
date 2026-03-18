@@ -29,6 +29,7 @@ import org.junit.jupiter.api.TestInfo;
 import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,7 +41,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) {
-                CompletionException e = assertThrows(CompletionException.class,
+                Throwable e = assertThrows(ExecutionException.class,
                         () -> bootstrap.handler(new ChannelInboundHandler() { })
                         .connect(KQueueSocketTestPermutation.newSocketAddress()).sync());
                 assertInstanceOf(FileNotFoundException.class, e.getCause());

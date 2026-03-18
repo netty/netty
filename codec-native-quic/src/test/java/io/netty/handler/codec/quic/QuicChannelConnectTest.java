@@ -1208,10 +1208,13 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 new TestHandler());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
+        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
+                .trustManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
+                .applicationProtocols(QuicTestUtils.PROTOS).build();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
-                QuicSslContextBuilder.forClient()
-                        .trustManager(QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
-                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
+                        clientSslContext)
+                        .sslEngineProvider(ch ->
+                                clientSslContext.newEngine(ch.alloc(), "localhost", address.getPort())));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)

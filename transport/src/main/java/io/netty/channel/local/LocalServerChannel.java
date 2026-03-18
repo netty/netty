@@ -30,7 +30,6 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -220,16 +219,6 @@ public class LocalServerChannel extends AbstractServerChannel {
         @Override
         public void handle(IoRegistration registration, IoEvent event) {
             // NOOP
-        }
-
-        @Override
-        public void registered() {
-            ((SingleThreadEventExecutor) executor()).addShutdownHook(shutdownHook);
-        }
-
-        @Override
-        public void unregistered() {
-            ((SingleThreadEventExecutor) executor()).removeShutdownHook(shutdownHook);
         }
 
         @Override

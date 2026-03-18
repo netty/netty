@@ -393,8 +393,10 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(server.isOpen());
 
         CloseWebSocketFrame closeMessage = decode(server.<ByteBuf>readOutbound(), CloseWebSocketFrame.class);
-        assertEquals(closeMessage, new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
+        CloseWebSocketFrame expectedFrame = new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE);
+        assertEquals(expectedFrame, closeMessage);
         closeMessage.release();
+        expectedFrame.release();
 
         assertFalse(client.finishAndReleaseAll());
         assertFalse(server.finishAndReleaseAll());

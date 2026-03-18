@@ -725,7 +725,8 @@ int BoringSSL_callback_alpn_select_proto(SSL* ssl, const unsigned char **out, un
         }
 
         // increment len and pointers.
-        i += target_proto_len;
+        // +1 accounts for the one-byte length prefix that was consumed above via ++supported_protos.
+        i += target_proto_len + 1;
         supported_protos += target_proto_len;
     }
     return SSL_TLSEXT_ERR_NOACK;
@@ -1014,7 +1015,8 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     jobject sessionCallbackRef = NULL;
     jobject privateKeyMethodRef = NULL;
     jobject sessionTicketCallbackRef = NULL;
-
+    SSL_CTX *ctx = NULL;
+    alpn_data* alpn = NULL;
     if ((handshakeCompleteCallbackRef = (*env)->NewGlobalRef(env, handshakeCompleteCallback)) == NULL) {
         goto error;
     }
@@ -1054,7 +1056,7 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
         goto error;
     }
 
-    SSL_CTX *ctx = SSL_CTX_new(TLS_with_buffers_method());
+     ctx = SSL_CTX_new(TLS_with_buffers_method());
     // When using BoringSSL we want to use CRYPTO_BUFFER to reduce memory usage and minimize overhead as we do not need
     // X509* at all and just need the raw bytes of the certificates to construct our Java X509Certificate.
     //
@@ -1113,6 +1115,10 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
         if (alpn != NULL) {
             // Fill the alpn_data struct
             alpn->proto_data = OPENSSL_malloc(alpn_length);
+            if (alpn->proto_data == NULL) {
+                // malloc failed, most likely OOM.
+                goto error;
+            }
             alpn->proto_len = alpn_length;
             (*env)->GetByteArrayRegion(env, alpn_protos, 0, alpn_length, (jbyte*) alpn->proto_data);
 
@@ -1122,10 +1128,20 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
             } else {
                 SSL_CTX_set_alpn_protos(ctx, alpn->proto_data, alpn->proto_len);
             }
+        } else {
+           // malloc failed, most likely OOM.
+           goto error;
         }
     }
     return (jlong) ctx;
 error:
+    if (ctx != NULL) {
+        SSL_CTX_free(ctx);
+    }
+    if (alpn != NULL) {
+        OPENSSL_free(alpn->proto_data);
+        OPENSSL_free(alpn);
+    }
     if (handshakeCompleteCallbackRef != NULL) {
         (*env)->DeleteGlobalRef(env, handshakeCompleteCallbackRef);
     }
@@ -1190,10 +1206,13 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
     }
 
     alpn_data* data = SSL_CTX_get_ex_data(ssl_ctx, alpn_data_idx);
+    if (data != NULL) {
+        OPENSSL_free(data->proto_data);
+    }
     OPENSSL_free(data);
 
     jobject sessionTicketCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, sessionTicketCallbackIdx);
-    if (sessionCallbackRef != NULL) {
+    if (sessionTicketCallbackRef != NULL) {
         (*env)->DeleteGlobalRef(env, sessionTicketCallbackRef);
     }
 
