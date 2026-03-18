@@ -23,10 +23,12 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.CharsetUtil;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * <p>
@@ -37,6 +39,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    private static final byte[] GUID_BYTES = WEBSOCKET_13_ACCEPT_GUID.getBytes(StandardCharsets.US_ASCII);
 
     /**
      * Constructor specifying the destination web socket location
@@ -152,7 +155,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
                     "not a WebSocket request: a |Upgrade| header must containing the value 'websocket'", req);
         }
 
-        CharSequence key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
+        String key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketServerHandshakeException("not a WebSocket request: missing key", req);
         }
@@ -163,9 +166,10 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             res.headers().add(headers);
         }
 
-        String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-        String accept = WebSocketUtil.base64(sha1);
+        MessageDigest digestSha1 = WebSocketUtil.sha1();
+        digestSha1.update(key.getBytes(StandardCharsets.US_ASCII));
+        digestSha1.update(GUID_BYTES);
+        String accept = WebSocketUtil.base64(digestSha1.digest());
 
         if (logger.isDebugEnabled()) {
             logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
