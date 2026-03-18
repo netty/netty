@@ -442,8 +442,7 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
     reg.flags |= (__u16) flags;
 
     int registerRes = sys_io_uring_register(ringFd, IORING_REGISTER_PBUF_RING, &reg, 1);
-
-    if (registerRes) {
+    if (registerRes < 0) {
         munmap(br, ring_size);
         return registerRes;
     }
@@ -460,7 +459,7 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
                                         jint nentries, jshort bgid) {
     struct io_uring_buf_reg reg = { .bgid = (__u16) bgid };
     int registerRes = sys_io_uring_register(ringFd, IORING_UNREGISTER_PBUF_RING, &reg, 1);
-    if (registerRes) {
+    if (registerRes < 0) {
         return registerRes;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
