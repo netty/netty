@@ -27,9 +27,8 @@ import java.util.concurrent.ConcurrentMap;
  * {@link OpenSslKeyMaterialProvider} that will cache the {@link OpenSslKeyMaterial} to reduce the overhead
  * of parsing the chain and the key for generation of the material.
  *
- * When new material is loaded on a cache miss, stale entries (whose alias is no longer owned by the
- * {@link X509KeyManager}) are evicted before inserting the new material. This keeps memory bounded to only the aliases that are
- * currently valid in the key manager.
+ * When the cache is full on a cache miss, stale entries (whose alias is no longer owned by the
+ * {@link X509KeyManager}) are evicted to make room before inserting new material.
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
@@ -43,7 +42,7 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
 
     /**
      * Removes cached entries whose alias is no longer recognized by the key manager.
-     * Called on cache miss to reclaim memory before potentially inserting a new entry.
+     * Called when the cache is full to reclaim memory from stale entries before giving up on caching.
      */
     private void evictStaleEntries() {
         Iterator<Map.Entry<String, OpenSslKeyMaterial>> iterator = cache.entrySet().iterator();
@@ -66,12 +65,13 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
                 return null;
             }
 
-            // Evict stale entries before inserting new material to reclaim memory.
-            evictStaleEntries();
-
-            if (cache.size() > maxCachedEntries) {
-                // Do not cache...
-                return material;
+            if (cache.size() >= maxCachedEntries) {
+                // Cache is full; try to evict stale entries to make room.
+                evictStaleEntries();
+                if (cache.size() >= maxCachedEntries) {
+                    // Still full after eviction, do not cache.
+                    return material;
+                }
             }
             OpenSslKeyMaterial old = cache.putIfAbsent(alias, material);
             if (old != null) {

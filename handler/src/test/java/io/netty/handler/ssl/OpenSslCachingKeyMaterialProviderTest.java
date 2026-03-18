@@ -95,7 +95,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
     }
 
     @Test
-    public void testStaleEntriesEvictedOnCacheMiss() throws Exception {
+    public void testStaleEntriesEvictedWhenCacheFull() throws Exception {
         final X509KeyManager delegate = ReferenceCountedOpenSslContext.chooseX509KeyManager(
                 newKeyManagerFactory().getKeyManagers());
 
@@ -134,7 +134,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
 
         RotatableKeyManager rotatableKeyManager = new RotatableKeyManager();
         OpenSslCachingKeyMaterialProvider provider =
-                new OpenSslCachingKeyMaterialProvider(rotatableKeyManager, PASSWORD, Integer.MAX_VALUE);
+                new OpenSslCachingKeyMaterialProvider(rotatableKeyManager, PASSWORD, 1);
 
         // Populate the cache with the old alias.
         OpenSslKeyMaterial material = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, "old-key");
@@ -145,7 +145,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
         // Simulate cert rotation: old alias is gone, new alias takes over.
         rotatableKeyManager.rotate();
 
-        // Cache miss for the new alias triggers evictStaleEntries(), which removes "old-key".
+        // Cache is full; loading "new-key" triggers evictStaleEntries(), which removes "old-key".
         OpenSslKeyMaterial newMaterial = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, "new-key");
         assertNotNull(newMaterial);
         assertEquals(1, provider.cacheSize()); // old evicted, new-key inserted
