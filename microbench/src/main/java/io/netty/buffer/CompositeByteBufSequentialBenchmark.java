@@ -26,6 +26,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 import java.util.ArrayList;
@@ -47,6 +48,18 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
             @Override
             ByteBuf newBuffer(int length) {
                 return newBufferLargeChunks(length);
+            }
+        },
+        SMALL_CHUNKS_DIRECT {
+            @Override
+            ByteBuf newBuffer(int length) {
+                return newBufferSmallChunksDirect(length);
+            }
+        },
+        LARGE_CHUNKS_DIRECT {
+            @Override
+            ByteBuf newBuffer(int length) {
+                return newBufferLargeChunksDirect(length);
             }
         };
         abstract ByteBuf newBuffer(int length);
@@ -82,7 +95,7 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
     private static final ByteProcessor TEST_PROCESSOR = new ByteProcessor() {
         @Override
         public boolean process(byte value) throws Exception {
-            return value == 'b'; // false
+            return value != 'b'; // true for non-'b' bytes, so we scan all bytes
         }
     };
 
@@ -91,20 +104,6 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         buffer.setIndex(0, buffer.capacity());
         buffer.forEachByte(TEST_PROCESSOR);
         return buffer.forEachByteDesc(TEST_PROCESSOR);
-    }
-
-    @Benchmark
-    public int sequentialWriteAndRead() {
-        buffer.clear();
-        for (int i = 0, l = buffer.writableBytes(); i < l; i++) {
-            buffer.writeByte('a');
-        }
-        for (int i = 0, l = buffer.readableBytes(); i < l; i++) {
-            if (buffer.readByte() == 'b') {
-                return -1;
-            }
-        }
-        return 1;
     }
 
     @Benchmark
@@ -124,6 +123,20 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
             result += buffer.getByte(i);
         }
         return result;
+    }
+
+    @Benchmark
+    public int sequentialWriteAndRead() {
+        buffer.clear();
+        for (int i = 0, l = buffer.writableBytes(); i < l; i++) {
+            buffer.writeByte('a');
+        }
+        for (int i = 0, l = buffer.readableBytes(); i < l; i++) {
+            if (buffer.readByte() == 'b') {
+                return -1;
+            }
+        }
+        return 1;
     }
 
     private static ByteBuf newBufferSmallChunks(int length) {
@@ -150,6 +163,44 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
             buffers.add(wrappedBuffer(new byte[512]));
             buffers.add(EMPTY_BUFFER);
             buffers.add(wrappedBuffer(new byte[1024]));
+        }
+
+        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
+
+        // Truncate to the requested capacity.
+        return buffer.capacity(length).writerIndex(0);
+    }
+
+    private static ByteBuf newDirectChunk(int size) {
+        ByteBuf buf = directBuffer(size);
+        buf.writerIndex(size);
+        return buf;
+    }
+
+    private static ByteBuf newBufferSmallChunksDirect(int length) {
+
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>(((length + 1) / 45) * 19);
+        for (int i = 0; i < length + 45; i += 45) {
+            for (int j = 1; j <= 9; j++) {
+                buffers.add(EMPTY_BUFFER);
+                buffers.add(newDirectChunk(j));
+            }
+            buffers.add(EMPTY_BUFFER);
+        }
+
+        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
+
+        // Truncate to the requested capacity.
+        return buffer.capacity(length).writerIndex(0);
+    }
+
+    private static ByteBuf newBufferLargeChunksDirect(int length) {
+
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>((length + 1) / 512);
+        for (int i = 0; i < length + 1536; i += 1536) {
+            buffers.add(newDirectChunk(512));
+            buffers.add(EMPTY_BUFFER);
+            buffers.add(newDirectChunk(1024));
         }
 
         ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));

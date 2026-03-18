@@ -615,6 +615,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         Component comp = components[cIndex];
         if (lastAccessed == comp) {
             lastAccessed = null;
+            lastAccessedIndex = 0;
         }
         comp.free();
         removeComp(cIndex);
@@ -646,6 +647,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
             if (lastAccessed == c) {
                 lastAccessed = null;
+                lastAccessedIndex = 0;
             }
             c.free();
         }
@@ -856,6 +858,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
         } else if (newCapacity < oldCapacity) {
             lastAccessed = null;
+            lastAccessedIndex = 0;
             int i = size - 1;
             for (int bytesToTrim = oldCapacity - newCapacity; i >= 0; i--) {
                 Component c = components[i];
@@ -953,6 +956,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     public byte getByte(int index) {
         Component c = findComponent(index);
         return c.abuf != null ? c.abuf._getByte(c.idx(index)) : c.buf.getByte(c.idx(index));
+    }
+
+    @Override
+    public byte readByte() {
+        checkReadableBytes(1);
+        int rIdx = readerIndex;
+        Component c = lastAccessed;
+        if (c == null) {
+            c = findIt(rIdx);
+        } else if (rIdx >= c.endOffset) {
+            c = findComponentForRead(rIdx);
+        } else if (rIdx < c.offset) {
+            c = findIt(rIdx);
+        }
+        readerIndex = rIdx + 1;
+        return c.abuf != null ? c.abuf._getByte(rIdx + c.adjustment) : c.buf.getByte(rIdx + c.adjustment);
     }
 
     @Override
@@ -1655,6 +1674,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     // weak cache - check it first when looking for component
     private Component lastAccessed;
+    private int lastAccessedIndex;
 
     private Component findComponent(int offset) {
         Component la = lastAccessed;
@@ -1674,6 +1694,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return findIt(offset);
     }
 
+    /**
+     * Sequential-read fast path: try the next component(s) before falling back to binary search.
+     */
+    private Component findComponentForRead(int offset) {
+        int cc = componentCount;
+        for (int next = lastAccessedIndex + 1; next < cc; next++) {
+            Component c = components[next];
+            if (c.endOffset > c.offset) {
+                lastAccessed = c;
+                lastAccessedIndex = next;
+                return c;
+            }
+        }
+        return findIt(offset);
+    }
+
     private Component findIt(int offset) {
         for (int low = 0, high = componentCount; low <= high;) {
             int mid = low + high >>> 1;
@@ -1688,6 +1724,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 high = mid - 1;
             } else {
                 lastAccessed = c;
+                lastAccessedIndex = mid;
                 return c;
             }
         }
@@ -1827,6 +1864,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             components[i].transferTo(consolidated);
         }
         lastAccessed = null;
+        lastAccessedIndex = 0;
         removeCompRange(cIndex + 1, endCIndex);
         components[cIndex] = newComponent(consolidated, 0);
         if (cIndex != 0 || numComponents != componentCount) {
@@ -1851,6 +1889,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 components[i].free();
             }
             lastAccessed = null;
+            lastAccessedIndex = 0;
             clearComps();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
@@ -1873,6 +1912,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         Component la = lastAccessed;
         if (la != null && la.endOffset <= readerIndex) {
             lastAccessed = null;
+            lastAccessedIndex = 0;
         }
         removeCompRange(0, firstComponentId);
 
@@ -1899,6 +1939,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 components[i].free();
             }
             lastAccessed = null;
+            lastAccessedIndex = 0;
             clearComps();
             setIndex(0, 0);
             adjustMarkers(readerIndex);
@@ -1930,6 +1971,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         Component la = lastAccessed;
         if (la != null && la.endOffset <= readerIndex) {
             lastAccessed = null;
+            lastAccessedIndex = 0;
         }
 
         removeCompRange(0, firstComponentId);
