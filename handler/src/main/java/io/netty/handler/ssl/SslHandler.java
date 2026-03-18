@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.channel.StacklessClosedChannelException;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
@@ -51,7 +52,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
@@ -1123,7 +1123,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         boolean handshakeFailed = handshakePromise.cause() != null;
 
         // Channel closed, we will generate 'ClosedChannelException' now.
-        ClosedChannelException exception = new ClosedChannelException();
+        StacklessClosedChannelException exception = StacklessClosedChannelException.newInstance(
+                SslHandler.class, "channelInactive(ChannelHandlerContext)");
 
         // Add a supressed exception if the handshake was not completed yet.
         if (isStateSet(STATE_HANDSHAKE_STARTED) && !handshakePromise.isDone()) {
