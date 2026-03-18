@@ -507,8 +507,13 @@ static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint
     }
 
     if (key != NULL) {
-        md5sig.tcpm_keylen = (*env)->GetArrayLength(env, key);
-        (*env)->GetByteArrayRegion(env, key, 0, md5sig.tcpm_keylen, (void *) &md5sig.tcpm_key);
+        jint keylen = (*env)->GetArrayLength(env, key);
+        if (keylen > TCP_MD5SIG_MAXKEYLEN) {
+            netty_unix_errors_throwIOException(env, "key is too long");
+            return;
+       }
+        md5sig.tcpm_keylen = (u_int16_t) keylen;
+        (*env)->GetByteArrayRegion(env, key, 0, keylen, (void *) &md5sig.tcpm_key);
         if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
             return;
         }
