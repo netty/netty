@@ -19,22 +19,41 @@ import io.netty.buffer.ByteBufAllocator;
 
 import javax.net.ssl.X509KeyManager;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
  * {@link OpenSslKeyMaterialProvider} that will cache the {@link OpenSslKeyMaterial} to reduce the overhead
  * of parsing the chain and the key for generation of the material.
+ *
+ * When new material is loaded on a cache miss, stale entries (whose alias is no longer owned by the
+ * {@link X509KeyManager}) are evicted before inserting the new material. This keeps memory bounded to only the aliases that are
+ * currently valid in the key manager.
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
     private final int maxCachedEntries;
-    private volatile boolean full;
     private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
 
     OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxCachedEntries) {
         super(keyManager, password);
         this.maxCachedEntries = maxCachedEntries;
+    }
+
+    /**
+     * Removes cached entries whose alias is no longer recognized by the key manager.
+     * Called on cache miss to reclaim memory before potentially inserting a new entry.
+     */
+    private void evictStaleEntries() {
+        Iterator<Map.Entry<String, OpenSslKeyMaterial>> iterator = cache.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, OpenSslKeyMaterial> entry = iterator.next();
+            if (keyManager().getCertificateChain(entry.getKey()) == null) {
+                iterator.remove();
+                entry.getValue().release();
+            }
+        }
     }
 
     @Override
@@ -47,11 +66,10 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
                 return null;
             }
 
-            if (full) {
-                return material;
-            }
+            // Evict stale entries before inserting new material to reclaim memory.
+            evictStaleEntries();
+
             if (cache.size() > maxCachedEntries) {
-                full = true;
                 // Do not cache...
                 return material;
             }
@@ -63,6 +81,10 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
         }
         // We need to call retain() as we want to always have at least a refCnt() of 1 before destroy() was called.
         return material.retain();
+    }
+
+    int cacheSize() {
+        return cache.size();
     }
 
     @Override
