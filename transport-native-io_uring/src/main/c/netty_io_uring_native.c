@@ -353,7 +353,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
     if (ret != 0) {
         // Close ring fd before return.
         close(ring_fd);
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer: ", ret);
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer: ", -ret);
         return NULL;
     }
 
