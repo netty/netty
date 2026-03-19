@@ -232,7 +232,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
                 if (values == null) {
                     //typically we have 0 or 1 entries. more than that is usually rare
-                    values = new ArrayList<>(2);
+                    values = new ArrayList<>(1);
                 }
                 values.add(e.getValue());
             }
