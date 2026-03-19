@@ -16,11 +16,11 @@ package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -222,17 +222,32 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public List<V> getAll(K name) {
         checkNotNull(name, "name");
 
-        LinkedList<V> values = new LinkedList<V>();
-
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
+
+        ArrayList<V> values = null;
+
         HeaderEntry<K, V> e = entries[i];
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
-                values.addFirst(e.getValue());
+                if (values == null) {
+                    //typically we have 0 or 1 entries. more than that is usually rare
+                    values = new ArrayList<>(2);
+                }
+                values.add(e.getValue());
             }
             e = e.next;
         }
+
+        if (values == null) {
+            return Collections.emptyList();
+        }
+
+        //we add this check, having 1 element here is most common
+        if (values.size() > 1) {
+            Collections.reverse(values);
+        }
+
         return values;
     }
 
