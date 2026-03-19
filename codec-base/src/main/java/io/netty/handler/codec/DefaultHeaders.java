@@ -226,27 +226,32 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         int i = index(h);
 
         ArrayList<V> values = null;
-
+        V value = null;
         HeaderEntry<K, V> e = entries[i];
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
-                if (values == null) {
-                    //typically we have 0 or 1 entries. more than that is usually rare
-                    values = new ArrayList<>(1);
+                if (value == null) {
+                    value = e.getValue();
+                } else {
+                    if (values == null) {
+                        values = new ArrayList<>(2);
+                        values.add(value);
+                    }
+                    values.add(e.getValue());
                 }
-                values.add(e.getValue());
             }
             e = e.next;
         }
 
         if (values == null) {
-            return Collections.emptyList();
+            if (value == null) {
+                return Collections.emptyList();
+            }
+            return Collections.singletonList(value);
         }
 
-        //we add this check, having 1 element here is most common
-        if (values.size() > 1) {
-            Collections.reverse(values);
-        }
+        assert values.size() > 1;
+        Collections.reverse(values);
 
         return values;
     }
