@@ -105,13 +105,13 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                     }
                     do {
                         w = outBuffer.writeBytes(zstdIs, outBuffer.writableBytes());
-                    } while (w != -1 && outBuffer.isWritable());
-                    if (outBuffer.readableBytes() >= maxForwardBytes) {
+                    } while (w > 0 && outBuffer.isWritable());
+                    if (!outBuffer.isWritable() || outBuffer.readableBytes() >= maxForwardBytes) {
                         needsRead = false;
                         ctx.fireChannelRead(outBuffer);
                         outBuffer = null;
                     }
-                } while (w != -1);
+                } while (w > 0);
                 if (outBuffer != null && outBuffer.isReadable()) {
                     needsRead = false;
                     ctx.fireChannelRead(outBuffer);
