@@ -20,6 +20,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.List;
+
 /**
  * An auto-tuning pooling {@link ByteBufAllocator}, that follows an anti-generational hypothesis.
  * <p>
@@ -42,6 +44,7 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
 
     private final AdaptivePoolingAllocator direct;
     private final AdaptivePoolingAllocator heap;
+    private final AdaptiveByteBufAllocatorMetric metric;
 
     public AdaptiveByteBufAllocator() {
         this(!PlatformDependent.isExplicitNoPreferDirect());
@@ -55,6 +58,7 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         super(preferDirect);
         direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), useCacheForNonEventLoopThreads);
         heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), useCacheForNonEventLoopThreads);
+        metric = new AdaptiveByteBufAllocatorMetric(this);
     }
 
     @Override
@@ -82,9 +86,67 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         return direct.usedMemory();
     }
 
+    /** AdaptiveByteBufAllocatorMetric Implementation **/
+
+    /**
+     * Returns the number of bytes of heap memory currently pinned to heap buffers,
+     * or {@code -1} if unknown.
+     */
+    public long pinnedHeapMemory() {
+        return heap.pinnedMemory();
+    }
+
+    /**
+     * Returns the number of bytes of direct memory currently pinned to direct buffers,
+     * or {@code -1} if unknown.
+     */
+    public long pinnedDirectMemory() {
+        return direct.pinnedMemory();
+    }
+
+    long numHeapAllocations() {
+        return heap.numAllocations();
+    }
+
+    long numDirectAllocations() {
+        return direct.numAllocations();
+    }
+
+    long numHeapDeallocations() {
+        return heap.numDeallocations();
+    }
+
+    long numDirectDeallocations() {
+        return direct.numDeallocations();
+    }
+
+    long numHeapFallbackAllocations() {
+        return heap.numFallbackAllocations();
+    }
+
+    long numDirectFallbackAllocations() {
+        return direct.numFallbackAllocations();
+    }
+
+    long numHeapActiveChunks() {
+        return heap.numActiveChunks();
+    }
+
+    long numDirectActiveChunks() {
+        return direct.numActiveChunks();
+    }
+
+    List<AdaptiveMagazineGroupMetric> heapMagazineGroups() {
+        return heap.magazineGroupMetrics();
+    }
+
+    List<AdaptiveMagazineGroupMetric> directMagazineGroups() {
+        return direct.magazineGroupMetrics();
+    }
+
     @Override
     public ByteBufAllocatorMetric metric() {
-        return this;
+        return metric;
     }
 
     private static final class HeapChunkAllocator implements AdaptivePoolingAllocator.ChunkAllocator {
