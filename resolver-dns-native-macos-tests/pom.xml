@@ -53,6 +53,22 @@
         <skipTests>true</skipTests>
       </properties>
     </profile>
+    <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty5-resolver-dns-native-macos</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
   <dependencies>
@@ -60,12 +76,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-resolver-dns-native-macos</artifactId>
-      <version>${project.version}</version>
-      <classifier>${jni.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

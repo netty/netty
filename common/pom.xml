@@ -53,7 +53,6 @@
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
-      <!-- Need compile scope to be taken into account by shade plugin -->
       <scope>compile</scope>
     </dependency>
     <dependency>
