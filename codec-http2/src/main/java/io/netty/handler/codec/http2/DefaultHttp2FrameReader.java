@@ -25,6 +25,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PING_FRAME_PAYLOAD_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.PRIORITY_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_INITIAL_WINDOW_SIZE;
@@ -401,7 +402,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
         if (headersContinuation.numFragments() >=  maxConsecutiveContinuationsFrames) {
             throw connectionError(ENHANCE_YOUR_CALM,
-                    "Number of consecutive continuations frames %d exceeds maximum: %d",
+                    "Number of small consecutive continuations frames %d exceeds maximum: %d",
                     headersContinuation.numFragments(), maxConsecutiveContinuationsFrames);
         }
     }
@@ -727,7 +728,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         final void addFragment(ByteBuf fragment, int len, ByteBufAllocator alloc,
                 boolean endOfHeaders) throws Http2Exception {
-            numFragments++;
+            if (!endOfHeaders && len < (MAX_FRAME_SIZE_LOWER_BOUND / 2)) {
+                // Only count of the fragment is not the end of header and if its < 8kb.
+                numFragments++;
+            }
 
             if (headerBlock == null) {
                 if (len > headersDecoder.configuration().maxHeaderListSizeGoAway()) {

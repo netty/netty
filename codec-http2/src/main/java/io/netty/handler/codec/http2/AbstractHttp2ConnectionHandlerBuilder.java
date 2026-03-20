@@ -469,17 +469,17 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns the maximum number of consecutive CONTINUATION frames that are allowed before
+     * Returns the maximum number of small consecutive CONTINUATION frames that are allowed before
      * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
      *
      * {@code 0} means no protection is in place.
      */
     protected int decoderEnforceMaxConsecutiveContinuationsFrames() {
-        return maxConsecutiveEmptyFrames;
+        return maxConsecutiveContinuationsFrames;
     }
 
     /**
-     * Sets the maximum number of consecutive CONTINUATION frames that are allowed before
+     * Sets the maximum number of small consecutive CONTINUATION frames that are allowed before
      * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
      *
      * {@code 0} means no protection should be applied.
