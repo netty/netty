@@ -18,14 +18,11 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.internal.Http2InternalCodecUtil;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.LeakPresenceDetector;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
@@ -210,7 +207,7 @@ public final class Http2CodecUtil {
     public static void writeFrameHeader(ByteBuf out, int payloadLength, byte type,
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-        writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
+        Http2InternalCodecUtil.writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
     }
 
     /**
@@ -244,154 +241,6 @@ public final class Http2CodecUtil {
     public static void headerListSizeExceeded(long maxHeaderListSize) throws Http2Exception {
         throw connectionError(PROTOCOL_ERROR, "Header size exceeded max " +
                 "allowed size (%d)", maxHeaderListSize);
-    }
-
-    static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
-            Http2Flags flags, int streamId) {
-        out.writeMedium(payloadLength);
-        out.writeByte(type);
-        out.writeByte(flags.value());
-        out.writeInt(streamId);
-    }
-
-    /**
-     * Provides the ability to associate the outcome of multiple {@link Promise}
-     * objects into a single {@link Promise} object.
-     */
-    static final class SimpleChannelPromiseAggregator extends DefaultPromise<Void> {
-        private final Promise<Void> promise;
-        private int expectedCount;
-        private int doneCount;
-        private Throwable aggregateFailure;
-        private boolean doneAllocating;
-
-        SimpleChannelPromiseAggregator(Promise<Void> promise, Channel c, EventExecutor e) {
-            super(e);
-            assert promise != null && !promise.isDone();
-            this.promise = promise;
-        }
-
-        /**
-         * Allocate a new promise which will be used to aggregate the overall success of this promise aggregator.
-         * @return A new promise which will be aggregated.
-         * {@code null} if {@link #doneAllocatingPromises()} was previously called.
-         */
-        public Promise<Void> newPromise() {
-            assert !doneAllocating : "Done allocating. No more promises can be allocated.";
-            ++expectedCount;
-            return this;
-        }
-
-        /**
-         * Signify that no more {@link #newPromise()} allocations will be made.
-         * The aggregation can not be successful until this method is called.
-         * @return The promise that is the aggregation of all promises allocated with {@link #newPromise()}.
-         */
-        public Promise<Void> doneAllocatingPromises() {
-            if (!doneAllocating) {
-                doneAllocating = true;
-                if (doneCount == expectedCount || expectedCount == 0) {
-                    return setPromise();
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public boolean tryFailure(Throwable cause) {
-            if (allowFailure()) {
-                ++doneCount;
-                setAggregateFailure(cause);
-                if (allPromisesDone()) {
-                    return tryPromise();
-                }
-                // TODO: We break the interface a bit here.
-                // Multiple failure events can be processed without issue because this is an aggregation.
-                return true;
-            }
-            return false;
-        }
-
-        /**
-         * Fail this object if it has not already been failed.
-         * <p>
-         * This method will NOT throw an {@link IllegalStateException} if called multiple times
-         * because that may be expected.
-         */
-        @Override
-        public Promise<Void> setFailure(Throwable cause) {
-            if (allowFailure()) {
-                ++doneCount;
-                setAggregateFailure(cause);
-                if (allPromisesDone()) {
-                    return setPromise();
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public Promise<Void> setSuccess(Void result) {
-            if (awaitingPromises()) {
-                ++doneCount;
-                if (allPromisesDone()) {
-                    setPromise();
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public boolean trySuccess(Void result) {
-            if (awaitingPromises()) {
-                ++doneCount;
-                if (allPromisesDone()) {
-                    return tryPromise();
-                }
-                // TODO: We break the interface a bit here.
-                // Multiple success events can be processed without issue because this is an aggregation.
-                return true;
-            }
-            return false;
-        }
-
-        private boolean allowFailure() {
-            return awaitingPromises() || expectedCount == 0;
-        }
-
-        private boolean awaitingPromises() {
-            return doneCount < expectedCount;
-        }
-
-        private boolean allPromisesDone() {
-            return doneCount == expectedCount && doneAllocating;
-        }
-
-        private Promise<Void> setPromise() {
-            if (aggregateFailure == null) {
-                promise.setSuccess(null);
-                return super.setSuccess(null);
-            } else {
-                promise.setFailure(aggregateFailure);
-                return super.setFailure(aggregateFailure);
-            }
-        }
-
-        private boolean tryPromise() {
-            if (aggregateFailure == null) {
-                promise.trySuccess(null);
-                return super.trySuccess(null);
-            } else {
-                promise.tryFailure(aggregateFailure);
-                return super.tryFailure(aggregateFailure);
-            }
-        }
-
-        private void setAggregateFailure(Throwable cause) {
-            if (aggregateFailure == null) {
-                aggregateFailure = cause;
-            }
-        }
     }
 
     public static void verifyPadding(int padding) {

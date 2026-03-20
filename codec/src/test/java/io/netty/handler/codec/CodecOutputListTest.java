@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.handler.codec.internal.CodecOutputList;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -22,4 +22,6 @@ module io.netty5.codec {
     exports io.netty.handler.codec.bytes;
     exports io.netty.handler.codec.json;
     exports io.netty.handler.codec.string;
+
+    exports io.netty.handler.codec.internal to io.netty5.microbench;
 }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-open module io.netty.testsuite_jpms.test {
+open module io.netty5.testsuite_jpms.test {
     requires org.junit.jupiter.api;
     requires jdk.jfr;
     requires io.netty5.buffer;

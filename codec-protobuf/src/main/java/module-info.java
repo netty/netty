@@ -20,4 +20,6 @@ module io.netty5.codec.protobuf {
     requires com.google.protobuf;
 
     exports io.netty.handler.codec.protobuf;
+
+    exports io.netty.handler.codec.protobuf.internal to io.netty5.microbench;
 }

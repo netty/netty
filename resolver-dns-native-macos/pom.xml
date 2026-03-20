@@ -485,6 +485,9 @@
         <executions>
           <execution>
             <id>module-info</id>
+            <configuration>
+              <moduleName>${javaModuleName}</moduleName>
+            </configuration>
           </execution>
         </executions>
       </plugin>

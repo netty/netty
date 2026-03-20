@@ -119,6 +119,9 @@
     <profile>
       <id>native-image-testsuite</id>
       <activation>
+        <os>
+          <family>linux</family>
+        </os>
         <file>
           <!-- GraalVM 'native-image' should exist when using GraalVM -->
           <exists>${java.home}/bin/native-image</exists>

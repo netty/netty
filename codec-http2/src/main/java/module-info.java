@@ -23,4 +23,6 @@ module io.netty5.codec.http2 {
     requires static transitive io.netty5.codec.compression;
 
     exports io.netty.handler.codec.http2;
+
+    exports io.netty.handler.codec.http2.internal to io.netty5.microbench;
 }

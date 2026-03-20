@@ -1,3 +1,5 @@
+import io.netty.util.internal.NettyBlockHoundIntegration;
+
 /*
  * Copyright 2026 The Netty Project
  *
@@ -13,6 +15,8 @@
  * the License.
  */
 module io.netty5.common {
+    provides reactor.blockhound.integration.BlockHoundIntegration with NettyBlockHoundIntegration;
+
     requires jdk.unsupported;
     requires java.logging;
     requires static org.jctools.core;
@@ -59,7 +63,9 @@ module io.netty5.common {
             io.netty5.transport.classes.io_uring,
             io.netty5.transport.classes.kqueue,
             io.netty5.resolver.dns.macos,
-            io.netty.testsuite_jpms.test;
+            io.netty5.testsuite_jpms.test,
+            io.netty5.microbench,
+            io.netty5.transport.blockhound;
     exports io.netty.util.internal.logging to
             io.netty5.buffer,
             io.netty5.resolver,
@@ -78,5 +84,6 @@ module io.netty5.common {
             io.netty5.transport.classes.io_uring,
             io.netty5.transport.classes.kqueue,
             io.netty5.resolver.dns.macos,
-            io.netty.testsuite_jpms.test;
+            io.netty5.testsuite_jpms.test,
+            io.netty5.microbench;
 }
