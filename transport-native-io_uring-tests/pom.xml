@@ -27,13 +27,26 @@
   <packaging>jar</packaging>
 
   <properties>
-    <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
     <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
     <argLine.jni>-Xcheck:jni</argLine.jni>
     <test.argLine>-D_</test.argLine>
   </properties>
 
   <profiles>
+    <profile>
+      <id>linux-aarch64</id>
+      <properties>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-riscv64</id>
+      <properties>
+        <!-- use riscv64 as this is also what os.detected.arch will use on an riscv64 system -->
+        <jni.classifier>${os.detected.name}-riscv64</jni.classifier>
+      </properties>
+    </profile>
     <profile>
       <id>linux</id>
       <activation>
@@ -131,6 +144,7 @@
           <artifactId>netty5-transport-native-epoll</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
+          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>
@@ -192,20 +206,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty5-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- For SelfSignedCertificate usage on JDK20+ -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>${tcnative.artifactId}</artifactId>
-      <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
