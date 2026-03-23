@@ -71,7 +71,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private int payloadLength;
     private HeadersContinuation headersContinuation;
     private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    private final int maxConsecutiveContinuationsFrames;
+    private final int maxSmallContinuationFrames;
 
     /**
      * Create a new instance.
@@ -95,10 +95,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         this(headersDecoder, 16);
     }
 
-    public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder, int maxConsecutiveContinuationsFrames) {
+    public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder, int maxSmallContinuationFrames) {
         this.headersDecoder = ObjectUtil.checkNotNull(headersDecoder, "headersDecoder");
-        this.maxConsecutiveContinuationsFrames = ObjectUtil.checkPositiveOrZero(
-                maxConsecutiveContinuationsFrames, "maxConsecutiveContinuationsFrames");
+        this.maxSmallContinuationFrames = ObjectUtil.checkPositiveOrZero(
+                maxSmallContinuationFrames, "maxSmallContinuationFrames");
     }
 
     @Override
@@ -400,10 +400,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                     + "Expected %d, but received %d.", headersContinuation.getStreamId(), streamId);
         }
 
-        if (headersContinuation.numFragments() >=  maxConsecutiveContinuationsFrames) {
+        if (headersContinuation.numSmallFragments() >=  maxSmallContinuationFrames) {
             throw connectionError(ENHANCE_YOUR_CALM,
                     "Number of small consecutive continuations frames %d exceeds maximum: %d",
-                    headersContinuation.numFragments(), maxConsecutiveContinuationsFrames);
+                    headersContinuation.numSmallFragments(), maxSmallContinuationFrames);
         }
     }
 
@@ -665,8 +665,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          *
          * @return the number of fragments
          */
-        final int numFragments() {
-            return builder.numFragments();
+        final int numSmallFragments() {
+            return builder.numSmallFragments();
         }
 
         /**
@@ -697,7 +697,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      */
     protected class HeadersBlockBuilder {
         private ByteBuf headerBlock;
-        private int numFragments;
+        private int numSmallFragments;
 
         /**
          * The local header size maximum has been exceeded while accumulating bytes.
@@ -730,7 +730,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 boolean endOfHeaders) throws Http2Exception {
             if (!endOfHeaders && len < (MAX_FRAME_SIZE_LOWER_BOUND / 2)) {
                 // Only count of the fragment is not the end of header and if its < 8kb.
-                numFragments++;
+                numSmallFragments++;
             }
 
             if (headerBlock == null) {
