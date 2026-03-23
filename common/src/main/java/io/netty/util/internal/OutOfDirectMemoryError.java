@@ -18,7 +18,7 @@ package io.netty.util.internal;
 import java.nio.ByteBuffer;
 
 /**
- * {@link OutOfMemoryError} that is throws if {@link PlatformDependent#allocateDirectNoCleaner(int)} can not allocate
+ * {@link OutOfMemoryError} that is throws if {@link PlatformDependent#allocateDirect(int)} can not allocate
  * a new {@link ByteBuffer} due memory restrictions.
  */
 public final class OutOfDirectMemoryError extends OutOfMemoryError {
