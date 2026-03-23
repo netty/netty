@@ -59,7 +59,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private int xlen = -1;
     private boolean needsRead;
 
-    private static final int DEFAULT_MAX_FORWARD_BYTES = 64 * 1024;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
     private final int maxForwardBytes;
 
     private volatile boolean finished;

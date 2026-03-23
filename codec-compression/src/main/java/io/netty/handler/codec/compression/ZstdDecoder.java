@@ -41,7 +41,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private static final int DEFAULT_MAX_FORWARD_BYTES = 64 * 1024;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
 
     private final int maximumAllocationSize;
     private final int maxForwardBytes;

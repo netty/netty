@@ -32,7 +32,7 @@ import java.util.List;
  */
 public final class BrotliDecoder extends ByteToMessageDecoder {
 
-    private static final int DEFAULT_MAX_FORWARD_BYTES = 64 * 1024;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
 
     private enum State {
         DONE, NEEDS_MORE_INPUT, ERROR

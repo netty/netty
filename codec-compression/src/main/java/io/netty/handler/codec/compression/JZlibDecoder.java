@@ -28,7 +28,7 @@ public class JZlibDecoder extends ZlibDecoder {
 
     private final Inflater z = new Inflater();
     private byte[] dictionary;
-    private static final int DEFAULT_MAX_FORWARD_BYTES = 64 * 1024;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
     private final int maxForwardBytes;
     private boolean needsRead;
     private volatile boolean finished;
