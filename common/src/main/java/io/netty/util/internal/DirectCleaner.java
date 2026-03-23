@@ -34,8 +34,7 @@ final class DirectCleaner implements Cleaner {
             return new CleanableDirectBufferImpl(newBuffer);
         } catch (Throwable e) {
             PlatformDependent.decrementMemoryCounter(delta);
-            PlatformDependent0.throwException(e);
-            return null;
+            throw e;
         }
     }
 
