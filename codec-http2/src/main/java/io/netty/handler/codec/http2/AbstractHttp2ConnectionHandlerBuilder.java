@@ -479,12 +479,12 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the maximum number of small consecutive CONTINUATION frames that are allowed before
+     * Sets the maximum number of small CONTINUATION frames per HEADERS block that are allowed before
      * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
      *
      * {@code 0} means no protection should be applied.
      */
-    protected B decoderEnforceMaxConsecutiveContinuationsFrames(int maxConsecutiveContinuationsFrames) {
+    protected B decoderEnforceMaxSmallContinuationFrames(int maxSmallContinuationFrames) {
         enforceNonCodecConstraints("maxConsecutiveContinuationsFrames");
         this.maxConsecutiveContinuationsFrames = checkPositiveOrZero(
                 maxConsecutiveContinuationsFrames, "maxConsecutiveContinuationsFrames");

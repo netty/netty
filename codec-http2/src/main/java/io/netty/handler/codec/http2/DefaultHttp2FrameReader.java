@@ -713,8 +713,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          *
          * @return number of fragments.
          */
-        int numFragments() {
-            return numFragments;
+        int numSmallFragments() {
+            return numSmallFragments;
         }
 
         /**
