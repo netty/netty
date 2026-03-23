@@ -54,6 +54,7 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
  * A {@link Http2FrameReader} that supports all frame types defined by the HTTP/2 specification.
  */
 public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSizePolicy, Configuration {
+    private static final int FRAGMENT_THRESHOLD = MAX_FRAME_SIZE_LOWER_BOUND / 2;
     private final Http2HeadersDecoder headersDecoder;
 
     /**
@@ -92,7 +93,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder) {
-        this(headersDecoder, 16);
+        this(headersDecoder, Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME);
     }
 
     public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder, int maxSmallContinuationFrames) {
@@ -728,7 +729,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         final void addFragment(ByteBuf fragment, int len, ByteBufAllocator alloc,
                 boolean endOfHeaders) throws Http2Exception {
-            if (!endOfHeaders && len < (MAX_FRAME_SIZE_LOWER_BOUND / 2)) {
+            if (maxSmallContinuationFrames > 0 && !endOfHeaders && len < FRAGMENT_THRESHOLD) {
                 // Only count of the fragment is not the end of header and if its < 8kb.
                 numSmallFragments++;
             }

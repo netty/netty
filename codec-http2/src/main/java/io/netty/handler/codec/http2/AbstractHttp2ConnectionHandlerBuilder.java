@@ -112,7 +112,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private int maxDecodedRstFramesSecondsPerWindow = 30;
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
-    private int maxSmallContinuationFrames = 16;
+    private int maxSmallContinuationFrames = Http2CodecUtil.DEFAULT_MAX_SMALL_CONTINUATION_FRAME;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
