@@ -18,46 +18,148 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 
 import javax.net.ssl.X509KeyManager;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
- * {@link OpenSslKeyMaterialProvider} that will cache the {@link OpenSslKeyMaterial} to reduce the overhead
- * of parsing the chain and the key for generation of the material.
- *
- * When the cache is full on a cache miss, stale entries (whose alias is no longer owned by the
- * {@link X509KeyManager}) are evicted to make room before inserting new material.
+ * {@link OpenSslKeyMaterialProvider} that will cache the
+ * {@link OpenSslKeyMaterial} to reduce the overhead of parsing the chain
+ * and the key for generation of the material.
+ * <p>
+ * All cache operations that access or evict entries perform retain/release
+ * atomically via {@link ConcurrentHashMap}'s per-bucket locking.
+ * When the cache is full on a cache miss, stale entries (whose alias is no
+ * longer owned by the {@link X509KeyManager}) are evicted to make room
+ * before inserting new material.
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
-    private final int maxCachedEntries;
-    private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+    /**
+     * A cache that performs retain/release atomically with map operations,
+     * using {@link ConcurrentHashMap}'s per-bucket locking to prevent
+     * use-after-free races between concurrent reads and evictions.
+     */
+    private static final class KeyMaterialCache {
 
-    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxCachedEntries) {
-        super(keyManager, password);
-        this.maxCachedEntries = maxCachedEntries;
+        /**
+         * Backing store for cached key materials.
+         */
+        private final ConcurrentHashMap<String, OpenSslKeyMaterial> map =
+                new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+
+        /**
+         * Returns the material for the given alias with its reference count
+         * incremented, or {@code null} if absent.
+         *
+         * @param alias the alias to look up
+         * @return the retained material, or {@code null} if not cached
+         */
+        OpenSslKeyMaterial getAndRetain(final String alias) {
+            final OpenSslKeyMaterial[] result = {null};
+            map.computeIfPresent(alias, (final String k, final OpenSslKeyMaterial v) -> {
+                v.retain();
+                result[0] = v;
+                return v;
+            });
+            return result[0];
+        }
+
+        /**
+         * Inserts {@code material} if absent and returns it retained. If a
+         * concurrent insert won, returns the existing entry retained instead;
+         * the caller must then release {@code material}.
+         *
+         * @param alias    the alias to insert under
+         * @param material the material to insert
+         * @return the retained material now in the cache
+         */
+        OpenSslKeyMaterial putIfAbsentAndRetain(final String alias, final OpenSslKeyMaterial material) {
+            final OpenSslKeyMaterial[] result = {null};
+            map.compute(alias, (final String k, final OpenSslKeyMaterial existing) -> {
+                if (existing != null) {
+                    existing.retain();
+                    result[0] = existing;
+                    return existing;
+                }
+                // Retain for the caller; the map holds the original reference.
+                material.retain();
+                result[0] = material;
+                return material;
+            });
+            return result[0];
+        }
+
+        /**
+         * Removes and releases the entry for the given alias, if present.
+         *
+         * @param alias the alias whose entry should be removed and released
+         */
+        void removeAndRelease(final String alias) {
+            map.computeIfPresent(alias, (final String k, final OpenSslKeyMaterial v) -> {
+                v.release();
+                return null;
+            });
+        }
+
+        /**
+         * Returns the number of entries in the cache.
+         *
+         * @return the cache size
+         */
+        int size() {
+            return map.size();
+        }
+
+        /**
+         * Returns {@code true} if the cache contains no entries.
+         *
+         * @return {@code true} if empty
+         */
+        boolean isEmpty() {
+            return map.isEmpty();
+        }
+
+        /**
+         * Returns a view of the aliases currently in the cache.
+         *
+         * @return the set of aliases
+         */
+        Iterable<String> aliases() {
+            return map.keySet();
+        }
     }
 
     /**
-     * Removes cached entries whose alias is no longer recognized by the key manager.
-     * Called when the cache is full to reclaim memory from stale entries before giving up on caching.
+     * Maximum number of entries to hold in the cache.
+     */
+    private final int maxCachedEntries;
+
+    /**
+     * The key material cache.
+     */
+    private final KeyMaterialCache cache = new KeyMaterialCache();
+
+    OpenSslCachingKeyMaterialProvider(final X509KeyManager keyManager, final String password, final int maxEntries) {
+        super(keyManager, password);
+        maxCachedEntries = maxEntries;
+    }
+
+    /**
+     * Removes cached entries whose alias is no longer recognized by the key
+     * manager. Evicting only when full avoids per-insert overhead, which is
+     * acceptable for most cases where {@code maxCachedEntries} is reasonably
+     * sized.
      */
     private void evictStaleEntries() {
-        Iterator<Map.Entry<String, OpenSslKeyMaterial>> iterator = cache.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, OpenSslKeyMaterial> entry = iterator.next();
-            if (keyManager().getCertificateChain(entry.getKey()) == null) {
-                iterator.remove();
-                entry.getValue().release();
+        for (String alias : cache.aliases()) {
+            if (keyManager().getCertificateChain(alias) == null) {
+                cache.removeAndRelease(alias);
             }
         }
     }
 
     @Override
-    OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
-        OpenSslKeyMaterial material = cache.get(alias);
+    OpenSslKeyMaterial chooseKeyMaterial(final ByteBufAllocator allocator, final String alias) throws Exception {
+        OpenSslKeyMaterial material = cache.getAndRetain(alias);
         if (material == null) {
             material = super.chooseKeyMaterial(allocator, alias);
             if (material == null) {
@@ -73,14 +175,14 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
                     return material;
                 }
             }
-            OpenSslKeyMaterial old = cache.putIfAbsent(alias, material);
-            if (old != null) {
+            OpenSslKeyMaterial old = cache.putIfAbsentAndRetain(alias, material);
+            if (old != material) {
+                // Another operation inserted first; release our copy.
                 material.release();
                 material = old;
             }
         }
-        // We need to call retain() as we want to always have at least a refCnt() of 1 before destroy() was called.
-        return material.retain();
+        return material;
     }
 
     int cacheSize() {
@@ -90,11 +192,9 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
     @Override
     void destroy() {
         // Remove and release all entries.
-        do  {
-            Iterator<OpenSslKeyMaterial> iterator = cache.values().iterator();
-            while (iterator.hasNext()) {
-                iterator.next().release();
-                iterator.remove();
+        do {
+            for (String alias : cache.aliases()) {
+                cache.removeAndRelease(alias);
             }
         } while (!cache.isEmpty());
     }
