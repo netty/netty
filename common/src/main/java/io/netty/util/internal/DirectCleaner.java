@@ -58,8 +58,7 @@ final class DirectCleaner implements Cleaner {
                 this.buffer = PlatformDependent0.allocateDirectNoCleaner(capacity);
             } catch (Throwable e) {
                 PlatformDependent.decrementMemoryCounter(capacity);
-                PlatformDependent0.throwException(e);
-                throw new AssertionError(); // unreachable
+                throw e;
             }
         }
 
