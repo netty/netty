@@ -28,6 +28,8 @@ public class JZlibDecoder extends ZlibDecoder {
 
     private final Inflater z = new Inflater();
     private byte[] dictionary;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+    private final int maxForwardBytes;
     private boolean needsRead;
     private volatile boolean finished;
 
@@ -78,6 +80,7 @@ public class JZlibDecoder extends ZlibDecoder {
      */
     public JZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
         super(maxAllocation);
+        this.maxForwardBytes = maxAllocation > 0 ? maxAllocation : DEFAULT_MAX_FORWARD_BYTES;
 
         ObjectUtil.checkNotNull(wrapper, "wrapper");
 
@@ -113,6 +116,7 @@ public class JZlibDecoder extends ZlibDecoder {
      */
     public JZlibDecoder(byte[] dictionary, int maxAllocation) {
         super(maxAllocation);
+        this.maxForwardBytes = maxAllocation > 0 ? maxAllocation : DEFAULT_MAX_FORWARD_BYTES;
         this.dictionary = ObjectUtil.checkNotNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
@@ -174,7 +178,7 @@ public class JZlibDecoder extends ZlibDecoder {
                     int outputLength = z.next_out_index - oldNextOutIndex;
                     if (outputLength > 0) {
                         decompressed.writerIndex(decompressed.writerIndex() + outputLength);
-                        if (maxAllocation == 0) {
+                        if (maxAllocation == 0 && decompressed.readableBytes() >= maxForwardBytes) {
                             // If we don't limit the maximum allocations we should just
                             // forward the buffer directly.
                             ByteBuf buffer = decompressed;
