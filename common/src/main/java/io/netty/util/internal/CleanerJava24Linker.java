@@ -236,11 +236,19 @@ public class CleanerJava24Linker implements Cleaner {
         private final long memoryAddress;
 
         private CleanableDirectBufferImpl(int capacity) {
-            long addr = malloc(capacity);
+            PlatformDependent.incrementMemoryCounter(capacity);
+            long addr;
+            try {
+                addr = malloc(capacity);
+            } catch (Throwable e) {
+                PlatformDependent.decrementMemoryCounter(capacity);
+                throw e;
+            }
             try {
                 memoryAddress = addr;
                 buffer = (ByteBuffer) INVOKE_CREATE_BYTEBUFFER.invokeExact(addr, (long) capacity);
             } catch (Throwable throwable) {
+                PlatformDependent.decrementMemoryCounter(capacity);
                 Error error = new Error(throwable);
                 try {
                     free(addr);
@@ -258,7 +266,9 @@ public class CleanerJava24Linker implements Cleaner {
 
         @Override
         public void clean() {
+            int capacity = buffer.capacity();
             free(memoryAddress);
+            PlatformDependent.decrementMemoryCounter(capacity);
         }
 
         @Override
