@@ -69,7 +69,7 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
 
     static class Alloc implements ByteBufAllocator {
 
-        private final ByteBuf buf = Unpooled.buffer();
+        private final ByteBuf buf = Unpooled.buffer(512);
         private final int capacity = buf.capacity();
 
         @Override
@@ -83,7 +83,8 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
             if (initialCapacity <= capacity) {
                 return buffer();
             } else {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException(
+                        "initialCapacity " + initialCapacity + " is greater than capacity " + capacity);
             }
         }
 
@@ -92,7 +93,8 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
             if (initialCapacity <= capacity) {
                 return buffer();
             } else {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException(
+                        "initialCapacity " + initialCapacity + " is greater than capacity " + capacity);
             }
         }
 
