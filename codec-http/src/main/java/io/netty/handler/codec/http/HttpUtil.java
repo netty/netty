@@ -810,13 +810,13 @@ public final class HttpUtil {
     private static final long TOKEN_CHARS_HIGH = 0x57ffffffc7fffffeL;
     private static final long TOKEN_CHARS_LOW = 0x3ff6cfa00000000L;
 
-    private static boolean isValidTokenChar(byte bit) {
-        if (bit < 0) {
+    static boolean isValidTokenChar(byte octet) {
+        if (octet < 0) {
             return false;
         }
-        if (bit < 64) {
-            return 0 != (TOKEN_CHARS_LOW & 1L << bit);
+        if (octet < 64) {
+            return 0 != (TOKEN_CHARS_LOW & 1L << octet);
         }
-        return 0 != (TOKEN_CHARS_HIGH & 1L << bit - 64);
+        return 0 != (TOKEN_CHARS_HIGH & 1L << octet - 64);
     }
 }
