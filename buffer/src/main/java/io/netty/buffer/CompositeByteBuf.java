@@ -1701,7 +1701,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int cc = componentCount;
         for (int next = lastAccessedIndex + 1; next < cc; next++) {
             Component c = components[next];
-            if (c.endOffset > c.offset) {
+            if (offset < c.endOffset) {
                 lastAccessed = c;
                 lastAccessedIndex = next;
                 return c;
