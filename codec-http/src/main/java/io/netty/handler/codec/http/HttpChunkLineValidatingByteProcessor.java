@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.ByteProcessor;
 
+import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -60,10 +61,112 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
     private static final int CHUNK_EXT_VAL_QUOTED_ESCAPE = 4;
     private static final int CHUNK_EXT_VAL_QUOTED_END = 5;
     private static final int CHUNK_EXT_VAL_TOKEN = 6;
+    private static final int N_STATES = 7;
+
+    private static final byte[] TRANSITIONS = buildTable();
+
+    private static byte[] buildTable() {
+        byte[] table = new byte[N_STATES * 256];
+        Arrays.fill(table, (byte) -1);
+
+        // SIZE: hex digits and whitespace stay in SIZE, ';' transitions to CHUNK_EXT_NAME
+        for (int i = 0; i < "0123456789abcdefABCDEF \t".length(); i++) {
+            table[SIZE << 8 | "0123456789abcdefABCDEF \t".charAt(i)] = SIZE;
+        }
+        table[SIZE << 8 | ';'] = CHUNK_EXT_NAME;
+
+        // CHUNK_EXT_NAME: token chars + OWS stay, '=' transitions to VAL_START
+        for (int i = 0x21; i <= 0x7E; i++) {
+            table[CHUNK_EXT_NAME << 8 | i] = CHUNK_EXT_NAME;
+        }
+        table[CHUNK_EXT_NAME << 8 | ' '] = CHUNK_EXT_NAME;
+        table[CHUNK_EXT_NAME << 8 | '\t'] = CHUNK_EXT_NAME;
+        // Exclude non-token delimiters from name
+        for (int i = 0; i < "(),/:<=>?@[\\]{}".length(); i++) {
+            table[CHUNK_EXT_NAME << 8 | "(),/:<=>?@[\\]{}".charAt(i)] = -1;
+        }
+        table[CHUNK_EXT_NAME << 8 | '='] = CHUNK_EXT_VAL_START;
+
+        // CHUNK_EXT_VAL_START: OWS stays, '"' goes to QUOTED, token chars go to TOKEN
+        table[CHUNK_EXT_VAL_START << 8 | ' '] = CHUNK_EXT_VAL_START;
+        table[CHUNK_EXT_VAL_START << 8 | '\t'] = CHUNK_EXT_VAL_START;
+        table[CHUNK_EXT_VAL_START << 8 | '"'] = CHUNK_EXT_VAL_QUOTED;
+        for (int i = 0x21; i <= 0x7E; i++) {
+            if (table[CHUNK_EXT_VAL_START << 8 | i] == -1) {
+                table[CHUNK_EXT_VAL_START << 8 | i] = CHUNK_EXT_VAL_TOKEN;
+            }
+        }
+        // Exclude non-token delimiters (including '"' already set above)
+        for (int i = 0; i < "(),/:<=>?@[\\]{}".length(); i++) {
+            table[CHUNK_EXT_VAL_START << 8 | "(),/:<=>?@[\\]{}".charAt(i)] = -1;
+        }
+
+        // CHUNK_EXT_VAL_QUOTED: '\' escapes, '"' ends, qdtext stays
+        table[CHUNK_EXT_VAL_QUOTED << 8 | '\\'] = CHUNK_EXT_VAL_QUOTED_ESCAPE;
+        table[CHUNK_EXT_VAL_QUOTED << 8 | '"'] = CHUNK_EXT_VAL_QUOTED_END;
+        table[CHUNK_EXT_VAL_QUOTED << 8 | '\t'] = CHUNK_EXT_VAL_QUOTED;
+        table[CHUNK_EXT_VAL_QUOTED << 8 | ' '] = CHUNK_EXT_VAL_QUOTED;
+        table[CHUNK_EXT_VAL_QUOTED << 8 | '!'] = CHUNK_EXT_VAL_QUOTED;
+        for (int i = 0x23; i <= 0x5B; i++) {
+            table[CHUNK_EXT_VAL_QUOTED << 8 | i] = CHUNK_EXT_VAL_QUOTED;
+        }
+        for (int i = 0x5D; i <= 0x7E; i++) {
+            table[CHUNK_EXT_VAL_QUOTED << 8 | i] = CHUNK_EXT_VAL_QUOTED;
+        }
+        for (int i = 0x80; i <= 0xFF; i++) {
+            table[CHUNK_EXT_VAL_QUOTED << 8 | i] = CHUNK_EXT_VAL_QUOTED;
+        }
+
+        // CHUNK_EXT_VAL_QUOTED_ESCAPE: any VCHAR/obs-text/SP/HTAB goes back to QUOTED
+        table[CHUNK_EXT_VAL_QUOTED_ESCAPE << 8 | '\t'] = CHUNK_EXT_VAL_QUOTED;
+        table[CHUNK_EXT_VAL_QUOTED_ESCAPE << 8 | ' '] = CHUNK_EXT_VAL_QUOTED;
+        for (int i = 0x21; i <= 0x7E; i++) {
+            table[CHUNK_EXT_VAL_QUOTED_ESCAPE << 8 | i] = CHUNK_EXT_VAL_QUOTED;
+        }
+        for (int i = 0x80; i <= 0xFF; i++) {
+            table[CHUNK_EXT_VAL_QUOTED_ESCAPE << 8 | i] = CHUNK_EXT_VAL_QUOTED;
+        }
+
+        // CHUNK_EXT_VAL_QUOTED_END: OWS stays, ';' transitions to CHUNK_EXT_NAME
+        table[CHUNK_EXT_VAL_QUOTED_END << 8 | '\t'] = CHUNK_EXT_VAL_QUOTED_END;
+        table[CHUNK_EXT_VAL_QUOTED_END << 8 | ' '] = CHUNK_EXT_VAL_QUOTED_END;
+        table[CHUNK_EXT_VAL_QUOTED_END << 8 | ';'] = CHUNK_EXT_NAME;
+
+        // CHUNK_EXT_VAL_TOKEN: token chars stay, ';' transitions to CHUNK_EXT_NAME
+        for (int i = 0x21; i <= 0x7E; i++) {
+            table[CHUNK_EXT_VAL_TOKEN << 8 | i] = CHUNK_EXT_VAL_TOKEN;
+        }
+        // Exclude non-token delimiters (including ';' which is set below)
+        for (int i = 0; i < "(),/:<=>?@[\\]{};".length(); i++) {
+            table[CHUNK_EXT_VAL_TOKEN << 8 | "(),/:<=>?@[\\]{};".charAt(i)] = -1;
+        }
+        table[CHUNK_EXT_VAL_TOKEN << 8 | ';'] = CHUNK_EXT_NAME;
+
+        assert verifyTable(table);
+        return table;
+    }
+
+    /**
+     * Verify the table matches the specification built from Match objects.
+     * Only runs when assertions are enabled.
+     */
+    private static boolean verifyTable(byte[] table) {
+        byte[] expected = compile();
+        for (int i = 0; i < table.length; i++) {
+            if (table[i] != expected[i]) {
+                int state = i >> 8;
+                int byteVal = i & 0xFF;
+                throw new AssertionError(
+                        "Transition mismatch at state " + state + " byte 0x" +
+                        Integer.toHexString(byteVal) + ": got " + table[i] + " expected " + expected[i]);
+            }
+        }
+        return true;
+    }
 
     static final class Match extends BitSet {
         private static final long serialVersionUID = 49522994383099834L;
-        private final int then;
+        final int then;
 
         Match(int then) {
             super(256);
@@ -93,77 +196,96 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
         }
     }
 
-    private enum State {
-        Size(
+    /**
+     * Build the transition table from Match objects with explicit disjointness.
+     * Used only for assertion verification.
+     */
+    static byte[] compile() {
+        Match[][] stateMatchers = new Match[N_STATES][];
+
+        stateMatchers[SIZE] = new Match[]{
                 new Match(SIZE).chars("0123456789abcdefABCDEF \t"),
-                new Match(CHUNK_EXT_NAME).chars(";")),
-        ChunkExtName(
+                new Match(CHUNK_EXT_NAME).chars(";")
+        };
+        stateMatchers[CHUNK_EXT_NAME] = new Match[]{
                 new Match(CHUNK_EXT_NAME)
                         .range(0x21, 0x7E)
                         .chars(" \t")
                         .chars("(),/:<=>?@[\\]{}", false),
-                new Match(CHUNK_EXT_VAL_START).chars("=")),
-        ChunkExtValStart(
+                new Match(CHUNK_EXT_VAL_START).chars("=")
+        };
+        stateMatchers[CHUNK_EXT_VAL_START] = new Match[]{
                 new Match(CHUNK_EXT_VAL_START).chars(" \t"),
                 new Match(CHUNK_EXT_VAL_QUOTED).chars("\""),
+                // explicitly exclude '"' (0x22) — disjoint with the matcher above
                 new Match(CHUNK_EXT_VAL_TOKEN)
                         .range(0x21, 0x7E)
-                        .chars("(),/:<=>?@[\\]{}", false)),
-        ChunkExtValQuoted(
+                        .chars("(),/:<=>?@[\\]{}\"", false)
+        };
+        stateMatchers[CHUNK_EXT_VAL_QUOTED] = new Match[]{
                 new Match(CHUNK_EXT_VAL_QUOTED_ESCAPE).chars("\\"),
                 new Match(CHUNK_EXT_VAL_QUOTED_END).chars("\""),
+                // 0x23-0x5B excludes '"' (0x22), 0x5D-0x7E excludes '\' (0x5C) — disjoint by range
                 new Match(CHUNK_EXT_VAL_QUOTED)
                         .chars("\t !")
                         .range(0x23, 0x5B)
                         .range(0x5D, 0x7E)
-                        .range(0x80, 0xFF)),
-        ChunkExtValQuotedEscape(
+                        .range(0x80, 0xFF)
+        };
+        stateMatchers[CHUNK_EXT_VAL_QUOTED_ESCAPE] = new Match[]{
                 new Match(CHUNK_EXT_VAL_QUOTED)
                         .chars("\t ")
                         .range(0x21, 0x7E)
-                        .range(0x80, 0xFF)),
-        ChunkExtValQuotedEnd(
+                        .range(0x80, 0xFF)
+        };
+        stateMatchers[CHUNK_EXT_VAL_QUOTED_END] = new Match[]{
                 new Match(CHUNK_EXT_VAL_QUOTED_END).chars("\t "),
-                new Match(CHUNK_EXT_NAME).chars(";")),
-        ChunkExtValToken(
+                new Match(CHUNK_EXT_NAME).chars(";")
+        };
+        stateMatchers[CHUNK_EXT_VAL_TOKEN] = new Match[]{
+                // explicitly exclude ';' (0x3B) — disjoint with the matcher below
                 new Match(CHUNK_EXT_VAL_TOKEN)
-                        .range(0x21, 0x7E, true)
-                        .chars("(),/:<=>?@[\\]{}", false),
-                new Match(CHUNK_EXT_NAME).chars(";")),
-        ;
+                        .range(0x21, 0x7E)
+                        .chars("(),/:<=>?@[\\]{};", false),
+                new Match(CHUNK_EXT_NAME).chars(";")
+        };
 
-        private final Match[] matches;
-
-        State(Match... matches) {
-            this.matches = matches;
-        }
-
-        State match(byte value) {
-            for (Match match : matches) {
-                if (match.get(value)) {
-                    return STATES_BY_ORDINAL[match.then];
+        byte[] table = new byte[N_STATES * 256];
+        Arrays.fill(table, (byte) -1);
+        for (int state = 0; state < N_STATES; state++) {
+            int base = state << 8;
+            for (Match m : stateMatchers[state]) {
+                for (int i = m.nextSetBit(0); i >= 0; i = m.nextSetBit(i + 1)) {
+                    if (table[base | i] != -1) {
+                        throw new IllegalStateException(
+                                "overlapping matchers at byte 0x" + Integer.toHexString(i) +
+                                " in state " + state);
+                    }
+                    table[base | i] = (byte) m.then;
                 }
             }
-            if (this == Size) {
-                throw new NumberFormatException("Invalid chunk size");
-            } else {
-                throw new InvalidChunkExtensionException("Invalid chunk extension");
-            }
         }
+        return table;
     }
 
-    private static final State[] STATES_BY_ORDINAL = State.values();
-
-    private State state = State.Size;
+    private int state = SIZE;
 
     @Override
     public boolean process(byte value) {
-        state = state.match(value);
+        int next = TRANSITIONS[state << 8 | (value & 0xFF)];
+        if (next < 0) {
+            if (state == SIZE) {
+                throw new NumberFormatException("Invalid chunk size");
+            }
+            throw new InvalidChunkExtensionException("Invalid chunk extension");
+        }
+        state = next;
         return true;
     }
 
     public void finish() {
-        if (state != State.Size && state != State.ChunkExtName && state != State.ChunkExtValQuotedEnd) {
+        if (state != SIZE && state != CHUNK_EXT_NAME
+                && state != CHUNK_EXT_VAL_TOKEN && state != CHUNK_EXT_VAL_QUOTED_END) {
             throw new InvalidChunkExtensionException("Invalid chunk extension");
         }
     }
