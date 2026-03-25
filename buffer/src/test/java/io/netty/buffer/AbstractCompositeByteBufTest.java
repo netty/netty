@@ -1874,6 +1874,8 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals('a', composite.readByte());
         composite.skipBytes(1);
         assertEquals('c', composite.readByte());
+
+        composite.release();
     }
 
 }
