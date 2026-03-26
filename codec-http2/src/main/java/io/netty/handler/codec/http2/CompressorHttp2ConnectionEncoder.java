@@ -343,8 +343,50 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     }
 
     /**
+     * Determine the content encoding to use for compressing the response data.
+     * This method is called when the response does not already have a {@code content-encoding} header set.
+     * <p>
+     * The default implementation selects the first available encoding from the configured
+     * compression options.
+     * </p>
+     *
+     * @param ctx the context.
+     * @return the desired content encoding, or {@code null} if no compression should be applied
+     * @throws Http2Exception if an error occurs during encoding determination
+     */
+    CharSequence determineEncoding(ChannelHandlerContext ctx)
+            throws Http2Exception {
+        if (supportsCompressionOptions) {
+            if (gzipCompressionOptions != null) {
+                return GZIP;
+            }
+            if (deflateOptions != null) {
+                return DEFLATE;
+            }
+            if (Brotli.isAvailable() && brotliOptions != null) {
+                return BR;
+            }
+            if (zstdOptions != null) {
+                return ZSTD;
+            }
+            if (snappyOptions != null) {
+                return SNAPPY;
+            }
+        } else {
+            // Deprecated constructor path - default to gzip
+            return GZIP;
+        }
+        return null;
+    }
+
+    /**
      * Checks if a new compressor object is needed for the stream identified by {@code streamId}. This method will
      * modify the {@code content-encoding} header contained in {@code headers}.
+     * <p>
+     * If the {@code content-encoding} header is already set, the content is assumed to be already encoded
+     * and no compression will be applied. This is consistent with
+     * {@link io.netty.handler.codec.http.HttpContentCompressor} behavior for HTTP/1.x.
+     * </p>
      *
      * @param ctx the context.
      * @param headers Object representing headers which are to be written
@@ -359,8 +401,17 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
 
         CharSequence encoding = headers.get(CONTENT_ENCODING);
-        if (encoding == null) {
-            encoding = IDENTITY;
+        if (encoding != null) {
+            // Content-Encoding is already set, which means the content is already encoded.
+            // Do not re-encode to avoid double-encoding. This is consistent with
+            // HttpContentCompressor behavior for HTTP/1.x.
+            // See https://github.com/netty/netty/issues/14277
+            return null;
+        }
+
+        encoding = determineEncoding(ctx);
+        if (encoding == null || IDENTITY.contentEqualsIgnoreCase(encoding)) {
+            return null;
         }
         final EmbeddedChannel compressor = newContentCompressor(ctx, encoding);
         if (compressor != null) {

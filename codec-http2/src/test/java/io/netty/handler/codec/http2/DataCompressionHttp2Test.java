@@ -92,6 +92,7 @@ public class DataCompressionHttp2Test {
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
     private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
+    private volatile CharSequence requestedEncoding;
 
     @BeforeAll
     public static void beforeAllTests() throws Throwable {
@@ -100,6 +101,7 @@ public class DataCompressionHttp2Test {
 
     @BeforeEach
     public void setup() throws InterruptedException, Http2Exception {
+        requestedEncoding = null;
         MockitoAnnotations.initMocks(this);
         doAnswer(new Answer<Void>() {
             @Override
@@ -154,9 +156,9 @@ public class DataCompressionHttp2Test {
     @ParameterizedTest
     @ValueSource(ints = { 0, 10 })
     public void justHeadersNoData(final int padding) throws Exception {
+        requestedEncoding = HttpHeaderValues.GZIP;
         bootstrapEnv(0);
-        final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH)
-                .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+        final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH);
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
@@ -175,10 +177,10 @@ public class DataCompressionHttp2Test {
     public void gzipEncodingSingleEmptyMessage(final int padding) throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        requestedEncoding = HttpHeaderValues.GZIP;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -200,10 +202,10 @@ public class DataCompressionHttp2Test {
     public void gzipEncodingSingleMessage(final int padding) throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        requestedEncoding = HttpHeaderValues.GZIP;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -227,10 +229,10 @@ public class DataCompressionHttp2Test {
         final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
         final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
         final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
+        requestedEncoding = HttpHeaderValues.GZIP;
         bootstrapEnv(data1.readableBytes() + data2.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -254,10 +256,10 @@ public class DataCompressionHttp2Test {
     public void brotliEncodingSingleEmptyMessage(final int padding) throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        requestedEncoding = HttpHeaderValues.BR;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -279,10 +281,10 @@ public class DataCompressionHttp2Test {
     public void brotliEncodingSingleMessage(final int padding) throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        requestedEncoding = HttpHeaderValues.BR;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -304,10 +306,10 @@ public class DataCompressionHttp2Test {
     public void zstdEncodingSingleEmptyMessage(final int padding) throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        requestedEncoding = HttpHeaderValues.ZSTD;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -329,10 +331,10 @@ public class DataCompressionHttp2Test {
     public void zstdEncodingSingleMessage(final int padding) throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        requestedEncoding = HttpHeaderValues.ZSTD;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -354,10 +356,10 @@ public class DataCompressionHttp2Test {
     public void snappyEncodingSingleEmptyMessage(final int padding) throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
+        requestedEncoding = HttpHeaderValues.SNAPPY;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -379,10 +381,10 @@ public class DataCompressionHttp2Test {
     public void snappyEncodingSingleMessage(final int padding) throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
+        requestedEncoding = HttpHeaderValues.SNAPPY;
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -405,11 +407,11 @@ public class DataCompressionHttp2Test {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
         new Random().nextBytes(bytes);
+        requestedEncoding = HttpHeaderValues.DEFLATE;
         bootstrapEnv(BUFFER_SIZE);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -422,6 +424,46 @@ public class DataCompressionHttp2Test {
             awaitServer();
             assertEquals(data.resetReaderIndex().toString(CharsetUtil.UTF_8),
                     serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 10 })
+    public void preCompressedContentNotDoubleEncoded(final int padding) throws Exception {
+        // Verify that pre-compressed content with Content-Encoding already set is not re-compressed.
+        // This is the fix for https://github.com/netty/netty/issues/14277
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final byte[] textBytes = text.getBytes(CharsetUtil.UTF_8);
+
+        // Pre-compress the data with gzip
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final java.util.zip.GZIPOutputStream gzipOut = new java.util.zip.GZIPOutputStream(baos);
+        gzipOut.write(textBytes);
+        gzipOut.close();
+        final byte[] compressed = baos.toByteArray();
+
+        final ByteBuf data = Unpooled.wrappedBuffer(compressed);
+        requestedEncoding = HttpHeaderValues.GZIP;
+        bootstrapEnv(textBytes.length);
+        try {
+            // Set Content-Encoding to indicate content is already gzip-encoded
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            // Server's DelegatingDecompressorFrameListener decompresses once.
+            // If the encoder had double-encoded, this would produce garbage instead of the original text.
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
         } finally {
             data.release();
         }
@@ -476,7 +518,7 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2RemoteFlowController(serverConnection));
                 serverConnection.local().flowController(
                         new DefaultHttp2LocalFlowController(serverConnection).frameWriter(frameWriter));
-                Http2ConnectionEncoder encoder = new CompressorHttp2ConnectionEncoder(
+                Http2ConnectionEncoder encoder = newTestCompressorEncoder(
                         new DefaultHttp2ConnectionEncoder(serverConnection, frameWriter));
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
@@ -510,7 +552,7 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2RemoteFlowController(clientConnection));
                 clientConnection.local().flowController(
                         new DefaultHttp2LocalFlowController(clientConnection).frameWriter(frameWriter));
-                clientEncoder = new CompressorHttp2ConnectionEncoder(
+                clientEncoder = newTestCompressorEncoder(
                         new DefaultHttp2ConnectionEncoder(clientConnection, frameWriter));
 
                 Http2ConnectionDecoder decoder =
@@ -551,6 +593,19 @@ public class DataCompressionHttp2Test {
         if (cause != null) {
             throw new AssertionError("Server-side decompression error", cause);
         }
+    }
+
+    private CompressorHttp2ConnectionEncoder newTestCompressorEncoder(Http2ConnectionEncoder delegate) {
+        if (requestedEncoding != null) {
+            final CharSequence encoding = requestedEncoding;
+            return new CompressorHttp2ConnectionEncoder(delegate) {
+                @Override
+                CharSequence determineEncoding(ChannelHandlerContext ctx) {
+                    return encoding;
+                }
+            };
+        }
+        return new CompressorHttp2ConnectionEncoder(delegate);
     }
 
     private ChannelHandlerContext ctxClient() {
