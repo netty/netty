@@ -73,12 +73,17 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
       sbytes = 0;
       res = sendfile(srcFd, socketFd, base_off + off, len, NULL, &sbytes, 0);
 #endif
+      // BSD/macOS sendfile passes the offset by value (unlike Linux which takes off_t*).
+      // When interrupted (EINTR), sbytes reports how many bytes were sent before the signal.
+      // Advance off so the next iteration resumes from where we left off, not from the start.
+      off += sbytes;
       len -= sbytes;
     } while (res < 0 && ((err = errno) == EINTR));
     sbytes = lenBefore - len;
     if (sbytes > 0) {
         // update the transferred field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + sbytes);
+        // off has already been advanced by sbytes inside the loop, so it equals the new total.
+        (*env)->SetLongField(env, fileRegion, transferredFieldId, off);
         return sbytes;
     }
     return res < 0 ? -err : 0;
