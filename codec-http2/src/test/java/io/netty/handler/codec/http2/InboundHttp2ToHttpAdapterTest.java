@@ -291,6 +291,56 @@ public class InboundHttp2ToHttpAdapterTest {
     }
 
     @Test
+    public void exceedMaxContentLengthShouldCauseStreamErrorNotConnectionError() throws Exception {
+        // Verify that exceeding maxContentLength causes a stream error (RST_STREAM)
+        // not a connection error (GOAWAY), so other streams can continue.
+        // This is the fix for https://github.com/netty/netty/issues/11994
+        boostrapEnv(0, 1, 1);
+        final byte[] oversizedData = new byte[maxContentLength + 1];
+        final ByteBuf oversizedContent = Unpooled.wrappedBuffer(oversizedData);
+        final String normalText = "hello";
+        final ByteBuf normalContent = Unpooled.copiedBuffer(normalText.getBytes());
+        final FullHttpRequest expectedRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "/normal/path", normalContent.copy(), true);
+        try {
+            HttpHeaders httpHeaders = expectedRequest.headers();
+            httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+            httpHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, normalText.length());
+            httpHeaders.setShort(HttpConversionUtil.ExtensionHeaderNames.STREAM_WEIGHT.text(), (short) 16);
+            final Http2Headers oversizedHeaders = new DefaultHttp2Headers().method(new AsciiString("POST")).path(
+                    new AsciiString("/oversized/path"));
+            final Http2Headers normalHeaders = new DefaultHttp2Headers().method(new AsciiString("GET")).path(
+                    new AsciiString("/normal/path"));
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    // Stream 3: send data exceeding maxContentLength - should cause stream error
+                    clientHandler.encoder().writeHeaders(ctxClient(), 3, oversizedHeaders, 0, false,
+                            newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 3, oversizedContent, 0, true,
+                            newPromiseClient());
+                    // Stream 5: send a normal request - should succeed if connection is still alive
+                    clientHandler.encoder().writeHeaders(ctxClient(), 5, normalHeaders, 0, false,
+                            newPromiseClient());
+                    clientHandler.encoder().writeData(ctxClient(), 5, normalContent, 0, true,
+                            newPromiseClient());
+                    clientChannel.flush();
+                }
+            });
+            // If maxContentLength caused a CONNECTION error, GOAWAY would close the connection
+            // and stream 5 would never be delivered. With the fix (STREAM error), only stream 3
+            // is reset and stream 5 is delivered successfully.
+            awaitRequests();
+            ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
+            verify(serverListener).messageReceived(requestCaptor.capture());
+            capturedRequests = requestCaptor.getAllValues();
+            assertEquals(expectedRequest, capturedRequests.get(0));
+        } finally {
+            expectedRequest.release();
+        }
+    }
+
+    @Test
     public void clientRequestMultipleDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
         final String text = "hello world big time data!";
