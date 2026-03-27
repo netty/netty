@@ -33,6 +33,8 @@ import io.netty.channel.unix.PeerCredentials;
 import java.io.IOException;
 import java.net.SocketAddress;
 
+import static io.netty.channel.unix.Errors.ioResult;
+
 /**
  * {@link DomainSocketChannel} implementation that uses linux io_uring
  */
@@ -202,17 +204,22 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
                 final ChannelPipeline pipeline = pipeline();
                 try {
-                    if (res == 0) {
-                        allocHandle.lastBytesRead(0);
-                        return;
-                    } else if (res < 0) {
-                        // Check if we need to throw.
-                        Errors.ioResult("io_uring recvmsg", res);
+                    if (res > 0) {
+                        int fd = readMsgHdrMemory.getScmRightsFd();
+                        allocHandle.lastBytesRead(fd);
+                        allocHandle.incMessagesRead(1);
+                        pipeline.fireChannelRead(new FileDescriptor(fd));
+                    } else {
+                        if (res == 0) {
+                            allocHandle.lastBytesRead(-1);
+                        } else {
+                            allocHandle.lastBytesRead(ioResult("io_uring recvmsg", res));
+                        }
                     }
-                    int fd = readMsgHdrMemory.getScmRightsFd();
-                    allocHandle.lastBytesRead(fd);
-                    allocHandle.incMessagesRead(1);
-                    pipeline.fireChannelRead(new FileDescriptor(fd));
+                    if (allocHandle.lastBytesRead() < 0) {
+                        // There is nothing left to read as we received an EOF.
+                        shutdownInput(true);
+                    }
                 } catch (Throwable throwable) {
                     handleReadException(pipeline, null, throwable, false, allocHandle);
                 } finally {
