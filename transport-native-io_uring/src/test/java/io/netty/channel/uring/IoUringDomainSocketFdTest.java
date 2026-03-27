@@ -37,9 +37,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IoUringDomainSocketFdTest extends AbstractSocketTest {
@@ -140,7 +140,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
         FileDescriptor fd = recvFdFuture.get();
         assertTrue(fd.isOpen());
-        assertNotEquals(0, fd.intValue());
+        assertThat(fd.intValue()).isGreaterThanOrEqualTo(0);
         fd.close();
         assertFalse(fd.isOpen());
 

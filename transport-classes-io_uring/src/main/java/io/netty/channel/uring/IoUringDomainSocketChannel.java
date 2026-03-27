@@ -202,11 +202,17 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
                 final ChannelPipeline pipeline = pipeline();
                 try {
-                    int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
-                    int nativeFd = readMsgHdrMemory.getScmRightsFd();
-                    allocHandle.lastBytesRead(nativeFd);
+                    if (res == 0) {
+                        allocHandle.lastBytesRead(0);
+                        return;
+                    } else if (res < 0) {
+                        // Check if we need to throw.
+                        Errors.ioResult("io_uring recvmsg", res);
+                    }
+                    int fd = readMsgHdrMemory.getScmRightsFd();
+                    allocHandle.lastBytesRead(fd);
                     allocHandle.incMessagesRead(1);
-                    pipeline.fireChannelRead(new FileDescriptor(nativeFd));
+                    pipeline.fireChannelRead(new FileDescriptor(fd));
                 } catch (Throwable throwable) {
                     handleReadException(pipeline, null, throwable, false, allocHandle);
                 } finally {
