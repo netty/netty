@@ -1056,7 +1056,7 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
         goto error;
     }
 
-     ctx = SSL_CTX_new(TLS_with_buffers_method());
+    ctx = SSL_CTX_new(TLS_with_buffers_method());
     // When using BoringSSL we want to use CRYPTO_BUFFER to reduce memory usage and minimize overhead as we do not need
     // X509* at all and just need the raw bytes of the certificates to construct our Java X509Certificate.
     //
@@ -1136,7 +1136,11 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     return (jlong) ctx;
 error:
     if (ctx != NULL) {
+        CRYPTO_BUFFER_POOL* pool = SSL_CTX_get_ex_data(ctx, crypto_buffer_pool_idx);
         SSL_CTX_free(ctx);
+        if (pool != NULL) {
+            CRYPTO_BUFFER_POOL_free(pool);
+        }
     }
     if (alpn != NULL) {
         OPENSSL_free(alpn->proto_data);
