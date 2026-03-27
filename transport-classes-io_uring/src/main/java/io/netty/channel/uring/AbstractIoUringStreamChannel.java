@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
@@ -25,14 +26,18 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -227,10 +232,50 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        // Since we cannot use synchronous sendfile,
-        // the channel can only support DefaultFileRegion instead of FileRegion.
         if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
             return new IoUringFileRegion((DefaultFileRegion) msg);
+        }
+
+        if (msg instanceof FileRegion) {
+            // FileRegion not handled above cannot use splice — convert to a direct ByteBuf
+            // via transferTo so it can be sent through the normal io_uring async send path.
+            // Not zero-copy but functionally correct.
+            //
+            // On error paths, don't release region — the caller (AbstractChannel.write)
+            // releases the original msg. On success, we must release it ourselves because
+            // the caller will only see the returned ByteBuf.
+            FileRegion region = (FileRegion) msg;
+            long remaining = region.count() - region.transferred();
+            if (remaining > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException(
+                        "FileRegion too large to convert to ByteBuf: " + remaining + " bytes");
+            }
+            ByteBuf buf = alloc().directBuffer((int) remaining);
+            boolean success = false;
+            try {
+                ByteBufWritableByteChannel channel = new ByteBufWritableByteChannel(buf);
+                long expected = region.count();
+                while (region.transferred() < expected) {
+                    long transferred = region.transferTo(channel, region.transferred());
+                    if (transferred <= 0) {
+                        break;
+                    }
+                }
+                if (region.transferred() < expected) {
+                    throw new ChannelException(
+                            "FileRegion transfer incomplete: expected " + expected +
+                            " bytes, got " + region.transferred());
+                }
+                success = true;
+            } catch (IOException e) {
+                throw new ChannelException("Failed to convert FileRegion to ByteBuf", e);
+            } finally {
+                if (!success) {
+                    buf.release();
+                }
+            }
+            ReferenceCountUtil.safeRelease(region);
+            return buf;
         }
 
         return super.filterOutboundMessage(msg);
@@ -660,5 +705,34 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     @Override
     boolean isPollInFirst() {
         return bufferRing == null || !bufferRing.isUsable();
+    }
+
+    /**
+     * A {@link WritableByteChannel} that writes into a {@link ByteBuf}.
+     * Used by the generic FileRegion fallback in filterOutboundMessage.
+     */
+    private static final class ByteBufWritableByteChannel implements WritableByteChannel {
+        private final ByteBuf buf;
+
+        ByteBufWritableByteChannel(ByteBuf buf) {
+            this.buf = buf;
+        }
+
+        @Override
+        public int write(ByteBuffer src) {
+            int remaining = src.remaining();
+            buf.writeBytes(src);
+            return remaining - src.remaining();
+        }
+
+        @Override
+        public boolean isOpen() {
+            return true;
+        }
+
+        @Override
+        public void close() {
+            // NOOP
+        }
     }
 }

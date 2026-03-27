@@ -41,7 +41,7 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
 
     @Override
     protected boolean supportsCustomFileRegion() {
-        return false;
+        return true;
     }
 
     //@Disabled("Fix me")
