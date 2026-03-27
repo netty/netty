@@ -1855,4 +1855,52 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         }
     }
 
+    @Test
+    public void testFindComponent() {
+        CompositeByteBuf composite = newCompositeBuffer();
+
+        ByteBuf b1 = newBuffer(10);
+        b1.writeByte('a');
+        composite.addComponent(true, b1);
+
+        ByteBuf b2 = newBuffer(10);
+        b2.writeByte('b');
+        composite.addComponent(true, b2);
+
+        ByteBuf b3 = newBuffer(10);
+        b3.writeByte('c');
+        composite.addComponent(true, b3);
+
+        assertEquals('a', composite.readByte());
+        composite.skipBytes(1);
+        assertEquals('c', composite.readByte());
+
+        composite.release();
+    }
+
+    @Test
+    public void testReadByteAfterDiscardReadComponents() {
+        CompositeByteBuf composite = newCompositeBuffer();
+
+        for (char ch = 'a'; ch <= 'e'; ch++) {
+            ByteBuf buf = newBuffer(10);
+            buf.writeByte(ch);
+            composite.addComponent(true, buf);
+        }
+
+        // Sequential reads to warm up lastAccessed/lastAccessedIndex
+        assertEquals('a', composite.readByte());
+        assertEquals('b', composite.readByte());
+        assertEquals('c', composite.readByte());
+
+        // Discard components A and B (already fully read)
+        composite.discardReadComponents();
+
+        // Continue sequential reads — must not hit stale lastAccessedIndex
+        assertEquals('d', composite.readByte());
+        assertEquals('e', composite.readByte());
+
+        composite.release();
+    }
+
 }
