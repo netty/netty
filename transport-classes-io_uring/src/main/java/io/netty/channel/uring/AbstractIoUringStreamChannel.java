@@ -263,8 +263,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 if (region.transferred() < expected) {
                     throw new ChannelException(
-                            "FileRegion transfer incomplete: expected " + expected +
-                            " bytes, got " + region.transferred());
+                            "FileRegion transfer incomplete: expected "
+                            + expected + " bytes, got " + region.transferred());
                 }
                 success = true;
             } catch (IOException e) {
