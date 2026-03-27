@@ -37,11 +37,11 @@ final class MsgHdrMemory {
     private final CleanableDirectBuffer msgHdrMemoryCleanable;
     private final CleanableDirectBuffer socketAddrMemoryCleanable;
     private final CleanableDirectBuffer iovMemoryCleanable;
-    private final CleanableDirectBuffer cmsgDataMemoryCleanable;
+    private final CleanableDirectBuffer cmsgMemoryCleanable;
     private final ByteBuffer msgHdrMemory;
     private final ByteBuffer socketAddrMemory;
     private final ByteBuffer iovMemory;
-    private final ByteBuffer cmsgDataMemory;
+    private final ByteBuffer cmsgMemory;
 
     private final long msgHdrMemoryAddress;
     private final short idx;
@@ -52,7 +52,7 @@ final class MsgHdrMemory {
         this.msgHdrMemoryCleanable = null;
         this.socketAddrMemoryCleanable = null;
         this.iovMemoryCleanable = null;
-        this.cmsgDataMemoryCleanable = null;
+        this.cmsgMemoryCleanable = null;
         int offset = idx * MSG_HDR_SIZE;
         // ByteBuffer.slice(int, int) / duplicate() are specified to produce BIG_ENDIAN byte buffers.
         // Set native order explicitly so native structs written via putInt/putLong use the expected endianness.
@@ -68,15 +68,15 @@ final class MsgHdrMemory {
                 msgHdrMemoryArray, offset, Native.SIZEOF_IOVEC
         ).order(ByteOrder.nativeOrder());
         offset += Native.SIZEOF_IOVEC;
-        this.cmsgDataMemory = PlatformDependent.offsetSlice(
+        this.cmsgMemory = PlatformDependent.offsetSlice(
                 msgHdrMemoryArray, offset, Native.CMSG_SPACE
         ).order(ByteOrder.nativeOrder());
 
         msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
 
-        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
-        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
-        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
+        long cmsgMemoryAddr = Buffer.memoryAddress(cmsgMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgMemoryAddr);
     }
 
     MsgHdrMemory() {
@@ -85,21 +85,21 @@ final class MsgHdrMemory {
         msgHdrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_MSGHDR);
         socketAddrMemoryCleanable = null;
         iovMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_IOVEC);
-        cmsgDataMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
+        cmsgMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
 
         msgHdrMemory = msgHdrMemoryCleanable.buffer();
         socketAddrMemory = null;
         iovMemory = iovMemoryCleanable.buffer();
-        cmsgDataMemory = cmsgDataMemoryCleanable.buffer();
+        cmsgMemory = cmsgMemoryCleanable.buffer();
 
         msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
         // These two parameters must be set to valid values and cannot be 0,
         // otherwise the fd we get in io_uring_recvmsg is 0
         Iov.set(iovMemory, GLOBAL_IOV_BASE_ADDRESS, GLOBAL_IOV_LEN);
 
-        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
-        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
-        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
+        long cmsgMemoryAddr = Buffer.memoryAddress(cmsgMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgMemoryAddr);
     }
 
     void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
@@ -116,7 +116,7 @@ final class MsgHdrMemory {
             addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);
         }
         Iov.set(iovMemory, bufferAddress, length);
-        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgMemory,
                 cmsgDataOffset, segmentSize);
     }
 
@@ -125,15 +125,21 @@ final class MsgHdrMemory {
     }
 
     void setScmRightsFd(int fd) {
-        MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
+        MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     int getScmRightsFd() {
-        return MsgHdr.getCmsgData(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
+        long len = CmsgHdr.readLen(cmsgMemory);
+        int level = CmsgHdr.readLevel(cmsgMemory);
+        int type = CmsgHdr.readType(cmsgMemory);
+        assert len == Native.CMSG_LEN_FOR_FD;
+        assert level == Native.SOL_SOCKET;
+        assert type == Native.SCM_RIGHTS;
+        return CmsgHdr.readIntData(cmsgMemory, cmsgDataOffset);
     }
 
     void prepRecvReadFd() {
-        MsgHdr.prepReadFd(msgHdrMemory, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
+        MsgHdr.prepReadFd(msgHdrMemory, cmsgMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
@@ -184,8 +190,8 @@ final class MsgHdrMemory {
         if (iovMemoryCleanable != null) {
             iovMemoryCleanable.clean();
         }
-        if (cmsgDataMemoryCleanable != null) {
-            cmsgDataMemoryCleanable.clean();
+        if (cmsgMemoryCleanable != null) {
+            cmsgMemoryCleanable.clean();
         }
     }
 }

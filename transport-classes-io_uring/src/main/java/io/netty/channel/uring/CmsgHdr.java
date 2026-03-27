@@ -58,7 +58,25 @@ final class CmsgHdr {
         cmsghdr.putInt(cmsghdrPosition + cmsgHdrDataOffset, fd);
     }
 
-    static int readScmRights(ByteBuffer cmsghdr, int cmsgHdrDataOffset) {
+    static long readLen(ByteBuffer cmsghdr) {
+        int cmsghdrPosition = cmsghdr.position();
+        if (Native.SIZEOF_SIZE_T == 4) {
+            return cmsghdr.getInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN);
+        } else {
+            assert Native.SIZEOF_SIZE_T == 8;
+            return cmsghdr.getLong(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN);
+        }
+    }
+
+    static int readLevel(ByteBuffer cmsghdr) {
+        return cmsghdr.getInt(cmsghdr.position() + Native.CMSG_OFFSETOF_CMSG_LEVEL);
+    }
+
+    static int readType(ByteBuffer cmsghdr) {
+        return cmsghdr.getInt(cmsghdr.position() + Native.CMSG_OFFSETOF_CMSG_TYPE);
+    }
+
+    static int readIntData(ByteBuffer cmsghdr, int cmsgHdrDataOffset) {
         return cmsghdr.getInt(cmsghdr.position() + cmsgHdrDataOffset);
     }
 }

@@ -645,6 +645,7 @@ final class Native {
 
     private static native int registerUnix();
 
+    static native long cmsghdrFirstHdr(long hdrAddr);
     static native long cmsghdrData(long hdrAddr);
 
     static native String kernelVersion();

@@ -125,8 +125,4 @@ final class MsgHdr {
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         }
     }
-
-    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
-        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset);
-    }
 }
