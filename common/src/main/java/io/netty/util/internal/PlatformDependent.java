@@ -281,8 +281,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (javaVersion() < 9 ||
-                PlatformDependent0.isNativeImage()) {
+        if (javaVersion() < 9) {
             return false;
         }
         boolean varHandleAvailable = false;

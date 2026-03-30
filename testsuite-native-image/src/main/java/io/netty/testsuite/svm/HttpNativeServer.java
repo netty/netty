@@ -61,6 +61,9 @@ public final class HttpNativeServer {
     }
 
     public static void main(String[] args) throws Exception {
+        for (AllocatorType allocatorType : AllocatorType.values()) {
+            BufferVarHandleVerification.verify(chooseAllocator(allocatorType));
+        }
         for (TransportType value : TransportType.values()) {
             for (AllocatorType allocatorType : AllocatorType.values()) {
                 boolean serverStartSucess = testTransport(value, allocatorType);
