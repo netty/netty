@@ -30,6 +30,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -48,7 +49,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
      * Maximum bytes per chunk when converting a generic {@link FileRegion}
      * to {@link ByteBuf} for the io_uring async send path.
      */
-    private static final int FILE_REGION_MAX_CHUNK_SIZE = 64 * 1024;
+    private static final int FILE_REGION_MAX_CHUNK_SIZE =
+            SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024);
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     byte writeOpCode;
@@ -307,46 +309,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 ops = fileRegion.splice(fd);
             } else if (msg instanceof FileRegion) {
-                // Generic FileRegion: read a chunk into a direct ByteBuf and send it.
-                // Non-null fileRegionChunkBuf means re-sending after a partial send.
-                FileRegion region = (FileRegion) msg;
-                ByteBuf buf = fileRegionChunkBuf;
-                if (buf == null) {
-                    long remaining = region.count() - region.transferred();
-                    if (remaining > 0) {
-                        int chunkSize = (int) Math.min(remaining, FILE_REGION_MAX_CHUNK_SIZE);
-                        buf = alloc().directBuffer(chunkSize);
-                        try {
-                            ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
-                            int written = 0;
-                            while (written < chunkSize) {
-                                long t = region.transferTo(ch, region.transferred());
-                                if (t <= 0) {
-                                    break;
-                                }
-                                written += (int) t;
-                            }
-                            if (buf.readableBytes() == 0) {
-                                buf.release();
-                                handleWriteError(new ChannelException(
-                                        "FileRegion transferTo produced 0 bytes"));
-                                return 0;
-                            }
-                        } catch (Exception e) {
-                            buf.release();
-                            handleWriteError(e);
-                            return 0;
-                        }
-                    } else {
-                        // Empty or fully transferred FileRegion — submit a 0-byte send so the
-                        // completion path removes it from the outbound buffer.
-                        buf = alloc().directBuffer(0);
-                    }
-                    fileRegionChunkBuf = buf;
-                }
-                long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                int length = buf.readableBytes();
-                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
+                return scheduleWriteFileRegion(fd, registration, (FileRegion) msg);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
@@ -355,6 +318,58 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                 ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
             }
+            byte opCode = ops.opcode();
+            writeId = registration.submit(ops);
+            writeOpCode = opCode;
+            if (writeId == 0) {
+                return 0;
+            }
+            return 1;
+        }
+
+        /**
+         * Read a chunk from a generic {@link FileRegion} into a direct {@link ByteBuf} and
+         * submit it as an io_uring async send. If {@code fileRegionChunkBuf} is non-null,
+         * re-sends the remaining bytes from a previous partial send.
+         */
+        private int scheduleWriteFileRegion(int fd, IoRegistration registration, FileRegion region) {
+            ByteBuf buf = fileRegionChunkBuf;
+            if (buf == null) {
+                long remaining = region.count() - region.transferred();
+                if (remaining > 0) {
+                    int chunkSize = (int) Math.min(remaining, FILE_REGION_MAX_CHUNK_SIZE);
+                    buf = alloc().directBuffer(chunkSize);
+                    try {
+                        ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
+                        int written = 0;
+                        while (written < chunkSize) {
+                            long t = region.transferTo(ch, region.transferred());
+                            if (t <= 0) {
+                                break;
+                            }
+                            written += (int) t;
+                        }
+                        if (buf.readableBytes() == 0) {
+                            buf.release();
+                            handleWriteError(new ChannelException(
+                                    "FileRegion transferTo produced 0 bytes"));
+                            return 0;
+                        }
+                    } catch (Exception e) {
+                        buf.release();
+                        handleWriteError(e);
+                        return 0;
+                    }
+                } else {
+                    // Empty or fully transferred — submit a 0-byte send so the
+                    // completion path removes it from the outbound buffer.
+                    buf = alloc().directBuffer(0);
+                }
+                fileRegionChunkBuf = buf;
+            }
+            long address = IoUring.memoryAddress(buf) + buf.readerIndex();
+            int length = buf.readableBytes();
+            IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
