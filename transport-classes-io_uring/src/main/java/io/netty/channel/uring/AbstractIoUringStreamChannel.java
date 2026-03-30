@@ -45,8 +45,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     /**
-     * Maximum number of bytes to read from a generic {@link FileRegion} per chunk.
-     * This limits memory usage when converting non-{@link DefaultFileRegion} implementations
+     * Maximum bytes per chunk when converting a generic {@link FileRegion}
      * to {@link ByteBuf} for the io_uring async send path.
      */
     private static final int FILE_REGION_MAX_CHUNK_SIZE = 64 * 1024;
@@ -243,8 +242,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         if (msg instanceof FileRegion) {
-            // Generic FileRegion — let it pass through to the write path where it will be
-            // converted to ByteBuf in chunks to limit memory usage.
+            // Generic FileRegion — pass through to the write path for chunked conversion.
             return msg;
         }
 
@@ -255,8 +253,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
 
-        // Temporary buffer holding a chunk of data read from a generic FileRegion.
-        // Non-null while an async send for a FileRegion chunk is in flight.
+        // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
         private ByteBuf fileRegionChunkBuf;
 
         @Override
@@ -311,8 +308,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else if (msg instanceof FileRegion) {
                 // Generic FileRegion: read a chunk into a direct ByteBuf and send it.
-                // If fileRegionChunkBuf is non-null, we are re-sending remaining bytes
-                // from a previous partial send.
+                // Non-null fileRegionChunkBuf means re-sending after a partial send.
                 FileRegion region = (FileRegion) msg;
                 ByteBuf buf = fileRegionChunkBuf;
                 if (buf == null) {
@@ -699,15 +695,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     buf.skipBytes(res);
                     channelOutboundBuffer.progress(res);
                     if (!buf.isReadable()) {
-                        // Chunk fully sent — release it and check if the entire FileRegion is done.
+                        // Chunk fully sent.
                         releaseFileRegionChunkBuf();
                         if (region.transferred() >= region.count()) {
                             channelOutboundBuffer.remove();
                         }
-                        // Return true so the write loop continues with the next chunk or message.
                     } else {
-                        // Partial send — remaining bytes still in the chunk buffer.
-                        // Return false to schedule POLLOUT; next write will re-send the remainder.
+                        // Partial send — schedule POLLOUT to re-send the remainder.
                         return false;
                     }
                 } else {
@@ -781,12 +775,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     /**
-     * A {@link WritableByteChannel} that writes into a {@link ByteBuf}.
-     * Used by the generic FileRegion fallback to buffer data from
-     * {@link FileRegion#transferTo(WritableByteChannel, long)} before async send.
-     * Writes are capped to the ByteBuf's writable capacity so that
-     * {@code transferTo} cannot overflow the buffer when the FileRegion
-     * has more data remaining than the chunk size.
+     * A {@link WritableByteChannel} backed by a {@link ByteBuf}.
+     * Writes are capped to {@link ByteBuf#writableBytes()} to prevent overflow
+     * when {@link FileRegion#transferTo} writes more than the chunk size.
      */
     private static final class ByteBufWritableByteChannel implements WritableByteChannel {
         private final ByteBuf buf;
