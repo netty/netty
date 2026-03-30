@@ -47,6 +47,10 @@ static jmethodID closedChannelExceptionMethodId = NULL;
     }
 #else
     static inline int strerror_r_xsi(int errnum, char *strerrbuf, size_t buflen) {
+        // Clear errno before calling the GNU variant so we can reliably detect failure.
+        // The GNU strerror_r only sets errno on error; it does not clear a pre-existing value,
+        // so a stale non-zero errno would otherwise cause a false negative here.
+        errno = 0;
         char* tmp = strerror_r(errnum, strerrbuf, buflen);
         if (strerrbuf[0] == '\0') {
             // Our output buffer was not used. Copy from tmp.
