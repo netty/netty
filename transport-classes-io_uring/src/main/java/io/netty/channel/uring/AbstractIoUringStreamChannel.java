@@ -50,7 +50,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
      * to {@link ByteBuf} for the io_uring async send path.
      */
     private static final int FILE_REGION_MAX_CHUNK_SIZE =
-            SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024);
+            Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024));
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     byte writeOpCode;
