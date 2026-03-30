@@ -30,7 +30,6 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -44,6 +43,13 @@ import static io.netty.channel.unix.Errors.ioResult;
 abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel implements DuplexChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIoUringStreamChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+
+    /**
+     * Maximum number of bytes to read from a generic {@link FileRegion} per chunk.
+     * This limits memory usage when converting non-{@link DefaultFileRegion} implementations
+     * to {@link ByteBuf} for the io_uring async send path.
+     */
+    private static final int FILE_REGION_MAX_CHUNK_SIZE = 64 * 1024;
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     byte writeOpCode;
@@ -237,45 +243,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         if (msg instanceof FileRegion) {
-            // FileRegion not handled above cannot use splice — convert to a direct ByteBuf
-            // via transferTo so it can be sent through the normal io_uring async send path.
-            // Not zero-copy but functionally correct.
-            //
-            // On error paths, don't release region — the caller (AbstractChannel.write)
-            // releases the original msg. On success, we must release it ourselves because
-            // the caller will only see the returned ByteBuf.
-            FileRegion region = (FileRegion) msg;
-            long remaining = region.count() - region.transferred();
-            if (remaining > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException(
-                        "FileRegion too large to convert to ByteBuf: " + remaining + " bytes");
-            }
-            ByteBuf buf = alloc().directBuffer((int) remaining);
-            boolean success = false;
-            try {
-                ByteBufWritableByteChannel channel = new ByteBufWritableByteChannel(buf);
-                long expected = region.count();
-                while (region.transferred() < expected) {
-                    long transferred = region.transferTo(channel, region.transferred());
-                    if (transferred <= 0) {
-                        break;
-                    }
-                }
-                if (region.transferred() < expected) {
-                    throw new ChannelException(
-                            "FileRegion transfer incomplete: expected "
-                            + expected + " bytes, got " + region.transferred());
-                }
-                success = true;
-            } catch (IOException e) {
-                throw new ChannelException("Failed to convert FileRegion to ByteBuf", e);
-            } finally {
-                if (!success) {
-                    buf.release();
-                }
-            }
-            ReferenceCountUtil.safeRelease(region);
-            return buf;
+            // Generic FileRegion — let it pass through to the write path where it will be
+            // converted to ByteBuf in chunks to limit memory usage.
+            return msg;
         }
 
         return super.filterOutboundMessage(msg);
@@ -284,6 +254,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     protected class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
+
+        // Temporary buffer holding a chunk of data read from a generic FileRegion.
+        // Non-null while an async send for a FileRegion chunk is in flight.
+        private ByteBuf fileRegionChunkBuf;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
@@ -335,6 +309,48 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     return 0;
                 }
                 ops = fileRegion.splice(fd);
+            } else if (msg instanceof FileRegion) {
+                // Generic FileRegion: read a chunk into a direct ByteBuf and send it.
+                // If fileRegionChunkBuf is non-null, we are re-sending remaining bytes
+                // from a previous partial send.
+                FileRegion region = (FileRegion) msg;
+                ByteBuf buf = fileRegionChunkBuf;
+                if (buf == null) {
+                    long remaining = region.count() - region.transferred();
+                    if (remaining > 0) {
+                        int chunkSize = (int) Math.min(remaining, FILE_REGION_MAX_CHUNK_SIZE);
+                        buf = alloc().directBuffer(chunkSize);
+                        try {
+                            ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
+                            int written = 0;
+                            while (written < chunkSize) {
+                                long t = region.transferTo(ch, region.transferred());
+                                if (t <= 0) {
+                                    break;
+                                }
+                                written += (int) t;
+                            }
+                            if (buf.readableBytes() == 0) {
+                                buf.release();
+                                handleWriteError(new ChannelException(
+                                        "FileRegion transferTo produced 0 bytes"));
+                                return 0;
+                            }
+                        } catch (Exception e) {
+                            buf.release();
+                            handleWriteError(e);
+                            return 0;
+                        }
+                    } else {
+                        // Empty or fully transferred FileRegion — submit a 0-byte send so the
+                        // completion path removes it from the outbound buffer.
+                        buf = alloc().directBuffer(0);
+                    }
+                    fileRegionChunkBuf = buf;
+                }
+                long address = IoUring.memoryAddress(buf) + buf.readerIndex();
+                int length = buf.readableBytes();
+                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             } else {
                 ByteBuf buf = (ByteBuf) msg;
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
@@ -649,6 +665,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
             }
 
+            if (current instanceof FileRegion) {
+                return handleWriteCompleteGenericFileRegion(
+                        channelOutboundBuffer, (FileRegion) current, res);
+            }
+
             if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -665,10 +686,62 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return true;
         }
 
+        private boolean handleWriteCompleteGenericFileRegion(
+                ChannelOutboundBuffer channelOutboundBuffer, FileRegion region, int res) {
+            try {
+                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    releaseFileRegionChunkBuf();
+                    return true;
+                }
+                if (res >= 0) {
+                    ByteBuf buf = fileRegionChunkBuf;
+                    assert buf != null;
+                    buf.skipBytes(res);
+                    channelOutboundBuffer.progress(res);
+                    if (!buf.isReadable()) {
+                        // Chunk fully sent — release it and check if the entire FileRegion is done.
+                        releaseFileRegionChunkBuf();
+                        if (region.transferred() >= region.count()) {
+                            channelOutboundBuffer.remove();
+                        }
+                        // Return true so the write loop continues with the next chunk or message.
+                    } else {
+                        // Partial send — remaining bytes still in the chunk buffer.
+                        // Return false to schedule POLLOUT; next write will re-send the remainder.
+                        return false;
+                    }
+                } else {
+                    // Don't release the chunk buffer before checking the error —
+                    // for retryable errors (EAGAIN) we need to re-send the same data.
+                    try {
+                        if (ioResult("io_uring write", res) == 0) {
+                            return false;
+                        }
+                    } catch (Throwable cause) {
+                        releaseFileRegionChunkBuf();
+                        handleWriteError(cause);
+                        return true;
+                    }
+                }
+            } catch (Throwable cause) {
+                releaseFileRegionChunkBuf();
+                handleWriteError(cause);
+            }
+            return true;
+        }
+
+        private void releaseFileRegionChunkBuf() {
+            if (fileRegionChunkBuf != null) {
+                fileRegionChunkBuf.release();
+                fileRegionChunkBuf = null;
+            }
+        }
+
         @Override
         public void unregistered() {
             super.unregistered();
             assert readBuffer == null;
+            releaseFileRegionChunkBuf();
         }
     }
 
@@ -709,7 +782,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     /**
      * A {@link WritableByteChannel} that writes into a {@link ByteBuf}.
-     * Used by the generic FileRegion fallback in filterOutboundMessage.
+     * Used by the generic FileRegion fallback to buffer data from
+     * {@link FileRegion#transferTo(WritableByteChannel, long)} before async send.
+     * Writes are capped to the ByteBuf's writable capacity so that
+     * {@code transferTo} cannot overflow the buffer when the FileRegion
+     * has more data remaining than the chunk size.
      */
     private static final class ByteBufWritableByteChannel implements WritableByteChannel {
         private final ByteBuf buf;
@@ -720,9 +797,19 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         public int write(ByteBuffer src) {
-            int remaining = src.remaining();
+            int toWrite = Math.min(src.remaining(), buf.writableBytes());
+            if (toWrite == 0) {
+                return 0;
+            }
+            if (toWrite < src.remaining()) {
+                int oldLimit = src.limit();
+                src.limit(src.position() + toWrite);
+                buf.writeBytes(src);
+                src.limit(oldLimit);
+                return toWrite;
+            }
             buf.writeBytes(src);
-            return remaining - src.remaining();
+            return toWrite;
         }
 
         @Override
