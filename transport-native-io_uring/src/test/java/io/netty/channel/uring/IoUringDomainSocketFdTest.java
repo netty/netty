@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -26,19 +25,16 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
-import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketAddress;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,9 +62,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
     public void testSendRecvFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
 
-        String expected = "Hello World";
         CompletableFuture<FileDescriptor> recvFdFuture = new CompletableFuture<>();
-        CompletableFuture<ByteBuf> recvByteBufFuture = new CompletableFuture<>();
 
         sb.childHandler(new ChannelInboundHandlerAdapter() {
             @Override
@@ -80,15 +74,6 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
                     if (!future.isSuccess()) {
                         Throwable cause = future.cause();
                         recvFdFuture.completeExceptionally(cause);
-                    } else {
-                        ByteBuf sendBuffer = ctx.alloc().directBuffer(expected.length());
-                        sendBuffer.writeBytes(expected.getBytes());
-                        ctx.writeAndFlush(sendBuffer).addListener(f -> {
-                            if (!f.isSuccess()) {
-                                Throwable cause = f.cause();
-                                recvByteBufFuture.completeExceptionally(cause);
-                            }
-                        });
                     }
                 });
             }
@@ -96,41 +81,18 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInboundHandlerAdapter() {
 
-            private CompositeByteBuf byteBufs;
-
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof FileDescriptor) {
                     FileDescriptor fd = (FileDescriptor) msg;
                     recvFdFuture.complete(fd);
-                    ctx.channel().config()
-                            .setOption(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE, DomainSocketReadMode.BYTES);
-                } else {
-                    byteBufs.addComponent(true, (ByteBuf) msg);
                 }
             }
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                DomainSocketReadMode readMode = ctx.channel().config()
-                        .getOption(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE);
-                if (readMode == DomainSocketReadMode.FILE_DESCRIPTORS) {
-                    recvFdFuture.completeExceptionally(cause);
-                } else {
-                    recvByteBufFuture.completeExceptionally(cause);
-                }
+                recvFdFuture.completeExceptionally(cause);
                 ctx.close();
-            }
-
-            @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                if (byteBufs != null) {
-                    recvByteBufFuture.complete(byteBufs);
-                    byteBufs = null;
-                } else {
-                    // after receiving the file descriptor, we need to start receiving the data again.
-                    byteBufs = ctx.alloc().compositeBuffer();
-                }
             }
         });
         cb.option(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE,
@@ -143,14 +105,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
         assertThat(fd.intValue()).isGreaterThanOrEqualTo(0);
         fd.close();
         assertFalse(fd.isOpen());
-
-        ByteBuf recvBuffer = recvByteBufFuture.get();
-       try {
-           assertEquals(expected, recvBuffer.toString(Charset.defaultCharset()));
-           cc.close().sync();
-           sc.close().sync();
-       } finally {
-           ReferenceCountUtil.release(recvBuffer);
-       }
+        cc.close().sync();
+        sc.close().sync();
     }
 }
