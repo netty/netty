@@ -133,6 +133,7 @@ final class CleanerJava9 implements Cleaner {
 
         private CleanableDirectBufferImpl(ByteBuffer buffer) {
             this.buffer = buffer;
+            PlatformDependent.incrementMemoryCounter(buffer.capacity());
         }
 
         @Override
@@ -142,7 +143,9 @@ final class CleanerJava9 implements Cleaner {
 
         @Override
         public void clean() {
+            int capacity = buffer.capacity();
             freeDirectBufferStatic(buffer);
+            PlatformDependent.decrementMemoryCounter(capacity);
         }
     }
 }

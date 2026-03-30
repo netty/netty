@@ -169,11 +169,14 @@ final class CleanerJava25 implements Cleaner {
     @SuppressWarnings("OverlyStrongTypeCast") // The cast is needed for 'invokeExact' semantics.
     @Override
     public CleanableDirectBuffer allocate(int capacity) {
+        PlatformDependent.incrementMemoryCounter(capacity);
         try {
             return (CleanableDirectBufferImpl) INVOKE_ALLOCATOR.invokeExact(capacity);
         } catch (RuntimeException e) {
+            PlatformDependent.decrementMemoryCounter(capacity);
             throw e; // Propagate the runtime exceptions that the Arena would normally throw.
         } catch (Throwable e) {
+            PlatformDependent.decrementMemoryCounter(capacity);
             throw new IllegalStateException("Unexpected allocation exception", e);
         }
     }
@@ -209,12 +212,15 @@ final class CleanerJava25 implements Cleaner {
 
         @Override
         public void clean() {
+            int capacity = buffer.capacity();
             try {
                 closeable.close();
             } catch (RuntimeException e) {
                 throw e; // Propagate the runtime exceptions that Arena would normally throw.
             } catch (Exception e) {
                 throw new IllegalStateException("Unexpected close exception", e);
+            } finally {
+                PlatformDependent.decrementMemoryCounter(capacity);
             }
         }
 

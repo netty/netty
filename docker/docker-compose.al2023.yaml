@@ -30,15 +30,15 @@ services:
   install-tcnative:
     <<: *common-tcnative
     command: '/bin/bash -cl "
-      ./mvnw -am -pl openssl-dynamic clean install &&
-      env -u LDFLAGS -u CFLAGS -u CXXFLAGS -u LD_LIBRARY_PATH ./mvnw -am -pl boringssl-static clean install
+      ./mvnw -B -q -am -pl openssl-dynamic clean install &&
+      env -u LDFLAGS -u CFLAGS -u CXXFLAGS -u LD_LIBRARY_PATH ./mvnw -B -q -am -pl boringssl-static clean install
     "'
     working_dir: /netty-tcnative
 
   update-tcnative-version:
     <<: *common
     command: '/bin/bash -cl "
-      ./mvnw versions:update-property -Dproperty=tcnative.version -DnewVersion=$(cd /netty-tcnative && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout) -DallowSnapshots=true -DprocessParent=true -DgenerateBackupPoms=false
+      ./mvnw -B -q versions:update-property -Dproperty=tcnative.version -DnewVersion=$(cd /netty-tcnative && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout) -DallowSnapshots=true -DprocessParent=true -DgenerateBackupPoms=false
     "'
 
   build:

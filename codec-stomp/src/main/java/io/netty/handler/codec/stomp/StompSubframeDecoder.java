@@ -238,6 +238,9 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     private static void skipControlCharacters(ByteBuf buffer) {
         byte b;
         for (;;) {
+            if (!buffer.isReadable()) {
+                return;
+            }
             b = buffer.readByte();
             if (b != StompConstants.CR && b != StompConstants.LF) {
                 buffer.readerIndex(buffer.readerIndex() - 1);

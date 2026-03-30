@@ -41,7 +41,10 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
     }
 
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+
     private final int maximumAllocationSize;
+    private final int maxForwardBytes;
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
 
@@ -62,6 +65,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     public ZstdDecoder(int maximumAllocationSize) {
         this.maximumAllocationSize = ObjectUtil.checkPositiveOrZero(maximumAllocationSize, "maximumAllocationSize");
+        this.maxForwardBytes = maximumAllocationSize > 0 ? maximumAllocationSize : DEFAULT_MAX_FORWARD_BYTES;
     }
 
     @Override
@@ -101,13 +105,18 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                     }
                     do {
                         w = outBuffer.writeBytes(zstdIs, outBuffer.writableBytes());
-                    } while (w != -1 && outBuffer.isWritable());
-                    if (outBuffer.isReadable()) {
+                    } while (w > 0 && outBuffer.isWritable());
+                    if (!outBuffer.isWritable() || outBuffer.readableBytes() >= maxForwardBytes) {
                         needsRead = false;
                         ctx.fireChannelRead(outBuffer);
                         outBuffer = null;
                     }
-                } while (w != -1);
+                } while (w > 0);
+                if (outBuffer != null && outBuffer.isReadable()) {
+                    needsRead = false;
+                    ctx.fireChannelRead(outBuffer);
+                    outBuffer = null;
+                }
             } finally {
                 if (outBuffer != null) {
                     outBuffer.release();

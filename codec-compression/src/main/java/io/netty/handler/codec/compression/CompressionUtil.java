@@ -16,10 +16,14 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.nio.ByteBuffer;
 
 final class CompressionUtil {
+
+    static final int DEFAULT_MAX_FORWARD_BYTES = SystemPropertyUtil.getInt(
+            "io.netty.compression.defaultMaxForwardBytes", 64 * 1024);
 
     private CompressionUtil() { }
 

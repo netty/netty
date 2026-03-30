@@ -31,6 +31,26 @@ interface Cleaner {
     CleanableDirectBuffer allocate(int capacity);
 
     /**
+     * Reallocate a direct buffer with a new capacity. The old buffer is consumed and
+     * must not be used after this call.
+     * <p>
+     * The default implementation allocates a new buffer, copies the data, and frees the old one.
+     * Implementations may override this to provide more efficient reallocation (e.g. via
+     * {@code Unsafe.reallocateMemory}).
+     */
+    default CleanableDirectBuffer reallocate(CleanableDirectBuffer old, int newCapacity) {
+        CleanableDirectBuffer newBuf = allocate(newCapacity);
+        ByteBuffer oldBB = old.buffer();
+        ByteBuffer newBB = newBuf.buffer();
+        int bytesToCopy = Math.min(oldBB.capacity(), newCapacity);
+        oldBB.position(0).limit(bytesToCopy);
+        newBB.position(0).limit(bytesToCopy);
+        newBB.put(oldBB).clear();
+        old.clean();
+        return newBuf;
+    }
+
+    /**
      * Free a direct {@link ByteBuffer} if possible
      *
      * @deprecated Instead allocate buffers from {@link #allocate(int)}

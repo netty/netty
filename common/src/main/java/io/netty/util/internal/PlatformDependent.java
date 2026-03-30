@@ -118,11 +118,9 @@ public final class PlatformDependent {
     private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final int ADDRESS_SIZE = addressSize0();
-    private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
-    private static final Cleaner DIRECT_CLEANER;
     private static final Cleaner LEGACY_CLEANER;
     private static final boolean HAS_ALLOCATE_UNINIT_ARRAY;
     private static final String LINUX_ID_PREFIX = "ID=";
@@ -183,23 +181,19 @@ public final class PlatformDependent {
         //           (note: that JDK's direct memory limit is independent of this).
         long maxDirectMemory = SystemPropertyUtil.getLong("io.netty.maxDirectMemory", -1);
 
-        if (maxDirectMemory == 0 || !hasUnsafe() || !PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
-            USE_DIRECT_BUFFER_NO_CLEANER = false;
-            DIRECT_CLEANER = NOOP;
+        // Initialize the direct memory counter independently of Unsafe availability,
+        // so that io.netty.maxDirectMemory is enforced even when Unsafe is not available (e.g. Java 25+).
+        if (maxDirectMemory == 0) {
             DIRECT_MEMORY_COUNTER = null;
-        } else {
-            USE_DIRECT_BUFFER_NO_CLEANER = true;
-            DIRECT_CLEANER = new DirectCleaner();
-            if (maxDirectMemory < 0) {
-                maxDirectMemory = MAX_DIRECT_MEMORY;
-                if (maxDirectMemory <= 0) {
-                    DIRECT_MEMORY_COUNTER = null;
-                } else {
-                    DIRECT_MEMORY_COUNTER = new AtomicLong();
-                }
+        } else if (maxDirectMemory < 0) {
+            maxDirectMemory = MAX_DIRECT_MEMORY;
+            if (maxDirectMemory <= 0) {
+                DIRECT_MEMORY_COUNTER = null;
             } else {
                 DIRECT_MEMORY_COUNTER = new AtomicLong();
             }
+        } else {
+            DIRECT_MEMORY_COUNTER = new AtomicLong();
         }
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
         DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
@@ -234,7 +228,11 @@ public final class PlatformDependent {
         } else {
             LEGACY_CLEANER = NOOP;
         }
-        CLEANER = USE_DIRECT_BUFFER_NO_CLEANER ? DIRECT_CLEANER : LEGACY_CLEANER;
+        if (maxDirectMemory != 0 && hasUnsafe() && PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
+            CLEANER = new DirectCleaner();
+        } else {
+            CLEANER = LEGACY_CLEANER;
+        }
 
         EXPLICIT_NO_PREFER_DIRECT = SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
@@ -636,6 +634,18 @@ public final class PlatformDependent {
     }
 
     /**
+     * Reallocate a direct buffer with the given new capacity.
+     * The old buffer is invalidated and must not be used after this call.
+     *
+     * @param buffer The old buffer to reallocate.
+     * @param newCapacity The desired new capacity.
+     * @return The new {@link CleanableDirectBuffer} with the given capacity.
+     */
+    public static CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer buffer, int newCapacity) {
+        return CLEANER.reallocate(buffer, newCapacity);
+    }
+
+    /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
      *
@@ -643,8 +653,6 @@ public final class PlatformDependent {
      */
     @Deprecated
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        // Use the LEGACY_CLEANER reference to avoid using the DIRECT_CLEANER implementation
-        // that just calls #freeDirectNoCleaner(ByteBuffer).
         LEGACY_CLEANER.freeDirectBuffer(buffer);
     }
 
@@ -1031,75 +1039,6 @@ public final class PlatformDependent {
         PlatformDependent0.setMemory(address, bytes, value);
     }
 
-    /**
-     * Allocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s allocated with
-     * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
-     */
-    public static ByteBuffer allocateDirectNoCleaner(int capacity) {
-        assert USE_DIRECT_BUFFER_NO_CLEANER;
-
-        incrementMemoryCounter(capacity);
-        try {
-            return PlatformDependent0.allocateDirectNoCleaner(capacity);
-        } catch (Throwable e) {
-            decrementMemoryCounter(capacity);
-            throwException(e);
-            return null;
-        }
-    }
-
-    /**
-     * Allocate a new {@link ByteBuffer} with the given {@code capacity}, inside a {@link CleanableDirectBuffer}.
-     * The {@link ByteBuffer} <strong>MUST</strong> be deallocated via the {@link CleanableDirectBuffer#clean()}
-     * of the returned {@link CleanableDirectBuffer} object.
-     */
-    public static CleanableDirectBuffer allocateDirectBufferNoCleaner(int capacity) {
-        assert USE_DIRECT_BUFFER_NO_CLEANER;
-        return DIRECT_CLEANER.allocate(capacity);
-    }
-
-    /**
-     * Reallocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s reallocated with
-     * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
-     */
-    public static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
-        assert USE_DIRECT_BUFFER_NO_CLEANER;
-
-        int len = capacity - buffer.capacity();
-        incrementMemoryCounter(len);
-        try {
-            return PlatformDependent0.reallocateDirectNoCleaner(buffer, capacity);
-        } catch (Throwable e) {
-            decrementMemoryCounter(len);
-            throwException(e);
-            return null;
-        }
-    }
-
-    /**
-     * Reallocate a new {@link ByteBuffer} with the given {@code capacity}.
-     * The {@link ByteBuffer} is given as wrapped in its associated {@link CleanableDirectBuffer},
-     * and a new {@link CleanableDirectBuffer} instance will be returned.
-     * The {@link ByteBuffer}s reallocated with this method <strong>MUST</strong> be deallocated
-     * via the {@link CleanableDirectBuffer#clean()} method on the returned object.
-     */
-    public static CleanableDirectBuffer reallocateDirectBufferNoCleaner(CleanableDirectBuffer buffer, int capacity) {
-        assert USE_DIRECT_BUFFER_NO_CLEANER;
-        return ((DirectCleaner) DIRECT_CLEANER).reallocate(buffer, capacity);
-    }
-
-    /**
-     * This method <strong>MUST</strong> only be called for {@link ByteBuffer}s that were allocated via
-     * {@link #allocateDirectNoCleaner(int)}.
-     */
-    public static void freeDirectNoCleaner(ByteBuffer buffer) {
-        assert USE_DIRECT_BUFFER_NO_CLEANER;
-
-        int capacity = buffer.capacity();
-        PlatformDependent0.freeMemory(PlatformDependent0.directBufferAddress(buffer));
-        decrementMemoryCounter(capacity);
-    }
-
     public static boolean hasAlignDirectByteBuffer() {
         return hasUnsafe() || PlatformDependent0.hasAlignSliceMethod();
     }
@@ -1155,7 +1094,7 @@ public final class PlatformDependent {
         }
     }
 
-    private static void incrementMemoryCounter(int capacity) {
+    static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);
             if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
@@ -1167,7 +1106,7 @@ public final class PlatformDependent {
         }
     }
 
-    private static void decrementMemoryCounter(int capacity) {
+    static void decrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long usedMemory = DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
             assert usedMemory >= 0;
@@ -1175,7 +1114,7 @@ public final class PlatformDependent {
     }
 
     public static boolean useDirectBufferNoCleaner() {
-        return USE_DIRECT_BUFFER_NO_CLEANER;
+        return CLEANER instanceof DirectCleaner;
     }
 
     /**
