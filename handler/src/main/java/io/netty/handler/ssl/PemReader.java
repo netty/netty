@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -117,7 +118,7 @@ final class PemReader {
             for (ByteBuf cert : certs) {
                 cert.release();
             }
-            throw e;
+            PlatformDependent.throwException(e);
         }
 
         if (certs.isEmpty()) {
