@@ -127,7 +127,7 @@ public class MqttPropertiesTest {
 
         assertTrue(props.isEmpty());
 
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 10));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
 
         assertFalse(props.isEmpty());
     }
