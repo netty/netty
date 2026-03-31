@@ -112,6 +112,12 @@ final class MsgHdr {
                            ByteBuffer iovMemory, int iovLength) {
         int memoryPosition = memory.position();
         long msgControlAddr = Buffer.memoryAddress(msgControl);
+        assert msgControl.position() == 0;
+        for (int i = 0; i < Native.MSG_CONTROL_LEN_FOR_FD; i++) {
+            // Memset memory.
+            msgControl.put(i, (byte) 0);
+        }
+
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
