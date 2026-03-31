@@ -1180,6 +1180,32 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    void mustParseMultipleChunkExtensionsWithTokenValues() throws Exception {
+        // Regression: the old Match-based state machine had ';' (0x3B) missing from the
+        // exclusion set in ChunkExtValToken, so ';' was treated as a token character
+        // instead of starting a new extension.  This caused valid multi-extension lines
+        // like ";name1=val1;name2=val2" to be rejected with InvalidChunkExtensionException.
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n" +
+                "1;name1=val1;name2=val2\r\n" +
+                "Y\r\n" +
+                "0\r\n" +
+                "\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertFalse(response.decoderResult().isFailure());
+        HttpContent content = channel.readInbound();
+        assertFalse(content.decoderResult().isFailure()); // Must accept valid multi-extension token values.
+        content.release();
+        LastHttpContent last = channel.readInbound();
+        assertEquals(0, last.content().readableBytes());
+        last.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     void mustRejectChunkExtensionsWithEscapedLineBreakInQuotedStrings() throws Exception {
         // See full explanation: https://w4ke.info/2025/10/29/funky-chunks-2.html
         String responseStr = "HTTP/1.1 200 OK\r\n" +
