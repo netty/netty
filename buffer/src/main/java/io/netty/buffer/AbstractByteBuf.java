@@ -1498,6 +1498,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     ByteBuffer _internalNioBuffer() {
-        return internalNioBuffer(0, maxFastWritableBytes());
+        return internalNioBuffer(0, capacity());
     }
 }

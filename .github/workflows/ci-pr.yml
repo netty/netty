@@ -349,7 +349,7 @@ jobs:
         run: brew bundle
 
       - name: Build project
-        run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
+        run: ./mvnw -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true && ./mvnw -B -ntp --file pom.xml package -Pboringssl -pl transport-native-kqueue
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms

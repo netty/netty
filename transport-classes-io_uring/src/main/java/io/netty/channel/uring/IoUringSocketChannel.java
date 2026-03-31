@@ -160,6 +160,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
         @Override
         protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArray iovArray) {
+            if (!IoUring.isSendmsgZcSupported()) {
+                return super.filterWriteMultiple(iovArray);
+            }
             IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
             return new ChannelOutboundBuffer.MessageProcessor() {
                 @Override

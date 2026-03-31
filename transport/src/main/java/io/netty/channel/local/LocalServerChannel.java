@@ -44,12 +44,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
 
     private IoRegistration registration;
 
@@ -221,6 +215,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
+        private final Runnable shutdownHook = this::closeNow;
+
         @Override
         public void close() {
             close(voidPromise());

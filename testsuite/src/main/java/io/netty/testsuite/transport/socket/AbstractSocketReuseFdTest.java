@@ -142,7 +142,12 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (client) {
-                ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII));
+                ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII))
+                        .addListener(f -> {
+                            if (!f.isSuccess()) {
+                                donePromise.tryFailure(f.cause());
+                            }
+                        });
             }
         }
 
@@ -157,7 +162,12 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
                     if (client) {
                         ctx.close();
                     } else {
-                        ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII));
+                        ctx.writeAndFlush(Unpooled.copiedBuffer(EXPECTED_PAYLOAD, CharsetUtil.US_ASCII))
+                                .addListener(f -> {
+                                    if (!f.isSuccess()) {
+                                        donePromise.tryFailure(f.cause());
+                                    }
+                                });
                     }
                 }
             }

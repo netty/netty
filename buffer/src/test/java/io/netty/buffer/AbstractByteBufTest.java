@@ -75,6 +75,7 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -2330,6 +2331,11 @@ public abstract class AbstractByteBufTest {
             thread.start();
         }
 
+        joinAllAndReportErrors(threads, errorRef);
+    }
+
+    private static void joinAllAndReportErrors(List<Thread> threads, AtomicReference<Throwable> errorRef)
+            throws Throwable {
         try {
             for (Thread thread : threads) {
                 thread.join();
@@ -2362,7 +2368,7 @@ public abstract class AbstractByteBufTest {
     static void testCopyMultipleThreads0(final ByteBuf buffer) throws Throwable {
         final ByteBuf expected = buffer.copy();
         try {
-            final AtomicInteger counter = new AtomicInteger(30000);
+            final CyclicBarrier startBarrier = new CyclicBarrier(10);
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
             List<Thread> threads = new ArrayList<Thread>();
             for (int i = 0; i < 10; i++) {
@@ -2370,7 +2376,9 @@ public abstract class AbstractByteBufTest {
                     @Override
                     public void run() {
                         try {
-                            while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                            startBarrier.await(10, TimeUnit.SECONDS);
+                            int counter = 3000;
+                            while (errorRef.get() == null && counter-- > 0) {
                                 ByteBuf copy = buffer.copy();
                                 try {
                                     assertEquals(expected, copy);
@@ -2389,14 +2397,7 @@ public abstract class AbstractByteBufTest {
                 thread.start();
             }
 
-            for (Thread thread : threads) {
-                thread.join();
-            }
-
-            Throwable error = errorRef.get();
-            if (error != null) {
-                throw error;
-            }
+            joinAllAndReportErrors(threads, errorRef);
         } finally {
             expected.release();
         }
@@ -6474,4 +6475,22 @@ public abstract class AbstractByteBufTest {
         assertNotSame(capacity, buffer.capacity());
         buffer.release();
     }
+
+    @Test
+    public void test_internalNioBuffer() {
+        ByteBuf buf = buffer(8, 16);
+        ByteBuf buffer = buf;
+        if (buf instanceof SimpleLeakAwareByteBuf) {
+            buffer = buf.unwrap();
+        }
+        assumeThat(buffer).isInstanceOf(AbstractByteBuf.class);
+        try {
+            ByteBuffer nioBuffer = ((AbstractByteBuf) buffer)._internalNioBuffer();
+            assertEquals(0, nioBuffer.position());
+            assertThat(nioBuffer.remaining()).isGreaterThanOrEqualTo(8);
+        } finally {
+            buf.release();
+        }
+    }
+
 }

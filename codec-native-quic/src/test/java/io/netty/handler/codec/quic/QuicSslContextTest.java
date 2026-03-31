@@ -20,6 +20,8 @@ import io.netty.util.internal.EmptyArrays;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.X509ExtendedKeyManager;
 
@@ -34,7 +36,11 @@ public class QuicSslContextTest {
 
     @Test
     public void testSessionContextSettingsForClient() {
-        testSessionContextSettings(QuicSslContextBuilder.forClient(), 20, 50);
+        QuicSslContextBuilder builder = QuicSslContextBuilder
+                .forClient()
+                .endpointIdentificationAlgorithm("HTTPS");
+        testSessionContextSettings(builder, 20, 50,
+                "HTTPS");
     }
 
     @Test
@@ -72,10 +78,11 @@ public class QuicSslContextTest {
             public PrivateKey getPrivateKey(String alias) {
                 return null;
             }
-        }, null), 20, 50);
+        }, null), 20, 50, null);
     }
 
-    private void testSessionContextSettings(QuicSslContextBuilder builder, int size, int timeout) {
+    private void testSessionContextSettings(QuicSslContextBuilder builder, int size, int timeout,
+                                            String endpointIdentificationAlgorithm) {
         SslContext context = builder.sessionCacheSize(size).sessionTimeout(timeout).build();
         assertEquals(size, context.sessionCacheSize());
         assertEquals(timeout, context.sessionTimeout());
@@ -90,5 +97,9 @@ public class QuicSslContextTest {
         int newTimeout = timeout / 2;
         sessionContext.setSessionTimeout(newTimeout);
         assertEquals(newTimeout, sessionContext.getSessionTimeout());
+
+        SSLEngine engine = context.newEngine(null);
+        SSLParameters sslParameters = engine.getSSLParameters();
+        assertEquals(endpointIdentificationAlgorithm, sslParameters.getEndpointIdentificationAlgorithm());
     }
 }

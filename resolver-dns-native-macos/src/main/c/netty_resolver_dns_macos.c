@@ -144,13 +144,23 @@ error:
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * 1);
-
+    if (dynamicMethods == NULL) {
+        return NULL;
+    }
     char* dynamicTypeName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver;");
+    if (dynamicTypeName == NULL) {
+        free(dynamicMethods);
+        return NULL;
+    }
     JNINativeMethod* dynamicMethod = &dynamicMethods[0];
     dynamicMethod->name = "resolvers";
     dynamicMethod->signature = netty_jni_util_prepend("()[L", dynamicTypeName);
-    dynamicMethod->fnPtr = (void *) netty_resolver_dns_macos_resolvers;
     free(dynamicTypeName);
+    if (dynamicMethod->signature == NULL) {
+        free(dynamicMethods);
+        return NULL;
+    }
+    dynamicMethod->fnPtr = (void *) netty_resolver_dns_macos_resolvers;
     return dynamicMethods;
 }
 

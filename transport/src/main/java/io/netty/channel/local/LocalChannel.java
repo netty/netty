@@ -74,13 +74,6 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
-
     private final Runnable finishReadTask = new Runnable() {
         @Override
         public void run() {
@@ -477,6 +470,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
+
+        private final Runnable shutdownHook = this::closeNow;
 
         @Override
         public void close() {

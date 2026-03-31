@@ -222,7 +222,7 @@ public final class SslContextBuilder {
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
         if (!forServer) {
-            endpointIdentificationAlgorithm = SslUtils.defaultEndpointVerificationAlgorithm;
+            endpointIdentificationAlgorithm = SslContext.defaultEndpointVerificationAlgorithm;
         }
         serverNames = forServer ? null : new ArrayList<>(2); // Only for clients.
     }

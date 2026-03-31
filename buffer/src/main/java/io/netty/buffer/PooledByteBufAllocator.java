@@ -402,9 +402,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (directArena != null) {
             buf = directArena.allocate(cache, initialCapacity, maxCapacity);
         } else {
-            buf = PlatformDependent.hasUnsafe() ?
-                    UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
-                    new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
+            buf = UnsafeByteBufUtil.newDirectByteBuf(this, initialCapacity, maxCapacity);
             onAllocateBuffer(buf, false, false);
         }
         return toLeakAwareBuffer(buf);
