@@ -8,7 +8,7 @@ ENV AWS_LC_VERSION $aws_lc_version
 ENV MAVEN_VERSION $maven_version
 
 # install dependencies
-RUN dnf install -y \
+RUN dnf install -yq \
  apr-devel \
  autoconf \
  automake \
