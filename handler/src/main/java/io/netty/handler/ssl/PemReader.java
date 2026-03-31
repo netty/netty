@@ -68,34 +68,44 @@ final class PemReader {
         List<ByteBuf> certs = new ArrayList<ByteBuf>();
         Matcher m = CERT_HEADER.matcher(content);
         int start = 0;
-        for (;;) {
-            if (!m.find(start)) {
-                break;
-            }
+        try {
+            for (;;) {
+                if (!m.find(start)) {
+                    break;
+                }
 
-            // Here and below it's necessary to save the position as it is reset
-            // after calling usePattern() on Android due to a bug.
-            //
-            // See https://issuetracker.google.com/issues/293206296
-            start = m.end();
-            m.usePattern(BODY);
-            if (!m.find(start)) {
-                break;
-            }
+                // Here and below it's necessary to save the position as it is reset
+                // after calling usePattern() on Android due to a bug.
+                //
+                // See https://issuetracker.google.com/issues/293206296
+                start = m.end();
+                m.usePattern(BODY);
+                if (!m.find(start)) {
+                    break;
+                }
 
-            ByteBuf base64 = Unpooled.copiedBuffer(m.group(0), CharsetUtil.US_ASCII);
-            start = m.end();
-            m.usePattern(CERT_FOOTER);
-            if (!m.find(start)) {
-                // Certificate is incomplete.
-                break;
-            }
-            ByteBuf der = Base64.decode(base64);
-            base64.release();
-            certs.add(der);
+                ByteBuf base64 = Unpooled.copiedBuffer(m.group(0), CharsetUtil.US_ASCII);
+                try {
+                    start = m.end();
+                    m.usePattern(CERT_FOOTER);
+                    if (!m.find(start)) {
+                        // Certificate is incomplete.
+                        break;
+                    }
+                    ByteBuf der = Base64.decode(base64);
+                    certs.add(der);
+                } finally {
+                    base64.release();
+                }
 
-            start = m.end();
-            m.usePattern(CERT_HEADER);
+                start = m.end();
+                m.usePattern(CERT_HEADER);
+            }
+        } catch (Throwable e) {
+            for (ByteBuf cert : certs) {
+                cert.release();
+            }
+            throw e;
         }
 
         if (certs.isEmpty()) {
@@ -132,15 +142,17 @@ final class PemReader {
         }
 
         ByteBuf base64 = Unpooled.copiedBuffer(m.group(0), CharsetUtil.US_ASCII);
-        start = m.end();
-        m.usePattern(KEY_FOOTER);
-        if (!m.find(start)) {
-            // Key is incomplete.
-            throw keyNotFoundException();
+        try {
+            start = m.end();
+            m.usePattern(KEY_FOOTER);
+            if (!m.find(start)) {
+                // Key is incomplete.
+                throw keyNotFoundException();
+            }
+            return Base64.decode(base64);
+        } finally {
+            base64.release();
         }
-        ByteBuf der = Base64.decode(base64);
-        base64.release();
-        return der;
     }
 
     private static KeyException keyNotFoundException() {

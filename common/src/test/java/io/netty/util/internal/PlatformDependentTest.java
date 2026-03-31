@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static io.netty.util.internal.PlatformDependent.hashCodeAscii;
@@ -155,10 +154,10 @@ public class PlatformDependentTest {
     @Test
     public void testAllocateWithCapacity0() {
         assumeTrue(PlatformDependent.hasDirectBufferNoCleanerConstructor());
-        ByteBuffer buffer = PlatformDependent.allocateDirectNoCleaner(0);
-        assertNotEquals(0, PlatformDependent.directBufferAddress(buffer));
-        assertEquals(0, buffer.capacity());
-        PlatformDependent.freeDirectNoCleaner(buffer);
+        CleanableDirectBuffer buffer = PlatformDependent.allocateDirect(0);
+        assertNotEquals(0, PlatformDependent.directBufferAddress(buffer.buffer()));
+        assertEquals(0, buffer.buffer().capacity());
+        buffer.clean();
     }
 
     @EnabledForJreRange(min = JRE.JAVA_25)
