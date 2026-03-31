@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -25,11 +24,6 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
-<<<<<<< fix_fd
-=======
-import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.Disabled;
->>>>>>> 4.2
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -54,7 +48,6 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
         return IoUringSocketTestPermutation.INSTANCE.domainSocket();
     }
 
-    @Disabled
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSendRecvFd(TestInfo testInfo) throws Throwable {
