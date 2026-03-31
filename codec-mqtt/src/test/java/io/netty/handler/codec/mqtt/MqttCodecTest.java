@@ -659,6 +659,25 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testPubAckMessageWithUserPropertyAndSuccessForMqtt5() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.UserProperty("traceId", "abc"));
+        final MqttMessage message = createPubAckMessage((byte) 0, props);
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        mqttDecoder.channelRead(ctx, byteBuf);
+
+        assertEquals(1, out.size());
+
+        final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validatePubReplyVariableHeader((MqttPubReplyMessageVariableHeader) message.variableHeader(),
+                (MqttPubReplyMessageVariableHeader) decodedMessage.variableHeader());
+    }
+
+    @Test
     public void testSubAckMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
         props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
@@ -797,6 +816,28 @@ public class MqttCodecTest {
         final MqttMessage message = MqttMessageBuilders.disconnect()
                 .reasonCode((byte) 0) // ok
                 .properties(MqttProperties.NO_PROPERTIES)
+                .build();
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        mqttDecoder.channelRead(ctx, byteBuf);
+
+        assertEquals(1, out.size());
+        final MqttMessage decodedMessage = (MqttMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateReasonCodeAndPropertiesVariableHeader(
+                (MqttReasonCodeAndPropertiesVariableHeader) message.variableHeader(),
+                (MqttReasonCodeAndPropertiesVariableHeader) decodedMessage.variableHeader());
+    }
+
+    @Test
+    public void testDisconnectMessageWithUserPropertyAndSuccessForMqtt5() throws Exception {
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.UserProperty("traceId", "abc"));
+        final MqttMessage message = MqttMessageBuilders.disconnect()
+                .reasonCode((byte) 0)
+                .properties(props)
                 .build();
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 

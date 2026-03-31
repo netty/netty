@@ -401,7 +401,9 @@ public final class MqttProperties {
 
     public boolean isEmpty() {
         IntObjectHashMap<MqttProperty> props = this.props;
-        return props == null || props.isEmpty();
+        return (props == null || props.isEmpty()) &&
+                (userProperties == null || userProperties.isEmpty()) &&
+                (subscriptionIds == null || subscriptionIds.isEmpty());
     }
 
     /**
