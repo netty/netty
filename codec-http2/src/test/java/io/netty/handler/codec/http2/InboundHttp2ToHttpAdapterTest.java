@@ -295,7 +295,13 @@ public class InboundHttp2ToHttpAdapterTest {
         // Verify that exceeding maxContentLength causes a stream error (RST_STREAM)
         // not a connection error (GOAWAY), so other streams can continue.
         // This is the fix for https://github.com/netty/netty/issues/11994
-        boostrapEnv(0, 1, 1);
+        //
+        // clientLatch=1: RST_STREAM for stream 3 triggers onRstStreamRead on the client,
+        //   which fires exceptionCaught and counts down clientLatch.
+        //   With a connection error (GOAWAY), no RST_STREAM is sent, so clientLatch
+        //   never counts down and awaitResponses() times out — failing the test.
+        // serverLatch=1: stream 5 request should be delivered normally.
+        boostrapEnv(1, 1, 1);
         final byte[] oversizedData = new byte[maxContentLength + 1];
         final ByteBuf oversizedContent = Unpooled.wrappedBuffer(oversizedData);
         final String normalText = "hello";
@@ -327,14 +333,26 @@ public class InboundHttp2ToHttpAdapterTest {
                     clientChannel.flush();
                 }
             });
-            // If maxContentLength caused a CONNECTION error, GOAWAY would close the connection
-            // and stream 5 would never be delivered. With the fix (STREAM error), only stream 3
-            // is reset and stream 5 is delivered successfully.
+
+            // Verify stream 5 is delivered successfully on the server
             awaitRequests();
             ArgumentCaptor<FullHttpMessage> requestCaptor = ArgumentCaptor.forClass(FullHttpMessage.class);
             verify(serverListener).messageReceived(requestCaptor.capture());
             capturedRequests = requestCaptor.getAllValues();
             assertEquals(expectedRequest, capturedRequests.get(0));
+
+            // Verify the client received RST_STREAM (not GOAWAY) for the oversized stream.
+            // The server's onStreamError sends RST_STREAM, which the client's
+            // InboundHttp2ToHttpAdapter.onRstStreamRead translates into an exceptionCaught
+            // event carrying a StreamException — this counts down clientLatch.
+            // With a connection error, the server sends GOAWAY instead — no RST_STREAM is
+            // received, exceptionCaught never fires, and awaitResponses() times out.
+            awaitResponses();
+            assertNotNull(clientException);
+            assertTrue(isStreamError(clientException));
+            Http2Exception.StreamException streamEx = (Http2Exception.StreamException) clientException;
+            assertEquals(3, streamEx.streamId());
+            assertEquals(Http2Error.ENHANCE_YOUR_CALM, streamEx.error());
         } finally {
             expectedRequest.release();
         }
