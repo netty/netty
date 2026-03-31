@@ -207,9 +207,7 @@ static jint netty_unix_errors_errorEHOSTUNREACH(JNIEnv* env, jclass clazz) {
 }
 
 static jstring netty_unix_errors_strError(JNIEnv* env, jclass clazz, jint error) {
-    char strerrbuf[256] = {0};
-    strerror_r_xsi(error, strerrbuf, sizeof(strerrbuf));
-    return (*env)->NewStringUTF(env, strerrbuf);
+    return (*env)->NewStringUTF(env, strerror(error));
 }
 // JNI Registered Methods End
 
