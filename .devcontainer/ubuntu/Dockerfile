@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/base:ubuntu
+FROM ubuntu:24.04
 RUN apt update && apt install -y \
     autotools-dev \
     autoconf \
@@ -16,12 +16,14 @@ RUN apt update && apt install -y \
     cmake \
     ninja-build \
     perl \
-    golang
+    golang \
+    zip \
+    unzip
 
-USER vscode
-RUN curl -s "https://get.sdkman.io" | bash
+#USER vscode
 ARG java_version="25-zulu"
 ENV JAVA_VERSION=$java_version
+RUN curl -sv "https://get.sdkman.io" | bash
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
     yes | sdk install java $JAVA_VERSION && \
     rm -rf $HOME/.sdkman/archives/* && \
