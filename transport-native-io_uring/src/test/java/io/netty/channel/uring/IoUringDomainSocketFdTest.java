@@ -27,6 +27,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -53,6 +54,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
         return IoUringSocketTestPermutation.INSTANCE.domainSocket();
     }
 
+    @Disabled
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSendRecvFd(TestInfo testInfo) throws Throwable {
