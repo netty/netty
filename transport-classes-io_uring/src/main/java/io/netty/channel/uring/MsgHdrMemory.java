@@ -85,7 +85,7 @@ final class MsgHdrMemory {
         msgHdrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_MSGHDR);
         socketAddrMemoryCleanable = null;
         iovMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_IOVEC);
-        cmsgMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
+        cmsgMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.MSG_CONTROL_LEN_FOR_FD);
 
         msgHdrMemory = msgHdrMemoryCleanable.buffer();
         socketAddrMemory = null;
