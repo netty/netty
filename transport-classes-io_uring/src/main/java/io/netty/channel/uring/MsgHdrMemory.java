@@ -125,11 +125,13 @@ final class MsgHdrMemory {
     }
 
     void setScmRightsFd(int fd) {
-        MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgMemory, cmsgDataOffset, iovMemory, 1);
+        Native.prepSendFd(msgHdrMemoryAddress, Buffer.memoryAddress(cmsgMemory),
+                Native.MSG_CONTROL_LEN_FOR_FD, Buffer.memoryAddress(iovMemory), 1, fd);
+        //MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     Integer getScmRightsFd() {
-        long len = CmsgHdr.readLen(cmsgMemory);
+        /*long len = CmsgHdr.readLen(cmsgMemory);
         int level = CmsgHdr.readLevel(cmsgMemory);
         int type = CmsgHdr.readType(cmsgMemory);
         if (len != Native.CMSG_LEN_FOR_FD || level != Native.SOL_SOCKET || type != Native.SCM_RIGHTS) {
@@ -139,6 +141,8 @@ final class MsgHdrMemory {
         //assert level == Native.SOL_SOCKET : "level " + level + " is not " + Native.SOL_SOCKET;
         //assert type == Native.SCM_RIGHTS : "type " + type + " is not " + Native.SCM_RIGHTS;
         return CmsgHdr.readIntData(cmsgMemory, cmsgDataOffset);
+         */
+        return Native.recvFd(msgHdrMemoryAddress);
     }
 
     void prepRecvReadFd() {

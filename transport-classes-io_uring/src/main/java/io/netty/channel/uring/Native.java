@@ -623,6 +623,9 @@ final class Native {
 
     static native void eventFdWrite(int fd, long value);
 
+    static native void prepSendFd(long msghdrAddress, long msgControlAddress, int controlLen,
+                                  long iovAddress, int iovLen, int fd);
+    static native int recvFd(long msghdrAddress);
     static int getFd(DefaultFileRegion fileChannel) {
         return getFd0(fileChannel);
     }

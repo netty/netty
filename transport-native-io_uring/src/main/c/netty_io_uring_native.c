@@ -774,6 +774,36 @@ static jint netty_io_uring_ScmRights(JNIEnv* env, jclass clazz) {
     return SCM_RIGHTS;
 }
 
+static void netty_io_uring_prep_send_fd(JNIEnv* env, jclass clazz, jlong msghdrAddress,
+     jlong msgControlAddress, jint controlLen, jlong iovAddress, jint iovLen, jint fd) {
+     struct cmsghdr *cmsg;
+
+     struct msghdr* msg = (struct msghdr*) msghdrAddress;
+     msg->msg_control = (void *) msgControlAddress;
+     msg->msg_controllen = controlLen;
+     msg->msg_iov = (struct iovec *) iovAddress;
+     msg->msg_iovlen = iovLen;
+
+     cmsg = CMSG_FIRSTHDR(msg);
+     cmsg->cmsg_level = SOL_SOCKET;
+     cmsg->cmsg_type = SCM_RIGHTS;
+     cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+     *((int *)CMSG_DATA(cmsg)) = fd;
+}
+
+static jint netty_io_uring_recv_fd(JNIEnv* env, jclass clazz, jlong msghdrAddress) {
+     struct msghdr* msg = (struct msghdr*) msghdrAddress;
+     struct cmsghdr* cmsg = CMSG_FIRSTHDR(msg);
+     if (!cmsg) {
+         return -errno;
+     }
+     if ((cmsg->cmsg_len == CMSG_LEN(sizeof(int))) && (cmsg->cmsg_level == SOL_SOCKET) && (cmsg->cmsg_type == SCM_RIGHTS)) {
+         int socketFd = *((int *) CMSG_DATA(cmsg));
+         return socketFd;
+     }
+     return -1;
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockNonblock", "()I", (void *) netty_io_uring_sockNonblock },
@@ -860,6 +890,8 @@ static const JNINativeMethod method_table[] = {
     {"eventFdWrite", "(IJ)V", (void *) netty_io_uring_eventFdWrite },
     {"registerUnix", "()I", (void *) netty_io_uring_registerUnix },
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
+    {"prepSendFd", "(JJIJII)V", (void *) netty_io_uring_prep_send_fd},
+    {"recvFd", "(J)I", (void *) netty_io_uring_recv_fd},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
