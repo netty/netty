@@ -205,7 +205,12 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 final ChannelPipeline pipeline = pipeline();
                 try {
                     if (res > 0) {
-                        int fd = readMsgHdrMemory.getScmRightsFd();
+                        Integer fd = readMsgHdrMemory.getScmRightsFd();
+                        if (fd == null) {
+                            // Ignore if we receive something we don't expect.
+                            scheduleRead(false);
+                            return;
+                        }
                         allocHandle.lastBytesRead(1);
                         allocHandle.incMessagesRead(1);
                         pipeline.fireChannelRead(new FileDescriptor(fd));
