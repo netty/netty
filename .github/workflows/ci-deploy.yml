@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   stage-snapshot-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         include:
@@ -191,7 +191,7 @@ jobs:
           include-hidden-files: true
 
   deploy-staged-snapshots:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # Wait until we have staged everything
     needs: [ stage-snapshot-linux, stage-snapshot-windows-x86_64, stage-snapshot-macos ]
     steps:
