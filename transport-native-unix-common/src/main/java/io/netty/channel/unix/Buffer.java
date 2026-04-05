@@ -62,7 +62,7 @@ public final class Buffer {
      */
     public static long memoryAddress(ByteBuffer buffer) {
         assert buffer.isDirect();
-        if (PlatformDependent.hasUnsafe()) {
+        if (PlatformDependent.hasDirectByteBufferAddress(buffer)) {
             return PlatformDependent.directBufferAddress(buffer);
         }
         return memoryAddress0(buffer);
