@@ -40,7 +40,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -157,15 +156,10 @@ public class PkiTestingTlsTest {
                 .subject("CN=localhost")
                 .buildSelfSigned();
 
-        // Disable 128-bit ciphers so only 256-bit ciphers remain.
-        String[] ciphers = {"TLS_AES_256_GCM_SHA384",
-                            "TLS_CHACHA20_POLY1305_SHA256"};
-
         String[] groups = new String[]{"X25519MLKEM768"};
         SslContextBuilder serverBuilder = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(SslProvider.OPENSSL)
-                .protocols("TLSv1.3")
-                .ciphers(Arrays.asList(ciphers));
+                .protocols("TLSv1.3");
 
         if (!configureViaParameter) {
             serverBuilder.option(OpenSslContextOption.GROUPS, groups.clone());
@@ -176,8 +170,7 @@ public class PkiTestingTlsTest {
                 .trustManager(cert.toTrustManagerFactory())
                 .sslProvider(SslProvider.OPENSSL)
                 .serverName(new SNIHostName("localhost"))
-                .protocols("TLSv1.3")
-                .ciphers(Arrays.asList(ciphers));
+                .protocols("TLSv1.3");
 
         if (!configureViaParameter) {
             clientBuilder.option(OpenSslContextOption.GROUPS, groups.clone());
