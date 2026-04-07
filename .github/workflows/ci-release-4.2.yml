@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,7 +85,7 @@ jobs:
           include-hidden-files: true
 
   stage-release-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: prepare-release
     strategy:
       matrix:
@@ -367,7 +367,7 @@ jobs:
         run: ./.github/scripts/release_rollback.ps1 release.properties netty/netty 4.2
 
   deploy-staged-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # Wait until we have staged everything
     needs: [ stage-release-linux, stage-release-macos, stage-release-windows]
     steps:
