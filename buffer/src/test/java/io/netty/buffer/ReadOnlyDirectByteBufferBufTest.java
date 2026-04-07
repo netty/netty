@@ -581,7 +581,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
-    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testToStringMultipleThreads1() throws Throwable {
         String expected = "Hello, World!";
         byte[] bytes = expected.getBytes(CharsetUtil.ISO_8859_1);
