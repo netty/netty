@@ -2726,6 +2726,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2740,6 +2741,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2790,11 +2792,12 @@ public abstract class AbstractByteBufTest {
                 }
             }).start();
         }
-        latch.await(10, TimeUnit.SECONDS);
+        latch.await();
         barrier.await(5, TimeUnit.SECONDS);
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2809,6 +2812,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
@@ -2858,7 +2862,7 @@ public abstract class AbstractByteBufTest {
                 }
             }).start();
         }
-        latch.await(10, TimeUnit.SECONDS);
+        latch.await();
         barrier.await(5, TimeUnit.SECONDS);
     }
 

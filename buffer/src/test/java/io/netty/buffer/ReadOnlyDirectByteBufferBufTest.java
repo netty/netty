@@ -490,6 +490,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -505,6 +506,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -520,6 +522,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -535,6 +538,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     }
 
     @Test
+    @Timeout(30)
     public void testSliceReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
