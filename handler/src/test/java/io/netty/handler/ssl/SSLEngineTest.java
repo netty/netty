@@ -1376,6 +1376,7 @@ public abstract class SSLEngineTest {
             clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+            pingPongPacketsUntilSessionAllocation(param, clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
             assertTrue(session.isValid(), "session should be valid: " + session);
@@ -1417,43 +1418,7 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             if (param.protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
-                // Allocate something which is big enough for sure
-                ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
-                ByteBuffer appBuffer = allocateBuffer(param.type(), 32 * 1024);
-
-                appBuffer.clear().position(4).flip();
-                packetBuffer.clear();
-
-                do {
-                    SSLEngineResult result;
-
-                    do {
-                        result = serverEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-                    do {
-                        result = clientEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-
-                    do {
-                        result = clientEngine.wrap(appBuffer, packetBuffer);
-                    } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    appBuffer.clear();
-                    packetBuffer.flip();
-
-                    do {
-                        result = serverEngine.unwrap(packetBuffer, appBuffer);
-                    } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
-
-                    packetBuffer.clear();
-                    appBuffer.clear().position(4).flip();
-                } while (clientEngine.getSession().getId().length == 0);
+                pingPongPacketsUntilSessionAllocation(param, clientEngine, serverEngine);
 
                 // With TLS1.3 we should see pseudo IDs and so these should never match.
                 assertFalse(Arrays.equals(clientEngine.getSession().getId(), serverEngine.getSession().getId()));
@@ -1470,6 +1435,47 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
         }
+    }
+
+    private void pingPongPacketsUntilSessionAllocation(
+            SSLEngineTestParam param, SSLEngine clientEngine, SSLEngine serverEngine) throws SSLException {
+        // Allocate something which is big enough for sure
+        ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
+        ByteBuffer appBuffer = allocateBuffer(param.type(), 32 * 1024);
+
+        appBuffer.clear().position(4).flip();
+        packetBuffer.clear();
+
+        do {
+            SSLEngineResult result;
+
+            do {
+                result = serverEngine.wrap(appBuffer, packetBuffer);
+            } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            appBuffer.clear();
+            packetBuffer.flip();
+            do {
+                result = clientEngine.unwrap(packetBuffer, appBuffer);
+            } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            packetBuffer.clear();
+            appBuffer.clear().position(4).flip();
+
+            do {
+                result = clientEngine.wrap(appBuffer, packetBuffer);
+            } while (appBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            appBuffer.clear();
+            packetBuffer.flip();
+
+            do {
+                result = serverEngine.unwrap(packetBuffer, appBuffer);
+            } while (packetBuffer.hasRemaining() || result.bytesProduced() > 0);
+
+            packetBuffer.clear();
+            appBuffer.clear().position(4).flip();
+        } while (clientEngine.getSession().getId().length == 0);
     }
 
     @MethodSource("newTestParams")
