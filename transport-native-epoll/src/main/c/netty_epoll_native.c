@@ -243,7 +243,7 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
             int err = errno;
             close(efd);
             netty_unix_errors_throwChannelExceptionErrorNo(env, "fcntl() failed: ", err);
-            return err;
+            return -err;
         }
     }
     return efd;
