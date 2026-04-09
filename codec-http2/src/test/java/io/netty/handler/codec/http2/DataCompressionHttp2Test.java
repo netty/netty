@@ -29,7 +29,6 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
@@ -38,7 +37,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -53,6 +51,7 @@ import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
@@ -93,11 +92,6 @@ public class DataCompressionHttp2Test {
     private Http2ConnectionHandler clientHandler;
     private ByteArrayOutputStream serverOut;
     private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
-
-    @BeforeAll
-    public static void beforeAllTests() throws Throwable {
-        Brotli.ensureAvailability();
-    }
 
     @BeforeEach
     public void setup() throws InterruptedException, Http2Exception {
@@ -173,13 +167,12 @@ public class DataCompressionHttp2Test {
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 10 })
-    public void gzipEncodingSingleEmptyMessage(final int padding) throws Exception {
+    public void noContentEncodingSingleEmptyMessage(final int padding) throws Exception {
         final String text = "";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -198,13 +191,12 @@ public class DataCompressionHttp2Test {
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 10 })
-    public void gzipEncodingSingleMessage(final int padding) throws Exception {
+    public void noContentEncodingSingleMessage(final int padding) throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -223,15 +215,14 @@ public class DataCompressionHttp2Test {
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 10 })
-    public void gzipEncodingMultipleMessages(final int padding) throws Exception {
+    public void noContentEncodingMultipleMessages(final int padding) throws Exception {
         final String text1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
         final String text2 = "dddddddddddddddddddeeeeeeeeeeeeeeeeeeeffffffffffffffffffff";
         final ByteBuf data1 = Unpooled.copiedBuffer(text1.getBytes());
         final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
         bootstrapEnv(data1.readableBytes() + data2.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -252,165 +243,14 @@ public class DataCompressionHttp2Test {
 
     @ParameterizedTest
     @ValueSource(ints = { 0, 10 })
-    public void brotliEncodingSingleEmptyMessage(final int padding) throws Exception {
-        final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void brotliEncodingSingleMessage(final int padding) throws Exception {
-        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8));
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void zstdEncodingSingleEmptyMessage(final int padding) throws Exception {
-        final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void zstdEncodingSingleMessage(int padding) throws Exception {
-        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8));
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.ZSTD);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void snappyEncodingSingleEmptyMessage(final int padding) throws Exception {
-        final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void snappyEncodingSingleMessage(final int padding) throws Exception {
-        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
-        bootstrapEnv(data.readableBytes());
-        try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
-
-            runInChannel(clientChannel, new Http2Runnable() {
-                @Override
-                public void run() throws Http2Exception {
-                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
-                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
-                    clientHandler.flush(ctxClient());
-                }
-            });
-            awaitServer();
-            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
-        } finally {
-            data.release();
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 0, 10 })
-    public void deflateEncodingWriteLargeMessage(final int padding) throws Exception {
+    public void noContentEncodingLargeMessage(final int padding) throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
         new Random().nextBytes(bytes);
         bootstrapEnv(BUFFER_SIZE);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
-                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH);
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
@@ -560,5 +400,64 @@ public class DataCompressionHttp2Test {
 
     private ChannelPromise newPromiseClient() {
         return ctxClient().newPromise();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 10 })
+    public void preEncodedGzipContentPassesThrough(final int padding) throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final byte[] compressed = gzipCompress(text.getBytes(CharsetUtil.UTF_8));
+        final ByteBuf data = Unpooled.wrappedBuffer(compressed);
+        bootstrapEnv(text.getBytes(CharsetUtil.UTF_8).length);
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 10 })
+    public void identityContentEncodingPassesThrough(final int padding) throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8));
+        bootstrapEnv(data.readableBytes());
+        try {
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
+                    .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.IDENTITY);
+
+            runInChannel(clientChannel, new Http2Runnable() {
+                @Override
+                public void run() throws Http2Exception {
+                    clientEncoder.writeHeaders(ctxClient(), 3, headers, padding, false, newPromiseClient());
+                    clientEncoder.writeData(ctxClient(), 3, data.retain(), padding, true, newPromiseClient());
+                    clientHandler.flush(ctxClient());
+                }
+            });
+            awaitServer();
+            assertEquals(text, serverOut.toString(CharsetUtil.UTF_8.name()));
+        } finally {
+            data.release();
+        }
+    }
+
+    private static byte[] gzipCompress(byte[] data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzipOut = new GZIPOutputStream(bos)) {
+            gzipOut.write(data);
+        }
+        return bos.toByteArray();
     }
 }

@@ -392,9 +392,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
 
         CharSequence encoding = headers.get(CONTENT_ENCODING);
-        if (encoding == null) {
-            encoding = IDENTITY;
+        if (encoding != null) {
+            // Content-Encoding was already set, either as something specific or as the IDENTITY encoding.
+            // Therefore, we should NOT encode here. This is consistent with HttpContentCompressor behavior.
+            return null;
         }
+        encoding = IDENTITY;
         final EmbeddedChannel compressor = newContentCompressor(ctx, encoding);
         if (compressor != null) {
             CharSequence targetContentEncoding = getTargetContentEncoding(encoding);
