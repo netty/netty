@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   install-jars-linux-aarch64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -66,7 +66,7 @@ jobs:
 
   load-native-linux-aarch64:
     # The host should always be Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ install-jars-linux-aarch64 ]
     steps:
       - uses: actions/checkout@v4

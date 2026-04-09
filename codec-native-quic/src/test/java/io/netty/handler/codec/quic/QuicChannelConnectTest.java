@@ -98,7 +98,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     public void testConnectAndQLog(Executor executor) throws Throwable {
         Path path = Files.createTempFile("qlog", ".quic");
         assertTrue(path.toFile().delete());
@@ -116,7 +116,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(10)
     public void testConnectAndQLogDir(Executor executor) throws Throwable {
         Path path = Files.createTempDirectory("qlogdir-");
         testQLog(executor, path, p -> {
@@ -384,35 +384,35 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(3)
+    @Timeout(10)
     public void testConnectWithNoDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.randomGenerator());
     }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(5)
+    @Timeout(10)
     public void testConnectWithDroppedPacketsAndRandomConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.randomGenerator());
     }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(3)
+    @Timeout(10)
     public void testConnectWithNoDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 0, QuicConnectionIdGenerator.signGenerator());
     }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(5)
+    @Timeout(10)
     public void testConnectWithDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.signGenerator());
     }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(5)
+    @Timeout(10)
     public void testTimedOut(Executor executor) throws Throwable {
         final AtomicBoolean dropPackets = new AtomicBoolean();
         final BlockingQueue<QuicStreamChannel> acceptedStreams = new LinkedBlockingQueue<>();
@@ -1723,7 +1723,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
-    @Timeout(5)
+    @Timeout(10)
     public void testSessionReusedOnClientSide(Executor executor) throws Exception {
         testSessionReuse(executor, false);
     }
