@@ -20,6 +20,6 @@ import io.netty.channel.IoHandle;
 /**
  * {@link IoHandle} sub-type that is used by the local transport internally.
  */
-interface LocalIoHandle extends IoHandle {
+public interface LocalIoHandle extends IoHandle {
     void closeNow();
 }
