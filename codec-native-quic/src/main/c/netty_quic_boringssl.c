@@ -1114,7 +1114,7 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
 
     if (alpn_protos != NULL) {
         int alpn_length = (*env)->GetArrayLength(env, alpn_protos);
-        alpn_data* alpn = (alpn_data*) OPENSSL_malloc(sizeof(alpn_data));
+        alpn = (alpn_data*) OPENSSL_malloc(sizeof(alpn_data));
         if (alpn != NULL) {
             // Fill the alpn_data struct
             alpn->proto_data = OPENSSL_malloc(alpn_length);
