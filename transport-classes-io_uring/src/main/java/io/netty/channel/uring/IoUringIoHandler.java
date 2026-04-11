@@ -27,6 +27,8 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.ObjectUtil;
@@ -37,11 +39,12 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -55,7 +58,13 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
-    private final IntObjectMap<DefaultIoUringIoRegistration> registrations;
+
+    /**
+     * Maps sequence number -> IoUringCompletionContext for all inflight submissions.
+     * This replaces both the old {@code registrations} IntObjectHashMap and the UserData encode/decode logic.
+     */
+    private final LongObjectMap<IoUringCompletionContext> pendingOps;
+
     // The maximum number of bytes for an InetAddress / Inet6Address
     private final byte[] inet4AddressArray = new byte[SockaddrIn.IPV4_ADDRESS_LENGTH];
     private final byte[] inet6AddressArray = new byte[SockaddrIn.IPV6_ADDRESS_LENGTH];
@@ -74,12 +83,31 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
-    private int nextRegistrationId = Integer.MIN_VALUE;
 
-    // these two ids are used internally any so can't be used by nextRegistrationId().
-    private static final int EVENTFD_ID = Integer.MAX_VALUE;
-    private static final int RINGFD_ID = EVENTFD_ID - 1;
-    private static final int INVALID_ID = 0;
+    // Head of the intrusive free list for recycling IoUringCompletionContext instances.
+    // Only accessed from the EventLoop thread, so no synchronization needed.
+    private IoUringCompletionContext freeListHead;
+
+    /**
+     * We start at {@code INVALID_ID + 1} so that {@code INVALID_ID} is never used as a valid sequence.
+     */
+    private final AtomicLong nextSequence = new AtomicLong(INVALID_ID + 1);
+
+    private static final long INVALID_ID = Long.MIN_VALUE;
+
+    /**
+     * Singleton context for eventfd-related internal operations.
+     * Used with {@code ==} reference equality in completion handling.
+     */
+    private static final IoUringCompletionContext EVENTFD_CONTEXT =
+            new IoUringCompletionContext(null, (byte) 0, 0);
+
+    /**
+     * Singleton context for ringfd-related internal operations (NOP, timeout, etc.).
+     * Used with {@code ==} reference equality in completion handling.
+     */
+    private static final IoUringCompletionContext RINGFD_CONTEXT =
+            new IoUringCompletionContext(null, (byte) 0, 0);
 
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
 
@@ -133,7 +161,7 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
-        registrations = new IntObjectHashMap<>();
+        pendingOps = new LongObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBufCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
         eventfdReadBuf = eventfdReadBufCleanable.buffer();
@@ -143,6 +171,19 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
+    }
+
+    private long nextSequence() {
+        return nextSequence.getAndIncrement();
+    }
+
+    /**
+     * Submit an internal operation (eventfd/ringfd) and return the sequence used as user_data.
+     */
+    private long registerInternalOp(IoUringCompletionContext ctx) {
+        long seq = nextSequence();
+        pendingOps.put(seq, ctx);
+        return seq;
     }
 
     @Override
@@ -274,31 +315,44 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+    private void handle(int res, int flags, long sqeUdata, ByteBuffer extraCqeData) {
         try {
-            int id = UserData.decodeId(udata);
-            byte op = UserData.decodeOp(udata);
-            short data = UserData.decodeData(udata);
-
-            if (logger.isTraceEnabled()) {
-                logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(op), data, res);
+            IoUringCompletionContext ctx = pendingOps.get(sqeUdata);
+            if (ctx == null) {
+                logger.debug("ignoring completion for unknown sequence (seq={}, res={})", sqeUdata, res);
+                return;
             }
-            if (id == EVENTFD_ID) {
+
+            // Only remove from pendingOps if IORING_CQE_F_MORE is not set, as otherwise we know
+            // that we will receive more completions for the initial request.
+            boolean oneshotOp = (flags & Native.IORING_CQE_F_MORE) == 0;
+            if (oneshotOp) {
+                pendingOps.remove(sqeUdata);
+            }
+
+            // Check if this is an internal operation (eventfd / ringfd) using reference equality
+            if (ctx == EVENTFD_CONTEXT) {
                 handleEventFdRead();
                 return;
             }
-            if (id == RINGFD_ID) {
-                // Just return
+            if (ctx == RINGFD_CONTEXT) {
+                // RINGFD: just return (NOP, timeout, etc.)
                 return;
             }
-            DefaultIoUringIoRegistration registration = registrations.get(id);
-            if (registration == null) {
-                logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
-                        Native.opToStr(op), id, res);
-                return;
+
+            DefaultIoUringIoRegistration registration = ctx.registration;
+
+            if (logger.isTraceEnabled()) {
+                logger.trace("completed(ring {}): {}(userData={}, res={})",
+                        ringBuffer.fd(), Native.opToStr(ctx.op), ctx.userData, res);
             }
-            registration.handle(res, flags, op, data, extraCqeData);
+
+            registration.handle(res, flags, ctx.op, ctx.userData, extraCqeData);
+
+            // Recycle if this completion is terminal (no more CQEs expected for this SQE).
+            if (oneshotOp) {
+                recycleContext(ctx);
+            }
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
@@ -316,17 +370,16 @@ public final class IoUringIoHandler implements IoHandler {
 
     private void submitEventFdRead() {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
-        long udata = UserData.encode(EVENTFD_ID, Native.IORING_OP_READ, (short) 0);
+        long seq = registerInternalOp(EVENTFD_CONTEXT);
 
         eventfdReadSubmitted = submissionQueue.addEventFdRead(
-                eventfd.intValue(), eventfdReadBufAddress, 0, 8, udata);
+                eventfd.intValue(), eventfdReadBufAddress, 0, 8, seq);
     }
 
     private int submitAndWaitWithTimeout(SubmissionQueue submissionQueue,
                                          boolean linkTimeout, long timeoutNanoSeconds) {
         if (timeoutNanoSeconds != -1) {
-            long udata = UserData.encode(RINGFD_ID,
-                    linkTimeout ? Native.IORING_OP_LINK_TIMEOUT : Native.IORING_OP_TIMEOUT, (short) 0);
+            long seq = registerInternalOp(RINGFD_CONTEXT);
             // We use the same timespec pointer for all add*Timeout operations. This only works because we call
             // submit directly after it. This ensures the submitted timeout is considered "stable" and so can be reused.
             long seconds, nanoSeconds;
@@ -341,9 +394,9 @@ public final class IoUringIoHandler implements IoHandler {
             timeoutMemory.putLong(KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
             timeoutMemory.putLong(KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
             if (linkTimeout) {
-                submissionQueue.addLinkTimeout(timeoutMemoryAddress, udata);
+                submissionQueue.addLinkTimeout(timeoutMemoryAddress, seq);
             } else {
-                submissionQueue.addTimeout(timeoutMemoryAddress, udata);
+                submissionQueue.addTimeout(timeoutMemoryAddress, seq);
             }
         }
         int submitted = submissionQueue.submitAndGet();
@@ -360,9 +413,12 @@ public final class IoUringIoHandler implements IoHandler {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
-        List<DefaultIoUringIoRegistration> copy = new ArrayList<>(registrations.values());
-
-        for (DefaultIoUringIoRegistration registration: copy) {
+        // Collect distinct registrations from all inflight ops.
+        Set<DefaultIoUringIoRegistration> registrations = new HashSet<>();
+        for (IoUringCompletionContext ctx : pendingOps.values()) {
+            registrations.add(ctx.registration);
+        }
+        for (DefaultIoUringIoRegistration registration : registrations) {
             registration.close();
         }
 
@@ -370,8 +426,8 @@ public final class IoUringIoHandler implements IoHandler {
         Native.eventFdWrite(eventfd.intValue(), 1L);
 
         // Ensure all previously submitted IOs get to complete before tearing down everything.
-        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
-        submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, udata);
+        long seq = registerInternalOp(RINGFD_CONTEXT);
+        submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, seq);
 
         // Submit everything and wait until we could drain i.
         submissionQueue.submitAndGet();
@@ -395,13 +451,13 @@ public final class IoUringIoHandler implements IoHandler {
             submissionQueue.submit();
         }
         // Try to drain all the IO from the queue first...
-        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
+        long seq = registerInternalOp(RINGFD_CONTEXT);
         // We need to also specify the Native.IOSQE_LINK flag for it to work as otherwise it is not correctly linked
         // with the timeout.
         // See:
         // - https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
         // - https://git.kernel.dk/cgit/liburing/commit/?h=link-timeout&id=bc1bd5e97e2c758d6fd975bd35843b9b2c770c5a
-        submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), udata);
+        submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), seq);
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
         completionQueue.process(this::handle);
@@ -433,11 +489,12 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
-                    if (UserData.decodeId(udata) == EVENTFD_ID) {
+                public void handle(int res, int flags, long sqeUdata, ByteBuffer extraCqeData) {
+                    IoUringCompletionContext ctx = pendingOps.get(sqeUdata);
+                    if (ctx == EVENTFD_CONTEXT) {
                         eventFdDrained = true;
                     }
-                    IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
+                    IoUringIoHandler.this.handle(res, flags, sqeUdata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -451,8 +508,8 @@ public final class IoUringIoHandler implements IoHandler {
         // transition back to false, thus we should never have any more events written.
         // So, if we have a read event pending, we can cancel it.
         if (eventfdReadSubmitted != 0) {
-            long udata = UserData.encode(EVENTFD_ID, Native.IORING_OP_ASYNC_CANCEL, (short) 0);
-            submissionQueue.addCancel(eventfdReadSubmitted, udata);
+            long seq = registerInternalOp(EVENTFD_CONTEXT);
+            submissionQueue.addCancel(eventfdReadSubmitted, seq);
             eventfdReadSubmitted = 0;
             submissionQueue.submit();
         }
@@ -483,47 +540,23 @@ public final class IoUringIoHandler implements IoHandler {
             throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
-        for (;;) {
-            int id = nextRegistrationId();
-            DefaultIoUringIoRegistration old = registrations.put(id, registration);
-            if (old != null) {
-                assert old.handle != registration.handle;
-                registrations.put(id, old);
-            } else {
-                registration.setId(id);
-                ioHandle.registered();
-                break;
-            }
-        }
+        ioHandle.registered();
 
         return registration;
-    }
-
-    private int nextRegistrationId() {
-        int id;
-        do {
-            id = nextRegistrationId++;
-        } while (id == RINGFD_ID || id == EVENTFD_ID || id == INVALID_ID);
-        return id;
     }
 
     private final class DefaultIoUringIoRegistration implements IoRegistration {
         private final AtomicBoolean canceled = new AtomicBoolean();
         private final ThreadAwareExecutor executor;
-        private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, (short) 0);
+        private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, 0L);
         final IoUringIoHandle handle;
 
         private boolean removeLater;
         private int outstandingCompletions;
-        private int id;
 
         DefaultIoUringIoRegistration(ThreadAwareExecutor executor, IoUringIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
-        }
-
-        void setId(int id) {
-            this.id = id;
         }
 
         @Override
@@ -537,18 +570,19 @@ public final class IoUringIoHandler implements IoHandler {
                 // as it will only produce a completion on failure.
                 throw new IllegalArgumentException("IOSQE_CQE_SKIP_SUCCESS not supported");
             }
-            long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
+            long seq = nextSequence();
             if (executor.isExecutorThread(Thread.currentThread())) {
-                submit0(ioOps, udata);
+                submit0(ioOps, seq);
             } else {
-                executor.execute(() -> submit0(ioOps, udata));
+                executor.execute(() -> submit0(ioOps, seq));
             }
-            return udata;
+            return seq;
         }
 
-        private void submit0(IoUringIoOps ioOps, long udata) {
+        private void submit0(IoUringIoOps ioOps, long seq) {
+            pendingOps.put(seq, allocateContext(this, ioOps.opcode(), ioOps.userData()));
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
+                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
                     ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
             );
             outstandingCompletions++;
@@ -581,7 +615,7 @@ public final class IoUringIoHandler implements IoHandler {
 
         private void tryRemove() {
             if (outstandingCompletions > 0) {
-                // We have some completions outstanding, we will remove the id <-> registration mapping
+                // We have some completions outstanding, we will remove the registration
                 // once these are done.
                 removeLater = true;
                 return;
@@ -590,8 +624,6 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void remove() {
-            DefaultIoUringIoRegistration old = registrations.remove(id);
-            assert old == this;
             handle.unregistered();
         }
 
@@ -606,17 +638,75 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
-        void handle(int res, int flags, byte op, short data, ByteBuffer extraCqeData) {
-            event.update(res, flags, op, data, extraCqeData);
+        void handle(int res, int flags, byte op, long userData, ByteBuffer extraCqeData) {
+            event.update(res, flags, op, userData, extraCqeData);
             handle.handle(this, event);
             // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
             // receive more completions for the intial request.
             if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
-                // No more outstanding completions, remove the fd <-> registration mapping now.
+                // No more outstanding completions, remove the registration now.
                 removeLater = false;
                 remove();
             }
         }
+    }
+
+    /**
+     * Holds the context for an inflight io_uring submission. Each SQE that is submitted gets a unique
+     * sequence number as its {@code user_data}, and an instance of this class is stored in a map keyed
+     * by that sequence. When the corresponding CQE arrives, we look up this context to dispatch the
+     * completion to the correct {@link IoRegistration} with the original fd, opcode, and user data.
+     */
+    static final class IoUringCompletionContext {
+        DefaultIoUringIoRegistration registration;
+        byte op;
+        long userData;
+
+        // Intrusive free list pointer; only used when the context is in the free list.
+        IoUringCompletionContext next;
+
+        IoUringCompletionContext(DefaultIoUringIoRegistration registration, byte op, long userData) {
+            this.registration = registration;
+            this.op = op;
+            this.userData = userData;
+        }
+
+        void init(DefaultIoUringIoRegistration registration, byte op, long userData) {
+            this.registration = registration;
+            this.op = op;
+            this.userData = userData;
+        }
+
+        void reset() {
+            this.registration = null;
+            this.op = 0;
+            this.userData = 0;
+        }
+
+        @Override
+        public String toString() {
+            return "IoUringCompletionContext{" +
+                    "op=" + Native.opToStr(op) +
+                    ", userData=" + userData +
+                    '}';
+        }
+    }
+
+    private IoUringCompletionContext allocateContext(DefaultIoUringIoRegistration registration, byte op, long userData) {
+        IoUringCompletionContext ctx = freeListHead;
+        if (ctx != null) {
+            freeListHead = ctx.next;
+            ctx.next = null;
+            ctx.init(registration, op, userData);
+            return ctx;
+        }
+        return new IoUringCompletionContext(registration, op, userData);
+    }
+
+    private void recycleContext(IoUringCompletionContext ctx) {
+        ctx.reset();
+        ctx.next = freeListHead;
+        freeListHead = ctx;
     }
 
     private static IoUringIoHandle cast(IoHandle handle) {

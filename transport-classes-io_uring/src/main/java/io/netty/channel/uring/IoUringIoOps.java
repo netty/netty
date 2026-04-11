@@ -36,6 +36,7 @@ public final class IoUringIoOps implements IoOps {
     private final short union4;
     private final int union5;
     private final long union6;
+    private final long userData;
 
     /**
      * Create a new instance which represents the {@code io_uring_sqe} struct.
@@ -133,6 +134,16 @@ public final class IoUringIoOps implements IoOps {
      */
     public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
                         short data, short union4, short personality, int union5, long union6) {
+        this(opcode, flags, ioPrio, fd, union1, union2, len, union3, data, union4, personality, union5, union6,
+                data);
+    }
+
+    /**
+     * Create a new instance which represents the {@code io_uring_sqe} struct with a full long user data.
+     */
+    public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
+                        short data, short union4, short personality, int union5, long union6,
+                        long userData) {
         this.opcode = opcode;
         this.flags = flags;
         this.ioPrio = ioPrio;
@@ -146,6 +157,7 @@ public final class IoUringIoOps implements IoOps {
         this.personality = personality;
         this.union5 = union5;
         this.union6 = union6;
+        this.userData = userData;
     }
 
     byte opcode() {
@@ -184,6 +196,15 @@ public final class IoUringIoOps implements IoOps {
         return data;
     }
 
+    /**
+     * Returns the user data that should be passed back at completion time.
+     *
+     * @return the user data.
+     */
+    long userData() {
+        return userData;
+    }
+
     short personality() {
         return personality;
     }
@@ -212,6 +233,7 @@ public final class IoUringIoOps implements IoOps {
                 ", len=" + len +
                 ", union3=" + union3 +
                 ", data=" + data +
+                ", userData=" + userData +
                 ", union4=" + union4 +
                 ", personality=" + personality +
                 ", union5=" + union5 +
