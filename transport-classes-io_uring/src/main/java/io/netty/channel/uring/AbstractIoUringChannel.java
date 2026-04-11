@@ -439,13 +439,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+         * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
 
         /**
          * Schedule the write of a single message and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+         * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteSingle(Object msg);
 
@@ -455,13 +455,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            short data = (short) event.userData();
+            long userData = event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
-                    readComplete(op, res, flags, data);
+                    readComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -470,16 +470,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SPLICE:
                 case Native.IORING_OP_SEND_ZC:
                 case Native.IORING_OP_SENDMSG_ZC:
-                    writeComplete(op, res, flags, data);
+                    writeComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_POLL_ADD:
-                    pollAddComplete(res, flags, data);
+                    pollAddComplete(res, flags, userData);
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
-                    cancelComplete0(op, res, flags, data);
+                    cancelComplete0(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_CONNECT:
-                    connectComplete(op, res, flags, data);
+                    connectComplete(op, res, flags, userData);
 
                     // once the connect was completed we can also free some resources that are not needed anymore.
                     freeMsgHdrArray();
@@ -526,12 +526,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        private void pollAddComplete(int res, int flags, short data) {
+        private void pollAddComplete(int res, int flags, long userData) {
             if ((res & Native.POLLOUT) != 0) {
                 pollOut(res);
             }
             if ((res & Native.POLLIN) != 0) {
-                pollIn(res, flags, data);
+                pollIn(res, flags, userData);
             }
             if ((res & Native.POLLRDHUP) != 0) {
                 pollRdHup(res);
@@ -747,7 +747,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
         }
 
-        private void readComplete(byte op, int res, int flags, short data) {
+        private void readComplete(byte op, int res, int flags, long userData) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
 
             boolean multishot = numOutstandingReads == -1;
@@ -772,7 +772,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 socketIsEmpty = socketIsEmpty(flags);
                 socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
                         (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
-                readComplete0(op, res, flags, data, numOutstandingReads);
+                readComplete0(op, res, flags, userData, numOutstandingReads);
             } finally {
                 try {
                     // Check if we should consider the read loop to be done.
@@ -830,7 +830,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once a read was completed.
          */
-        protected abstract void readComplete0(byte op, int res, int flags, short data, int outstandingCompletes);
+        protected abstract void readComplete0(byte op, int res, int flags, long userData, int outstandingCompletes);
 
         /**
          * Called once POLLRDHUP event is ready to be processed
@@ -856,7 +856,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once POLLIN event is ready to be processed
          */
-        private void pollIn(int res, int flags, short data) {
+        private void pollIn(int res, int flags, long userData) {
             // Check if we need to rearm. This works for both cases, POLL_ADD and POLL_ADD_MULTI.
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             if (rearm) {
@@ -900,13 +900,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         /**
-         * Schedule a read and returns the number of {@link #readComplete(byte, int, int, short)}
+         * Schedule a read and returns the number of {@link #readComplete(byte, int, int, long)}
          * calls that are expected because of the scheduled read.
          *
          * @param first             {@code true} if this is the first read of a read loop.
          * @param socketIsEmpty     {@code true} if the socket is guaranteed to be empty, {@code false} otherwise.
-         * @return                  the number of {@link #readComplete(byte, int, int, short)} calls expected or
-         *                          {@code -1} if {@link #readComplete(byte, int, int, short)} is called until
+         * @return                  the number of {@link #readComplete(byte, int, int, long)} calls expected or
+         *                          {@code -1} if {@link #readComplete(byte, int, int, long)} is called until
          *                          the read is cancelled (multi-shot).
          */
         protected abstract int scheduleRead0(boolean first, boolean socketIsEmpty);
@@ -963,9 +963,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param op    the op code.
          * @param res   the result.
          * @param flags the flags.
-         * @param data  the data that was passed when submitting the op.
+         * @param userData  the user data that was passed when submitting the op.
          */
-        private void writeComplete(byte op, int res, int flags, short data) {
+        private void writeComplete(byte op, int res, int flags, long userData) {
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.
@@ -975,7 +975,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     outboundBuffer().removeBytes(res);
 
                     // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    connectComplete(op, 0, flags, data);
+                    connectComplete(op, 0, flags, userData);
                 } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
                     // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
                     // In this case, our TCP connection will be established normally, but no data was transmitted at
@@ -984,7 +984,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     submitConnect((InetSocketAddress) requestedRemoteAddress);
                 } else {
                     // There was an error, handle it as a normal connect error.
-                    connectComplete(op, res, flags, data);
+                    connectComplete(op, res, flags, userData);
                 }
                 return;
             }
@@ -994,7 +994,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 --numOutstandingWrites;
             }
 
-            boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+            boolean writtenAll = writeComplete0(op, res, flags, userData, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
 
                 // We were not able to write everything, let's register for POLLOUT
@@ -1018,10 +1018,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param op            the op code
          * @param res           the result.
          * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
+         * @param userData      the user data that was passed when submitting the op.
          * @param outstanding   the outstanding write completions.
          */
-        abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
+        abstract boolean writeComplete0(byte op, int res, int flags, long userData, int outstanding);
 
         /**
          * Called once a cancel was completed.
@@ -1029,9 +1029,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param op            the op code
          * @param res           the result.
          * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
+         * @param userData      the user data that was passed when submitting the op.
          */
-        void cancelComplete0(byte op, int res, int flags, short data) {
+        void cancelComplete0(byte op, int res, int flags, long userData) {
             // NOOP
         }
 
@@ -1040,9 +1040,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param op            the op code.
          * @param res           the result.
          * @param flags         the flags.
-         * @param data          the data that was passed when submitting the op.
+         * @param userData      the user data that was passed when submitting the op.
          */
-        void connectComplete(byte op, int res, int flags, short data) {
+        void connectComplete(byte op, int res, int flags, long userData) {
             ioState &= ~CONNECT_SCHEDULED;
             freeRemoteAddressMemory();
 

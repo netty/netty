@@ -131,7 +131,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long userData, int outstanding) {
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
@@ -149,7 +149,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 }
                 return true;
             }
-            return super.writeComplete0(op, res, flags, data, outstanding);
+            return super.writeComplete0(op, res, flags, userData, outstanding);
         }
 
         private IoUringIoOps prepSendFdIoOps(FileDescriptor fileDescriptor, MsgHdrMemory msgHdrMemory) {
@@ -193,7 +193,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, long userData, int outstanding) {
             if (op == Native.IORING_OP_RECVMSG) {
                 readId = 0;
                 if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -215,7 +215,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 }
                 return;
             }
-            super.readComplete0(op, res, flags, data, outstanding);
+            super.readComplete0(op, res, flags, userData, outstanding);
         }
 
         @Override

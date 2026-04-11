@@ -412,7 +412,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, long userData, int outstanding) {
             ByteBuf byteBuf = readBuffer;
             readBuffer = null;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -564,7 +564,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         private boolean handleWriteCompleteFileRegion(ChannelOutboundBuffer channelOutboundBuffer,
-                                                      IoUringFileRegion fileRegion, int res, short data) {
+                                                      IoUringFileRegion fileRegion, int res, long userData) {
             try {
                 if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                     return true;
@@ -574,7 +574,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
                     return false;
                 }
-                int progress = fileRegion.handleResult(result, data);
+                int progress = fileRegion.handleResult(result, userData);
                 if (progress == -1) {
                     // Done with writing
                     channelOutboundBuffer.remove();
@@ -588,7 +588,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long userData, int outstanding) {
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
                 // We only want to reset these if IORING_CQE_F_NOTIF is not set.
                 // If it's set we know this is only an extra notification for a write but we already handled
@@ -601,7 +601,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
+                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, userData);
             }
 
             if (res >= 0) {

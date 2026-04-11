@@ -147,7 +147,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long userData, int outstanding) {
             throw new UnsupportedOperationException();
         }
 
@@ -213,7 +213,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, long userData, int outstanding) {
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 acceptId = 0;
                 return;
@@ -303,4 +303,3 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         return false;
     }
 }
-

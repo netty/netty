@@ -74,18 +74,18 @@ final class IoUringFileRegion implements FileRegion {
      * Handle splice result
      *
      * @param result    the result
-     * @param data      the data that was submitted as part of the SPLICE.
+     * @param userData  the user data that was submitted as part of the SPLICE.
      * @return          the number of bytes that should be considered to be transferred.
      */
-    int handleResult(int result, short data) {
+    int handleResult(int result, long userData) {
         assert result >= 0;
-        if (data == SPLICE_TO_PIPE) {
+        if (userData == SPLICE_TO_PIPE) {
             // This is the result for spliceToPipe
             transferred += result;
             pipeLen = result;
             return 0;
         }
-        if (data == SPLICE_TO_SOCKET) {
+        if (userData == SPLICE_TO_SOCKET) {
             // This is the result for spliceToSocket
             pipeLen -= result;
             assert pipeLen >= 0;
@@ -98,7 +98,7 @@ final class IoUringFileRegion implements FileRegion {
             }
             return result;
         }
-        throw new IllegalArgumentException("Unknown data: " + data);
+        throw new IllegalArgumentException("Unknown userData: " + userData);
     }
 
     @Override

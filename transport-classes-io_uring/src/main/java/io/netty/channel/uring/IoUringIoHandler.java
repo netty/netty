@@ -170,12 +170,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private long nextSequence() {
-        for (;;) {
-            long seq = nextSequence.getAndIncrement();
-            if (seq != INVALID_ID) {
-                return seq;
-            }
-        }
+       return nextSequence.getAndIncrement();
     }
 
     /**
@@ -331,13 +326,12 @@ public final class IoUringIoHandler implements IoHandler {
                 pendingOps.remove(sqeUdata);
             }
 
-            // Check if this is an internal operation (eventfd / ringfd) using reference equality
             if (ctx == EVENTFD_CONTEXT) {
                 handleEventFdRead();
                 return;
             }
             if (ctx == RINGFD_CONTEXT) {
-                // RINGFD: just return (NOP, timeout, etc.)
+                // Just return
                 return;
             }
 
