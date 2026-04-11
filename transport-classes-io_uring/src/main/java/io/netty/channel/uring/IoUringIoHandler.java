@@ -40,8 +40,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,10 +56,11 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
+    // Head of the intrusive doubly-linked list that tracks all currently registered handles.
+    private DefaultIoUringIoRegistration registrationsHead;
 
     /**
      * Maps sequence number -> IoUringCompletionContext for all inflight submissions.
-     * This replaces both the old {@code registrations} IntObjectHashMap and the UserData encode/decode logic.
      */
     private final LongObjectMap<IoUringCompletionContext> pendingOps;
 
@@ -88,12 +87,9 @@ public final class IoUringIoHandler implements IoHandler {
     // Only accessed from the EventLoop thread, so no synchronization needed.
     private IoUringCompletionContext freeListHead;
 
-    /**
-     * We start at {@code INVALID_ID + 1} so that {@code INVALID_ID} is never used as a valid sequence.
-     */
     private final AtomicLong nextSequence = new AtomicLong(INVALID_ID + 1);
 
-    private static final long INVALID_ID = Long.MIN_VALUE;
+    private static final long INVALID_ID = 0;
 
     /**
      * Singleton context for eventfd-related internal operations.
@@ -174,7 +170,12 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private long nextSequence() {
-        return nextSequence.getAndIncrement();
+        for (;;) {
+            long seq = nextSequence.getAndIncrement();
+            if (seq != INVALID_ID) {
+                return seq;
+            }
+        }
     }
 
     /**
@@ -413,13 +414,11 @@ public final class IoUringIoHandler implements IoHandler {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
-        // Collect distinct registrations from all inflight ops.
-        Set<DefaultIoUringIoRegistration> registrations = new HashSet<>();
-        for (IoUringCompletionContext ctx : pendingOps.values()) {
-            registrations.add(ctx.registration);
-        }
-        for (DefaultIoUringIoRegistration registration : registrations) {
+        DefaultIoUringIoRegistration registration = registrationsHead;
+        while (registration != null) {
+            DefaultIoUringIoRegistration next = registration.next;
             registration.close();
+            registration = next;
         }
 
         // Write to the eventfd to ensure that if we submitted a read for the eventfd we will see the completion event.
@@ -540,9 +539,40 @@ public final class IoUringIoHandler implements IoHandler {
             throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
-        ioHandle.registered();
+        addRegistration(registration);
+        try {
+            ioHandle.registered();
+        } catch (Exception e) {
+            removeRegistration(registration);
+            throw e;
+        }
 
         return registration;
+    }
+
+    private void addRegistration(DefaultIoUringIoRegistration registration) {
+        DefaultIoUringIoRegistration head = registrationsHead;
+        registration.next = head;
+        if (head != null) {
+            head.prev = registration;
+        }
+        registrationsHead = registration;
+    }
+
+    private void removeRegistration(DefaultIoUringIoRegistration registration) {
+        DefaultIoUringIoRegistration prev = registration.prev;
+        DefaultIoUringIoRegistration next = registration.next;
+        if (prev == null) {
+            assert registrationsHead == registration;
+            registrationsHead = next;
+        } else {
+            prev.next = next;
+        }
+        if (next != null) {
+            next.prev = prev;
+        }
+        registration.prev = null;
+        registration.next = null;
     }
 
     private final class DefaultIoUringIoRegistration implements IoRegistration {
@@ -551,6 +581,8 @@ public final class IoUringIoHandler implements IoHandler {
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, 0L);
         final IoUringIoHandle handle;
 
+        private DefaultIoUringIoRegistration prev;
+        private DefaultIoUringIoRegistration next;
         private boolean removeLater;
         private int outstandingCompletions;
 
@@ -624,6 +656,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void remove() {
+            removeRegistration(this);
             handle.unregistered();
         }
 
@@ -692,7 +725,8 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private IoUringCompletionContext allocateContext(DefaultIoUringIoRegistration registration, byte op, long userData) {
+    private IoUringCompletionContext allocateContext(DefaultIoUringIoRegistration registration,
+                                                     byte op, long userData) {
         IoUringCompletionContext ctx = freeListHead;
         if (ctx != null) {
             freeListHead = ctx.next;
