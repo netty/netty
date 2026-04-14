@@ -566,6 +566,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
             if (close ||
+                    allocHandle.isReadEOF() ||
                     cause instanceof OutOfMemoryError ||
                     cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
                     cause instanceof IOException) {
