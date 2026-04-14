@@ -167,8 +167,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     protected void doDeregister() throws Exception {
         IoRegistration registration = this.registration;
         if (registration != null) {
-            // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
-            // to false to ensure a consistent state in all cases.
+            // As unregisteredFilters() may have not been called because isOpen() returned false we just set both
+            // filters to false, to ensure a consistent state in all cases.
             // Make sure we unregister our filters from kqueue!
             readFilter(false);
             writeFilter(false);
