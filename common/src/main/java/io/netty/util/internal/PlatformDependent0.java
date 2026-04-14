@@ -802,7 +802,9 @@ final class PlatformDependent0 {
         }
         if (hasMemorySegmentAddressOfBuffer()) {
             try {
-                return (long) MEMORY_SEGMENT_ADDRESS_OF_BUFFER.invokeExact((Buffer) buffer);
+                // MemorySegment.ofBuffer(buffer).address() includes the current position offset.
+                // Netty/JNI GetDirectBufferAddress expects the base (index 0) address, so subtract position.
+                return (long) MEMORY_SEGMENT_ADDRESS_OF_BUFFER.invokeExact((Buffer) buffer) - buffer.position();
             } catch (Throwable e) {
                 LinkageError error = new LinkageError("Failed to call MemorySegment.ofBuffer(arg1).address()");
                 error.initCause(e);

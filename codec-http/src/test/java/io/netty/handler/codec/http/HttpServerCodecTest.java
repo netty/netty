@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -172,6 +173,237 @@ public class HttpServerCodecTest {
         buf.release();
 
         assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testInterleavedRequestResponseAcrossOverflow() {
+        // Test interleaved enqueue/dequeue that crosses the inline-to-overflow boundary.
+        // Send some requests, process some responses, then send more requests to trigger overflow.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Send 30 GET requests (not yet filling the 32-slot inline queue).
+        StringBuilder requests = new StringBuilder();
+        for (int i = 0; i < 30; i++) {
+            requests.append("GET /").append(i).append(" HTTP/1.1\r\nHost: a\r\n\r\n");
+        }
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requests.toString(), CharsetUtil.UTF_8)));
+
+        // Drain inbound.
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            if (msg instanceof HttpContent) {
+                ((HttpContent) msg).release();
+            }
+        }
+
+        // Respond to 10 of them (draining 10 from the queue, leaving 20).
+        for (int i = 0; i < 10; i++) {
+            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.copiedBuffer("ok", CharsetUtil.UTF_8));
+            resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
+            assertTrue(ch.writeOutbound(resp));
+            ByteBuf buf = ch.readOutbound();
+            buf.release();
+        }
+
+        // Now send 15 more requests (20 remaining + 15 = 35 total, exceeding inline capacity of 32).
+        // Put a HEAD request as the last one to verify overflow ordering.
+        requests = new StringBuilder();
+        for (int i = 30; i < 44; i++) {
+            requests.append("GET /").append(i).append(" HTTP/1.1\r\nHost: a\r\n\r\n");
+        }
+        requests.append("HEAD /44 HTTP/1.1\r\nHost: a\r\n\r\n");
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requests.toString(), CharsetUtil.UTF_8)));
+
+        // Drain inbound.
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            if (msg instanceof HttpContent) {
+                ((HttpContent) msg).release();
+            }
+        }
+
+        // Respond to remaining 20 GET requests (inline queue).
+        for (int i = 10; i < 30; i++) {
+            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.copiedBuffer("ok", CharsetUtil.UTF_8));
+            resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
+            assertTrue(ch.writeOutbound(resp));
+            ByteBuf buf = ch.readOutbound();
+            buf.release();
+        }
+
+        // Respond to the 14 GET requests that were added.
+        for (int i = 30; i < 44; i++) {
+            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.copiedBuffer("ok", CharsetUtil.UTF_8));
+            resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
+            assertTrue(ch.writeOutbound(resp));
+            ByteBuf buf = ch.readOutbound();
+            String encoded = buf.toString(CharsetUtil.US_ASCII);
+            assertTrue(encoded.contains("ok"), "GET response at position " + i + " should contain body");
+            buf.release();
+        }
+
+        // Respond to the HEAD request at position 44 — must be content-always-empty.
+        HttpResponse headResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        headResp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 999);
+        assertTrue(ch.writeOutbound(headResp));
+        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        ByteBuf buf = ch.readOutbound();
+        String encoded = buf.toString(CharsetUtil.US_ASCII);
+        assertTrue(encoded.contains("HTTP/1.1 200 OK"), "HEAD response should be 200 OK");
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertFalse(buf.isReadable(), "HEAD response body should be empty in overflow scenario");
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testGetMethodHasNormalBody() {
+        // Verify a simple GET request is treated as METHOD_FLAG_NONE and body is included.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "GET / HTTP/1.1\r\nHost: a\r\n\r\n", CharsetUtil.UTF_8)));
+
+        HttpRequest request = ch.readInbound();
+        assertEquals(HttpMethod.GET, request.method());
+        LastHttpContent content = ch.readInbound();
+        content.release();
+
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8));
+        resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 5);
+        assertTrue(ch.writeOutbound(resp));
+
+        ByteBuf buf = ch.readOutbound();
+        String encoded = buf.toString(CharsetUtil.US_ASCII);
+        assertTrue(encoded.contains("hello"), "GET response should contain body");
+        assertTrue(encoded.contains("content-length: 5"));
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testPostMethodHasNormalBody() {
+        // POST should also be METHOD_FLAG_NONE.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "POST / HTTP/1.1\r\nHost: a\r\nContent-Length: 0\r\n\r\n", CharsetUtil.UTF_8)));
+
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            if (msg instanceof HttpContent) {
+                ((HttpContent) msg).release();
+            }
+        }
+
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("result", CharsetUtil.UTF_8));
+        resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 6);
+        assertTrue(ch.writeOutbound(resp));
+
+        ByteBuf buf = ch.readOutbound();
+        String encoded = buf.toString(CharsetUtil.US_ASCII);
+        assertTrue(encoded.contains("result"), "POST response should contain body");
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testOverflowDrainsBeforeInlineRefill() {
+        // Verify that once overflow is activated, subsequent enqueues also go to overflow
+        // until the overflow drains, keeping FIFO order correct.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        int totalRequests = 34; // 32 inline + 2 overflow
+
+        // Send 34 pipelined requests: position 33 (overflow) is HEAD.
+        StringBuilder requests = new StringBuilder();
+        for (int i = 0; i < totalRequests; i++) {
+            if (i == 33) {
+                requests.append("HEAD /").append(i).append(" HTTP/1.1\r\nHost: a\r\n\r\n");
+            } else {
+                requests.append("GET /").append(i).append(" HTTP/1.1\r\nHost: a\r\n\r\n");
+            }
+        }
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requests.toString(), CharsetUtil.UTF_8)));
+
+        // Drain inbound.
+        for (;;) {
+            Object msg = ch.readInbound();
+            if (msg == null) {
+                break;
+            }
+            if (msg instanceof HttpContent) {
+                ((HttpContent) msg).release();
+            }
+        }
+
+        // Send responses for first 33 (all GET).
+        for (int i = 0; i < 33; i++) {
+            FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.copiedBuffer("ok", CharsetUtil.UTF_8));
+            resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 2);
+            assertTrue(ch.writeOutbound(resp));
+            ByteBuf buf = ch.readOutbound();
+            String encoded = buf.toString(CharsetUtil.US_ASCII);
+            assertTrue(encoded.contains("ok"), "GET response at position " + i + " should contain body");
+            buf.release();
+        }
+
+        // Response for position 33 — HEAD from overflow queue.
+        HttpResponse headResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        headResp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 42);
+        assertTrue(ch.writeOutbound(headResp));
+        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        ByteBuf buf = ch.readOutbound();
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertFalse(buf.isReadable(), "HEAD response from overflow queue body should be empty");
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testPollFromEmptyQueueReturnsNone() {
+        // If a response is written without a matching request (unusual but defensive),
+        // pollMethod should return METHOD_FLAG_NONE, so body is treated normally.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Write a response without any prior request.
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("data", CharsetUtil.UTF_8));
+        resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 4);
+        assertDoesNotThrow(() -> ch.writeOutbound(resp));
+
+        ByteBuf buf = ch.readOutbound();
+        assertNotNull(buf);
+        String encoded = buf.toString(CharsetUtil.US_ASCII);
+        assertTrue(encoded.contains("data"), "Response body should be present even without prior request");
+        buf.release();
+
+        ch.finishAndReleaseAll();
     }
 
     private static ByteBuf prepareDataChunk(int size) {
