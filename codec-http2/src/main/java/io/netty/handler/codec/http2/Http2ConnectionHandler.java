@@ -479,24 +479,29 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+    public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                        final ChannelPromise promise) throws Exception {
         // Ensure we send the preface before we notify the connect promise as the user might try to write
         // directly in the listener attached to the promise and we need to ensure the preface is always the first
         // thing that is written.
-        ctx.connect(remoteAddress, localAddress, ctx.newPromise()).addListener(f -> {
-            if (f.isSuccess()) {
-                try {
-                    byteDecoder.sendPrefaceIfNeeded(ctx);
-                } catch (Throwable e) {
-                    promise.setFailure(e);
-                    return;
+        ctx.connect(remoteAddress, localAddress, ctx.newPromise()).addListener(
+                new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture f) {
+                        if (f.isSuccess()) {
+                            try {
+                                byteDecoder.sendPrefaceIfNeeded(ctx);
+                            } catch (Throwable e) {
+                                promise.setFailure(e);
+                                return;
+                            }
+                            promise.setSuccess();
+                        } else {
+                            promise.setFailure(f.cause());
+                        }
+                    }
                 }
-                promise.setSuccess();
-            } else {
-                promise.setFailure(f.cause());
-            }
-        });
+        );
     }
 
     @Override
