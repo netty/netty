@@ -52,7 +52,7 @@ class H2PrefaceTest {
     @ParameterizedTest
     @EnumSource(OpenMode.class)
     void openStreamAfterBlockingConnect(OpenMode mode) throws Exception {
-        StreamRequestResponseListener streamRequestResponseListener = new StreamRequestResponseListener();
+        final StreamRequestResponseListener streamRequestResponseListener = new StreamRequestResponseListener();
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
         Channel backend = new ServerBootstrap()
