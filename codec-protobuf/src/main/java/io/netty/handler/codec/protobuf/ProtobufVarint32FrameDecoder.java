@@ -63,8 +63,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
      *                       {@link TooLongFrameException} will be thrown.
      */
     public ProtobufVarint32FrameDecoder(int maxFrameLength) {
-        checkPositive(maxFrameLength, "maxFrameLength");
-        this.maxFrameLength = maxFrameLength;
+        this.maxFrameLength = checkPositive(maxFrameLength, "maxFrameLength");
     }
 
     @Override
