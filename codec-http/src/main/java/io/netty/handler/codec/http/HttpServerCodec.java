@@ -26,7 +26,6 @@ import java.util.Queue;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
@@ -49,8 +48,27 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEA
 public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder>
         implements HttpServerUpgradeHandler.SourceCodec {
 
-    /** A queue that is used for correlating a request and a response. */
-    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
+    private static final byte METHOD_FLAG_HEAD = 1;
+    private static final byte METHOD_FLAG_CONNECT = 2;
+    private static final byte METHOD_FLAG_OTHER = 3;
+
+    // We only need 2 bits per request because we distinguish:
+    // 01 = HEAD, 10 = CONNECT, 11 = other
+    private static final int METHOD_FLAG_BITS = 2;
+    private static final int INLINE_QUEUE_CAPACITY = Long.SIZE / METHOD_FLAG_BITS; // 32
+
+    /**
+     * FIFO of request method flags.
+     *
+     * The oldest entry is stored in the least-significant bits so poll is just a mask + unsigned shift.
+     * This avoids allocation for the common case of <= 32 outstanding requests.
+     *
+     * Once more than {@link #INLINE_QUEUE_CAPACITY} requests are queued, additional entries are appended
+     * to {@link #methodOverflowQueue}. Order is preserved by always draining the inline queue first.
+     */
+    private long methodQueue;
+    private int methodQueueSize;
+    private Queue<Byte> methodOverflowQueue;
 
     /**
      * Creates a new instance with the default decoder options
@@ -156,6 +174,54 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         ctx.pipeline().remove(this);
     }
 
+    private void enqueueMethod(HttpMethod method) {
+        final byte flag;
+        if (HttpMethod.HEAD.equals(method)) {
+            flag = METHOD_FLAG_HEAD;
+        } else if (HttpMethod.CONNECT.equals(method)) {
+            flag = METHOD_FLAG_CONNECT;
+        } else {
+            flag = METHOD_FLAG_OTHER;
+        }
+
+        // Once we have overflow, always append there until it drains completely.
+        Queue<Byte> overflowQueue = methodOverflowQueue;
+        if (overflowQueue != null) {
+            overflowQueue.add(flag);
+            return;
+        }
+
+        if (methodQueueSize < INLINE_QUEUE_CAPACITY) {
+            methodQueue |= (long) flag << (methodQueueSize << 1);
+            methodQueueSize++;
+        } else {
+            overflowQueue = new ArrayDeque<>(4);
+            overflowQueue.add(flag);
+            methodOverflowQueue = overflowQueue;
+        }
+    }
+
+    private byte pollMethod() {
+        if (methodQueueSize != 0) {
+            //(methodQueue & ((1L << METHOD_FLAG_BITS) - 1))
+            byte flag = (byte) (methodQueue & 0x3L);
+            methodQueue >>>= METHOD_FLAG_BITS;
+            methodQueueSize--;
+            return flag;
+        }
+
+        Queue<Byte> overflowQueue = methodOverflowQueue;
+        if (overflowQueue != null) {
+            Byte flag = overflowQueue.poll();
+            if (overflowQueue.isEmpty()) {
+                methodOverflowQueue = null;
+            }
+            return flag != null ? flag : METHOD_FLAG_OTHER;
+        }
+
+        return METHOD_FLAG_OTHER;
+    }
+
     private final class HttpServerRequestDecoder extends HttpRequestDecoder {
         HttpServerRequestDecoder(HttpDecoderConfig config) {
             super(config);
@@ -169,7 +235,7 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
             for (int i = oldSize; i < size; i++) {
                 Object obj = out.get(i);
                 if (obj instanceof HttpRequest) {
-                    queue.add(((HttpRequest) obj).method());
+                    enqueueMethod(((HttpRequest) obj).method());
                 }
             }
         }
@@ -177,11 +243,11 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
-        private HttpMethod method;
+        private byte methodFlag;
 
         @Override
         protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {
-            if (!isAlwaysEmpty && HttpMethod.CONNECT.equals(method)
+            if (!isAlwaysEmpty && methodFlag == METHOD_FLAG_CONNECT
                     && msg.status().codeClass() == HttpStatusClass.SUCCESS) {
                 // Stripping Transfer-Encoding:
                 // See https://tools.ietf.org/html/rfc7230#section-3.3.1
@@ -193,9 +259,9 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         }
 
         @Override
-        protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
-            method = queue.poll();
-            return HttpMethod.HEAD.equals(method) || super.isContentAlwaysEmpty(msg);
+        protected boolean isContentAlwaysEmpty(HttpResponse msg) {
+            methodFlag = pollMethod();
+            return methodFlag == METHOD_FLAG_HEAD || super.isContentAlwaysEmpty(msg);
         }
     }
 }
