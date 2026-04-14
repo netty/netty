@@ -20,12 +20,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -53,7 +53,7 @@ class H2PrefaceTest {
     @EnumSource(OpenMode.class)
     void openStreamAfterBlockingConnect(OpenMode mode) throws Exception {
         StreamRequestResponseListener streamRequestResponseListener = new StreamRequestResponseListener();
-        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
         Channel backend = new ServerBootstrap()
                 .group(eventLoopGroup)
@@ -109,13 +109,26 @@ class H2PrefaceTest {
                     streamChannelBootstrap.open().addListener(streamRequestResponseListener);
                     break;
                 case Listener:
-                    cf.addListener((ChannelFuture connectFuture) ->
-                            streamChannelBootstrap.open().addListener(streamRequestResponseListener));
+                    cf.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            streamChannelBootstrap.open().addListener(streamRequestResponseListener);
+                        }
+                    });
+
                     break;
                 case SubmitInListener:
-                    cf.addListener(f -> channel.eventLoop().submit(() ->
-                        streamChannelBootstrap.open().addListener(streamRequestResponseListener)
-                    ));
+                    cf.addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            channel.eventLoop().submit(new Runnable() {
+                                @Override
+                                public void run() {
+                                    streamChannelBootstrap.open().addListener(streamRequestResponseListener);
+                                }
+                            });
+                        }
+                    });
                     break;
                 default:
                     throw new AssertionError();
@@ -145,7 +158,8 @@ class H2PrefaceTest {
     /// Send a request and wait for a response once an Http2StreamChannel is established
     private static final class StreamRequestResponseListener implements
             GenericFutureListener<Future<Http2StreamChannel>> {
-        private final CompletableFuture<Http2HeadersFrame> responseHeaders = new CompletableFuture<>();
+        private final CompletableFuture<Http2HeadersFrame> responseHeaders =
+                new CompletableFuture<Http2HeadersFrame>();
 
         @Override
         public void operationComplete(final Future<Http2StreamChannel> future) {
@@ -169,9 +183,12 @@ class H2PrefaceTest {
                     .path("/test")
                     .scheme("http");
             final Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(headers, true);
-            streamChannel.writeAndFlush(headersFrame).addListener(f -> {
-                if (!f.isSuccess()) {
-                    responseHeaders.completeExceptionally(f.cause());
+            streamChannel.writeAndFlush(headersFrame).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture f) throws Exception {
+                    if (!f.isSuccess()) {
+                        responseHeaders.completeExceptionally(f.cause());
+                    }
                 }
             });
         }
