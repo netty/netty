@@ -48,12 +48,12 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_
 public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder>
         implements HttpServerUpgradeHandler.SourceCodec {
 
-    private static final byte METHOD_FLAG_NONE = 0;
     private static final byte METHOD_FLAG_HEAD = 1;
     private static final byte METHOD_FLAG_CONNECT = 2;
+    private static final byte METHOD_FLAG_OTHER = 3;
 
     // We only need 2 bits per request because we distinguish:
-    // 00 = other, 01 = HEAD, 10 = CONNECT.
+    // 01 = HEAD, 10 = CONNECT, 11 = other
     private static final int METHOD_FLAG_BITS = 2;
     private static final int INLINE_QUEUE_CAPACITY = Long.SIZE / METHOD_FLAG_BITS; // 32
 
@@ -176,12 +176,12 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
     private void enqueueMethod(HttpMethod method) {
         final byte flag;
-        if (method == HttpMethod.HEAD) {
+        if (HttpMethod.HEAD.equals(method)) {
             flag = METHOD_FLAG_HEAD;
-        } else if (method == HttpMethod.CONNECT) {
+        } else if (HttpMethod.CONNECT.equals(method)) {
             flag = METHOD_FLAG_CONNECT;
         } else {
-            flag = METHOD_FLAG_NONE;
+            flag = METHOD_FLAG_OTHER;
         }
 
         // Once we have overflow, always append there until it drains completely.
@@ -216,10 +216,10 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
             if (overflowQueue.isEmpty()) {
                 methodOverflowQueue = null;
             }
-            return flag != null ? flag : METHOD_FLAG_NONE;
+            return flag != null ? flag : METHOD_FLAG_OTHER;
         }
 
-        return METHOD_FLAG_NONE;
+        return METHOD_FLAG_OTHER;
     }
 
     private final class HttpServerRequestDecoder extends HttpRequestDecoder {
