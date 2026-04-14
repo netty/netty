@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -503,12 +502,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     }
 
     class KQueueStreamUnsafe extends AbstractKQueueUnsafe {
-        // Overridden here just to be able to access this method from AbstractKQueueStreamChannel
-        @Override
-        protected Executor prepareToClose() {
-            return super.prepareToClose();
-        }
-
         @Override
         void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
             final ChannelConfig config = config();
