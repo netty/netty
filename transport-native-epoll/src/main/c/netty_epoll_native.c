@@ -243,7 +243,7 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
             int err = errno;
             close(efd);
             netty_unix_errors_throwChannelExceptionErrorNo(env, "fcntl() failed: ", err);
-            return err;
+            return -err;
         }
     }
     return efd;
@@ -620,7 +620,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 #ifdef IP_RECVORIGDSTADDR
     int readLocalAddr = 0;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
-            &readLocalAddr, sizeof(readLocalAddr)) < 0) {
+            &readLocalAddr, sizeof(readLocalAddr)) != -1 && readLocalAddr != 0) {
         cntrlbuf = malloc(sizeof(char) * storageSize * len);
     }
 #endif // IP_RECVORIGDSTADDR
@@ -638,7 +638,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
 
         msg[i].msg_hdr.msg_name = addr + i;
-        msg[i].msg_hdr.msg_namelen = (socklen_t) addrSize;
+        msg[i].msg_hdr.msg_namelen = (socklen_t) storageSize;
 
         if (cntrlbuf != NULL) {
             msg[i].msg_hdr.msg_control =  cntrlbuf + i * storageSize;

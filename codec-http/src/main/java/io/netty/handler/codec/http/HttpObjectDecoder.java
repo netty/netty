@@ -477,6 +477,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (line == null) {
                 return;
             }
+            checkChunkExtensions(line);
             int chunkSize = getChunkSize(line.array(), line.arrayOffset() + line.readerIndex(), line.readableBytes());
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
@@ -723,6 +724,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return current;
     }
 
+    private static void checkChunkExtensions(ByteBuf line) {
+        int extensionsStart = line.bytesBefore((byte) ';');
+        if (extensionsStart == -1) {
+            return;
+        }
+        HttpChunkLineValidatingByteProcessor processor = new HttpChunkLineValidatingByteProcessor();
+        line.forEachByte(processor);
+        processor.finish();
+    }
+
     private HttpContent invalidChunk(ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
         message = null;
@@ -933,7 +944,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private static int getChunkSize(byte[] hex, int start, int length) {
-        // trim the leading bytes if white spaces, if any
+        // trim the leading bytes of white spaces, if any
         final int skipped = skipWhiteSpaces(hex, start, length);
         if (skipped == length) {
             // empty case

@@ -318,6 +318,118 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
+    public void testHeartbeatOnlyDoesNotThrowException() {
+        // STOMP heartbeat is just a LF byte - should not cause IndexOutOfBoundsException
+        ByteBuf heartbeat = Unpooled.buffer();
+        heartbeat.writeByte('\n');
+        channel.writeInbound(heartbeat);
+
+        // Heartbeat should be consumed silently, no output produced
+        Object result = channel.readInbound();
+        assertNull(result);
+    }
+
+    @Test
+    public void testMultipleHeartbeatsDoNotThrowException() {
+        // Multiple consecutive heartbeats
+        ByteBuf heartbeats = Unpooled.buffer();
+        heartbeats.writeByte('\n');
+        heartbeats.writeByte('\n');
+        heartbeats.writeByte('\n');
+        channel.writeInbound(heartbeats);
+
+        Object result = channel.readInbound();
+        assertNull(result);
+    }
+
+    @Test
+    public void testCarriageReturnLineFeedHeartbeat() {
+        // CR+LF heartbeat
+        ByteBuf heartbeat = Unpooled.buffer();
+        heartbeat.writeByte('\r');
+        heartbeat.writeByte('\n');
+        channel.writeInbound(heartbeat);
+
+        Object result = channel.readInbound();
+        assertNull(result);
+    }
+
+    @Test
+    public void testHeartbeatFollowedByFrame() {
+        // Heartbeat bytes followed by a real STOMP frame should decode correctly
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeByte('\n');
+        incoming.writeByte('\n');
+        incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
+        channel.writeInbound(incoming);
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.CONNECT, frame.command());
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testHeartbeatBetweenFrames() {
+        // Heartbeat bytes between two STOMP frames
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
+        incoming.writeByte('\n');
+        incoming.writeByte('\n');
+        incoming.writeBytes(StompTestConstants.CONNECTED_FRAME.getBytes());
+        channel.writeInbound(incoming);
+
+        StompHeadersSubframe frame1 = channel.readInbound();
+        assertNotNull(frame1);
+        assertEquals(StompCommand.CONNECT, frame1.command());
+
+        StompContentSubframe content1 = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content1);
+        content1.release();
+
+        StompHeadersSubframe frame2 = channel.readInbound();
+        assertNotNull(frame2);
+        assertEquals(StompCommand.CONNECTED, frame2.command());
+
+        StompContentSubframe content2 = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content2);
+        content2.release();
+
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testHeartbeatSentSeparatelyThenFrame() {
+        // Simulate heartbeat arriving in a separate TCP segment, then a frame later
+        ByteBuf heartbeat = Unpooled.buffer();
+        heartbeat.writeByte('\n');
+        channel.writeInbound(heartbeat);
+
+        // No output from heartbeat
+        assertNull(channel.readInbound());
+
+        // Now send a real frame
+        ByteBuf frame = Unpooled.buffer();
+        frame.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
+        channel.writeInbound(frame);
+
+        StompHeadersSubframe headersSubframe = channel.readInbound();
+        assertNotNull(headersSubframe);
+        assertEquals(StompCommand.CONNECT, headersSubframe.command());
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        assertNull(channel.readInbound());
+    }
+
+    @Test
     void testInvalidEscapeHeadersSequence() {
         channel = new EmbeddedChannel(new StompSubframeDecoder(true));
 

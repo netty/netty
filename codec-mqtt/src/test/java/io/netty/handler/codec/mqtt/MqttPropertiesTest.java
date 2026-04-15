@@ -28,6 +28,8 @@ import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOA
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.USER_PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MqttPropertiesTest {
 
@@ -106,6 +108,28 @@ public class MqttPropertiesTest {
         expectedProperties.add(expectedUserProperties);
 
         assertEquals(expectedProperties, props.listAll());
+    }
+
+    @Test
+    public void testIsEmptyWithOnlyUserProperties() {
+        MqttProperties props = new MqttProperties();
+
+        assertTrue(props.isEmpty());
+
+        props.add(new MqttProperties.UserProperty("tag", "firstTag"));
+
+        assertFalse(props.isEmpty());
+    }
+
+    @Test
+    public void testIsEmptyWithOnlySubscriptionIdentifiers() {
+        MqttProperties props = new MqttProperties();
+
+        assertTrue(props.isEmpty());
+
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
+
+        assertFalse(props.isEmpty());
     }
 
 }

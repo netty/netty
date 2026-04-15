@@ -221,6 +221,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         public boolean prefaceSent() {
             return true;
         }
+
+        /**
+         * Send the preface if needed.
+         *
+         * @param ctx           the {@link ChannelHandlerContext} to use.
+         * @throws Exception    thrown on error.
+         */
+        public void sendPrefaceIfNeeded(ChannelHandlerContext ctx) throws Exception {
+            // Noop by default.
+        }
     }
 
     private final class PrefaceDecoder extends BaseDecoder {
@@ -231,7 +241,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.
-            sendPreface(ctx);
+            sendPrefaceIfNeeded(ctx);
         }
 
         @Override
@@ -259,7 +269,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // The channel just became active - send the connection preface to the remote endpoint.
-            sendPreface(ctx);
+            sendPrefaceIfNeeded(ctx);
         }
 
         @Override
@@ -360,7 +370,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         /**
          * Sends the HTTP/2 connection preface upon establishment of the connection, if not already sent.
          */
-        private void sendPreface(ChannelHandlerContext ctx) throws Exception {
+        @Override
+        public void sendPrefaceIfNeeded(ChannelHandlerContext ctx) throws Exception {
             if (prefaceSent || !ctx.channel().isActive()) {
                 return;
             }
@@ -468,9 +479,29 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
-        ctx.connect(remoteAddress, localAddress, promise);
+    public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                        final ChannelPromise promise) throws Exception {
+        // Ensure we send the preface before we notify the connect promise as the user might try to write
+        // directly in the listener attached to the promise and we need to ensure the preface is always the first
+        // thing that is written.
+        ctx.connect(remoteAddress, localAddress, ctx.newPromise()).addListener(
+                new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture f) {
+                        if (f.isSuccess()) {
+                            try {
+                                byteDecoder.sendPrefaceIfNeeded(ctx);
+                            } catch (Throwable e) {
+                                promise.setFailure(e);
+                                return;
+                            }
+                            promise.setSuccess();
+                        } else {
+                            promise.setFailure(f.cause());
+                        }
+                    }
+                }
+        );
     }
 
     @Override
