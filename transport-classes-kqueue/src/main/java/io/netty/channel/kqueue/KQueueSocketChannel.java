@@ -36,7 +36,6 @@ import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.concurrent.CompletionHandler;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -48,7 +47,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -623,26 +621,5 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
             }
         }
         return super.doConnect0(remoteAddress, localAddress);
-    }
-
-    @Override
-    protected Executor prepareToClose() {
-        try {
-            // Check isOpen() first as otherwise it will throw a RuntimeException
-            // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && config.getSoLinger() > 0) {
-                // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                // because we try to read or write until the actual close happens which may be later due
-                // SO_LINGER handling.
-                // See https://github.com/netty/netty/issues/4449
-                doDeregister(newPromise());
-                return GlobalEventExecutor.INSTANCE;
-            }
-        } catch (Throwable ignore) {
-            // Ignore the error as the underlying channel may be closed in the meantime and so
-            // getSoLinger() may produce an exception. In this case we just return null.
-            // See https://github.com/netty/netty/issues/4449
-        }
-        return null;
     }
 }
