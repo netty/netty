@@ -139,7 +139,8 @@ public class HttpServerCodecTest {
         assertTrue(ch.finish());
 
         ByteBuf buf = ch.readOutbound();
-        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n",
+                buf.toString(CharsetUtil.US_ASCII));
         buf.release();
 
         buf = ch.readOutbound();
@@ -176,7 +177,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testInterleavedRequestResponseAcrossOverflow() {
+    public void testInterleavedRequestResponseAcrossOverflow() throws Exception {
         // Test interleaved enqueue/dequeue that crosses the inline-to-overflow boundary.
         // Send some requests, process some responses, then send more requests to trigger overflow.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
@@ -270,7 +271,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testGetMethodHasNormalBody() {
+    public void testGetMethodHasNormalBody() throws Exception {
         // Verify a simple GET request is treated as METHOD_FLAG_NONE and body is included.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
@@ -297,7 +298,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testPostMethodHasNormalBody() {
+    public void testPostMethodHasNormalBody() throws Exception {
         // POST should also be METHOD_FLAG_NONE.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
@@ -328,7 +329,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testOverflowDrainsBeforeInlineRefill() {
+    public void testOverflowDrainsBeforeInlineRefill() throws Exception {
         // Verify that once overflow is activated, subsequent enqueues also go to overflow
         // until the overflow drains, keeping FIFO order correct.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
@@ -386,7 +387,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testPollFromEmptyQueueReturnsNone() {
+    public void testPollFromEmptyQueueReturnsNone() throws Exception {
         // If a response is written without a matching request (unusual but defensive),
         // pollMethod should return METHOD_FLAG_NONE, so body is treated normally.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
