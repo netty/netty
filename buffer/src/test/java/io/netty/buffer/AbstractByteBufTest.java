@@ -2759,7 +2759,7 @@ public abstract class AbstractByteBufTest {
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         assertEquals(buffer.readableBytes(), expectedBytes.length);
         final CountDownLatch latch = new CountDownLatch(60000);
-        final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
@@ -2843,7 +2843,7 @@ public abstract class AbstractByteBufTest {
     static void testReadOutputStreamMultipleThreads(
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final CountDownLatch latch = new CountDownLatch(60000);
-        final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
@@ -6013,7 +6013,7 @@ public abstract class AbstractByteBufTest {
 
             final ByteBuf buffer = newBuffer(4);
             assertEquals(1, buffer.refCnt());
-            final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
+            final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
             final AtomicInteger cnt = new AtomicInteger(Integer.MAX_VALUE);
             Thread t1 = new Thread(new Runnable() {
                 @Override
