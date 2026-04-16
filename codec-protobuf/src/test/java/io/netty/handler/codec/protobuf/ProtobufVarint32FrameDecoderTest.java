@@ -83,7 +83,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testFrameWithinMaxFrameLength() {
+    public void testFrameWithinMaxFrameLength() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(10));
         byte[] b = { 4, 1, 1, 1, 1 };
         assertTrue(channel.writeInbound(wrappedBuffer(b)));
@@ -98,7 +98,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testFrameExceedingMaxFrameLength() {
+    public void testFrameExceedingMaxFrameLength() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(3));
         byte[] b = { 4, 1, 1, 1, 1 };
         assertThrows(TooLongFrameException.class, () -> channel.writeInbound(wrappedBuffer(b)));
@@ -107,7 +107,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testOversizedFramePartialDiscard() {
+    public void testOversizedFramePartialDiscard() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(3));
 
         // Frame with length=10, only send length byte + 5 data bytes
@@ -122,7 +122,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testValidFrameAfterOversized() {
+    public void testValidFrameAfterOversized() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(5));
 
         // Oversized frame: length=10, all data present
