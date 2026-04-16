@@ -36,7 +36,7 @@ import static io.netty.util.internal.MacAddressUtil.parseMAC;
  */
 public final class DefaultChannelId implements ChannelId {
 
-    private static final long serialVersionUID = 3884076183504074063L;
+    private static final long serialVersionUID = 809640043754842613L;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelId.class);
     private static final byte[] MACHINE_ID;
