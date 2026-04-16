@@ -2106,7 +2106,7 @@ final class AdaptivePoolingAllocator {
         protected void deallocate() {
             if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.isEventEnabled()) {
                 FreeBufferEvent event = new FreeBufferEvent();
-                if (event.shouldCommit()) {
+                if (event.shouldCommit() && rootParent != null) {
                     event.fill(this, AdaptiveByteBufAllocator.class);
                     event.commit();
                 }
