@@ -16,7 +16,6 @@
 
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.MacAddressUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -31,14 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.MacAddressUtil.defaultMachineId;
 import static io.netty.util.internal.MacAddressUtil.parseMAC;
-import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 
 /**
  * The default {@link ChannelId} implementation.
  */
 public final class DefaultChannelId implements ChannelId {
 
-    private static final long serialVersionUID = 3884076183504074063L;
+    private static final long serialVersionUID = 809640043754842613L;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelId.class);
     private static final byte[] MACHINE_ID;
@@ -49,6 +47,8 @@ public final class DefaultChannelId implements ChannelId {
     private static final int RANDOM_LEN = 4;
 
     private static final AtomicInteger nextSequence = new AtomicInteger();
+
+    private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
 
     /**
      * Returns a new {@link DefaultChannelId} instance.
@@ -188,7 +188,11 @@ public final class DefaultChannelId implements ChannelId {
         return jmxPid(loader);
     }
 
-    private final byte[] data;
+    private final byte[] machineId;
+    private final int processId;
+    private final int sequence;
+    private final long timestamp;
+    private final int random;
     private final int hashCode;
 
     private transient String shortValue;
@@ -198,66 +202,31 @@ public final class DefaultChannelId implements ChannelId {
      * Visible for testing
      */
     DefaultChannelId(final byte[] machineId, final int processId, final int sequence,
-                             final long timestamp, final int random) {
-        final byte[] data = new byte[machineId.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
-        int i = 0;
-
-        // machineId
-        System.arraycopy(machineId, 0, data, i, machineId.length);
-        i += machineId.length;
-
-        // processId
-        writeInt(data, i, processId);
-        i += Integer.BYTES;
-
-        // sequence
-        writeInt(data, i, sequence);
-        i += Integer.BYTES;
-
-        // timestamp (kind of)
-        writeLong(data, i, timestamp);
-        i += Long.BYTES;
-
-        // random
-        writeInt(data, i, random);
-        i += Integer.BYTES;
-        assert i == data.length;
-
-        this.data = data;
-        hashCode = Arrays.hashCode(data);
+                     final long timestamp, final int random) {
+        this.machineId = machineId;
+        this.processId = processId;
+        this.sequence = sequence;
+        this.timestamp = timestamp;
+        this.random = random;
+        hashCode = computeHashCode();
     }
 
-    private static void writeInt(byte[] data, int i, int value) {
-        if (PlatformDependent.isUnaligned()) {
-            PlatformDependent.putInt(data, i, BIG_ENDIAN_NATIVE_ORDER ? value : Integer.reverseBytes(value));
-            return;
-        }
-        data[i] = (byte) (value >>> 24);
-        data[i + 1] = (byte) (value >>> 16);
-        data[i + 2] = (byte) (value >>> 8);
-        data[i + 3] = (byte) value;
-    }
-
-    private static void writeLong(byte[] data, int i, long value) {
-        if (PlatformDependent.isUnaligned()) {
-            PlatformDependent.putLong(data, i, BIG_ENDIAN_NATIVE_ORDER ? value : Long.reverseBytes(value));
-            return;
-        }
-        data[i] = (byte) (value >>> 56);
-        data[i + 1] = (byte) (value >>> 48);
-        data[i + 2] = (byte) (value >>> 40);
-        data[i + 3] = (byte) (value >>> 32);
-        data[i + 4] = (byte) (value >>> 24);
-        data[i + 5] = (byte) (value >>> 16);
-        data[i + 6] = (byte) (value >>> 8);
-        data[i + 7] = (byte) value;
+    private int computeHashCode() {
+        int h = Arrays.hashCode(machineId);
+        h = 31 * h + processId;
+        h = 31 * h + sequence;
+        h = 31 * h + Long.hashCode(timestamp);
+        h = 31 * h + random;
+        return h;
     }
 
     @Override
     public String asShortText() {
         String shortValue = this.shortValue;
         if (shortValue == null) {
-            this.shortValue = shortValue = ByteBufUtil.hexDump(data, data.length - RANDOM_LEN, RANDOM_LEN);
+            final StringBuilder buf = new StringBuilder(RANDOM_LEN * 2);
+            appendHexInt(buf, random);
+            this.shortValue = shortValue = buf.toString();
         }
         return shortValue;
     }
@@ -272,23 +241,38 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private String newLongValue() {
-        final StringBuilder buf = new StringBuilder(2 * data.length + 5);
-        final int machineIdLen = data.length - PROCESS_ID_LEN - SEQUENCE_LEN - TIMESTAMP_LEN - RANDOM_LEN;
-        int i = 0;
-        i = appendHexDumpField(buf, i, machineIdLen);
-        i = appendHexDumpField(buf, i, PROCESS_ID_LEN);
-        i = appendHexDumpField(buf, i, SEQUENCE_LEN);
-        i = appendHexDumpField(buf, i, TIMESTAMP_LEN);
-        i = appendHexDumpField(buf, i, RANDOM_LEN);
-        assert i == data.length;
-        return buf.substring(0, buf.length() - 1);
+        final int machineIdLen = machineId.length;
+        final StringBuilder buf = new StringBuilder(
+                2 * (machineIdLen + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN) + 4);
+        appendHexBytes(buf, machineId);
+        buf.append('-');
+        appendHexInt(buf, processId);
+        buf.append('-');
+        appendHexInt(buf, sequence);
+        buf.append('-');
+        appendHexLong(buf, timestamp);
+        buf.append('-');
+        appendHexInt(buf, random);
+        return buf.toString();
     }
 
-    private int appendHexDumpField(StringBuilder buf, int i, int length) {
-        buf.append(ByteBufUtil.hexDump(data, i, length));
-        buf.append('-');
-        i += length;
-        return i;
+    private static void appendHexBytes(StringBuilder buf, byte[] bytes) {
+        for (byte b : bytes) {
+            buf.append(HEX_CHARS[(b & 0xFF) >>> 4]);
+            buf.append(HEX_CHARS[b & 0xF]);
+        }
+    }
+
+    private static void appendHexInt(StringBuilder buf, int value) {
+        for (int i = 28; i >= 0; i -= 4) {
+            buf.append(HEX_CHARS[(value >>> i) & 0xF]);
+        }
+    }
+
+    private static void appendHexLong(StringBuilder buf, long value) {
+        for (int i = 60; i >= 0; i -= 4) {
+            buf.append(HEX_CHARS[(int) ((value >>> i) & 0xF)]);
+        }
     }
 
     @Override
@@ -303,24 +287,40 @@ public final class DefaultChannelId implements ChannelId {
             return 0;
         }
         if (o instanceof DefaultChannelId) {
-            // lexicographic comparison
-            final byte[] otherData = ((DefaultChannelId) o).data;
-            int len1 = data.length;
-            int len2 = otherData.length;
-            int len = Math.min(len1, len2);
-
-            for (int k = 0; k < len; k++) {
-                byte x = data[k];
-                byte y = otherData[k];
-                if (x != y) {
-                    // treat these as unsigned bytes for comparison
-                    return (x & 0xff) - (y & 0xff);
-                }
+            final DefaultChannelId other = (DefaultChannelId) o;
+            int cmp = compareBytes(machineId, other.machineId);
+            if (cmp != 0) {
+                return cmp;
             }
-            return len1 - len2;
+            cmp = Integer.compareUnsigned(processId, other.processId);
+            if (cmp != 0) {
+                return cmp;
+            }
+            cmp = Integer.compareUnsigned(sequence, other.sequence);
+            if (cmp != 0) {
+                return cmp;
+            }
+            cmp = Long.compareUnsigned(timestamp, other.timestamp);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return Integer.compareUnsigned(random, other.random);
         }
 
         return asLongText().compareTo(o.asLongText());
+    }
+
+    private static int compareBytes(byte[] a, byte[] b) {
+        int len1 = a.length;
+        int len2 = b.length;
+        int len = Math.min(len1, len2);
+        for (int k = 0; k < len; k++) {
+            int cmp = (a[k] & 0xFF) - (b[k] & 0xFF);
+            if (cmp != 0) {
+                return cmp;
+            }
+        }
+        return len1 - len2;
     }
 
     @Override
@@ -332,7 +332,12 @@ public final class DefaultChannelId implements ChannelId {
             return false;
         }
         DefaultChannelId other = (DefaultChannelId) obj;
-        return hashCode == other.hashCode && Arrays.equals(data, other.data);
+        return hashCode == other.hashCode
+                && random == other.random
+                && processId == other.processId
+                && sequence == other.sequence
+                && timestamp == other.timestamp
+                && Arrays.equals(machineId, other.machineId);
     }
 
     @Override
