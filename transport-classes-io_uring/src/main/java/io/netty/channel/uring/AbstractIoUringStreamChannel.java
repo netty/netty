@@ -46,11 +46,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     /**
-     * Maximum bytes per chunk when converting a generic {@link FileRegion}
-     * to {@link ByteBuf} for the io_uring async send path.
+     * Maximum bytes per chunk when converting a generic {@link FileRegion} to a {@link ByteBuf}
+     * for the io_uring async send path. Overridable via the {@code io.netty.iouring.fileRegionChunkSize}
+     * system property; capped at 16 MiB to guard against pathological configurations that would
+     * risk direct-memory OOM.
      */
-    private static final int FILE_REGION_MAX_CHUNK_SIZE =
-            Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024));
+    private static final int FILE_REGION_MAX_CHUNK_SIZE = Math.min(16 * 1024 * 1024,
+            Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024)));
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     byte writeOpCode;
@@ -244,7 +246,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         if (msg instanceof FileRegion) {
-            // Generic FileRegion — pass through to the write path for chunked conversion.
+            // Generic FileRegion -- pass through to the write path for chunked conversion.
             return msg;
         }
 
@@ -327,11 +329,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return 1;
         }
 
-        /**
-         * Read a chunk from a generic {@link FileRegion} into a direct {@link ByteBuf} and
-         * submit it as an io_uring async send. If {@code fileRegionChunkBuf} is non-null,
-         * re-sends the remaining bytes from a previous partial send.
-         */
+        // Read a chunk from a generic FileRegion into a direct ByteBuf and submit it as an
+        // io_uring async send. If fileRegionChunkBuf is non-null, re-submits the remaining
+        // bytes from a previous partial/failed send.
         private int scheduleWriteFileRegion(int fd, IoRegistration registration, FileRegion region) {
             ByteBuf buf = fileRegionChunkBuf;
             if (buf == null) {
@@ -341,18 +341,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     buf = alloc().directBuffer(chunkSize);
                     try {
                         ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
-                        int written = 0;
-                        while (written < chunkSize) {
+                        while (buf.writableBytes() > 0) {
                             long t = region.transferTo(ch, region.transferred());
                             if (t <= 0) {
                                 break;
                             }
-                            written += (int) t;
                         }
                         if (buf.readableBytes() == 0) {
                             buf.release();
                             handleWriteError(new ChannelException(
-                                    "FileRegion transferTo produced 0 bytes"));
+                                    "FileRegion.transferTo(...) produced 0 bytes (count="
+                                            + region.count() + ", transferred=" + region.transferred() + ')'));
                             return 0;
                         }
                     } catch (Exception e) {
@@ -361,8 +360,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         return 0;
                     }
                 } else {
-                    // Empty or fully transferred — submit a 0-byte send so the
-                    // completion path removes it from the outbound buffer.
+                    // Empty or fully-transferred region. Submit a 0-byte send so the completion
+                    // path removes it from the outbound buffer via the normal async flow.
                     buf = alloc().directBuffer(0);
                 }
                 fileRegionChunkBuf = buf;
@@ -374,6 +373,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                // Submission only fails when the registration is no longer valid (channel is
+                // being deregistered). unregistered() will release fileRegionChunkBuf and the
+                // outbound buffer will release the FileRegion, so nothing to clean up here --
+                // mirroring the plain ByteBuf path above.
                 return 0;
             }
             return 1;
@@ -697,6 +700,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return true;
         }
 
+        // Returns true when the completion can be treated as "written all" for this SQE
+        // (the framework may still schedule further writes from the outbound buffer); returns
+        // false to signal the framework that POLLOUT should be armed so the chunk buffer is
+        // resubmitted once the socket becomes writable again.
         private boolean handleWriteCompleteGenericFileRegion(
                 ChannelOutboundBuffer channelOutboundBuffer, FileRegion region, int res) {
             try {
@@ -716,20 +723,16 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             channelOutboundBuffer.remove();
                         }
                     } else {
-                        // Partial send — schedule POLLOUT to re-send the remainder.
+                        // Partial send -- schedule POLLOUT to re-send the remainder.
                         return false;
                     }
                 } else {
-                    // Don't release the chunk buffer before checking the error —
-                    // for retryable errors (EAGAIN) we need to re-send the same data.
-                    try {
-                        if (ioResult("io_uring write", res) == 0) {
-                            return false;
-                        }
-                    } catch (Throwable cause) {
-                        releaseFileRegionChunkBuf();
-                        handleWriteError(cause);
-                        return true;
+                    // Keep the chunk buffer -- on retryable errors (EAGAIN) ioResult returns 0
+                    // and scheduleWriteFileRegion() will re-submit the same fileRegionChunkBuf
+                    // once POLLOUT fires. On a non-retryable error ioResult throws, and the
+                    // outer catch releases the buffer.
+                    if (ioResult("io_uring write", res) == 0) {
+                        return false;
                     }
                 }
             } catch (Throwable cause) {
