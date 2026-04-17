@@ -69,12 +69,12 @@ public class ResourceLeakDetector<T> {
         DISABLED,
         /**
          * Enables simplistic sampling resource leak detection which reports there is a leak or not,
-         * at the cost of small overhead (default).
+         * at the cost of small overhead .
          */
         SIMPLE,
         /**
          * Enables advanced sampling resource leak detection which reports where the leaked object was accessed
-         * recently at the cost of high overhead.
+         * recently at the cost of high overhead (default).
          */
         ADVANCED,
         /**
