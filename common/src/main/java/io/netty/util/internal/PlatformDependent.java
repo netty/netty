@@ -281,7 +281,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (javaVersion() < 9 ||
+        if (isUnaligned() || javaVersion() < 9 ||
                 PlatformDependent0.isNativeImage()) {
             return false;
         }
