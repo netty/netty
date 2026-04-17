@@ -17,14 +17,17 @@ package io.netty.handler.codec.protobuf;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.buffer.Unpooled.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ProtobufVarint32FrameDecoderTest {
@@ -75,6 +78,84 @@ public class ProtobufVarint32FrameDecoderTest {
         ByteBuf actual = ch.readInbound();
         assertEquals(expected, actual);
         assertFalse(ch.finish());
+
+        expected.release();
+        actual.release();
+    }
+
+    @Test
+    public void testFrameWithinMaxFrameLength() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(10));
+        byte[] b = { 4, 1, 1, 1, 1 };
+        assertTrue(channel.writeInbound(wrappedBuffer(b)));
+
+        ByteBuf expected = wrappedBuffer(new byte[] { 1, 1, 1, 1 });
+        ByteBuf actual = channel.readInbound();
+        assertEquals(expected, actual);
+        assertFalse(channel.finish());
+
+        expected.release();
+        actual.release();
+    }
+
+    @Test
+    public void testFrameExceedingMaxFrameLength() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(3));
+        final byte[] b = { 4, 1, 1, 1, 1 };
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(wrappedBuffer(b));
+            }
+        });
+        assertNull(channel.readInbound());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testOversizedFramePartialDiscard() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(3));
+
+        // Frame with length=10, only send length byte + 5 data bytes
+        final byte[] partial = { 10, 1, 2, 3, 4, 5 };
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(wrappedBuffer(partial));
+            }
+        });
+
+        // Send remaining 5 bytes — should be silently discarded
+        byte[] remaining = { 6, 7, 8, 9, 10 };
+        assertFalse(channel.writeInbound(wrappedBuffer(remaining)));
+        assertNull(channel.readInbound());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testValidFrameAfterOversized() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(5));
+
+        // Oversized frame: length=10, all data present
+        final byte[] oversized = new byte[11];
+        oversized[0] = 10;
+        for (int i = 1; i <= 10; i++) {
+            oversized[i] = (byte) i;
+        }
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(wrappedBuffer(oversized));
+            }
+        });
+
+        // Valid frame after recovery
+        byte[] valid = { 3, 10, 20, 30 };
+        assertTrue(channel.writeInbound(wrappedBuffer(valid)));
+        ByteBuf expected = wrappedBuffer(new byte[] { 10, 20, 30 });
+        ByteBuf actual = channel.readInbound();
+        assertEquals(expected, actual);
+        assertFalse(channel.finish());
 
         expected.release();
         actual.release();
