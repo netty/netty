@@ -424,7 +424,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
-    <bouncycastle.version>1.83</bouncycastle.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
