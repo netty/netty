@@ -580,27 +580,27 @@ public final class IoUringIoHandler implements IoHandler {
                 throw new IllegalArgumentException("IOSQE_CQE_SKIP_SUCCESS not supported");
             }
             long userData = ioOps.userData();
-            short shortUserData = (short) userData;
-            if (shortUserData == userData) {
-                long packedSeq = UserData.encode(id, ioOps.opcode(), shortUserData);
+            // Use the fast path when the full submission can still be encoded into packed UserData.
+            if (canUseFastPath(userData)) {
+                long packedSeq = UserData.encode(id, ioOps.opcode(), (short) userData);
                 if (executor.isExecutorThread(Thread.currentThread())) {
-                    submitPacked0(ioOps, packedSeq);
+                    submitFastPath0(ioOps, packedSeq);
                 } else {
-                    executor.execute(() -> submitPacked0(ioOps, packedSeq));
+                    executor.execute(() -> submitFastPath0(ioOps, packedSeq));
                 }
                 return packedSeq;
             }
             long seq = pendingOps.nextToken();
             if (executor.isExecutorThread(Thread.currentThread())) {
-                submit0(ioOps, seq, userData);
+                submitSlowPath0(ioOps, seq, userData);
                 return seq;
             } else {
-                executor.execute(() -> submit0(ioOps, seq, userData));
+                executor.execute(() -> submitSlowPath0(ioOps, seq, userData));
                 return seq;
             }
         }
 
-        private void submitPacked0(IoUringIoOps ioOps, long seq) {
+        private void submitFastPath0(IoUringIoOps ioOps, long seq) {
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
                     ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
                     ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
@@ -608,7 +608,7 @@ public final class IoUringIoHandler implements IoHandler {
             outstandingCompletions++;
         }
 
-        private void submit0(IoUringIoOps ioOps, long seq, long userData) {
+        private void submitSlowPath0(IoUringIoOps ioOps, long seq, long userData) {
             try {
                 pendingOps.registerNormal(seq, this, ioOps.opcode(), userData);
                 ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
@@ -620,6 +620,10 @@ public final class IoUringIoHandler implements IoHandler {
                 pendingOps.release(seq);
                 throw cause;
             }
+        }
+
+        private boolean canUseFastPath(long userData) {
+            return (short) userData == userData;
         }
 
         @SuppressWarnings("unchecked")
