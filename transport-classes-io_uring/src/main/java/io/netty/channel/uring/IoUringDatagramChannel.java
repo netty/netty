@@ -408,17 +408,16 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, long userData, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert outstanding != -1 : "multi-shot not implemented yet";
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
             assert byteBuf != null;
-            int idx = Math.toIntExact(userData);
-            MsgHdrMemory hdr = recvmsgHdrs.hdr(idx);
+            MsgHdrMemory hdr = recvmsgHdrs.hdr(data);
             // Reset the id as this read was completed and so don't need to be cancelled later.
-            recvmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
+            recvmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
 
             try {
                 if (res < 0) {
@@ -521,7 +520,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IoRegistration registration = registration();
-            // We use the header index as completion userData so the CQE maps back to the right MsgHdrMemory.
+            // We always use idx here so we can detect if no idx was used by checking if data < 0 in
+            // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(
                     fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
@@ -535,13 +535,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, long userData, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
             ChannelOutboundBuffer outboundBuffer = outboundBuffer();
-            int idx = Math.toIntExact(userData);
 
             // Reset the id as this write was completed and so don't need to be cancelled later.
-            sendmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
-            sendmsgResArray[idx] = res;
+            sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
+            sendmsgResArray[data] = res;
             // Store the result so we can handle it as soon as we have no outstanding writes anymore.
             if (outstanding == 0) {
                 // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer
@@ -575,11 +574,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        void connectComplete(byte op, int res, int flags, long userData) {
+        void connectComplete(byte op, int res, int flags, short data) {
             if (res >= 0) {
                 connected = true;
             }
-            super.connectComplete(op, res, flags, userData);
+            super.connectComplete(op, res, flags, data);
         }
 
         @Override

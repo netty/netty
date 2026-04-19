@@ -27,8 +27,6 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.collection.LongObjectHashMap;
-import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.ObjectUtil;
@@ -56,13 +54,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
-    // Head of the intrusive doubly-linked list that tracks all currently registered handles.
-    private DefaultIoUringIoRegistration registrationsHead;
-
-    /**
-     * Maps sequence number -> IoUringCompletionContext for all inflight submissions.
-     */
-    private final LongObjectMap<IoUringCompletionContext> pendingOps;
+    private final IntObjectMap<DefaultIoUringIoRegistration> registrations;
 
     // The maximum number of bytes for an InetAddress / Inet6Address
     private final byte[] inet4AddressArray = new byte[SockaddrIn.IPV4_ADDRESS_LENGTH];
@@ -82,29 +74,13 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
-
-    // Head of the intrusive free list for recycling IoUringCompletionContext instances.
-    // Only accessed from the EventLoop thread, so no synchronization needed.
-    private IoUringCompletionContext freeListHead;
-
-    private final AtomicLong nextSequence = new AtomicLong(INVALID_ID + 1);
+    private DefaultIoUringIoRegistration registrationsHead;
+    private final PendingOpSlots pendingOps;
+    private int nextRegistrationId = 1;
 
     private static final long INVALID_ID = 0;
-
-    /**
-     * Singleton context for eventfd-related internal operations.
-     * Used with {@code ==} reference equality in completion handling.
-     */
-    private static final IoUringCompletionContext EVENTFD_CONTEXT =
-            new IoUringCompletionContext(null, (byte) 0, 0);
-
-    /**
-     * Singleton context for ringfd-related internal operations (NOP, timeout, etc.).
-     * Used with {@code ==} reference equality in completion handling.
-     */
-    private static final IoUringCompletionContext RINGFD_CONTEXT =
-            new IoUringCompletionContext(null, (byte) 0, 0);
-
+    private static final long EVENTFD_TOKEN = PendingOpSlots.token(1);
+    private static final long RINGFD_TOKEN = PendingOpSlots.token(2);
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
 
     private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
@@ -140,6 +116,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
+        registrations = new IntObjectHashMap<>();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
@@ -157,7 +134,7 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
-        pendingOps = new LongObjectHashMap<>();
+        pendingOps = new PendingOpSlots(IoUring.DEFAULT_PENDING_OPS_INITIAL_CAPACITY);
         eventfd = Native.newBlockingEventFd();
         eventfdReadBufCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
         eventfdReadBuf = eventfdReadBufCleanable.buffer();
@@ -167,19 +144,6 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1024);
-    }
-
-    private long nextSequence() {
-       return nextSequence.getAndIncrement();
-    }
-
-    /**
-     * Submit an internal operation (eventfd/ringfd) and return the sequence used as user_data.
-     */
-    private long registerInternalOp(IoUringCompletionContext ctx) {
-        long seq = nextSequence();
-        pendingOps.put(seq, ctx);
-        return seq;
     }
 
     @Override
@@ -311,43 +275,53 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private void handle(int res, int flags, long sqeUdata, ByteBuffer extraCqeData) {
+    private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
-            IoUringCompletionContext ctx = pendingOps.get(sqeUdata);
-            if (ctx == null) {
-                logger.debug("ignoring completion for unknown sequence (seq={}, res={})", sqeUdata, res);
-                return;
-            }
-
             // Only remove from pendingOps if IORING_CQE_F_MORE is not set, as otherwise we know
             // that we will receive more completions for the initial request.
             boolean oneshotOp = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (oneshotOp) {
-                pendingOps.remove(sqeUdata);
+            int id = UserData.decodeId(udata);
+            if (id > 0) {
+                DefaultIoUringIoRegistration registration = registrations.get(id);
+                if (registration != null) {
+                    byte op = UserData.decodeOp(udata);
+                    long userData = UserData.decodeData(udata);
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("completed(ring {}): {}(userData={}, res={})",
+                                ringBuffer.fd(), Native.opToStr(op), userData, res);
+                    }
+                    registration.handle(res, flags, op, userData, extraCqeData);
+                    return;
+                }
             }
-
-            if (ctx == EVENTFD_CONTEXT) {
+            if (udata == EVENTFD_TOKEN) {
                 handleEventFdRead();
                 return;
             }
-            if (ctx == RINGFD_CONTEXT) {
-                // Just return
+            if (udata == RINGFD_TOKEN) {
+                return;
+            }
+            int slot = pendingOps.findSlot(udata);
+            if (slot != -1) {
+                DefaultIoUringIoRegistration registration = pendingOps.registration(slot);
+                byte op = pendingOps.op(slot);
+                long userData = pendingOps.userData(slot);
+
+                if (logger.isTraceEnabled()) {
+                    logger.trace("completed(ring {}): {}(userData={}, res={})",
+                            ringBuffer.fd(), Native.opToStr(op), userData, res);
+                }
+
+                registration.handle(res, flags, op, userData, extraCqeData);
+
+                // Recycle if this completion is terminal (no more CQEs expected for this SQE).
+                if (oneshotOp) {
+                    pendingOps.release(slot);
+                }
                 return;
             }
 
-            DefaultIoUringIoRegistration registration = ctx.registration;
-
-            if (logger.isTraceEnabled()) {
-                logger.trace("completed(ring {}): {}(userData={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(ctx.op), ctx.userData, res);
-            }
-
-            registration.handle(res, flags, ctx.op, ctx.userData, extraCqeData);
-
-            // Recycle if this completion is terminal (no more CQEs expected for this SQE).
-            if (oneshotOp) {
-                recycleContext(ctx);
-            }
+            logger.debug("ignoring completion for unknown sequence (seq={}, res={})", udata, res);
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
@@ -365,16 +339,13 @@ public final class IoUringIoHandler implements IoHandler {
 
     private void submitEventFdRead() {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
-        long seq = registerInternalOp(EVENTFD_CONTEXT);
-
         eventfdReadSubmitted = submissionQueue.addEventFdRead(
-                eventfd.intValue(), eventfdReadBufAddress, 0, 8, seq);
+                eventfd.intValue(), eventfdReadBufAddress, 0, 8, EVENTFD_TOKEN);
     }
 
     private int submitAndWaitWithTimeout(SubmissionQueue submissionQueue,
                                          boolean linkTimeout, long timeoutNanoSeconds) {
         if (timeoutNanoSeconds != -1) {
-            long seq = registerInternalOp(RINGFD_CONTEXT);
             // We use the same timespec pointer for all add*Timeout operations. This only works because we call
             // submit directly after it. This ensures the submitted timeout is considered "stable" and so can be reused.
             long seconds, nanoSeconds;
@@ -389,9 +360,9 @@ public final class IoUringIoHandler implements IoHandler {
             timeoutMemory.putLong(KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
             timeoutMemory.putLong(KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
             if (linkTimeout) {
-                submissionQueue.addLinkTimeout(timeoutMemoryAddress, seq);
+                submissionQueue.addLinkTimeout(timeoutMemoryAddress, RINGFD_TOKEN);
             } else {
-                submissionQueue.addTimeout(timeoutMemoryAddress, seq);
+                submissionQueue.addTimeout(timeoutMemoryAddress, RINGFD_TOKEN);
             }
         }
         int submitted = submissionQueue.submitAndGet();
@@ -419,8 +390,7 @@ public final class IoUringIoHandler implements IoHandler {
         Native.eventFdWrite(eventfd.intValue(), 1L);
 
         // Ensure all previously submitted IOs get to complete before tearing down everything.
-        long seq = registerInternalOp(RINGFD_CONTEXT);
-        submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, seq);
+        submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, RINGFD_TOKEN);
 
         // Submit everything and wait until we could drain i.
         submissionQueue.submitAndGet();
@@ -444,13 +414,12 @@ public final class IoUringIoHandler implements IoHandler {
             submissionQueue.submit();
         }
         // Try to drain all the IO from the queue first...
-        long seq = registerInternalOp(RINGFD_CONTEXT);
         // We need to also specify the Native.IOSQE_LINK flag for it to work as otherwise it is not correctly linked
         // with the timeout.
         // See:
         // - https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
         // - https://git.kernel.dk/cgit/liburing/commit/?h=link-timeout&id=bc1bd5e97e2c758d6fd975bd35843b9b2c770c5a
-        submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), seq);
+        submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), RINGFD_TOKEN);
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
         completionQueue.process(this::handle);
@@ -483,8 +452,7 @@ public final class IoUringIoHandler implements IoHandler {
 
                 @Override
                 public void handle(int res, int flags, long sqeUdata, ByteBuffer extraCqeData) {
-                    IoUringCompletionContext ctx = pendingOps.get(sqeUdata);
-                    if (ctx == EVENTFD_CONTEXT) {
+                    if (sqeUdata == EVENTFD_TOKEN) {
                         eventFdDrained = true;
                     }
                     IoUringIoHandler.this.handle(res, flags, sqeUdata, extraCqeData);
@@ -501,8 +469,7 @@ public final class IoUringIoHandler implements IoHandler {
         // transition back to false, thus we should never have any more events written.
         // So, if we have a read event pending, we can cancel it.
         if (eventfdReadSubmitted != 0) {
-            long seq = registerInternalOp(EVENTFD_CONTEXT);
-            submissionQueue.addCancel(eventfdReadSubmitted, seq);
+            submissionQueue.addCancel(eventfdReadSubmitted, EVENTFD_TOKEN);
             eventfdReadSubmitted = 0;
             submissionQueue.submit();
         }
@@ -533,6 +500,7 @@ public final class IoUringIoHandler implements IoHandler {
             throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
+        registration.setId(nextRegistrationId());
         addRegistration(registration);
         try {
             ioHandle.registered();
@@ -544,7 +512,16 @@ public final class IoUringIoHandler implements IoHandler {
         return registration;
     }
 
+    private int nextRegistrationId() {
+        int id = nextRegistrationId++;
+        if (id <= 0) {
+            throw new IllegalStateException("registration id overflow");
+        }
+        return id;
+    }
+
     private void addRegistration(DefaultIoUringIoRegistration registration) {
+        registrations.put(registration.id, registration);
         DefaultIoUringIoRegistration head = registrationsHead;
         registration.next = head;
         if (head != null) {
@@ -554,6 +531,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private void removeRegistration(DefaultIoUringIoRegistration registration) {
+        registrations.remove(registration.id);
         DefaultIoUringIoRegistration prev = registration.prev;
         DefaultIoUringIoRegistration next = registration.next;
         if (prev == null) {
@@ -579,10 +557,15 @@ public final class IoUringIoHandler implements IoHandler {
         private DefaultIoUringIoRegistration next;
         private boolean removeLater;
         private int outstandingCompletions;
+        private int id;
 
         DefaultIoUringIoRegistration(ThreadAwareExecutor executor, IoUringIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
+        }
+
+        void setId(int id) {
+            this.id = id;
         }
 
         @Override
@@ -596,22 +579,47 @@ public final class IoUringIoHandler implements IoHandler {
                 // as it will only produce a completion on failure.
                 throw new IllegalArgumentException("IOSQE_CQE_SKIP_SUCCESS not supported");
             }
-            long seq = nextSequence();
-            if (executor.isExecutorThread(Thread.currentThread())) {
-                submit0(ioOps, seq);
-            } else {
-                executor.execute(() -> submit0(ioOps, seq));
+            long userData = ioOps.userData();
+            short shortUserData = (short) userData;
+            if (shortUserData == userData) {
+                long packedSeq = UserData.encode(id, ioOps.opcode(), shortUserData);
+                if (executor.isExecutorThread(Thread.currentThread())) {
+                    submitPacked0(ioOps, packedSeq);
+                } else {
+                    executor.execute(() -> submitPacked0(ioOps, packedSeq));
+                }
+                return packedSeq;
             }
-            return seq;
+            long seq = pendingOps.nextToken();
+            if (executor.isExecutorThread(Thread.currentThread())) {
+                submit0(ioOps, seq, userData);
+                return seq;
+            } else {
+                executor.execute(() -> submit0(ioOps, seq, userData));
+                return seq;
+            }
         }
 
-        private void submit0(IoUringIoOps ioOps, long seq) {
-            pendingOps.put(seq, allocateContext(this, ioOps.opcode(), ioOps.userData()));
+        private void submitPacked0(IoUringIoOps ioOps, long seq) {
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
                     ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
                     ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
             );
             outstandingCompletions++;
+        }
+
+        private void submit0(IoUringIoOps ioOps, long seq, long userData) {
+            try {
+                pendingOps.registerNormal(seq, this, ioOps.opcode(), userData);
+                ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
+                        ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
+                        ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
+                );
+                outstandingCompletions++;
+            } catch (Throwable cause) {
+                pendingOps.release(seq);
+                throw cause;
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -678,63 +686,166 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    /**
-     * Holds the context for an inflight io_uring submission. Each SQE that is submitted gets a unique
-     * sequence number as its {@code user_data}, and an instance of this class is stored in a map keyed
-     * by that sequence. When the corresponding CQE arrives, we look up this context to dispatch the
-     * completion to the correct {@link IoRegistration} with the original fd, opcode, and user data.
-     */
-    static final class IoUringCompletionContext {
-        DefaultIoUringIoRegistration registration;
-        byte op;
-        long userData;
+    private static final class PendingOpSlots {
+        private DefaultIoUringIoRegistration[] registrations;
+        private byte[] ops;
+        private long[] userDatas;
+        private long[] activeSequences;
+        private int mask;
+        private final AtomicLong nextSequence = new AtomicLong(3);
 
-        // Intrusive free list pointer; only used when the context is in the free list.
-        IoUringCompletionContext next;
-
-        IoUringCompletionContext(DefaultIoUringIoRegistration registration, byte op, long userData) {
-            this.registration = registration;
-            this.op = op;
-            this.userData = userData;
+        PendingOpSlots(int initialCapacity) {
+            int capacity = normalizeCapacity(initialCapacity);
+            registrations = new DefaultIoUringIoRegistration[capacity];
+            ops = new byte[capacity];
+            userDatas = new long[capacity];
+            activeSequences = new long[capacity];
+            mask = capacity - 1;
         }
 
-        void init(DefaultIoUringIoRegistration registration, byte op, long userData) {
-            this.registration = registration;
-            this.op = op;
-            this.userData = userData;
+        long nextToken() {
+            long sequence = nextSequence.getAndIncrement();
+            if (sequence <= 0) {
+                throw new IllegalStateException("slow path sequence overflow");
+            }
+            return token(sequence);
         }
 
-        void reset() {
-            this.registration = null;
-            this.op = 0;
-            this.userData = 0;
+        void registerNormal(long token, DefaultIoUringIoRegistration registration, byte op, long userData) {
+            long sequence = tokenSequence(token);
+            int slot = ensureWritableSlot(sequence);
+            registrations[slot] = registration;
+            ops[slot] = op;
+            userDatas[slot] = userData;
+            activeSequences[slot] = sequence;
         }
 
-        @Override
-        public String toString() {
-            return "IoUringCompletionContext{" +
-                    "op=" + Native.opToStr(op) +
-                    ", userData=" + userData +
-                    '}';
+        int findSlot(long token) {
+            long sequence = tokenSequence(token);
+            if (sequence == INVALID_ID) {
+                return -1;
+            }
+            int slot = slot(sequence, mask);
+            return activeSequences[slot] == sequence ? slot : -1;
         }
-    }
 
-    private IoUringCompletionContext allocateContext(DefaultIoUringIoRegistration registration,
-                                                     byte op, long userData) {
-        IoUringCompletionContext ctx = freeListHead;
-        if (ctx != null) {
-            freeListHead = ctx.next;
-            ctx.next = null;
-            ctx.init(registration, op, userData);
-            return ctx;
+        DefaultIoUringIoRegistration registration(int slot) {
+            return registrations[slot];
         }
-        return new IoUringCompletionContext(registration, op, userData);
-    }
 
-    private void recycleContext(IoUringCompletionContext ctx) {
-        ctx.reset();
-        ctx.next = freeListHead;
-        freeListHead = ctx;
+        byte op(int slot) {
+            return ops[slot];
+        }
+
+        long userData(int slot) {
+            return userDatas[slot];
+        }
+
+        void release(long token) {
+            int slot = findSlot(token);
+            if (slot != -1) {
+                release(slot);
+            }
+        }
+
+        void release(int slot) {
+            registrations[slot] = null;
+            ops[slot] = 0;
+            userDatas[slot] = 0;
+            activeSequences[slot] = INVALID_ID;
+        }
+
+        private int ensureWritableSlot(long sequence) {
+            int mask = this.mask;
+            int slot = slot(sequence, mask);
+            while (activeSequences[slot] != INVALID_ID) {
+                resize();
+                mask = this.mask;
+                slot = slot(sequence, mask);
+            }
+            return slot;
+        }
+
+        private void resize() {
+            int oldCapacity = activeSequences.length;
+            int newCapacity = oldCapacity << 1;
+            if (newCapacity <= 0) {
+                throw new IllegalStateException("slow path table overflow");
+            }
+
+            DefaultIoUringIoRegistration[] oldRegistrations = registrations;
+            byte[] oldOps = ops;
+            long[] oldUserDatas = userDatas;
+            long[] oldActiveSequences = activeSequences;
+
+            DefaultIoUringIoRegistration[] newRegistrations = new DefaultIoUringIoRegistration[newCapacity];
+            byte[] newOps = new byte[newCapacity];
+            long[] newUserDatas = new long[newCapacity];
+            long[] newActiveSequences = new long[newCapacity];
+
+            for (int i = 0; i < oldCapacity; i++) {
+                long sequence = oldActiveSequences[i];
+                if (sequence == INVALID_ID) {
+                    continue;
+                }
+                int newSlot = (sequence & oldCapacity) == 0 ? i : i + oldCapacity;
+                newRegistrations[newSlot] = oldRegistrations[i];
+                newOps[newSlot] = oldOps[i];
+                newUserDatas[newSlot] = oldUserDatas[i];
+                newActiveSequences[newSlot] = sequence;
+            }
+
+            registrations = newRegistrations;
+            ops = newOps;
+            userDatas = newUserDatas;
+            activeSequences = newActiveSequences;
+            mask = newCapacity - 1;
+        }
+
+        /**
+         * sequence is always > 0, so its top bit (bit63) is always 0.
+         * sequence layout:
+         *   [ 0 | bit62 ... bit32 | bit31 | bit30 ... bit0 ]
+         * upperBits = sequence >>> 31:
+         *   [ 0 | bit62 ... bit32 | bit31 ]
+         * lowerBits = ((int) sequence & Integer.MAX_VALUE) | Integer.MIN_VALUE:
+         *   [ 1 | bit30 ... bit0 ]   // negative int, high bit is used as a token marker
+         * Final token layout:
+         *   [ 0 | bit62 ... bit32 | bit31 ][ 1 | bit30 ... bit0 ]
+         * @param sequence original sequence
+         * @return real userData
+         */
+        private static long token(long sequence) {
+            // We intentionally do not handle sequence wrap-around here.
+            // `nextSequence` would need to reach Long.MAX_VALUE and overflow,
+            // which is considered practically impossible in this context.
+            long upperBits = sequence >>> 31;
+            int lowerBits = ((int) sequence & Integer.MAX_VALUE) | Integer.MIN_VALUE;
+            return (upperBits << Integer.SIZE) | (lowerBits & 0xFFFFFFFFL);
+        }
+
+        private static long tokenSequence(long token) {
+            int lowerBits = (int) token;
+            if (lowerBits >= 0) {
+                return INVALID_ID;
+            }
+            return (token >>> Integer.SIZE) << 31 | (lowerBits & Integer.MAX_VALUE);
+        }
+
+        private static int slot(long sequence, int mask) {
+            return (int) sequence & mask;
+        }
+
+        private static int normalizeCapacity(int requestedCapacity) {
+            int capacity = 1;
+            while (capacity < requestedCapacity) {
+                capacity <<= 1;
+                if (capacity <= 0) {
+                    throw new IllegalArgumentException("requestedCapacity overflow");
+                }
+            }
+            return capacity;
+        }
     }
 
     private static IoUringIoHandle cast(IoHandle handle) {

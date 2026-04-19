@@ -54,6 +54,7 @@ public final class IoUring {
     static final int NUM_ELEMENTS_IOVEC;
     static final int DEFAULT_RING_SIZE;
     static final int DEFAULT_CQ_SIZE;
+    static final int DEFAULT_PENDING_OPS_INITIAL_CAPACITY;
     static final int DISABLE_SETUP_CQ_SIZE = -1;
 
     private static final InternalLogger logger;
@@ -80,6 +81,7 @@ public final class IoUring {
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
         int numElementsIoVec = 10;
+        int pendingOpsInitialCapacity;
 
         String kernelVersion = "[unknown]";
         try {
@@ -178,7 +180,17 @@ public final class IoUring {
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
 
         DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
-
+        pendingOpsInitialCapacity = SystemPropertyUtil.getInt(
+                "io.netty.iouring.pendingOpsInitialCapacity", DEFAULT_RING_SIZE);
+        if (pendingOpsInitialCapacity <= 0) {
+            throw new IllegalArgumentException("io.netty.iouring.pendingOpsInitialCapacity: " +
+                                               pendingOpsInitialCapacity + " (expected: > 0)");
+        }
+        if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
+            throw new IllegalArgumentException("io.netty.iouring.pendingOpsInitialCapacity: " +
+                                               pendingOpsInitialCapacity + " (expected: power of 2)");
+        }
+        DEFAULT_PENDING_OPS_INITIAL_CAPACITY = pendingOpsInitialCapacity;
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {
             DEFAULT_CQ_SIZE = Math.max(DEFAULT_RING_SIZE,
                     SystemPropertyUtil.getInt("io.netty.iouring.cqSize", 4096));
