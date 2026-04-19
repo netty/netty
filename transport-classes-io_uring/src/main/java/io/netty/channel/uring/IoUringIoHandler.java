@@ -303,7 +303,8 @@ public final class IoUringIoHandler implements IoHandler {
             }
             int slot = pendingOps.findSlot(udata);
             if (slot != -1) {
-                DefaultIoUringIoRegistration registration = pendingOps.registration(slot);
+                int registrationId = pendingOps.registrationId(slot);
+                DefaultIoUringIoRegistration registration = registrations.get(registrationId);
                 byte op = pendingOps.op(slot);
                 long userData = pendingOps.userData(slot);
 
@@ -312,7 +313,10 @@ public final class IoUringIoHandler implements IoHandler {
                             ringBuffer.fd(), Native.opToStr(op), userData, res);
                 }
 
-                registration.handle(res, flags, op, userData, extraCqeData);
+                // Resolve slow-path completions through the live registration table to align with the fast path.
+                if (registration != null) {
+                    registration.handle(res, flags, op, userData, extraCqeData);
+                }
 
                 // Recycle if this completion is terminal (no more CQEs expected for this SQE).
                 if (oneshotOp) {
@@ -610,7 +614,7 @@ public final class IoUringIoHandler implements IoHandler {
 
         private void submitSlowPath0(IoUringIoOps ioOps, long seq, long userData) {
             try {
-                pendingOps.registerNormal(seq, this, ioOps.opcode(), userData);
+                pendingOps.registerNormal(seq, id, ioOps.opcode(), userData);
                 ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
                         ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
                         ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
@@ -691,7 +695,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private static final class PendingOpSlots {
-        private DefaultIoUringIoRegistration[] registrations;
+        private int[] registrationIds;
         private byte[] ops;
         private long[] userDatas;
         private long[] activeSequences;
@@ -700,7 +704,7 @@ public final class IoUringIoHandler implements IoHandler {
 
         PendingOpSlots(int initialCapacity) {
             int capacity = normalizeCapacity(initialCapacity);
-            registrations = new DefaultIoUringIoRegistration[capacity];
+            registrationIds = new int[capacity];
             ops = new byte[capacity];
             userDatas = new long[capacity];
             activeSequences = new long[capacity];
@@ -715,10 +719,10 @@ public final class IoUringIoHandler implements IoHandler {
             return token(sequence);
         }
 
-        void registerNormal(long token, DefaultIoUringIoRegistration registration, byte op, long userData) {
+        void registerNormal(long token, int registrationId, byte op, long userData) {
             long sequence = tokenSequence(token);
             int slot = ensureWritableSlot(sequence);
-            registrations[slot] = registration;
+            registrationIds[slot] = registrationId;
             ops[slot] = op;
             userDatas[slot] = userData;
             activeSequences[slot] = sequence;
@@ -733,8 +737,8 @@ public final class IoUringIoHandler implements IoHandler {
             return activeSequences[slot] == sequence ? slot : -1;
         }
 
-        DefaultIoUringIoRegistration registration(int slot) {
-            return registrations[slot];
+        int registrationId(int slot) {
+            return registrationIds[slot];
         }
 
         byte op(int slot) {
@@ -753,7 +757,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         void release(int slot) {
-            registrations[slot] = null;
+            registrationIds[slot] = 0;
             ops[slot] = 0;
             userDatas[slot] = 0;
             activeSequences[slot] = INVALID_ID;
@@ -777,12 +781,12 @@ public final class IoUringIoHandler implements IoHandler {
                 throw new IllegalStateException("slow path table overflow");
             }
 
-            DefaultIoUringIoRegistration[] oldRegistrations = registrations;
+            int[] oldRegistrationIds = registrationIds;
             byte[] oldOps = ops;
             long[] oldUserDatas = userDatas;
             long[] oldActiveSequences = activeSequences;
 
-            DefaultIoUringIoRegistration[] newRegistrations = new DefaultIoUringIoRegistration[newCapacity];
+            int[] newRegistrationIds = new int[newCapacity];
             byte[] newOps = new byte[newCapacity];
             long[] newUserDatas = new long[newCapacity];
             long[] newActiveSequences = new long[newCapacity];
@@ -793,13 +797,13 @@ public final class IoUringIoHandler implements IoHandler {
                     continue;
                 }
                 int newSlot = (sequence & oldCapacity) == 0 ? i : i + oldCapacity;
-                newRegistrations[newSlot] = oldRegistrations[i];
+                newRegistrationIds[newSlot] = oldRegistrationIds[i];
                 newOps[newSlot] = oldOps[i];
                 newUserDatas[newSlot] = oldUserDatas[i];
                 newActiveSequences[newSlot] = sequence;
             }
 
-            registrations = newRegistrations;
+            registrationIds = newRegistrationIds;
             ops = newOps;
             userDatas = newUserDatas;
             activeSequences = newActiveSequences;
