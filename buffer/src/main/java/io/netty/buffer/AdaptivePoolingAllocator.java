@@ -1748,6 +1748,12 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
+        boolean _isDirect() {
+            AbstractByteBuf root = rootParent;
+            return root != null && root.isDirect();
+        }
+
+        @Override
         public ByteBuffer nioBuffer(int index, int length) {
             checkIndex(index, length);
             return rootParent().nioBuffer(idx(index), length);
