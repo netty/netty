@@ -490,7 +490,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, CompletionHandler<Void> handler) {
-        ctx.bind(localAddress, handler);
+        // Ensure we send the preface before we notify the bind promise as the user might try to write
+        // directly in the listener attached to the promise and we need to ensure the preface is always the first
+        // thing that is written.
+        ctx.bind(localAddress, new PrefaceSendListener(ctx, handler));
     }
 
     @Override
@@ -499,23 +502,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Ensure we send the preface before we notify the connect promise as the user might try to write
         // directly in the listener attached to the promise and we need to ensure the preface is always the first
         // thing that is written.
-        ctx.connect(remoteAddress, localAddress, new CompletionHandler<>() {
-            @Override
-            public void success(Void result) {
-                try {
-                    byteDecoder.sendPrefaceIfNeeded(ctx);
-                } catch (Throwable e) {
-                    handler.failure(e);
-                    return;
-                }
-                handler.success(result);
-            }
-
-            @Override
-            public void failure(Throwable cause) {
-                handler.failure(cause);
-            }
-        });
+        ctx.connect(remoteAddress, localAddress, new PrefaceSendListener(ctx, handler));
     }
 
     @Override
@@ -1040,6 +1027,32 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             } else {
                 ctx.close(handler);
             }
+        }
+    }
+
+    private final class PrefaceSendListener implements CompletionHandler<Void> {
+        private final ChannelHandlerContext ctx;
+        private final CompletionHandler<Void> handler;
+
+        PrefaceSendListener(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
+            this.ctx = ctx;
+            this.handler = handler;
+        }
+
+        @Override
+        public void success(Void result) {
+            try {
+                byteDecoder.sendPrefaceIfNeeded(ctx);
+            } catch (Throwable e) {
+                handler.failure(e);
+                return;
+            }
+            handler.success(result);
+        }
+
+        @Override
+        public void failure(Throwable cause) {
+            handler.failure(cause);
         }
     }
 }
