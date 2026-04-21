@@ -18,11 +18,13 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -32,12 +34,15 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -51,6 +56,15 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     // Marker object that is used to mark a batch of buffers that were used with zero-copy write operations.
     private static final Object ZC_BATCH_MARKER = new Object();
 
+    /**
+     * Maximum bytes per chunk when converting a generic {@link FileRegion} to a {@link ByteBuf}
+     * for the io_uring async send path. Overridable via the {@code io.netty.iouring.fileRegionChunkSize}
+     * system property; capped at 16 MiB to guard against pathological configurations that would
+     * risk direct-memory OOM.
+     */
+    private static final int FILE_REGION_MAX_CHUNK_SIZE = Math.min(16 * 1024 * 1024,
+            Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024)));
+
     private MsgHdrMemory writeMsgHdrMemory;
     private MsgHdrMemory readMsgHdrMemory;
 
@@ -62,6 +76,8 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     long readId;
 
     private ByteBuf readBuffer;
+    // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
+    private ByteBuf fileRegionChunkBuf;
 
     // The configured buffer ring if any
     private IoUringBufferRing bufferRing;
@@ -157,11 +173,14 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        // Since we cannot use synchronous sendfile,
-        // the channel can only support DefaultFileRegion instead of FileRegion.
         if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
             return new IoUringFileRegion((DefaultFileRegion) msg);
         }
+        if (msg instanceof FileRegion) {
+            // Generic FileRegion -- pass through to the write path for chunked conversion.
+            return msg;
+        }
+
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX && msg instanceof FileDescriptor) {
             return msg;
         }
@@ -292,6 +311,8 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                 return 0;
             }
             ops = fileRegion.splice(fd);
+        } else if (msg instanceof FileRegion) {
+            return scheduleWriteFileRegion(fd, registration, (FileRegion) msg);
         } else {
             ByteBuf buf = (ByteBuf) msg;
             long address = IoUring.memoryAddress(buf) + buf.readerIndex();
@@ -304,6 +325,59 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         writeId = registration.submit(ops);
         writeOpCode = opCode;
         if (writeId == 0) {
+            return 0;
+        }
+        return 1;
+    }
+
+    // Read a chunk from a generic FileRegion into a direct ByteBuf and submit it as an
+    // io_uring async send. If fileRegionChunkBuf is non-null, re-submits the remaining
+    // bytes from a previous partial/failed send.
+    private int scheduleWriteFileRegion(int fd, IoRegistration registration, FileRegion region) {
+        ByteBuf buf = fileRegionChunkBuf;
+        if (buf == null) {
+            long remaining = region.count() - region.transferred();
+            if (remaining > 0) {
+                int chunkSize = (int) Math.min(remaining, FILE_REGION_MAX_CHUNK_SIZE);
+                buf = alloc().directBuffer(chunkSize);
+                try {
+                    ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
+                    while (buf.writableBytes() > 0) {
+                        long t = region.transferTo(ch, region.transferred());
+                        if (t <= 0) {
+                            break;
+                        }
+                    }
+                    if (buf.readableBytes() == 0) {
+                        buf.release();
+                        handleWriteError(new ChannelException(
+                                "FileRegion.transferTo(...) produced 0 bytes (count="
+                                        + region.count() + ", transferred=" + region.transferred() + ')'));
+                        return 0;
+                    }
+                } catch (Exception e) {
+                    buf.release();
+                    handleWriteError(e);
+                    return 0;
+                }
+            } else {
+                // Empty or fully-transferred region. Submit a 0-byte send so the completion
+                // path removes it from the outbound buffer via the normal async flow.
+                buf = alloc().directBuffer(0);
+            }
+            fileRegionChunkBuf = buf;
+        }
+        long address = IoUring.memoryAddress(buf) + buf.readerIndex();
+        int length = buf.readableBytes();
+        IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
+        byte opCode = ops.opcode();
+        writeId = registration.submit(ops);
+        writeOpCode = opCode;
+        if (writeId == 0) {
+            // Submission only fails when the registration is no longer valid (channel is
+            // being deregistered). unregistered() will release fileRegionChunkBuf and the
+            // outbound buffer will release the FileRegion, so nothing to clean up here --
+            // mirroring the plain ByteBuf path above.
             return 0;
         }
         return 1;
@@ -649,6 +723,11 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
         }
 
+        if (current instanceof FileRegion) {
+            return handleWriteCompleteGenericFileRegion(
+                    channelOutboundBuffer, (FileRegion) current, res);
+        }
+
         if (res >= 0) {
             channelOutboundBuffer.removeBytes(res);
         } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -859,9 +938,58 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         return 1;
     }
 
+    // Returns true when the completion can be treated as "written all" for this SQE
+    // (the framework may still schedule further writes from the outbound buffer); returns
+    // false to signal the framework that POLLOUT should be armed so the chunk buffer is
+    // resubmitted once the socket becomes writable again.
+    private boolean handleWriteCompleteGenericFileRegion(
+            ChannelOutboundBuffer channelOutboundBuffer, FileRegion region, int res) {
+        try {
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                releaseFileRegionChunkBuf();
+                return true;
+            }
+            if (res >= 0) {
+                ByteBuf buf = fileRegionChunkBuf;
+                assert buf != null;
+                buf.skipBytes(res);
+                if (!buf.isReadable()) {
+                    // Chunk fully sent.
+                    releaseFileRegionChunkBuf();
+                    if (region.transferred() >= region.count()) {
+                        channelOutboundBuffer.remove();
+                    }
+                } else {
+                    // Partial send -- schedule POLLOUT to re-send the remainder.
+                    return false;
+                }
+            } else {
+                // Keep the chunk buffer -- on retryable errors (EAGAIN) ioResult returns 0
+                // and scheduleWriteFileRegion() will re-submit the same fileRegionChunkBuf
+                // once POLLOUT fires. On a non-retryable error ioResult throws, and the
+                // outer catch releases the buffer.
+                if (ioResult("io_uring write", res) == 0) {
+                    return false;
+                }
+            }
+        } catch (Throwable cause) {
+            releaseFileRegionChunkBuf();
+            handleWriteError(cause);
+        }
+        return true;
+    }
+
+    private void releaseFileRegionChunkBuf() {
+        if (fileRegionChunkBuf != null) {
+            fileRegionChunkBuf.release();
+            fileRegionChunkBuf = null;
+        }
+    }
+
     @Override
     protected void unregistered() {
         super.unregistered();
+        releaseFileRegionChunkBuf();
         if (readMsgHdrMemory != null) {
             readMsgHdrMemory.release();
             readMsgHdrMemory = null;
@@ -879,6 +1007,46 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             return false;
         }
         return bufferRing == null || !bufferRing.isUsable();
+    }
+
+    /**
+     * A {@link WritableByteChannel} backed by a {@link ByteBuf}.
+     * Writes are capped to {@link ByteBuf#writableBytes()} to prevent overflow
+     * when {@link FileRegion#transferTo} writes more than the chunk size.
+     */
+    private static final class ByteBufWritableByteChannel implements WritableByteChannel {
+        private final ByteBuf buf;
+
+        ByteBufWritableByteChannel(ByteBuf buf) {
+            this.buf = buf;
+        }
+
+        @Override
+        public int write(ByteBuffer src) {
+            int toWrite = Math.min(src.remaining(), buf.writableBytes());
+            if (toWrite == 0) {
+                return 0;
+            }
+            if (toWrite < src.remaining()) {
+                int oldLimit = src.limit();
+                src.limit(src.position() + toWrite);
+                buf.writeBytes(src);
+                src.limit(oldLimit);
+                return toWrite;
+            }
+            buf.writeBytes(src);
+            return toWrite;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return true;
+        }
+
+        @Override
+        public void close() {
+            // NOOP
+        }
     }
 
     @Override
