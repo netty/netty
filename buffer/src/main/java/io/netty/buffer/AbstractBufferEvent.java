@@ -41,7 +41,7 @@ abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
         size = buf.capacity();
         maxFastCapacity = buf.maxFastWritableBytes() + buf.writerIndex();
         maxCapacity = buf.maxCapacity();
-        direct = buf.isDirect();
+        direct = buf._isDirect();
         address = buf._memoryAddress();
     }
 }
