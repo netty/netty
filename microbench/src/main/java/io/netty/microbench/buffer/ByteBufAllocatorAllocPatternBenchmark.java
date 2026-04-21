@@ -88,9 +88,15 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
             releaseIndexes = new int[MAX_LIVE_BUFFERS];
             sizes = new int[MathUtil.findNextPositivePowerOfTwo(FLATTEND_SIZE_ARRAY.length)];
             SplittableRandom rand = new SplittableRandom(SEED);
-            // Pre-generate the to be released index.
             for (int i = 0; i < releaseIndexes.length; i++) {
-                releaseIndexes[i] = rand.nextInt(releaseIndexes.length);
+                releaseIndexes[i] = i;
+            }
+            // Fisher-Yates shuffle.
+            for (int i = releaseIndexes.length - 1; i > 0; i--) {
+                int randomIndex = rand.nextInt(i + 1);
+                int temp = releaseIndexes[i];
+                releaseIndexes[i] = releaseIndexes[randomIndex];
+                releaseIndexes[randomIndex] = temp;
             }
             // Shuffle the `flattendSizeArray` to `sizes`.
             for (int i = 0; i < sizes.length; i++) {
