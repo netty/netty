@@ -273,7 +273,7 @@ public final class PlatformDependent {
     }
 
     private static boolean initializeVarHandle() {
-        if (PlatformDependent0.isNativeImage()) {
+        if (isUnaligned() || PlatformDependent0.isNativeImage()) {
             return false;
         }
         boolean varHandleAvailable = false;
