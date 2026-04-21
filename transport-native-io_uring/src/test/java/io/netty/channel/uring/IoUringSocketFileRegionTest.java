@@ -116,6 +116,7 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        boolean ioUringClient = cc instanceof IoUringSocketChannel;
         CountingFileRegion region = new CountingFileRegion(new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, payload.length));
         try {
@@ -127,6 +128,10 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
         }
         assertNull(sh.exception.get());
         assertEquals(payload.length, sh.counter);
+        // Chunking is only exercised when the client uses io_uring -- other transports (e.g. NIO)
+        // hand the FileRegion straight to the socket channel and the kernel's sendfile() transfers
+        // the whole file in a single transferTo call. Skip the chunking assertion for those combos.
+        assumeTrue(ioUringClient, "chunking only applies to io_uring client transport");
         // Skip the chunking assertion if an operator configured a chunk size larger than the
         // payload -- chunking is not exercised in that configuration, but the transfer itself is
         // still validated above.
@@ -160,6 +165,7 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        boolean ioUringClient = cc instanceof IoUringSocketChannel;
         CountingFileRegion firstRegion = new CountingFileRegion(new DefaultFileRegion(
                 new RandomAccessFile(firstFile, "r").getChannel(), 0, firstPayload.length));
         CountingFileRegion secondRegion = new CountingFileRegion(new DefaultFileRegion(
@@ -177,6 +183,8 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
         assertEquals(combined.length, sh.counter);
         assertTrue(secondRegion.transferToCalls.get() >= 1,
                 "Second region must be transferred too");
+        // Chunking is only exercised when the client uses io_uring -- see testCustomFileRegionChunking.
+        assumeTrue(ioUringClient, "chunking only applies to io_uring client transport");
         assumeTrue(CONFIGURED_CHUNK_SIZE < CHUNKING_REGION_SIZE, "chunk size >= payload; chunking not exercised");
         int minFirstCalls = (firstPayload.length + CONFIGURED_CHUNK_SIZE - 1) / CONFIGURED_CHUNK_SIZE;
         assertTrue(firstRegion.transferToCalls.get() >= minFirstCalls,
