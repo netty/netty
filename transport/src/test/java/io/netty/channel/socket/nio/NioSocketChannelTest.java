@@ -181,7 +181,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     private static void testChannelReRegisterRead(final boolean sameEventLoop) throws Exception {
         final EventLoopGroup group = new NioEventLoopGroup(2);
         final CountDownLatch latch = new CountDownLatch(1);
-        Promise<Void> eventLoopCheck = group.next().newPromise();
+        final Promise<Void> eventLoopCheck = group.next().newPromise();
 
         // Just some random bytes
         byte[] bytes = new byte[1024];
