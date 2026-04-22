@@ -236,6 +236,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                      } else if (cause != null) {
                                          eventLoopCheck.tryFailure(new AssertionError(cause));
                                      } else {
+                                         eventLoopCheck.trySuccess(null);
                                          group.next().register(channel);
                                      }
                                  }
