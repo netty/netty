@@ -191,7 +191,9 @@ public class LzfDecompressor extends InputBufferingDecompressor {
             final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
 
             try {
-                decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
+                decoder.decodeChunk(
+                        inputArray, inPos, inPos + chunkLength,
+                        outputArray, outPos, outPos + originalLength);
                 uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
             } catch (LZFException e) {
                 uncompressed.release();
