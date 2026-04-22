@@ -31,7 +31,10 @@ import static java.lang.Math.max;
 /**
  * Allows a way to register some {@link Runnable} that will executed once there are no references to an {@link Object}
  * anymore.
+ *
+ * @deprecated The object cleaner is deprecated for removal.
  */
+@Deprecated
 public final class ObjectCleaner {
     private static final int REFERENCE_QUEUE_POLL_TIMEOUT_MS =
             max(500, getInt("io.netty.util.internal.ObjectCleaner.refQueuePollTimeout", 10000));
