@@ -568,13 +568,13 @@ public final class IoUringIoHandler implements IoHandler {
                 }
                 return packedSeq;
             }
-            long seq = pendingOps.nextToken();
+            long token = pendingOps.nextToken();
             if (executor.isExecutorThread(Thread.currentThread())) {
-                submitSlowPath0(ioOps, seq, userData);
-                return seq;
+                submitSlowPath0(ioOps, token, userData);
+                return token;
             } else {
-                executor.execute(() -> submitSlowPath0(ioOps, seq, userData));
-                return seq;
+                executor.execute(() -> submitSlowPath0(ioOps, token, userData));
+                return token;
             }
         }
 
@@ -586,18 +586,13 @@ public final class IoUringIoHandler implements IoHandler {
             outstandingCompletions++;
         }
 
-        private void submitSlowPath0(IoUringIoOps ioOps, long seq, long userData) {
-            try {
-                pendingOps.registerNormal(seq, id, ioOps.opcode(), userData);
-                ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                        ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), seq,
-                        ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
-                );
-                outstandingCompletions++;
-            } catch (Throwable cause) {
-                pendingOps.release(seq);
-                throw cause;
-            }
+        private void submitSlowPath0(IoUringIoOps ioOps, long token, long userData) {
+            pendingOps.registerNormal(token, id, ioOps.opcode(), userData);
+            ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
+                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), token,
+                    ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
+            );
+            outstandingCompletions++;
         }
 
         private boolean canUseFastPath(long userData) {
