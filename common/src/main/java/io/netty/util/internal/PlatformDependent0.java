@@ -21,6 +21,7 @@ import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -49,6 +50,9 @@ final class PlatformDependent0 {
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
     private static final MethodHandle OFFSET_SLICE;
+    private static final MethodHandle ABSOLUTE_PUT_BUFFER;
+    private static final MethodHandle ABSOLUTE_PUT_ARRAY;
+    private static final MethodHandle MEMORY_SEGMENT_ADDRESS_OF_BUFFER;
     private static final boolean IS_ANDROID = isAndroid0();
     private static final int JAVA_VERSION = javaVersion0();
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
@@ -333,11 +337,19 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
+            String unalignedProperty = SystemPropertyUtil.get("io.netty.unalignedAccess", "").trim();
+
             // using a known type to avoid loading new classes
             final AtomicLong maybeMaxMemory = new AtomicLong(-1);
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
+                    if ("true".equalsIgnoreCase(unalignedProperty)) {
+                        return Boolean.TRUE;
+                    }
+                    if ("false".equalsIgnoreCase(unalignedProperty)) {
+                        return Boolean.FALSE;
+                    }
                     try {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
@@ -496,6 +508,63 @@ final class PlatformDependent0 {
             OFFSET_SLICE = null;
         }
 
+        if (javaVersion() >= 16) {
+            ABSOLUTE_PUT_BUFFER = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        MethodType type =
+                                methodType(ByteBuffer.class, int.class, ByteBuffer.class, int.class, int.class);
+                        return MethodHandles.publicLookup().findVirtual(ByteBuffer.class, "put", type);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            ABSOLUTE_PUT_BUFFER = null;
+        }
+
+        if (javaVersion() >= 13) {
+            ABSOLUTE_PUT_ARRAY = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        MethodType type =
+                                methodType(ByteBuffer.class, int.class, byte[].class, int.class, int.class);
+                        return MethodHandles.publicLookup().findVirtual(ByteBuffer.class, "put", type);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            ABSOLUTE_PUT_ARRAY = null;
+        }
+        if (javaVersion() >= 22) {
+            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = (MethodHandle) AccessController.doPrivileged(
+                    new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        // We're recreating the following code snippet:
+                        // (long) MemorySegment.ofBuffer((Buffer) arg1).address();
+                        Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
+                        MethodType ofBufferType = methodType(memsegCls, Buffer.class);
+                        MethodType addressType = methodType(long.class);
+                        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+                        MethodHandle ofBuffer = lookup.findStatic(memsegCls, "ofBuffer", ofBufferType);
+                        MethodHandle address = lookup.findVirtual(memsegCls, "address", addressType);
+                        return MethodHandles.filterArguments(address, 0, ofBuffer);
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            MEMORY_SEGMENT_ADDRESS_OF_BUFFER = null;
+        }
+
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
@@ -606,6 +675,10 @@ final class PlatformDependent0 {
         return UNSAFE_UNAVAILABILITY_CAUSE;
     }
 
+    static boolean hasMemorySegmentAddressOfBuffer() {
+        return MEMORY_SEGMENT_ADDRESS_OF_BUFFER != null;
+    }
+
     static boolean unalignedAccess() {
         return UNALIGNED;
     }
@@ -660,6 +733,32 @@ final class PlatformDependent0 {
         }
     }
 
+    static boolean hasAbsolutePutBufferMethod() {
+        return ABSOLUTE_PUT_BUFFER != null;
+    }
+
+    static boolean hasAbsolutePutArrayMethod() {
+        return ABSOLUTE_PUT_ARRAY != null;
+    }
+
+    static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, ByteBuffer src, int srcOffset, int length) {
+        try {
+            return (ByteBuffer) ABSOLUTE_PUT_BUFFER.invokeExact(dst, dstOffset, src, srcOffset, length);
+        } catch (Throwable e) {
+            rethrowIfPossible(e);
+            throw new LinkageError("ByteBuffer.put(int, ByteBuffer, int, int) not available", e);
+        }
+    }
+
+    static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, byte[] src, int srcOffset, int length) {
+        try {
+            return (ByteBuffer) ABSOLUTE_PUT_ARRAY.invokeExact(dst, dstOffset, src, srcOffset, length);
+        } catch (Throwable e) {
+            rethrowIfPossible(e);
+            throw new LinkageError("ByteBuffer.put(int, byte[], int, int) not available", e);
+        }
+    }
+
     static boolean hasAllocateArrayMethod() {
         return ALLOCATE_ARRAY_METHOD != null;
     }
@@ -693,8 +792,26 @@ final class PlatformDependent0 {
         }
     }
 
+    static boolean hasDirectByteBufferAddress(ByteBuffer buffer) {
+        return buffer.isDirect() && (hasUnsafe() || hasMemorySegmentAddressOfBuffer());
+    }
+
     static long directBufferAddress(ByteBuffer buffer) {
-        return getLong(buffer, ADDRESS_FIELD_OFFSET);
+        if (hasUnsafe()) {
+            return getLong(buffer, ADDRESS_FIELD_OFFSET);
+        }
+        if (hasMemorySegmentAddressOfBuffer()) {
+            try {
+                // MemorySegment.ofBuffer(buffer).address() includes the current position offset.
+                // Netty/JNI GetDirectBufferAddress expects the base (index 0) address, so subtract position.
+                return (long) MEMORY_SEGMENT_ADDRESS_OF_BUFFER.invokeExact((Buffer) buffer) - buffer.position();
+            } catch (Throwable e) {
+                LinkageError error = new LinkageError("Failed to call MemorySegment.ofBuffer(arg1).address()");
+                error.initCause(e);
+                throw error;
+            }
+        }
+        throw new IllegalStateException("No address access method");
     }
 
     static long byteArrayBaseOffset() {

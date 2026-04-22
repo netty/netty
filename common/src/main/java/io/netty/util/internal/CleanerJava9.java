@@ -92,6 +92,11 @@ final class CleanerJava9 implements Cleaner {
         freeDirectBufferStatic(buffer);
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     private static void freeDirectBufferStatic(ByteBuffer buffer) {
         // Try to minimize overhead when there is no SecurityManager present.
         // See https://bugs.openjdk.java.net/browse/JDK-8191053.
@@ -128,6 +133,7 @@ final class CleanerJava9 implements Cleaner {
 
         private CleanableDirectBufferImpl(ByteBuffer buffer) {
             this.buffer = buffer;
+            PlatformDependent.incrementMemoryCounter(buffer.capacity());
         }
 
         @Override
@@ -137,7 +143,9 @@ final class CleanerJava9 implements Cleaner {
 
         @Override
         public void clean() {
+            int capacity = buffer.capacity();
             freeDirectBufferStatic(buffer);
+            PlatformDependent.decrementMemoryCounter(capacity);
         }
     }
 }

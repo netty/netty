@@ -22,7 +22,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -573,14 +572,11 @@ public class ProxyHandlerTest {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII)).addListener(
-                    new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            latch.countDown();
-                            if (!(future.cause() instanceof ProxyConnectException)) {
-                                exceptions.add(new AssertionError(
-                                        "Unexpected failure cause for initial write: " + future.cause()));
-                            }
+                    future -> {
+                        latch.countDown();
+                        if (!(future.cause() instanceof ProxyConnectException)) {
+                            exceptions.add(new AssertionError(
+                                    "Unexpected failure cause for initial write: " + future.cause()));
                         }
                     });
         }

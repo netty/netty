@@ -45,7 +45,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;
-    private final boolean allowSectionedInternalNioBufferAccess;
 
     /**
      * Creates a new direct buffer.
@@ -54,20 +53,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-        this(alloc, initialCapacity, maxCapacity, true);
+        this(alloc, initialCapacity, maxCapacity, false);
     }
 
-    /**
-     * Creates a new direct buffer.
-     *
-     * @param initialCapacity the initial capacity of the underlying direct buffer
-     * @param maxCapacity     the maximum capacity of the underlying direct buffer
-     * @param allowSectionedInternalNioBufferAccess
-     * {@code true} if {@link #internalNioBuffer(int, int)} is allowed to be called,
-     * or {@code false} if it should throw an exception.
-     */
-    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
-                          boolean allowSectionedInternalNioBufferAccess) {
+    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity, boolean permitExpensiveClean) {
         super(maxCapacity);
         ObjectUtil.checkNotNull(alloc, "alloc");
         checkPositiveOrZero(initialCapacity, "initialCapacity");
@@ -78,8 +67,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = alloc;
-        setByteBuffer(allocateDirectBuffer(initialCapacity), false);
-        this.allowSectionedInternalNioBufferAccess = allowSectionedInternalNioBufferAccess;
+        setByteBuffer(allocateDirectBuffer(initialCapacity, permitExpensiveClean), false);
     }
 
     /**
@@ -113,7 +101,6 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         doNotFree = !doFree;
         setByteBuffer((slice ? initialBuffer.slice() : initialBuffer).order(ByteOrder.BIG_ENDIAN), false);
         writerIndex(initialCapacity);
-        allowSectionedInternalNioBufferAccess = true;
     }
 
     /**
@@ -135,7 +122,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
-        return PlatformDependent.allocateDirect(capacity);
+        return PlatformDependent.allocateDirect(capacity, false);
+    }
+
+    CleanableDirectBuffer allocateDirectBuffer(int capacity, boolean permitExpensiveClean) {
+        return PlatformDependent.allocateDirect(capacity, permitExpensiveClean);
     }
 
     void setByteBuffer(CleanableDirectBuffer cleanableDirectBuffer, boolean tryFree) {
@@ -617,7 +608,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (length == 0) {
             return;
         }
-        ByteBufUtil.readBytes(alloc(), internal ? internalNioBuffer() : buffer.duplicate(), index, length, out);
+        ByteBufUtil.readBytes(alloc(), internal ? _internalNioBuffer() : buffer.duplicate(), index, length, out);
     }
 
     @Override
@@ -750,13 +741,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
-        if (!allowSectionedInternalNioBufferAccess) {
-            throw new UnsupportedOperationException("Bug: unsafe access to shared internal chunk buffer");
-        }
-        return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
+        return (ByteBuffer) _internalNioBuffer().clear().position(index).limit(index + length);
     }
 
-    private ByteBuffer internalNioBuffer() {
+    @Override
+    ByteBuffer _internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
             this.tmpNioBuf = tmpNioBuf = buffer.duplicate();

@@ -203,10 +203,17 @@ public class CleanerJava24Linker implements Cleaner {
         throw new UnsupportedOperationException("Cannot clean arbitrary ByteBuffer instances");
     }
 
+    @Override
+    public boolean hasExpensiveClean() {
+        return false;
+    }
+
     static long malloc(int capacity) {
         final long addr;
         try {
-            addr = (long) INVOKE_MALLOC.invokeExact((long) capacity);
+            // Always allocate at least 1 byte, to avoid relying on non-portable behavior
+            // of malloc(3) for zero size allocations.
+            addr = (long) INVOKE_MALLOC.invokeExact(Math.max(capacity, 1L));
         } catch (Throwable e) {
             throw new Error(e); // Should not happen.
         }
@@ -229,11 +236,19 @@ public class CleanerJava24Linker implements Cleaner {
         private final long memoryAddress;
 
         private CleanableDirectBufferImpl(int capacity) {
-            long addr = malloc(capacity);
+            PlatformDependent.incrementMemoryCounter(capacity);
+            long addr;
+            try {
+                addr = malloc(capacity);
+            } catch (Throwable e) {
+                PlatformDependent.decrementMemoryCounter(capacity);
+                throw e;
+            }
             try {
                 memoryAddress = addr;
                 buffer = (ByteBuffer) INVOKE_CREATE_BYTEBUFFER.invokeExact(addr, (long) capacity);
             } catch (Throwable throwable) {
+                PlatformDependent.decrementMemoryCounter(capacity);
                 Error error = new Error(throwable);
                 try {
                     free(addr);
@@ -251,7 +266,9 @@ public class CleanerJava24Linker implements Cleaner {
 
         @Override
         public void clean() {
+            int capacity = buffer.capacity();
             free(memoryAddress);
+            PlatformDependent.decrementMemoryCounter(capacity);
         }
 
         @Override

@@ -97,6 +97,9 @@ static jint netty_unix_filedescriptor_close(JNIEnv* env, jclass clazz, jint fd) 
 
 static jint netty_unix_filedescriptor_open(JNIEnv* env, jclass clazz, jstring path) {
     const char* f_path = (*env)->GetStringUTFChars(env, path, 0);
+    if (f_path == NULL) {
+        return -ENOMEM;
+    }
 
     int res = open(f_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     (*env)->ReleaseStringUTFChars(env, path, f_path);
@@ -241,13 +244,16 @@ static jlong netty_unix_filedescriptor_newPipe(JNIEnv* env, jclass clazz) {
         }
     } else {
          if (pipe(fd) == 0) {
-            if (fcntl(fd[0], F_SETFD, O_NONBLOCK) < 0) {
+            // Read current flags and OR-ing in O_NONBLOCK to preserve old flags as well.
+            int flags0 = fcntl(fd[0], F_GETFL, 0);
+            if (flags0 < 0 || fcntl(fd[0], F_SETFL, flags0 | O_NONBLOCK) < 0) {
                 int err = errno;
                 close(fd[0]);
                 close(fd[1]);
                 return -err;
             }
-            if (fcntl(fd[1], F_SETFD, O_NONBLOCK) < 0) {
+            int flags1 = fcntl(fd[1], F_GETFL, 0);
+            if (flags1 < 0 || fcntl(fd[1], F_SETFL, flags1 | O_NONBLOCK) < 0) {
                 int err = errno;
                 close(fd[0]);
                 close(fd[1]);

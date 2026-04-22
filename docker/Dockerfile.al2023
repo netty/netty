@@ -1,6 +1,6 @@
 FROM --platform=linux/amd64 amazonlinux:2023
 
-ARG java_version=11.0.27-amzn
+ARG java_version=11.0.30-amzn
 ARG aws_lc_version=v1.54.0
 ARG maven_version=3.9.10
 ENV JAVA_VERSION $java_version
@@ -8,7 +8,7 @@ ENV AWS_LC_VERSION $aws_lc_version
 ENV MAVEN_VERSION $maven_version
 
 # install dependencies
-RUN dnf install -y \
+RUN dnf install -yq \
  apr-devel \
  autoconf \
  automake \

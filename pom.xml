@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.10.Final-SNAPSHOT</version>
+  <version>4.2.13.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -598,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.75.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.77.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -715,7 +715,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.82</bouncycastle.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -737,7 +737,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.74.Final</tcnative.version>
+    <tcnative.version>2.0.76.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -753,7 +753,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>warn</logging.logLevel>
-    <log4j2.version>2.23.1</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.14.0</junit.version>
     <skipTests>false</skipTests>
@@ -941,7 +941,7 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.0.3</version>
+        <version>1.2.0</version>
       </dependency>
       <dependency>
         <groupId>at.yawk.lz4</groupId>
@@ -1119,13 +1119,13 @@
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
-        <version>3.18.0</version>
+        <version>3.27.7</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>3.6.28</version>
+        <version>4.11.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1173,7 +1173,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.26.0</version>
+        <version>1.28.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1181,7 +1181,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.14.0</version>
+        <version>2.20.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1220,7 +1220,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.15.RELEASE</version>
+        <version>1.0.16.RELEASE</version>
       </dependency>
 
       <dependency>

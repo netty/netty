@@ -35,6 +35,8 @@ import java.util.List;
 @Deprecated
 public final class BrotliDecoder extends ByteToMessageDecoder {
 
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+
     private enum State {
         DONE, NEEDS_MORE_INPUT, ERROR
     }
@@ -51,6 +53,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
     private DecoderJNI.Wrapper decoder;
     private boolean destroyed;
     private boolean needsRead;
+    private ByteBuf accumBuffer;
 
     /**
      * Creates a new BrotliDecoder with a default 8kB input buffer
@@ -70,10 +73,25 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
     private void forwardOutput(ChannelHandlerContext ctx) {
         ByteBuffer nativeBuffer = decoder.pull();
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
-        ByteBuf copy = ctx.alloc().buffer(nativeBuffer.remaining());
-        copy.writeBytes(nativeBuffer);
+        int remaining = nativeBuffer.remaining();
+        if (accumBuffer == null) {
+            accumBuffer = ctx.alloc().buffer(remaining);
+        }
+        accumBuffer.writeBytes(nativeBuffer);
         needsRead = false;
-        ctx.fireChannelRead(copy);
+        if (accumBuffer.readableBytes() >= DEFAULT_MAX_FORWARD_BYTES) {
+            ctx.fireChannelRead(accumBuffer);
+            accumBuffer = null;
+        }
+    }
+
+    private void flushAccumBuffer(ChannelHandlerContext ctx) {
+        if (accumBuffer != null && accumBuffer.isReadable()) {
+            ctx.fireChannelRead(accumBuffer);
+        } else if (accumBuffer != null) {
+            accumBuffer.release();
+        }
+        accumBuffer = null;
     }
 
     private State decompress(ChannelHandlerContext ctx, ByteBuf input) {
@@ -148,6 +166,8 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
         } catch (Exception e) {
             destroy();
             throw e;
+        } finally {
+            flushAccumBuffer(ctx);
         }
     }
 

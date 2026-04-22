@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -54,8 +55,7 @@ import java.nio.channels.UnresolvedAddressException;
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 
 /**
- * {@link DatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link DatagramChannel} implementation that uses linux EPOLL.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
@@ -130,7 +130,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
         try {
             fd.setIpMulticastAll(IP_MULTICAST_ALL);
-        } catch (IOException e) {
+        } catch (IOException | ChannelException e) {
             logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
         }
 
@@ -346,6 +346,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    protected void doRegister(ChannelPromise promise) {
+        super.doRegister(promise);
+        promise.addListener(f -> {
+            if (f.isSuccess() && isRegistered()) {
+                // As Datagram is connection-less we can submit the current ops once the registration itself was
+                // successful.
+                submitCurrentOps();
+            }
+        });
+    }
+
+    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
@@ -447,7 +459,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        try {
+            return doWriteOrSendBytes(data, remoteAddress, false) > 0;
+        } catch (NativeIoException e) {
+            if (remoteAddress == null) {
+                throw translateForConnected(e);
+            }
+            throw e;
+        }
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {

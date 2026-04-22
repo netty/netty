@@ -243,7 +243,7 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
             int err = errno;
             close(efd);
             netty_unix_errors_throwChannelExceptionErrorNo(env, "fcntl() failed: ", err);
-            return err;
+            return -err;
         }
     }
     return efd;
@@ -269,7 +269,7 @@ static inline jint netty_epoll_wait(JNIEnv* env, jint efd, struct epoll_event *e
             netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
             return -1;
         }
-        deadline = ts.tv_sec * 1000 + ts.tv_nsec / 1000 + timeout;
+        deadline = ts.tv_sec * 1000 + ts.tv_nsec / 1000000 + timeout;
 
         while ((rc = epoll_wait(efd, ev, len, timeout)) < 0) {
             if (errno != EINTR) {
@@ -281,7 +281,7 @@ static inline jint netty_epoll_wait(JNIEnv* env, jint efd, struct epoll_event *e
                 return -1;
             }
 
-            now = ts.tv_sec * 1000 + ts.tv_nsec / 1000;
+            now = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
             if (now >= deadline) {
                 return 0;
             }
@@ -487,6 +487,11 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
     for (i = 0; i < len; i++) {
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        if (packet == NULL) {
+            // This should never happen but just handle it and return early. This way if GetObjectArrayElement(...)
+            // did put an exception on the stack we will see it and not crash.
+            return -1;
+        }
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetRecipientAddrFieldId);
         jint addrLen = (*env)->GetIntField(env, packet, packetRecipientAddrLenFieldId);
         jint packetSegmentSize = (*env)->GetIntField(env, packet, packetSegmentSizeFieldId);
@@ -615,7 +620,7 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 #ifdef IP_RECVORIGDSTADDR
     int readLocalAddr = 0;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR,
-            &readLocalAddr, sizeof(readLocalAddr)) < 0) {
+            &readLocalAddr, sizeof(readLocalAddr)) != -1 && readLocalAddr != 0) {
         cntrlbuf = malloc(sizeof(char) * storageSize * len);
     }
 #endif // IP_RECVORIGDSTADDR
@@ -624,11 +629,16 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
     for (i = 0; i < len; i++) {
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        if (packet == NULL) {
+            // This should never happen but just handle it and return early. This way if GetObjectArrayElement(...)
+            // did put an exception on the stack we will see it and not crash.
+            return -1;
+        }
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
 
         msg[i].msg_hdr.msg_name = addr + i;
-        msg[i].msg_hdr.msg_namelen = (socklen_t) addrSize;
+        msg[i].msg_hdr.msg_namelen = (socklen_t) storageSize;
 
         if (cntrlbuf != NULL) {
             msg[i].msg_hdr.msg_control =  cntrlbuf + i * storageSize;

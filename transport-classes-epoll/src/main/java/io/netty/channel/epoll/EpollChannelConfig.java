@@ -180,10 +180,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     }
 
     /**
-     * Return the {@link EpollMode} used. Default is
-     * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
-     * {@link #getMaxMessagesPerRead()} and have an accurate behaviour you should use
-     * {@link EpollMode#LEVEL_TRIGGERED}.
+     * Return the {@link EpollMode} used.
      *
      * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
      */
@@ -194,8 +191,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
 
     /**
      * Set the {@link EpollMode} used. Default is
-     * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
-     * {@link #getMaxMessagesPerRead()} and have an accurate behaviour you should use
      * {@link EpollMode#LEVEL_TRIGGERED}.
      *
      * <strong>Be aware this config setting can only be adjusted before the channel was registered.</strong>

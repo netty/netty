@@ -73,12 +73,17 @@ static jlong netty_kqueue_bsdsocket_sendFile(JNIEnv* env, jclass clazz, jint soc
       sbytes = 0;
       res = sendfile(srcFd, socketFd, base_off + off, len, NULL, &sbytes, 0);
 #endif
+      // BSD/macOS sendfile passes the offset by value (unlike Linux which takes off_t*).
+      // When interrupted (EINTR), sbytes reports how many bytes were sent before the signal.
+      // Advance off so the next iteration resumes from where we left off, not from the start.
+      off += sbytes;
       len -= sbytes;
     } while (res < 0 && ((err = errno) == EINTR));
     sbytes = lenBefore - len;
     if (sbytes > 0) {
         // update the transferred field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, transferredFieldId, off + sbytes);
+        // off has already been advanced by sbytes inside the loop, so it equals the new total.
+        (*env)->SetLongField(env, fileRegion, transferredFieldId, off);
         return sbytes;
     }
     return res < 0 ? -err : 0;
@@ -144,12 +149,36 @@ static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, ji
     const char* tmpString = NULL;
     af.af_name[0] = af.af_arg[0] ='\0';
 
+    jsize len = (*env)->GetStringUTFLength(env, afName);
+    if (len > sizeof(af.af_name)) {
+         // Too large and so can't be stored
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EOVERFLOW);
+        return;
+    }
     tmpString = (*env)->GetStringUTFChars(env, afName, NULL);
-    strncat(af.af_name, tmpString, sizeof(af.af_name) / sizeof(af.af_name[0]));
+    if (tmpString == NULL) {
+       // if NULL is returned it failed due OOME
+       netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
+       return;
+    }
+
+    strlcat(af.af_name, tmpString, sizeof(af.af_name));
     (*env)->ReleaseStringUTFChars(env, afName, tmpString);
 
+    len = (*env)->GetStringUTFLength(env, afArg);
+    if (len > sizeof(af.af_arg)) {
+         // Too large and so can't be stored
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", EOVERFLOW);
+        return;
+    }
+
     tmpString = (*env)->GetStringUTFChars(env, afArg, NULL);
-    strncat(af.af_arg, tmpString, sizeof(af.af_arg) / sizeof(af.af_arg[0]));
+    if (tmpString == NULL) {
+        // if NULL is returned it failed due OOME
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "setsockopt() failed: ", ENOMEM);
+        return;
+    }
+    strlcat(af.af_arg, tmpString, sizeof(af.af_arg));
     (*env)->ReleaseStringUTFChars(env, afArg, tmpString);
 
     netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af));
@@ -250,7 +279,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 #ifdef LOCAL_PEERPID
     socklen_t len = sizeof(pid);
     // Getting the LOCAL_PEERPID is expected to return error in some cases (e.g. server socket FDs) - just return 0.
-    if (netty_unix_socket_getOption0(fd, SOCK_STREAM, LOCAL_PEERPID, &pid, len) < 0) {
+    if (netty_unix_socket_getOption0(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, len) < 0) {
         pid = 0;
     }
 #endif

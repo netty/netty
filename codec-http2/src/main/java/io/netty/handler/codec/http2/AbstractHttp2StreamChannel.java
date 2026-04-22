@@ -42,6 +42,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -156,12 +157,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     }
 
-    private final ChannelFutureListener windowUpdateFrameWriteListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
+    private final ChannelFutureListener windowUpdateFrameWriteListener = future ->
             windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
-        }
-    };
 
     /**
      * The current status of the read-processing for a {@link AbstractHttp2StreamChannel}.
@@ -718,12 +715,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     promise.setSuccess();
                 } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
                     // This means close() was called before so we just register a listener and return
-                    closePromise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            promise.setSuccess();
-                        }
-                    });
+                    closePromise.addListener(future -> promise.setSuccess());
                 }
                 return;
             }
@@ -1052,12 +1044,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         if (f.isDone()) {
                             writeComplete(f, promise);
                         } else {
-                            f.addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) {
-                                    writeComplete(future, promise);
-                                }
-                            });
+                            f.addListener(future -> writeComplete(future, promise));
                         }
                     } else {
                         writeHttp2StreamFrame(frame, promise);
@@ -1113,22 +1100,19 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 final long bytes = FlowControlledFrameSizeEstimator.HANDLE_INSTANCE.size(frame);
                 incrementPendingOutboundBytes(bytes, false);
-                f.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        if (firstWrite) {
-                            firstWriteComplete(future, promise);
-                        } else {
-                            writeComplete(future, promise);
-                        }
-                        decrementPendingOutboundBytes(bytes, false);
+                f.addListener(future -> {
+                    if (firstWrite) {
+                        firstWriteComplete(future, promise);
+                    } else {
+                        writeComplete(future, promise);
                     }
+                    decrementPendingOutboundBytes(bytes, false);
                 });
                 writeDoneAndNoFlush = true;
             }
         }
 
-        private void firstWriteComplete(ChannelFuture future, ChannelPromise promise) {
+        private void firstWriteComplete(Future<?> future, ChannelPromise promise) {
             Throwable cause = future.cause();
             if (cause == null) {
                 promise.setSuccess();
@@ -1139,7 +1123,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        private void writeComplete(ChannelFuture future, ChannelPromise promise) {
+        private void writeComplete(Future<?> future, ChannelPromise promise) {
             Throwable cause = future.cause();
             if (cause == null) {
                 promise.setSuccess();

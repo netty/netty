@@ -1496,4 +1496,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
     long _memoryAddress() {
         return isAccessible() && hasMemoryAddress() ? memoryAddress() : 0L;
     }
+
+    boolean _isDirect() {
+        return isDirect();
+    }
+
+    ByteBuffer _internalNioBuffer() {
+        return internalNioBuffer(0, capacity());
+    }
 }

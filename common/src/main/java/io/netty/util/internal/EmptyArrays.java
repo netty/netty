@@ -21,6 +21,7 @@ import io.netty.util.AsciiString;
 import java.nio.ByteBuffer;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 public final class EmptyArrays {
 
@@ -36,6 +37,8 @@ public final class EmptyArrays {
     public static final Certificate[] EMPTY_CERTIFICATES = {};
     public static final X509Certificate[] EMPTY_X509_CERTIFICATES = {};
     public static final javax.security.cert.X509Certificate[] EMPTY_JAVAX_X509_CERTIFICATES = {};
+    @SuppressWarnings("rawtypes")
+    public static final Map.Entry[] EMPTY_MAP_ENTRY = {};
 
     public static final Throwable[] EMPTY_THROWABLES = {};
 

@@ -16,16 +16,17 @@ package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
@@ -147,6 +148,33 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         head = new HeaderEntry<K, V>();
     }
 
+    /**
+     * Returns {@code true} if there exists a header with the given {@code name} for which the
+     * supplied {@code valuePredicate} returns {@code true} when invoked with the stored header
+     * value as the first argument and {@code predicateArg} as the second argument.
+     * <p>
+     * Matching is performed by invoking {@code valuePredicate.test(storedValue, predicateArg)}
+     * on each stored header value for {@code name}.
+     *
+     * @param name           the header name to search for (must not be {@code null})
+     * @param predicateArg   argument passed as the second parameter to {@code valuePredicate} (may be {@code null})
+     * @param valuePredicate predicate used to test stored header values (must not be {@code null})
+     */
+    public boolean containsAny(K name, V predicateArg, BiPredicate<? super V, ? super V> valuePredicate) {
+        checkNotNull(name, "name");
+        checkNotNull(valuePredicate, "valuePredicate");
+        int h = hashingStrategy.hashCode(name);
+        int i = index(h);
+        HeaderEntry<K, V> e = entries[i];
+        while (e != null) {
+            if (e.hash == h && hashingStrategy.equals(name, e.key) && valuePredicate.test(e.value, predicateArg)) {
+                return true;
+            }
+            e = e.next;
+        }
+        return false;
+    }
+
     @Override
     public V get(K name) {
         checkNotNull(name, "name");
@@ -194,17 +222,37 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public List<V> getAll(K name) {
         checkNotNull(name, "name");
 
-        LinkedList<V> values = new LinkedList<V>();
-
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
+
+        ArrayList<V> values = null;
+        V value = null;
         HeaderEntry<K, V> e = entries[i];
         while (e != null) {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
-                values.addFirst(e.getValue());
+                if (value == null) {
+                    value = e.getValue();
+                } else {
+                    if (values == null) {
+                        values = new ArrayList<>(2);
+                        values.add(value);
+                    }
+                    values.add(e.getValue());
+                }
             }
             e = e.next;
         }
+
+        if (values == null) {
+            if (value == null) {
+                return Collections.emptyList();
+            }
+            return Collections.singletonList(value);
+        }
+
+        assert values.size() > 1;
+        Collections.reverse(values);
+
         return values;
     }
 

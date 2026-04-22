@@ -81,10 +81,13 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
     @Override
     protected void doClose() throws Exception {
-        super.doClose();
-        connected = active = false;
-        local = null;
-        remote = null;
+        try {
+            super.doClose();
+        } finally {
+            connected = active = false;
+            local = null;
+            remote = null;
+        }
     }
 
     @Override

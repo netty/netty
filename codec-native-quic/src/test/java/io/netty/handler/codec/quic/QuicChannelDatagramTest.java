@@ -67,6 +67,15 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
 
             @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                if (serverEventRef.get() == null) {
+                    exceptionCaught(ctx, new IllegalStateException("Expected to have received datagram extension" +
+                            " before channel was active"));
+                }
+                super.channelActive(ctx);
+            }
+
+            @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof ByteBuf) {
                     final ChannelFuture future;
@@ -107,6 +116,16 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
                 .datagram(10, 10));
 
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler() {
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                if (clientEventRef.get() == null) {
+                    exceptionCaught(ctx, new IllegalStateException("Expected to have received datagram extension" +
+                            " before channel was active"));
+                }
+                super.channelActive(ctx);
+            }
+
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (!receivedBuffer.trySuccess((ByteBuf) msg)) {

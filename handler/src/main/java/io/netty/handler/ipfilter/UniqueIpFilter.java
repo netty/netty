@@ -16,8 +16,6 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -41,12 +39,7 @@ public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         if (!connected.add(remoteIp)) {
             return false;
         } else {
-            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    connected.remove(remoteIp);
-                }
-            });
+            ctx.channel().closeFuture().addListener(future -> connected.remove(remoteIp));
             return true;
         }
     }

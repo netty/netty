@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2026 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http;
+package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.IllegalReferenceCountException;
 
 /**
- * Compression Encoder Factory for create {@link MessageToByteEncoder}
- * used to compress http content
+ * Non-public interface that adds a method to get the raw pointer to the underlying credential object.
  */
-interface CompressionEncoderFactory {
-    MessageToByteEncoder<ByteBuf> createEncoder();
+interface OpenSslCredentialPointer extends OpenSslCredential {
+    /**
+     * Returns the native {@code SSL_CREDENTIAL} pointer address.
+     *
+     * @return the native pointer address
+     * @throws IllegalReferenceCountException if the reference count is 0
+     */
+    long credentialAddress();
 }

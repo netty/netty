@@ -768,4 +768,23 @@ public class HttpObjectAggregatorTest {
                 "\r\n\r\n", CharsetUtil.US_ASCII));
         assertTrue(channel.finishAndReleaseAll());
     }
+
+    @Test
+    public void testOversizedRequestWithAutoReadFalse() {
+        EmbeddedChannel embedder = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(4));
+        embedder.config().setAutoRead(false);
+        assertFalse(embedder.writeInbound(Unpooled.copiedBuffer(
+                "PUT /upload HTTP/1.1\r\n"
+                + "Content-Length: 5\r\n\r\n", CharsetUtil.US_ASCII)));
+
+        assertNull(embedder.readInbound());
+
+        FullHttpResponse response = embedder.readOutbound();
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
+        assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        ReferenceCountUtil.release(response);
+
+        assertFalse(embedder.isOpen());
+        assertFalse(embedder.finish());
+    }
 }

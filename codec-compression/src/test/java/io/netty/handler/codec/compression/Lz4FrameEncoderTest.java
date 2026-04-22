@@ -22,8 +22,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -280,16 +278,13 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                     final int size = 27;
                     ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
                     finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
-                            .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            try {
-                                writeFailCauseRef.set(future.cause());
-                            } finally {
-                                latch.countDown();
-                            }
-                        }
-                    });
+                            .addListener(future -> {
+                                try {
+                                    writeFailCauseRef.set(future.cause());
+                                } finally {
+                                    latch.countDown();
+                                }
+                            });
                 }
             });
             latch.await();

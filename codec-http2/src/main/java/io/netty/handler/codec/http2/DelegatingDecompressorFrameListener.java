@@ -382,6 +382,10 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                         buf.release();
                         return;
                     }
+
+                    // Also take padding into account.
+                    incrementDecompressedBytes(padding);
+
                     incrementDecompressedBytes(buf.readableBytes());
                     // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
                     // from the decompressed amount which the user knows about to the compressed amount which flow

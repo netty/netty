@@ -21,14 +21,8 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
-    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
-                                         boolean allowSectionedInternalNioBufferAccess) {
-        super(alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
-    }
-
-    @Override
-    protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
-        return PlatformDependent.allocateDirectBufferNoCleaner(capacity);
+    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(alloc, initialCapacity, maxCapacity);
     }
 
     @Override
@@ -36,8 +30,8 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
         throw new UnsupportedOperationException();
     }
 
-    CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
-        return PlatformDependent.reallocateDirectBufferNoCleaner(oldBuffer, initialCapacity);
+    CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int newCapacity) {
+        return PlatformDependent.reallocateDirect(oldBuffer, newCapacity);
     }
 
     @Override

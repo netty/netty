@@ -262,7 +262,7 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
         final LongAdder openResourceCounter = new LongAdder();
         final Map<PresenceTracker<?>, Throwable> creationStacks =
                 TRACK_CREATION_STACK ? new ConcurrentHashMap<>() : null;
-        boolean closed;
+        int closed;
 
         /**
          * Create a new scope.
@@ -271,10 +271,11 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
          */
         public ResourceScope(String name) {
             this.name = name;
+            closed = 1;
         }
 
         void checkOpen() {
-            if (closed) {
+            if (closed == 0) {
                 throw new AllocationProhibitedException("Resource scope '" + name + "' already closed");
             }
         }
@@ -323,8 +324,16 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
          */
         @Override
         public void close() {
-            closed = true;
-            check();
+            if (--closed == 0) {
+                check();
+            }
+        }
+
+        public void retain() {
+            if (closed == 0) {
+                throw new IllegalStateException("Scope already closed");
+            }
+            closed++;
         }
     }
 

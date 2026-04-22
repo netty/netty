@@ -640,10 +640,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     @Override
     protected final void finalize() throws Throwable {
         try {
-            super.finalize();
-        } finally {
             destroyPoolSubPages(smallSubpagePools);
             destroyPoolChunkLists(qInit, q000, q025, q050, q075, q100);
+        } finally {
+            super.finalize();
         }
     }
 
@@ -764,7 +764,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         private static CleanableDirectBuffer allocateDirect(int capacity) {
-            return PlatformDependent.allocateDirect(capacity);
+            return PlatformDependent.allocateDirect(capacity, true);
         }
 
         @Override

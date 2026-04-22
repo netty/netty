@@ -33,8 +33,7 @@ import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
 import static io.netty.channel.unix.NativeInetAddress.address;
 
 /**
- * {@link ServerSocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
- * maximal performance.
+ * {@link ServerSocketChannel} implementation that uses linux EPOLL.
  */
 public final class EpollServerSocketChannel extends AbstractEpollServerChannel implements ServerSocketChannel {
 
@@ -84,6 +83,8 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         }
         socket.listen(config.getBacklog());
         active = true;
+        // We now listen for new connections, submit the ops so we receive events.
+        submitCurrentOps();
     }
 
     @Override

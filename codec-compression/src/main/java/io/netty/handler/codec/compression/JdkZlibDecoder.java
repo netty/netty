@@ -62,6 +62,9 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private int xlen = -1;
     private boolean needsRead;
 
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+    private final int maxForwardBytes;
+
     private volatile boolean finished;
 
     private boolean decideZlibOrNone;
@@ -164,6 +167,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated, int maxAllocation) {
         super(maxAllocation);
+        this.maxForwardBytes = maxAllocation > 0 ? maxAllocation : DEFAULT_MAX_FORWARD_BYTES;
 
         ObjectUtil.checkNotNull(wrapper, "wrapper");
 
@@ -268,9 +272,9 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     if (crc != null) {
                         crc.update(outArray, outIndex, outputLength);
                     }
-                    if (maxAllocation == 0) {
-                        // If we don't limit the maximum allocations we should just
-                        // forward the buffer directly.
+                    if (maxAllocation == 0 && decompressed.readableBytes() >= maxForwardBytes) {
+                        // Forward the buffer once it exceeds the threshold to bound memory
+                        // while avoiding excessive fireChannelRead calls.
                         ByteBuf buffer = decompressed;
                         decompressed = null;
                         needsRead = false;
