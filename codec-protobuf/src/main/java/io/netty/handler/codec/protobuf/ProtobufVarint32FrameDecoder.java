@@ -21,8 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 
 import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
@@ -42,12 +45,37 @@ import java.util.List;
  */
 public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
 
-    // TODO maxFrameLength + safe skip + fail-fast option
-    //      (just like LengthFieldBasedFrameDecoder)
+    private final int maxFrameLength;
+    private long bytesToDiscard;
+
+    /**
+     * Creates a new instance with no frame length limit.
+     */
+    public ProtobufVarint32FrameDecoder() {
+        this(Integer.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new instance with the specified maximum frame length.
+     *
+     * @param maxFrameLength the maximum length of the frame.
+     *                       If the length exceeds this value,
+     *                       {@link TooLongFrameException} will be thrown.
+     */
+    public ProtobufVarint32FrameDecoder(int maxFrameLength) {
+        this.maxFrameLength = checkPositive(maxFrameLength, "maxFrameLength");
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
+        if (bytesToDiscard > 0) {
+            int localBytesToDiscard = (int) Math.min(bytesToDiscard, in.readableBytes());
+            in.skipBytes(localBytesToDiscard);
+            bytesToDiscard -= localBytesToDiscard;
+            return;
+        }
+
         in.markReaderIndex();
         int preIndex = in.readerIndex();
         int length = readRawVarint32(in);
@@ -56,6 +84,19 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         }
         if (length < 0) {
             throw new CorruptedFrameException("negative length: " + length);
+        }
+
+        if (length > maxFrameLength) {
+            long discard = length - in.readableBytes();
+            if (discard <= 0) {
+                in.skipBytes(length);
+            } else {
+                bytesToDiscard = discard;
+                in.skipBytes(in.readableBytes());
+            }
+            throw new TooLongFrameException(
+                    "Frame length exceeds " + maxFrameLength
+                    + ": " + length);
         }
 
         if (in.readableBytes() < length) {

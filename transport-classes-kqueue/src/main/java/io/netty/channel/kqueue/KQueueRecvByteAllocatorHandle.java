@@ -65,12 +65,16 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
         readEOF = true;
     }
 
+    boolean isReadEOF() {
+        return readEOF;
+    }
+
     void numberBytesPending(long numberBytesPending) {
         this.numberBytesPending = numberBytesPending;
     }
 
     private boolean maybeMoreDataToRead() {
-        /**
+        /*
          * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
          * (see <a href="https://www.freebsd.org/cgi/man.cgi?kqueue">kqueue man</a>). However in order to
          * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to

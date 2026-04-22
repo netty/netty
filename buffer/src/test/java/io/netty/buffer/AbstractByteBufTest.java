@@ -2764,41 +2764,55 @@ public abstract class AbstractByteBufTest {
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         assertEquals(buffer.readableBytes(), expectedBytes.length);
         final CountDownLatch latch = new CountDownLatch(60000);
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                           buf = buffer.slice();
-                        } else {
-                           buf = buffer.duplicate();
-                        }
-                        TestGatheringByteChannel channel = new TestGatheringByteChannel();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(channel, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, channel.writtenBytes());
-                        latch.countDown();
-                    }
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                               buf = buffer.slice();
+                            } else {
+                               buf = buffer.duplicate();
+                            }
+                            TestGatheringByteChannel channel = new TestGatheringByteChannel();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(channel, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, channel.writtenBytes());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
         }
-        latch.await();
-        barrier.await(5, TimeUnit.SECONDS);
+        try {
+            latch.await();
+            barrier.await(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                e.addSuppressed(inner);
+            }
+            throw e;
+        }
     }
 
     @Test
@@ -2834,41 +2848,55 @@ public abstract class AbstractByteBufTest {
     static void testReadOutputStreamMultipleThreads(
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final CountDownLatch latch = new CountDownLatch(60000);
+        final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                            buf = buffer.slice();
-                        } else {
-                            buf = buffer.duplicate();
-                        }
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(out, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, out.toByteArray());
-                        latch.countDown();
-                    }
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                                buf = buffer.slice();
+                            } else {
+                                buf = buffer.duplicate();
+                            }
+                            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(out, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, out.toByteArray());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
         }
-        latch.await();
-        barrier.await(5, TimeUnit.SECONDS);
+        try {
+            latch.await();
+            barrier.await(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                e.addSuppressed(inner);
+            }
+            throw e;
+        }
     }
 
     @Test
@@ -2907,24 +2935,27 @@ public abstract class AbstractByteBufTest {
             @Override
             public Void call() throws Exception {
                 startBarrier.await();
-                for (int i = 0; i < 6000; i++) {
-                    ByteBuf buf;
-                    if (slice) {
-                        buf = buffer.slice();
-                    } else {
-                        buf = buffer.duplicate();
+                try {
+                    for (int i = 0; i < 6000; i++) {
+                        ByteBuf buf;
+                        if (slice) {
+                            buf = buffer.slice();
+                        } else {
+                            buf = buffer.duplicate();
+                        }
+
+                        byte[] array = new byte[8];
+                        buf.readBytes(array);
+
+                        assertArrayEquals(expectedBytes, array);
+
+                        Arrays.fill(array, (byte) 0);
+                        buf.getBytes(0, array);
+                        assertArrayEquals(expectedBytes, array);
                     }
-
-                    byte[] array = new byte[8];
-                    buf.readBytes(array);
-
-                    assertArrayEquals(expectedBytes, array);
-
-                    Arrays.fill(array, (byte) 0);
-                    buf.getBytes(0, array);
-                    assertArrayEquals(expectedBytes, array);
+                } finally {
+                    endBarrier.await();
                 }
-                endBarrier.await();
                 return null;
             }
         };
@@ -6015,6 +6046,7 @@ public abstract class AbstractByteBufTest {
 
             final ByteBuf buffer = newBuffer(4);
             assertEquals(1, buffer.refCnt());
+            final AtomicReference<Throwable> innerThrowable = new AtomicReference<>();
             final AtomicInteger cnt = new AtomicInteger(Integer.MAX_VALUE);
             Thread t1 = new Thread(new Runnable() {
                 @Override
@@ -6025,7 +6057,11 @@ public abstract class AbstractByteBufTest {
                     } else {
                         released = buffer.release();
                     }
-                    assertTrue(released);
+                    if (!released) {
+                        innerThrowable.set(new AssertionError("buffer was not released: " + buffer));
+                        latch.countDown();
+                        return;
+                    }
                     Thread t2 = new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -6045,6 +6081,10 @@ public abstract class AbstractByteBufTest {
             t1.start();
 
             latch.await();
+            Throwable inner = innerThrowable.get();
+            if (inner != null) {
+                fail(inner);
+            }
             assertEquals(0, cnt.get());
             innerLatch.countDown();
         }
