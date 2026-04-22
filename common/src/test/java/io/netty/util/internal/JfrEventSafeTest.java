@@ -40,7 +40,7 @@ public class JfrEventSafeTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
+    @EnabledForJreRange(min = JRE.JAVA_17, max = JRE.OTHER) // RecordingStream
     public void simple() throws Throwable {
         try (RecordingStream stream = new RecordingStream()) {
             stream.enable(MyEvent.class.getName());
@@ -57,7 +57,7 @@ public class JfrEventSafeTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
+    @EnabledForJreRange(min = JRE.JAVA_17, max = JRE.OTHER) // RecordingStream
     public void enableDefaults() throws Throwable {
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<String> result = new CompletableFuture<>();
