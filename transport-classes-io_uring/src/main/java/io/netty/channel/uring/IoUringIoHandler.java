@@ -37,7 +37,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,7 +56,6 @@ public final class IoUringIoHandler implements IoHandler {
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
     private final IntObjectMap<DefaultIoUringIoRegistration> registrations;
-
     // The maximum number of bytes for an InetAddress / Inet6Address
     private final byte[] inet4AddressArray = new byte[SockaddrIn.IPV4_ADDRESS_LENGTH];
     private final byte[] inet6AddressArray = new byte[SockaddrIn.IPV6_ADDRESS_LENGTH];
@@ -73,7 +74,6 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
-    private DefaultIoUringIoRegistration registrationsHead;
     private final PendingOpSlots pendingOps;
     private int nextRegistrationId = 1;
 
@@ -115,7 +115,6 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        registrations = new IntObjectHashMap<>();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
@@ -133,6 +132,7 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
+        registrations = new IntObjectHashMap<>();
         pendingOps = new PendingOpSlots(IoUring.DEFAULT_PENDING_OPS_INITIAL_CAPACITY);
         eventfd = Native.newBlockingEventFd();
         eventfdReadBufCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
@@ -382,11 +382,10 @@ public final class IoUringIoHandler implements IoHandler {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
-        DefaultIoUringIoRegistration registration = registrationsHead;
-        while (registration != null) {
-            DefaultIoUringIoRegistration next = registration.next;
+        List<DefaultIoUringIoRegistration> copy = new ArrayList<>(registrations.values());
+
+        for (DefaultIoUringIoRegistration registration: copy) {
             registration.close();
-            registration = next;
         }
 
         // Write to the eventfd to ensure that if we submitted a read for the eventfd we will see the completion event.
@@ -454,11 +453,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, long sqeUdata, ByteBuffer extraCqeData) {
-                    if (sqeUdata == EVENTFD_TOKEN) {
+                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+                    if (udata == EVENTFD_TOKEN) {
                         eventFdDrained = true;
                     }
-                    IoUringIoHandler.this.handle(res, flags, sqeUdata, extraCqeData);
+                    IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -503,13 +502,17 @@ public final class IoUringIoHandler implements IoHandler {
             throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
-        registration.setId(nextRegistrationId());
-        addRegistration(registration);
-        try {
-            ioHandle.registered();
-        } catch (Exception e) {
-            removeRegistration(registration);
-            throw e;
+        for (;;) {
+            int id = nextRegistrationId();
+            DefaultIoUringIoRegistration old = registrations.put(id, registration);
+            if (old != null) {
+                assert old.handle != registration.handle;
+                registrations.put(id, old);
+            } else {
+                registration.setId(id);
+                ioHandle.registered();
+                break;
+            }
         }
 
         return registration;
@@ -523,41 +526,12 @@ public final class IoUringIoHandler implements IoHandler {
         return id;
     }
 
-    private void addRegistration(DefaultIoUringIoRegistration registration) {
-        registrations.put(registration.id, registration);
-        DefaultIoUringIoRegistration head = registrationsHead;
-        registration.next = head;
-        if (head != null) {
-            head.prev = registration;
-        }
-        registrationsHead = registration;
-    }
-
-    private void removeRegistration(DefaultIoUringIoRegistration registration) {
-        registrations.remove(registration.id);
-        DefaultIoUringIoRegistration prev = registration.prev;
-        DefaultIoUringIoRegistration next = registration.next;
-        if (prev == null) {
-            assert registrationsHead == registration;
-            registrationsHead = next;
-        } else {
-            prev.next = next;
-        }
-        if (next != null) {
-            next.prev = prev;
-        }
-        registration.prev = null;
-        registration.next = null;
-    }
-
     private final class DefaultIoUringIoRegistration implements IoRegistration {
         private final AtomicBoolean canceled = new AtomicBoolean();
         private final ThreadAwareExecutor executor;
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, 0L);
         final IoUringIoHandle handle;
 
-        private DefaultIoUringIoRegistration prev;
-        private DefaultIoUringIoRegistration next;
         private boolean removeLater;
         private int outstandingCompletions;
         private int id;
@@ -656,7 +630,7 @@ public final class IoUringIoHandler implements IoHandler {
 
         private void tryRemove() {
             if (outstandingCompletions > 0) {
-                // We have some completions outstanding, we will remove the registration
+                // We have some completions outstanding, we will remove the id <-> registration mapping
                 // once these are done.
                 removeLater = true;
                 return;
@@ -665,7 +639,8 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void remove() {
-            removeRegistration(this);
+            DefaultIoUringIoRegistration old = registrations.remove(id);
+            assert old == this;
             handle.unregistered();
         }
 
