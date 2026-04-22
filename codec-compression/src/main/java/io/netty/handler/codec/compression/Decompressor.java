@@ -73,8 +73,8 @@ public interface Decompressor extends AutoCloseable {
          */
         NEED_OUTPUT,
         /**
-         * All data has been processed, and the format indicates that no more input may arrive. No decompressor calls
-         * are permitted.
+         * All data has been processed, and the format indicates that no more input may arrive. No further
+         * decompression operations are permitted, except {@link Decompressor#close()} to release resources.
          */
         COMPLETE,
     }

@@ -55,9 +55,9 @@ public final class LeakPresenceExtension
     @Override
     public void beforeAll(ExtensionContext context) {
         ExtensionContext.Store store = context.getStore(ExtensionContext.Namespace.GLOBAL);
-        LeakPresenceDetector.ResourceScope existingScope = (LeakPresenceDetector.ResourceScope) store.get(SCOPE_KEY);
+        ScopeWrapper existingScope = (ScopeWrapper) store.get(SCOPE_KEY);
         if (existingScope != null) {
-            existingScope.retain();
+            existingScope.scope.retain();
             return;
         }
         ScopeWrapper scope = new ScopeWrapper(new LeakPresenceDetector.ResourceScope(context.getDisplayName()));

@@ -64,7 +64,8 @@ public final class BackpressureGauge {
     }
 
     /**
-     * Relieve backpressure by a specific number of bytes.
+     * Relieve backpressure by resetting the message budget to its configured maximum and increasing the
+     * downstream byte budget by a specific number of bytes.
      */
     public void relieveBackpressure(long bytes) {
         downstreamMessageBudget = messagesPerRead;

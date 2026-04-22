@@ -35,7 +35,12 @@ final class DefensiveDecompressor implements Decompressor {
     @Override
     public Status status() throws DecompressionException {
         checkReady();
-        status = delegate.status();
+        try {
+            status = delegate.status();
+        } catch (Exception e) {
+            failed = true;
+            throw e;
+        }
         return status;
     }
 

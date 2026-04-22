@@ -26,11 +26,6 @@ import io.netty.util.internal.ObjectUtil;
  */
 public final class BackpressureDecompressionHandler extends AbstractBackpressureDecompressionHandler {
     private final Decompressor.AbstractDecompressorBuilder decompressorBuilder;
-    /**
-     * Decompressor is created lazily to avoid memory leaks when a BackpressureDecompressionHandler is never added to a
-     * channel.
-     */
-    private Decompressor decompressor;
 
     BackpressureDecompressionHandler(Builder builder) {
         super(builder);
