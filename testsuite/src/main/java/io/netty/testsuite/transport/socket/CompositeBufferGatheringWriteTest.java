@@ -28,6 +28,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -60,6 +61,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
+            final AtomicReference<Throwable> unexpectedClientException = new AtomicReference<Throwable>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
@@ -99,6 +101,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
                                 latch.countDown();
+                            } else if (!cause.getMessage().contains("reset")) {
+                                logger.warn("{} client got weird exception",
+                                        CompositeBufferGatheringWriteTest.this.getClass(), cause);
                             }
                         }
 
