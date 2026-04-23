@@ -38,7 +38,9 @@ public final class IoUringIoEvent implements IoEvent {
      * @param flags     the flags
      * @param opcode    the op code
      * @param data      the user data that was given as part of the submission.
+     * @deprecated use {@link #IoUringIoEvent(int,int,byte,long)} instead.
      */
+    @Deprecated
     public IoUringIoEvent(int res, int flags, byte opcode, short data) {
         this(res, flags, opcode, (long) data);
     }
@@ -98,7 +100,9 @@ public final class IoUringIoEvent implements IoEvent {
      * Returns the data that is passed as part of {@link IoUringIoOps}.
      *
      * @return  data.
+     * @deprecated use {@link #userData()} instead.
      */
+    @Deprecated
     public short data() {
         return (short) userData;
     }

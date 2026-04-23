@@ -313,19 +313,21 @@ public final class IoUringIoHandler implements IoHandler {
                             ringBuffer.fd(), Native.opToStr(op), userData, res);
                 }
 
-                // Resolve slow-path completions through the live registration table to align with the fast path.
-                if (registration != null) {
-                    registration.handle(res, flags, op, userData, extraCqeData);
-                }
-
                 // Recycle if this completion is terminal (no more CQEs expected for this SQE).
                 if (oneshotOp) {
                     pendingOps.release(slot);
                 }
+
+                // Resolve slow-path completions through the live registration table to align with the fast path.
+                if (registration != null) {
+                    registration.handle(res, flags, op, userData, extraCqeData);
+                }
                 return;
             }
-
-            logger.debug("ignoring completion for unknown sequence (seq={}, res={})", udata, res);
+            if (logger.isDebugEnabled()) {
+                logger.debug("ignoring completion for unknown sequence (seq={}, res={})",
+                        PendingOpSlots.tokenSequence(udata), res);
+            }
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
@@ -502,6 +504,7 @@ public final class IoUringIoHandler implements IoHandler {
         if (shuttingDown) {
             throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
+        int startId = nextRegistrationId;
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
         for (;;) {
             int id = nextRegistrationId();
@@ -509,6 +512,9 @@ public final class IoUringIoHandler implements IoHandler {
             if (old != null) {
                 assert old.handle != registration.handle;
                 registrations.put(id, old);
+                if (nextRegistrationId == startId) {
+                    throw new IllegalStateException("registration id space exhausted");
+                }
             } else {
                 registration.setId(id);
                 ioHandle.registered();
@@ -520,10 +526,10 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private int nextRegistrationId() {
-        int id = nextRegistrationId++;
-        if (id <= 0) {
-            throw new IllegalStateException("registration id overflow");
-        }
+        //registrationId must stay positive because id > 0
+        //it is used to distinguish normal fast-path completions from non-registration tokens.
+        int id = nextRegistrationId;
+        nextRegistrationId = id == Integer.MAX_VALUE ? 1 : id + 1;
         return id;
     }
 
@@ -596,7 +602,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private boolean canUseFastPath(long userData) {
-            return (short) userData == userData;
+            return ((short) userData) == userData;
         }
 
         @SuppressWarnings("unchecked")
