@@ -510,4 +510,91 @@ public class HttpPostMultiPartRequestDecoderTest {
         commonTestFileDelimiterLFLastChunk(factory, false);
     }
 
+    // Reproduces https://github.com/netty/netty/issues/16176
+    // A multipart field whose Content-Disposition has no "name" parameter must be rejected
+    // with ErrorDataDecoderException, not surface as a NullPointerException.
+    @Test
+    public void testFieldWithoutNameAttributeThrowsErrorDataDecoderException() {
+        String boundary = "861fbeab-cd20-470c-9609-d40a0f704466";
+        String content = "--" + boundary + "\n" +
+                "Content-Disposition: form-data\n" +
+                "\n" +
+                "value\n" +
+                "--" + boundary + "--\n";
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII));
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length());
+
+        try {
+            new HttpPostMultipartRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
+            assertTrue(expected.getMessage().contains("'name' parameter"),
+                    "Expected message to mention missing 'name' parameter, was: " + expected.getMessage());
+        } finally {
+            assertTrue(req.release());
+        }
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/16176
+    // A multipart file upload whose Content-Disposition has a filename but no "name" parameter
+    // must be rejected with ErrorDataDecoderException, not surface as a NullPointerException.
+    @Test
+    public void testFileUploadWithoutNameAttributeThrowsErrorDataDecoderException() {
+        String boundary = "861fbeab-cd20-470c-9609-d40a0f704466";
+        String content = "--" + boundary + "\n" +
+                "Content-Disposition: form-data; filename=\"upload.txt\"\n" +
+                "Content-Type: text/plain\n" +
+                "\n" +
+                "file-body\n" +
+                "--" + boundary + "--\n";
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII));
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length());
+
+        try {
+            new HttpPostMultipartRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException expected) {
+            assertTrue(expected.getMessage().contains("'name' parameter"),
+                    "Expected message to mention missing 'name' parameter, was: " + expected.getMessage());
+        } finally {
+            assertTrue(req.release());
+        }
+    }
+
+    // Regression: a well-formed multipart field with a name parameter still decodes successfully
+    // after adding the explicit null check.
+    @Test
+    public void testFieldWithNameAttributeStillDecodes() {
+        String boundary = "861fbeab-cd20-470c-9609-d40a0f704466";
+        String content = "--" + boundary + "\n" +
+                "Content-Disposition: form-data; name=\"field1\"\n" +
+                "\n" +
+                "value1\n" +
+                "--" + boundary + "--\n";
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII));
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length());
+
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(req);
+        try {
+            InterfaceHttpData data = decoder.getBodyHttpData("field1");
+            assertNotNull(data);
+            assertTrue(data instanceof Attribute);
+            assertEquals("value1", ((Attribute) data).getValue());
+        } catch (IOException e) {
+            fail("Unexpected exception: " + e.getMessage());
+        } finally {
+            decoder.destroy();
+            assertTrue(req.release());
+        }
+    }
+
 }

@@ -140,6 +140,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
     private int discardThreshold = HttpPostRequestDecoder.DEFAULT_DISCARD_THRESHOLD;
 
+    private static final String MISSING_NAME_ATTRIBUTE_MESSAGE =
+            "Content-Disposition is missing required 'name' parameter";
+
     /**
      *
      * @param request
@@ -568,6 +571,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
             Attribute nameAttribute = currentFieldAttributes.get(HttpHeaderValues.NAME);
             if (currentAttribute == null) {
+                if (nameAttribute == null) {
+                    throw new ErrorDataDecoderException(MISSING_NAME_ATTRIBUTE_MESSAGE);
+                }
                 Attribute lengthAttribute = currentFieldAttributes
                         .get(HttpHeaderNames.CONTENT_LENGTH);
                 long size;
@@ -948,6 +954,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (currentFileUpload == null) {
             Attribute filenameAttribute = currentFieldAttributes.get(HttpHeaderValues.FILENAME);
             Attribute nameAttribute = currentFieldAttributes.get(HttpHeaderValues.NAME);
+            if (nameAttribute == null) {
+                throw new ErrorDataDecoderException(MISSING_NAME_ATTRIBUTE_MESSAGE);
+            }
             Attribute contentTypeAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_TYPE);
             Attribute lengthAttribute = currentFieldAttributes.get(HttpHeaderNames.CONTENT_LENGTH);
             long size;
