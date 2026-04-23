@@ -328,13 +328,6 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                 check();
             }
         }
-
-        public void retain() {
-            if (closed == 0) {
-                throw new IllegalStateException("Scope already closed");
-            }
-            closed++;
-        }
     }
 
     private static final class LeakCreation extends Throwable {
