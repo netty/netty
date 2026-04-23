@@ -161,7 +161,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
     // Test for https://github.com/netty/netty/issues/4805
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
         testChannelReRegisterRead();
     }
@@ -221,12 +221,12 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             if (sc != null) {
                 sc.close();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     public void testShutdownOutputAndClose() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         ServerSocket socket = new ServerSocket();
@@ -256,7 +256,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             } catch (IOException ignore) {
                 // ignore
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
