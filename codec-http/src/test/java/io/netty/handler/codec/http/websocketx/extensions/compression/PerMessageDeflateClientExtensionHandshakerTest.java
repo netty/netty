@@ -285,4 +285,38 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
             }
         });
     }
+
+    // Reproduces https://github.com/netty/netty/issues/13896 on the client handshaker for
+    // server_max_window_bits: a misbehaving server that echoes back server_max_window_bits
+    // with no value previously caused Integer.parseInt(null) to throw
+    // NumberFormatException("Cannot parse null string") out of handshakeExtension.
+    @Test
+    public void testServerMaxWindowWithNullValue() {
+        PerMessageDeflateClientExtensionHandshaker handshaker =
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, null);
+
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/13896 on the client handshaker for
+    // server_max_window_bits with a non-numeric value.
+    @Test
+    public void testServerMaxWindowWithNonNumericValue() {
+        PerMessageDeflateClientExtensionHandshaker handshaker =
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, "abc");
+
+        WebSocketClientExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
 }

@@ -209,4 +209,56 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // Handshake should fail when client_max_window_bits is out of range
         assertNull(extension);
     }
+
+    // Reproduces https://github.com/netty/netty/issues/13896
+    // A non-numeric value for client_max_window_bits previously caused a
+    // NumberFormatException to bubble up and crash the request pipeline. The handshaker should
+    // instead reject the extension and let the connection proceed without compression.
+    @Test
+    public void testClientMaxWindowWithNonNumericValue() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(CLIENT_MAX_WINDOW, "not-a-number");
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/13896
+    // A null value for server_max_window_bits previously caused NumberFormatException
+    // ("Cannot parse null string") because parseInt was called without a null check.
+    @Test
+    public void testServerMaxWindowWithNullValue() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, null);
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/13896
+    // A non-numeric value for server_max_window_bits previously bubbled NumberFormatException
+    // up into the server pipeline.
+    @Test
+    public void testServerMaxWindowWithNonNumericValue() {
+        PerMessageDeflateServerExtensionHandshaker handshaker =
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
+
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(SERVER_MAX_WINDOW, "abc");
+
+        WebSocketServerExtension extension = handshaker.handshakeExtension(
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
+
+        assertNull(extension);
+    }
 }
