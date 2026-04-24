@@ -31,10 +31,8 @@ import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.util.Random;
@@ -221,7 +219,11 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
 
     private void testGatheringWriteSameEventLoop(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         // Ensure all clients are on the same EventLoop.
-        cb = cb.clone(cb.group().next());
+        try {
+            cb = cb.clone(cb.group().next());
+        } catch (UnsupportedOperationException e) {
+            throw new TestAbortedException("Not supported by this EventLoopGroup: " + cb.group(), e);
+        }
 
         AtomicInteger sHandlersIdx = new AtomicInteger(0);
         AtomicInteger cHandlersIdx = new AtomicInteger(0);
