@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -56,14 +57,21 @@ public final class LeakPresenceExtension
     public void beforeAll(ExtensionContext context) {
         ExtensionContext.Store store = context.getStore(ExtensionContext.Namespace.GLOBAL);
         ScopeWrapper existingScope = (ScopeWrapper) store.get(SCOPE_KEY);
-        if (existingScope != null) {
-            existingScope.scope.retain();
+        Class<?> testClass = context.getRequiredTestClass();
+        if (existingScope == null) {
+            ScopeWrapper scope = new ScopeWrapper(
+                    new LeakPresenceDetector.ResourceScope(context.getDisplayName()), testClass);
+            store.put(SCOPE_KEY, scope);
+            WithTransferableScope.SCOPE.set(scope);
             return;
         }
-        ScopeWrapper scope = new ScopeWrapper(new LeakPresenceDetector.ResourceScope(context.getDisplayName()));
-        store.put(SCOPE_KEY, scope);
 
-        WithTransferableScope.SCOPE.set(scope);
+        // JUnit creates a distinct ExtensionContext for each @Nested class. Those nested classes must reuse the
+        // shared outer scope, but only when they are enclosed by the class that originally created it.
+        if (!isOwnedBy(testClass, existingScope.owner)) {
+            throw new IllegalStateException("Weird context lifecycle");
+        }
+        WithTransferableScope.SCOPE.set(existingScope);
     }
 
     @Override
@@ -98,8 +106,14 @@ public final class LeakPresenceExtension
 
     @Override
     public void afterAll(ExtensionContext context) throws InterruptedException {
-        ScopeWrapper scope =
-                (ScopeWrapper) context.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY);
+        ExtensionContext.Store store = context.getStore(ExtensionContext.Namespace.GLOBAL);
+        ScopeWrapper scope = (ScopeWrapper) store.get(SCOPE_KEY);
+        if (scope == null) {
+            return;
+        }
+        if (scope.owner != context.getRequiredTestClass()) {
+            return;
+        }
 
         // Wait some time for resources to close. Many tests do loop.shutdownGracefully without waiting, and that's ok.
         long start = System.nanoTime();
@@ -108,6 +122,25 @@ public final class LeakPresenceExtension
         }
 
         scope.scope.close();
+        store.remove(SCOPE_KEY);
+    }
+
+    /**
+     * Accept the class that created the shared scope and any of its @Nested classes.
+     *
+     * JUnit models nested test classes as separate Class objects and separate ExtensionContexts, not as subclasses of
+     * the outer test class. That means a simple assignability check would reject legitimate nested usage and cause the
+     * nested class to fail in beforeAll even though it should reuse the outer scope.
+     */
+    private static boolean isOwnedBy(Class<?> testClass, Class<?> owner) {
+        Class<?> current = testClass;
+        while (current != null) {
+            if (current == owner) {
+                return true;
+            }
+            current = current.getEnclosingClass();
+        }
+        return false;
     }
 
     public static final class WithTransferableScope<T> extends LeakPresenceDetector<T> {
@@ -124,12 +157,8 @@ public final class LeakPresenceExtension
         }
 
         @Override
-        protected ResourceScope currentScope() throws AllocationProhibitedException {
-            ScopeWrapper scope = SCOPE.get();
-            if (scope == null) {
-                throw new AllocationProhibitedException("Resource created outside test?");
-            }
-            return scope.scope;
+        protected ResourceScope currentScope() {
+            return Objects.requireNonNull(SCOPE.get(), "Resource created outside test?").scope;
         }
     }
 
@@ -138,9 +167,17 @@ public final class LeakPresenceExtension
      */
     private static final class ScopeWrapper {
         final LeakPresenceDetector.ResourceScope scope;
+        /**
+         * The test class that originally created the shared scope.
+         *
+         * Nested classes reuse the same scope but must not close it in afterAll; only this owner may do the final
+         * close and remove the scope from the store.
+         */
+        final Class<?> owner;
 
-        ScopeWrapper(LeakPresenceDetector.ResourceScope scope) {
+        ScopeWrapper(LeakPresenceDetector.ResourceScope scope, Class<?> owner) {
             this.scope = scope;
+            this.owner = owner;
         }
     }
 }
