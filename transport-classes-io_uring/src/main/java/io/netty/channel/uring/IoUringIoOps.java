@@ -39,6 +39,17 @@ public final class IoUringIoOps implements IoOps {
 
     /**
      * Create a new instance which represents the {@code io_uring_sqe} struct.
+     * @deprecated use
+     * {@link #IoUringIoOps(byte, byte, short, int, long, long, int, int, long, short, short, int, long)} instead.
+     */
+    @Deprecated
+    public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
+                        short data, short union4, short personality, int union5, long union6) {
+        this(opcode, flags, ioPrio, fd, union1, union2, len, union3, (long) data, union4, personality, union5, union6);
+    }
+
+    /**
+     * Create a new instance which represents the {@code io_uring_sqe} struct.
      *
      * <pre>{@code
      *  struct io_uring_sqe {
@@ -130,14 +141,6 @@ public final class IoUringIoOps implements IoOps {
      *  };
      * }
      * </pre>
-     */
-    public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
-                        short data, short union4, short personality, int union5, long union6) {
-        this(opcode, flags, ioPrio, fd, union1, union2, len, union3, (long) data, union4, personality, union5, union6);
-    }
-
-    /**
-     * Create a new instance which represents the {@code io_uring_sqe} struct with a full long user data.
      */
     public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
                         long data, short union4, short personality, int union5, long union6) {

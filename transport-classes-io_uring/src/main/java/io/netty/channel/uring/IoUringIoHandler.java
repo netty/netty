@@ -277,6 +277,13 @@ public final class IoUringIoHandler implements IoHandler {
 
     private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
+            if (udata == EVENTFD_TOKEN) {
+                handleEventFdRead();
+                return;
+            }
+            if (udata == RINGFD_TOKEN) {
+                return;
+            }
             // Only remove from pendingOps if IORING_CQE_F_MORE is not set, as otherwise we know
             // that we will receive more completions for the initial request.
             boolean oneshotOp = (flags & Native.IORING_CQE_F_MORE) == 0;
@@ -294,24 +301,12 @@ public final class IoUringIoHandler implements IoHandler {
                     return;
                 }
             }
-            if (udata == EVENTFD_TOKEN) {
-                handleEventFdRead();
-                return;
-            }
-            if (udata == RINGFD_TOKEN) {
-                return;
-            }
             int slot = pendingOps.findSlot(udata);
             if (slot != -1) {
                 int registrationId = pendingOps.registrationId(slot);
                 DefaultIoUringIoRegistration registration = registrations.get(registrationId);
                 byte op = pendingOps.op(slot);
                 long userData = pendingOps.userData(slot);
-
-                if (logger.isTraceEnabled()) {
-                    logger.trace("completed(ring {}): {}(userData={}, res={})",
-                            ringBuffer.fd(), Native.opToStr(op), userData, res);
-                }
 
                 // Recycle if this completion is terminal (no more CQEs expected for this SQE).
                 if (oneshotOp) {
@@ -321,6 +316,11 @@ public final class IoUringIoHandler implements IoHandler {
                 // Resolve slow-path completions through the live registration table to align with the fast path.
                 if (registration != null) {
                     registration.handle(res, flags, op, userData, extraCqeData);
+                }
+
+                if (logger.isTraceEnabled()) {
+                    logger.trace("completed(ring {}): {}(userData={}, res={})",
+                            ringBuffer.fd(), Native.opToStr(op), userData, res);
                 }
                 return;
             }
@@ -577,11 +577,10 @@ public final class IoUringIoHandler implements IoHandler {
             long token = pendingOps.nextToken();
             if (executor.isExecutorThread(Thread.currentThread())) {
                 submitSlowPath0(ioOps, token, userData);
-                return token;
             } else {
                 executor.execute(() -> submitSlowPath0(ioOps, token, userData));
-                return token;
             }
+            return token;
         }
 
         private void submitFastPath0(IoUringIoOps ioOps, long seq) {
@@ -690,6 +689,8 @@ public final class IoUringIoHandler implements IoHandler {
         long nextToken() {
             long sequence = nextSequence.getAndIncrement();
             if (sequence <= 0) {
+                // Monotonic sequence starting at 3; ~29k years to exhaust positive long space at 10M/s,
+                // so overflow is purely theoretical.
                 throw new IllegalStateException("slow path sequence overflow");
             }
             return token(sequence);
