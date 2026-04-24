@@ -320,10 +320,11 @@ public final class JdkSslClientContext extends JdkSslContext {
     }
 
     private static TrustManager[] wrapIfNeeded(TrustManager[] tms, ResumptionController resumptionController) {
-        if (resumptionController != null) {
-            for (int i = 0; i < tms.length; i++) {
-                tms[i] = resumptionController.wrapIfNeeded(tms[i]);
-            }
+        if (tms == null || resumptionController == null) {
+            return tms;
+        }
+        for (int i = 0; i < tms.length; i++) {
+            tms[i] = resumptionController.wrapIfNeeded(tms[i]);
         }
         return tms;
     }
