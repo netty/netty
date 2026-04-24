@@ -268,7 +268,7 @@ public class EpollIoHandler implements IoHandler {
                             }
                             Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
                             state = RegistrationState.Added;
-                            //return epollIoOps.value;
+                            return epollIoOps.value;
                         case Added:
                             if (epollIoOps.value == EpollIoOps.NONE.value) {
                                 // 0 means there is nothing to handle anymore, unregister the fd as otherwise
