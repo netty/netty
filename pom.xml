@@ -464,7 +464,8 @@
     <logging.logLevel>warn</logging.logLevel>
     <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
-    <junit.version>5.12.1</junit.version>
+    <junit.version>5.14.0</junit.version>
+    <junit.platform.version>1.14.0</junit.platform.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
