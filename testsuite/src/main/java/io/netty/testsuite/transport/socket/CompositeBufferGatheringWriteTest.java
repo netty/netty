@@ -61,7 +61,6 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
-            final AtomicReference<Throwable> unexpectedClientException = new AtomicReference<Throwable>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
