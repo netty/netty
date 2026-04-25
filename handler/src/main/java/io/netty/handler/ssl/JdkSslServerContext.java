@@ -360,6 +360,9 @@ public final class JdkSslServerContext extends JdkSslContext {
     @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static TrustManager[] wrapTrustManagerIfNeeded(
             TrustManager[] trustManagers, ResumptionController resumptionController) {
+        if (trustManagers == null) {
+            return null;
+        }
         if (WRAP_TRUST_MANAGER && PlatformDependent.javaVersion() >= 7) {
             for (int i = 0; i < trustManagers.length; i++) {
                 TrustManager tm = trustManagers[i];
