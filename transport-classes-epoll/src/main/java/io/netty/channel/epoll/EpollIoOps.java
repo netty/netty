@@ -51,6 +51,12 @@ public final class EpollIoOps implements IoOps {
 
     public static final EpollIoOps EPOLLET = new EpollIoOps(Native.EPOLLET);
 
+    /**
+     * Special {@link EpollIoOps} which basically means we are not interested in any event and so should remove the
+     * fd from underlying epoll fd.
+     */
+    public static final EpollIoOps NONE = new EpollIoOps(0);
+
     static final int EPOLL_ERR_OUT_MASK = EpollIoOps.EPOLLERR.value | EpollIoOps.EPOLLOUT.value;
     static final int EPOLL_ERR_IN_MASK = EpollIoOps.EPOLLERR.value | EpollIoOps.EPOLLIN.value;
     static final int EPOLL_RDHUP_MASK = EpollIoOps.EPOLLRDHUP.value;
@@ -60,7 +66,8 @@ public final class EpollIoOps implements IoOps {
 
     static {
         EpollIoOps all = new EpollIoOps(EPOLLOUT.value | EPOLLIN.value | EPOLLERR.value | EPOLLRDHUP.value);
-        EVENTS = new EpollIoEvent[all.value + 1];
+        EVENTS = new EpollIoEvent[all.value + 2];
+        addToArray(EVENTS, NONE);
         addToArray(EVENTS, EPOLLOUT);
         addToArray(EVENTS, EPOLLIN);
         addToArray(EVENTS, EPOLLERR);
