@@ -1384,6 +1384,18 @@
                   <justification>Final methods added to an inheritable class are intentional and safe in this context.
                   </justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIFastResetCompressor</new>
+                  <justification>Added in at.yawk.lz4:lz4-java:1.11.0.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIHCFastResetCompressor</new>
+                  <justification>Added in at.yawk.lz4:lz4-java:1.11.0.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
