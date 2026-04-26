@@ -118,6 +118,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doClose(Promise<Void> promise) {
+        // Clear kqueue registrations *before* we close the file descriptor.
+        // Otherwise, the filter removals might hit a reused file descriptor.
+        doDeregister(newPromise());
+
         active = false;
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
@@ -148,17 +152,17 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doDeregister(Promise<Void> promise) {
-        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
-        // to false to ensure a consistent state in all cases.
-        // Make sure we unregister our filters from kqueue!
-        readFilter(false);
-        writeFilter(false);
-
-        clearRdHup0();
-
         IoRegistration registration = this.registration;
         if (registration != null) {
+            // As unregisteredFilters() may have not been called because isOpen() returned false we just set both
+            // filters to false, to ensure a consistent state in all cases.
+            // Make sure we unregister our filters from kqueue!
+            readFilter(false);
+            writeFilter(false);
+            clearRdHup0();
+
             registration.cancel();
+            this.registration = null;
         }
         promise.setSuccess(null);
     }

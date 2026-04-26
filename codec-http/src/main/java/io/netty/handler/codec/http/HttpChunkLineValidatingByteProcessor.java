@@ -108,7 +108,7 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
                 new Match(CHUNK_EXT_VAL_QUOTED).chars("\""),
                 new Match(CHUNK_EXT_VAL_TOKEN)
                         .range(0x21, 0x7E)
-                        .chars("(),/:<=>?@[\\]{}", false)),
+                        .chars("(),/:<=>?@[\\]{}\"", false)),
         ChunkExtValQuoted(
                 new Match(CHUNK_EXT_VAL_QUOTED_ESCAPE).chars("\\"),
                 new Match(CHUNK_EXT_VAL_QUOTED_END).chars("\""),
@@ -128,7 +128,7 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
         ChunkExtValToken(
                 new Match(CHUNK_EXT_VAL_TOKEN)
                         .range(0x21, 0x7E, true)
-                        .chars("(),/:<=>?@[\\]{}", false),
+                        .chars("(),/:<=>?@[\\]{};", false),
                 new Match(CHUNK_EXT_NAME).chars(";")),
         ;
 
@@ -163,8 +163,16 @@ final class HttpChunkLineValidatingByteProcessor implements ByteProcessor {
     }
 
     public void finish() {
-        if (state != State.Size && state != State.ChunkExtName && state != State.ChunkExtValQuotedEnd) {
-            throw new InvalidChunkExtensionException("Invalid chunk extension");
+        switch (state) {
+            case ChunkExtValQuoted:
+            case ChunkExtValQuotedEscape:
+            case ChunkExtValStart:
+                throw new InvalidChunkExtensionException("Invalid chunk extension");
         }
+        // Exhaustiveness check
+        assert state == State.Size ||
+                state == State.ChunkExtName ||
+                state == State.ChunkExtValQuotedEnd ||
+                state == State.ChunkExtValToken;
     }
 }

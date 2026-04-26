@@ -113,8 +113,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
     @Override
     protected void doClose(Promise<Void> promise) {
-        super.doClose(promise);
-        connected = false;
+        try {
+            super.doClose(promise);
+        } finally {
+            connected = active = false;
+        }
     }
 
     @Override
