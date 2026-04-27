@@ -249,14 +249,17 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     private boolean contentEquals(ByteBuf otherContent) {
-        boolean accessible = ByteBufUtil.isAccessible(content());
-        if (accessible != ByteBufUtil.isAccessible(otherContent)) {
-            return false;
-        }
-        if (!accessible) {
-            // Mirror hashCode(), which treats inaccessible content as a constant value, so two
-            // released messages remain consistently equal under equals/hashCode.
+        if (content() == otherContent) {
+            // Same buffer instance — keep equals reflexive even when the content has been released.
             return true;
+        }
+        if (!ByteBufUtil.isAccessible(content()) || !ByteBufUtil.isAccessible(otherContent)) {
+            // hashCode() caches its result on first call, so the cached hash captures whatever
+            // state existed at that moment (live or released). Two inaccessible instances may
+            // therefore have hashes computed at different times and disagree. Conservatively
+            // report not-equal when the content cannot be inspected, which never violates the
+            // equals/hashCode contract.
+            return false;
         }
         try {
             return content().equals(otherContent);

@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DefaultFullHttpResponseTest {
 
     @Test
-    public void testEqualsForReleasedContentDoesNotThrow() {
+    public void testEqualsForReleasedDistinctMessagesReturnsFalse() {
         ByteBuf content1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
         ByteBuf content2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
         FullHttpResponse a = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, content1);
@@ -37,9 +37,20 @@ public class DefaultFullHttpResponseTest {
         b.release();
         assertFalse(ByteBufUtil.isAccessible(content1));
         assertFalse(ByteBufUtil.isAccessible(content2));
-        // hashCode tolerates released content; equals must do the same to honour the contract.
-        assertEquals(a.hashCode(), b.hashCode());
-        assertTrue(a.equals(b));
+        // The bug was that equals() threw IllegalReferenceCountException; now it returns
+        // false because content cannot be inspected, which is contract-safe.
+        assertFalse(a.equals(b));
+        assertFalse(b.equals(a));
+    }
+
+    @Test
+    public void testEqualsIsReflexiveOnReleasedMessage() {
+        ByteBuf content = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
+        FullHttpResponse a = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, content);
+        a.release();
+        assertFalse(ByteBufUtil.isAccessible(content));
+        // Reflexivity is a hard contract requirement: a.equals(a) must always be true.
+        assertTrue(a.equals(a));
     }
 
     @Test
@@ -49,10 +60,13 @@ public class DefaultFullHttpResponseTest {
         FullHttpResponse a = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, content1);
         FullHttpResponse b = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, content2);
         a.release();
-        // Asymmetric accessibility: equals must not throw and must report not-equal.
-        assertFalse(a.equals(b));
-        assertFalse(b.equals(a));
-        b.release();
+        try {
+            // Asymmetric accessibility: equals must not throw and must report not-equal.
+            assertFalse(a.equals(b));
+            assertFalse(b.equals(a));
+        } finally {
+            b.release();
+        }
     }
 
     @Test
