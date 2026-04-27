@@ -225,8 +225,26 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         DefaultFullHttpRequest other = (DefaultFullHttpRequest) o;
 
         return super.equals(other) &&
-               content().equals(other.content()) &&
+               contentEquals(other.content()) &&
                trailingHeaders().equals(other.trailingHeaders());
+    }
+
+    private boolean contentEquals(ByteBuf otherContent) {
+        boolean accessible = ByteBufUtil.isAccessible(content());
+        if (accessible != ByteBufUtil.isAccessible(otherContent)) {
+            return false;
+        }
+        if (!accessible) {
+            // Mirror hashCode(), which treats inaccessible content as a constant value, so two
+            // released messages remain consistently equal under equals/hashCode.
+            return true;
+        }
+        try {
+            return content().equals(otherContent);
+        } catch (IllegalReferenceCountException ignored) {
+            // Race between the accessibility check and the comparison.
+            return false;
+        }
     }
 
     @Override
