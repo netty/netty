@@ -31,6 +31,8 @@ public final class HttpDecoderConfig implements Cloneable {
     private HttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory();
     private HttpHeadersFactory trailersFactory = DefaultHttpHeadersFactory.trailersFactory();
     private boolean allowDuplicateContentLengths = HttpObjectDecoder.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
+    private boolean rejectTransferEncodingWithContentLength =
+            HttpObjectDecoder.DEFAULT_REJECT_TRANSFER_ENCODING_WITH_CONTENT_LENGTH;
     private int maxInitialLineLength = HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
     private int maxHeaderSize = HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
     private int initialBufferSize = HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE;
@@ -175,6 +177,24 @@ public final class HttpDecoderConfig implements Cloneable {
      */
     public HttpDecoderConfig setAllowDuplicateContentLengths(boolean allowDuplicateContentLengths) {
         this.allowDuplicateContentLengths = allowDuplicateContentLengths;
+        return this;
+    }
+
+    public boolean isRejectTransferEncodingWithContentLength() {
+        return rejectTransferEncodingWithContentLength;
+    }
+
+    /**
+     * Set whether messages that contain both {@code Transfer-Encoding} and {@code Content-Length} headers should be
+     * rejected with a failed {@link io.netty.handler.codec.DecoderResult}.
+     * You usually want to enable this to protect against request smuggling attacks.
+     *
+     * @param rejectTransferEncodingWithContentLength set to {@code true} to reject such messages.
+     * @return This decoder config.
+     */
+    public HttpDecoderConfig setRejectTransferEncodingWithContentLength(
+            boolean rejectTransferEncodingWithContentLength) {
+        this.rejectTransferEncodingWithContentLength = rejectTransferEncodingWithContentLength;
         return this;
     }
 

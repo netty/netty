@@ -1480,4 +1480,21 @@ public class HttpResponseDecoderTest {
         ReferenceCountUtil.release(response);
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testContentLengthHeaderAndChunkedResponse() {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertFalse(response.decoderResult().isFailure());
+        assertFalse(response.headers().contains("Content-Length"));
+        assertTrue(HttpUtil.isKeepAlive(response));
+        LastHttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
 }

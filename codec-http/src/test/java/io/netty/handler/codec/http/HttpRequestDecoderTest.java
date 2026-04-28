@@ -705,7 +705,6 @@ public class HttpRequestDecoderTest {
     public void testContentLengthHeaderAndChunked() {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
-                "Connection: close\r\n" +
                 "Content-Length: 5\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "0\r\n\r\n";
@@ -713,11 +712,30 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertFalse(request.decoderResult().isFailure());
-        assertTrue(request.headers().names().contains("Transfer-Encoding"));
         assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
         assertFalse(request.headers().contains("Content-Length"));
+        assertFalse(HttpUtil.isKeepAlive(request));
         LastHttpContent c = channel.readInbound();
         c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testRejectTransferEncodingWithContentLength() {
+        HttpDecoderConfig config = new HttpDecoderConfig()
+                .setRejectTransferEncodingWithContentLength(true);
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertTrue(request.decoderResult().cause().getMessage()
+                .contains("Both Transfer-Encoding and Content-Length"));
         assertFalse(channel.finish());
     }
 

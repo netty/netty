@@ -80,6 +80,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *     See <a href="https://tools.ietf.org/html/rfc7230#section-3.3.2">RFC 7230, Section 3.3.2</a>.</td>
  * </tr>
  * <tr>
+ * <td>{@code rejectTransferEncodingWithContentLength}</td>
+ * <td>{@value #DEFAULT_REJECT_TRANSFER_ENCODING_WITH_CONTENT_LENGTH}</td>
+ * <td>When set to {@code true}, will reject any messages that contain both a Transfer-Encoding and a
+ *     Content-Length header field. Such messages might indicate a request smuggling attempt.
+ *     See <a href="https://www.rfc-editor.org/rfc/rfc9112#section-6.1">RFC 9112, Section 6.1</a>.</td>
+ * </tr>
+ * <tr>
  * <td>{@code allowPartialChunks}</td>
  * <td>{@value #DEFAULT_ALLOW_PARTIAL_CHUNKS}</td>
  * <td>If the length of a chunk exceeds the {@link ByteBuf}s readable bytes and {@code allowPartialChunks}
@@ -152,6 +159,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
+    public static final boolean DEFAULT_REJECT_TRANSFER_ENCODING_WITH_CONTENT_LENGTH = false;
     public static final boolean DEFAULT_STRICT_LINE_PARSING =
             SystemPropertyUtil.getBoolean("io.netty.handler.codec.http.defaultStrictLineParsing", true);
 
@@ -180,6 +188,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected final HttpHeadersFactory headersFactory;
     protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
+    private final boolean rejectTransferEncodingWithContentLength;
     private final ByteBuf parserScratchBuffer;
     private final Runnable defaultStrictCRLFCheck;
     private final HeaderParser headerParser;
@@ -343,6 +352,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         trailersFactory = config.getTrailersFactory();
         validateHeaders = isValidating(headersFactory);
         allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
+        rejectTransferEncodingWithContentLength = config.isRejectTransferEncodingWithContentLength();
         allowPartialChunks = config.isAllowPartialChunks();
     }
 
@@ -848,19 +858,33 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     /**
      * Invoked when a message with both a "Transfer-Encoding: chunked" and a "Content-Length" header field is detected.
-     * The default behavior is to <i>remove</i> the Content-Length field, but this method could be overridden
-     * to change the behavior (to, e.g., throw an exception and produce an invalid message).
+     * The default behavior is to <i>remove</i> the Content-Length field and, when decoding a request (server-side),
+     * set {@code Connection: close} to signal that the connection should be closed after the response is sent.
+     * This method can be overridden to change the behavior (to, e.g., throw an exception and produce an invalid
+     * message).
      * <p>
-     * See: https://tools.ietf.org/html/rfc7230#section-3.3.3
+     * {@link HttpServerCodec} overrides this method to additionally enforce connection closure after the response,
+     * regardless of whether {@link HttpServerKeepAliveHandler} is in the pipeline. When using a standalone
+     * {@link HttpRequestDecoder}, either add {@link HttpServerKeepAliveHandler} to the pipeline or implement
+     * equivalent logic to ensure the connection is closed, as required by
+     * <a href="https://www.rfc-editor.org/rfc/rfc9112#section-6.1">RFC 9112, Section 6.1</a>.
+     * <p>
      * <pre>
      *     If a message is received with both a Transfer-Encoding and a
      *     Content-Length header field, the Transfer-Encoding overrides the
-     *     Content-Length.  Such a message might indicate an attempt to
-     *     perform request smuggling (Section 9.5) or response splitting
-     *     (Section 9.4) and ought to be handled as an error.  A sender MUST
+     *     Content-Length. Such a message might indicate an attempt to
+     *     perform request smuggling (Section 11.2) or response splitting
+     *     (Section 11.1) and ought to be handled as an error. A sender MUST
      *     remove the received Content-Length field prior to forwarding such
      *     a message downstream.
+     *
+     *     ...the server MUST close the connection after responding to such
+     *     a request to avoid the potential attacks.
      * </pre>
+     * When {@link HttpDecoderConfig#setRejectTransferEncodingWithContentLength(boolean)} is set to {@code true},
+     * this method will throw an {@link IllegalArgumentException} and the message will be produced with a failed
+     * {@link DecoderResult}.
+     * <p>
      * Also see:
      * https://github.com/apache/tomcat/blob/b693d7c1981fa7f51e58bc8c8e72e3fe80b7b773/
      * java/org/apache/coyote/http11/Http11Processor.java#L747-L755
@@ -868,8 +892,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * src/http/ngx_http_request.c#L1946-L1953
      */
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
+        if (rejectTransferEncodingWithContentLength) {
+            throw new IllegalArgumentException(
+                    "Both Transfer-Encoding and Content-Length headers found");
+        }
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         contentLength = Long.MIN_VALUE;
+        if (isDecodingRequest()) {
+            HttpUtil.setKeepAlive(message, false);
+        }
     }
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
