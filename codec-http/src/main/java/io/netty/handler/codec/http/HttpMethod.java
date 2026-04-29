@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 
-import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The request method of HTTP or its derived protocols, such as
@@ -118,13 +118,33 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
     public HttpMethod(String name) {
-        name = checkNonEmptyAfterTrim(name, "name");
-        int index = HttpUtil.validateToken(name);
+        checkNotNull(name, "name");
+        // Strip leading/trailing SP and HT only. String.trim() would silently strip
+        // any character <= 0x20 (including NUL and other control bytes), which can mask
+        // request smuggling vectors when the parsed method name is later compared as a
+        // valid HTTP token.
+        int start = 0;
+        int end = name.length();
+        while (start < end && isSpaceOrHorizontalTab(name.charAt(start))) {
+            start++;
+        }
+        while (end > start && isSpaceOrHorizontalTab(name.charAt(end - 1))) {
+            end--;
+        }
+        if (start == end) {
+            throw new IllegalArgumentException("name cannot be empty");
+        }
+        String trimmed = start == 0 && end == name.length() ? name : name.substring(start, end);
+        int index = HttpUtil.validateToken(trimmed);
         if (index != -1) {
             throw new IllegalArgumentException(
-                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(name.charAt(index)));
+                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(trimmed.charAt(index)));
         }
-        this.name = AsciiString.cached(name);
+        this.name = AsciiString.cached(trimmed);
+    }
+
+    private static boolean isSpaceOrHorizontalTab(char c) {
+        return c == ' ' || c == '\t';
     }
 
     /**
