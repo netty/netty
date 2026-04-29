@@ -724,11 +724,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void flowControlledWriteAndErrorThrowAnException() throws Exception {
         final Http2RemoteFlowController.FlowControlled flowControlled = mockedFlowControlledThatThrowsOnWrite();
         final Http2Stream stream = stream(STREAM_A);
-        final RuntimeException fakeException = new RuntimeException("error failed");
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocationOnMock) {
-                throw fakeException;
+                throw Http2TestUtil.FAKE_EXCEPTION;
             }
         }).when(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
 
@@ -741,7 +740,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
                 controller.writePendingBytes();
             }
         });
-        assertSame(fakeException, e.getCause());
+        assertSame(Http2TestUtil.FAKE_EXCEPTION, e.getCause());
 
         verify(flowControlled, atLeastOnce()).write(any(ChannelHandlerContext.class), anyInt());
         verify(flowControlled).error(any(ChannelHandlerContext.class), any(Throwable.class));
