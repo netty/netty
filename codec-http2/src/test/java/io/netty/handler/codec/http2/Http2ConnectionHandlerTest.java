@@ -141,7 +141,7 @@ public class Http2ConnectionHandlerTest {
         DefaultChannelConfig config = new DefaultChannelConfig(channel);
         when(channel.config()).thenReturn(config);
 
-        Throwable fakeException = new RuntimeException("Fake exception");
+        Throwable fakeException = Http2TestUtil.FAKE_EXCEPTION;
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);
         when(encoder.frameWriter()).thenReturn(frameWriter);
