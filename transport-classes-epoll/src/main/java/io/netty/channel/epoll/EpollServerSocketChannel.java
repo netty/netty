@@ -82,7 +82,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
 
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                          LinuxSocket fd, boolean active) {
-        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0), false);
+        super(eventLoop, null, fd, active, EpollIoOps.EPOLLERR, false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", EpollIoHandle.class);
         config = new EpollServerSocketChannelConfig(this);
