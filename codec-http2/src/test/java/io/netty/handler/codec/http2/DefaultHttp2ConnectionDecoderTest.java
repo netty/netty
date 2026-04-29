@@ -486,7 +486,7 @@ public class DefaultHttp2ConnectionDecoderTest {
             @Override
             public Integer answer(InvocationOnMock in) throws Throwable {
                 localFlow.consumeBytes(stream, 4);
-                throw new RuntimeException("Fake Exception");
+                throw Http2TestUtil.FAKE_EXCEPTION;
             }
         }).when(listener).onDataRead(eq(ctx), eq(STREAM_ID), any(ByteBuf.class), eq(10), eq(true));
         try {
