@@ -625,6 +625,9 @@
     </profile>
     <profile>
       <id>noPrintGC</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <properties>
         <argLine.printGC>-D_</argLine.printGC>
       </properties>
