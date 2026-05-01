@@ -438,8 +438,40 @@ public final class HttpConversionUtil {
                 out.path(new AsciiString(request.uri()));
                 setHttp2Scheme(inHeaders, out);
             } else {
-                URI requestTargetUri = URI.create(request.uri());
-                out.path(toHttp2Path(requestTargetUri));
+                URI requestTargetUri;
+                AsciiString path;
+                try {
+                    requestTargetUri = URI.create(request.uri());
+                    path = toHttp2Path(requestTargetUri);
+                } catch (IllegalArgumentException e) {
+                    // java.net.URI's parser follows RFC 2396 and rejects characters such
+                    // as '{', '}' or '|' that are accepted under the looser RFC 3986 grammar
+                    // by JDK 21+ and that real-world request URIs commonly carry as
+                    // placeholder substitutions. Split the absolute-form request-target
+                    // around the path component so the :path pseudo-header can still be
+                    // populated and the request is not lost. The base URI is parsed
+                    // separately because authority and scheme extraction still rely on
+                    // java.net.URI; if even that fails we re-throw the original error.
+                    String requestUri = request.uri();
+                    int schemeEnd = requestUri.indexOf("://");
+                    int pathStart = schemeEnd >= 0 ? requestUri.indexOf('/', schemeEnd + 3) : -1;
+                    String baseUri;
+                    String pathWithQueryAndFragment;
+                    if (pathStart >= 0) {
+                        baseUri = requestUri.substring(0, pathStart);
+                        pathWithQueryAndFragment = requestUri.substring(pathStart);
+                    } else {
+                        baseUri = requestUri;
+                        pathWithQueryAndFragment = "/";
+                    }
+                    try {
+                        requestTargetUri = URI.create(baseUri);
+                    } catch (IllegalArgumentException baseFailure) {
+                        throw e;
+                    }
+                    path = new AsciiString(pathWithQueryAndFragment);
+                }
+                out.path(path);
                 // Take from the request-line if HOST header was empty
                 host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
                 setHttp2Scheme(inHeaders, requestTargetUri, out);

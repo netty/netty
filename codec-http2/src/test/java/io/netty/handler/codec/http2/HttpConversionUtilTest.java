@@ -231,6 +231,58 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void handlesRequestWhoseQueryHasCharactersRejectedByJavaNetUri() throws Exception {
+        // Reproduces https://github.com/netty/netty/issues/14591 — java.net.URI on JDK
+        // versions whose parser still follows RFC 2396 rejects '{' / '}' characters
+        // that real-world request URIs use as placeholder substitutions. The converter
+        // must fall back to splitting around the path component so the :path
+        // pseudo-header is preserved instead of an IllegalArgumentException bubbling up.
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "https://bh.contextweb.com/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}",
+                false);
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
+        assertEquals(new AsciiString("/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}"), out.path());
+        assertEquals(new AsciiString("https"), out.scheme());
+        assertEquals(new AsciiString("bh.contextweb.com"), out.authority());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
+    }
+
+    @Test
+    public void rethrowsOriginalParsingErrorWhenBaseUriCannotBeParsedEither() {
+        // Defensive boundary: when even the scheme + authority portion is unparseable
+        // by java.net.URI, the fallback has nothing useful to recover, so the original
+        // IllegalArgumentException must surface rather than letting the request slip
+        // through with malformed pseudo-headers. Skips request-line validation on the
+        // request itself so the test can construct a URI that the converter would
+        // otherwise never receive.
+        final HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "http://[bad host]/p?q={x}",
+                new DefaultHttpHeaders(false),
+                false);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.toHttp2Headers(msg, false);
+            }
+        });
+    }
+
+    @Test
+    public void handlesRequestWhosePathHasCharactersRejectedByJavaNetUri() throws Exception {
+        // Boundary: brace-style placeholders inside the path component (not just the
+        // query) must also be preserved by the fallback splitter so :path stays
+        // round-trip identical to the request-line.
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/orders/{id}/items", false);
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
+        assertEquals(new AsciiString("/orders/{id}/items"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
     public void handlesRequestWithDoubleSlashPath() throws Exception {
         boolean validateHeaders = true;
         HttpRequest msg = new DefaultHttpRequest(
