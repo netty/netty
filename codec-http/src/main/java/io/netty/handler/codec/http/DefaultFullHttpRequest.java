@@ -29,7 +29,14 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
     private final ByteBuf content;
-    private final HttpHeaders trailingHeader;
+
+    /**
+     * Either {@code trailingHeader} or {@code trailersFactory} is non-null. When the message is
+     * constructed via an {@link HttpHeadersFactory}, allocation of the trailing headers is deferred
+     * until {@link #trailingHeaders()} is first called, since most requests do not carry trailers.
+     */
+    private HttpHeaders trailingHeader;
+    private final HttpHeadersFactory trailersFactory;
 
     /**
      * Used to cache the value of the hash code and avoid {@link IllegalReferenceCountException}.
@@ -81,10 +88,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      * <p>
      * The recommended default header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
      * and the recommended default trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     * <p>
+     * The trailer headers are not created eagerly; they are allocated on the first call to
+     * {@link #trailingHeaders()} using the supplied {@code trailersFactory}.
      */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
-        this(httpVersion, method, uri, content, headersFactory.newHeaders(), trailersFactory.newHeaders());
+        super(httpVersion, method, uri, headersFactory.newHeaders(), true);
+        this.content = checkNotNull(content, "content");
+        this.trailersFactory = checkNotNull(trailersFactory, "trailersFactory");
     }
 
     /**
@@ -103,11 +115,17 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         super(httpVersion, method, uri, headers, validateRequestLine);
         this.content = checkNotNull(content, "content");
         this.trailingHeader = checkNotNull(trailingHeader, "trailingHeader");
+        this.trailersFactory = null;
     }
 
     @Override
     public HttpHeaders trailingHeaders() {
-        return trailingHeader;
+        HttpHeaders trailers = trailingHeader;
+        if (trailers == null) {
+            trailers = trailersFactory.newHeaders();
+            trailingHeader = trailers;
+        }
+        return trailers;
     }
 
     @Override
