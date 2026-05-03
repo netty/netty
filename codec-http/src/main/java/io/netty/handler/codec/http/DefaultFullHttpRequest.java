@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
 
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -28,14 +30,20 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Default implementation of {@link FullHttpRequest}.
  */
 public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHttpRequest {
+
+    private static final AtomicReferenceFieldUpdater<DefaultFullHttpRequest, HttpHeaders> TRAILING_HEADER_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultFullHttpRequest.class, HttpHeaders.class, "trailingHeader");
+
     private final ByteBuf content;
 
     /**
      * Either {@code trailingHeader} or {@code trailersFactory} is non-null. When the message is
      * constructed via an {@link HttpHeadersFactory}, allocation of the trailing headers is deferred
      * until {@link #trailingHeaders()} is first called, since most requests do not carry trailers.
+     * Safely published via {@link #TRAILING_HEADER_UPDATER}.
      */
-    private HttpHeaders trailingHeader;
+    private volatile HttpHeaders trailingHeader;
     private final HttpHeadersFactory trailersFactory;
 
     /**
@@ -123,7 +131,11 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
         HttpHeaders trailers = trailingHeader;
         if (trailers == null) {
             trailers = trailersFactory.newHeaders();
-            trailingHeader = trailers;
+            if (!TRAILING_HEADER_UPDATER.compareAndSet(this, null, trailers)) {
+                // Another thread won the race and already published its instance; use that one
+                // so all callers observe the same trailing headers reference.
+                trailers = trailingHeader;
+            }
         }
         return trailers;
     }
