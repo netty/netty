@@ -678,6 +678,16 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testChunkedNotLastInTransferEncoding() {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked, identity\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        testInvalidHeaders0(requestStr);
+    }
+
+    @Test
     public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, true);
