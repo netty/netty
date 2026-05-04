@@ -33,6 +33,7 @@ import java.util.List;
 public final class BrotliDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+    private static final int DEFAULT_INPUT_BUFFER_SIZE = 8 * 1024;
 
     private enum State {
         DONE, NEEDS_MORE_INPUT, ERROR
@@ -57,7 +58,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * Creates a new BrotliDecoder with a default 8kB input buffer
      */
     public BrotliDecoder() {
-        this(8 * 1024);
+        this(DEFAULT_INPUT_BUFFER_SIZE);
     }
 
     /**
@@ -65,7 +66,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * @param inputBufferSize desired size of the input buffer in bytes
      */
     public BrotliDecoder(int inputBufferSize) {
-        this(inputBufferSize, DEFAULT_MAX_FORWARD_BYTES);
+        this(inputBufferSize == 0 ? DEFAULT_INPUT_BUFFER_SIZE : inputBufferSize, DEFAULT_MAX_FORWARD_BYTES);
     }
 
     /**
