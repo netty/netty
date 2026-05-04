@@ -398,7 +398,7 @@ public class HttpClientCodecTest {
     }
 
     @Test
-    public void testInformationalFollowedByResponse() {
+    public void testInformationalFollowedByResponse() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
 
         assertTrue(channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/1")));
