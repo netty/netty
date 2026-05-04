@@ -45,7 +45,8 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new Lz4FrameDecoder(true));
+        // Use max limit of 31 MB as we want to test that we reject 32 MB in one of the tests
+        return new EmbeddedChannel(new Lz4FrameDecoder(true, 31 * 1024 * 1024));
     }
 
     @Test
@@ -88,6 +89,24 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "invalid decompressedLength");
+    }
+
+    @Test
+    public void testTooLargeDecompressedLength() {
+        final ByteBuf buf = Unpooled.buffer(22, 22);
+        buf.writeLong(MAGIC_NUMBER);
+        buf.writeByte(BLOCK_TYPE_COMPRESSED | 0x0F);
+        buf.writeIntLE(1);
+        buf.writeIntLE(1 << 25);
+        buf.writeIntLE(0);
+        buf.writeByte(0);
+
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(buf);
+            }
+        });
     }
 
     @Test
