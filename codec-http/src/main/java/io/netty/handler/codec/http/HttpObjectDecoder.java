@@ -861,10 +861,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // We only need to validate if we have more then the chunked value length contained as otherwise
                 // we know it is only chunked.
                 if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
-                        HttpHeaderValues.CHUNKED,0, chunkedValueLength)) {
+                        HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
                         throw new IllegalArgumentException(
                                 "chunked must be the last encoding present in the Transfer-Encoding header");
-
                 }
                 if (!contentLengthFields.isEmpty()) {
                     handleTransferEncodingChunkedWithContentLength(message);
