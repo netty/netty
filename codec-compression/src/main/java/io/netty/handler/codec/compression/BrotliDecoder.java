@@ -115,7 +115,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
                     break;
 
                 case NEEDS_MORE_INPUT:
-                    if (decoder.hasOutput()) {
+                    while (decoder.hasOutput()) {
                         forwardOutput(ctx);
                     }
 
