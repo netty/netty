@@ -224,12 +224,17 @@ public class DefaultHttp2HeadersTest {
 
     @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
     @MethodSource("invalidPseudoHeaders")
-    void headerValueValidation(String name, String value) {
+    void headerValueValidation(final String name, final String value) {
         // The second `true` parameter enables header value validation:
-        Http2Headers headers = new DefaultHttp2Headers(true, true, 10);
+        final Http2Headers headers = new DefaultHttp2Headers(true, true, 10);
         Class<? extends Exception> expectedType =
                 value.isEmpty() ? Http2Exception.class : IllegalArgumentException.class;
-        assertThrows(expectedType, () -> headers.add(name, value));
+        assertThrows(expectedType, new Executable() {
+            @Override
+            public void execute() {
+                headers.add(name, value);
+            }
+        });
     }
 
     static Stream<Arguments> invalidPseudoHeaders() {
