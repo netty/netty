@@ -105,9 +105,12 @@ public class NettyBlockHoundIntegrationTest {
 
     @Test
     public void testBlockingCallsInNettyThreads() throws Exception {
-        final FutureTask<Void> future = new FutureTask<>(() -> {
-            Thread.sleep(0);
-            return null;
+        final FutureTask<Void> future = new FutureTask<>(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                Thread.sleep(0);
+                return null;
+            }
         });
         GlobalEventExecutor.INSTANCE.execute(future);
 
@@ -173,9 +176,16 @@ public class NettyBlockHoundIntegrationTest {
                 };
         taskQueue.emulateContention();
         CountDownLatch latch = new CountDownLatch(1);
-        executor.submit(() -> {
-            executor.execute(() -> { }); // calls addTask
-            latch.countDown();
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                    }
+                }); // calls addTask
+                latch.countDown();
+            }
         });
         taskQueue.waitUntilContented();
         taskQueue.removeContention();
@@ -184,9 +194,12 @@ public class NettyBlockHoundIntegrationTest {
 
     @Test
     void permittingBlockingCallsInFastThreadLocalThreadSubclass() throws Exception {
-        final FutureTask<Void> future = new FutureTask<>(() -> {
-            Thread.sleep(0);
-            return null;
+        final FutureTask<Void> future = new FutureTask<>(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                Thread.sleep(0);
+                return null;
+            }
         });
         FastThreadLocalThread thread = new FastThreadLocalThread(future) {
             @Override
@@ -340,8 +353,12 @@ public class NettyBlockHoundIntegrationTest {
                         }
                     })
                     .connect(sc.localAddress())
-                    .addListener((ChannelFutureListener) future ->
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
+                    .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            future.channel().writeAndFlush(wrappedBuffer(new byte[]{1, 2, 3, 4}));
+                        }
+                    })
                     .syncUninterruptibly()
                     .channel();
 
@@ -364,20 +381,23 @@ public class NettyBlockHoundIntegrationTest {
     public void pooledBufferAllocation() throws Exception {
         AtomicLong iterationCounter = new AtomicLong();
         PooledByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
-        FutureTask<Void> task = new FutureTask<>(() -> {
-            List<ByteBuf> buffers = new ArrayList<>();
-            long count;
-            do {
-                count = iterationCounter.get();
-            } while (count == 0);
-            for (int i = 0; i < 13; i++) {
-                int size = 8 << i;
-                buffers.add(allocator.ioBuffer(size, size));
+        FutureTask<Void> task = new FutureTask<>(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                List<ByteBuf> buffers = new ArrayList<>();
+                long count;
+                do {
+                    count = iterationCounter.get();
+                } while (count == 0);
+                for (int i = 0; i < 13; i++) {
+                    int size = 8 << i;
+                    buffers.add(allocator.ioBuffer(size, size));
+                }
+                for (ByteBuf buffer : buffers) {
+                    buffer.release();
+                }
+                return null;
             }
-            for (ByteBuf buffer : buffers) {
-                buffer.release();
-            }
-            return null;
         });
         FastThreadLocalThread thread = new FastThreadLocalThread(task);
         thread.start();
@@ -433,13 +453,16 @@ public class NettyBlockHoundIntegrationTest {
             CountDownLatch latch = new CountDownLatch(1);
             List<Object> result = new ArrayList<>();
             List<Throwable> error = new ArrayList<>();
-            executor.execute(() -> {
-                try {
-                    result.add(callable.call());
-                } catch (Throwable t) {
-                    error.add(t);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        result.add(callable.call());
+                    } catch (Throwable t) {
+                        error.add(t);
+                    }
+                    latch.countDown();
                 }
-                latch.countDown();
             });
             latch.await();
             assertEquals(0, error.size());

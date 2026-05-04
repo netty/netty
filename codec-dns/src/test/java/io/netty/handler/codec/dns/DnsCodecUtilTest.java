@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -26,20 +27,25 @@ public class DnsCodecUtilTest {
 
     @Test
     void rejectTooLongLabelWhileDecoding() {
-        ByteBuf buf = Unpooled.buffer(256);
+        final ByteBuf buf = Unpooled.buffer(256);
         // 63 is the maximum label length
         writeLabel(buf, 64);
         writeLabel(buf, 3);
         buf.writeByte(0);
 
-        assertThrows(TooLongFrameException.class, () -> DnsCodecUtil.decodeDomainName(buf));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                DnsCodecUtil.decodeDomainName(buf);
+            }
+        });
         buf.release();
     }
 
     @Test
     void rejectTooLongDomainNameWhileDecoding() {
         // 255 is the maximum domain name
-        ByteBuf buf = Unpooled.buffer(512);
+        final ByteBuf buf = Unpooled.buffer(512);
         writeLabel(buf, 50);
         writeLabel(buf, 50);
         writeLabel(buf, 50);
@@ -47,44 +53,64 @@ public class DnsCodecUtilTest {
         writeLabel(buf, 56);
         buf.writeByte(0);
 
-        assertThrows(TooLongFrameException.class, () -> DnsCodecUtil.decodeDomainName(buf));
+        assertThrows(TooLongFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                DnsCodecUtil.decodeDomainName(buf);
+            }
+        });
         buf.release();
     }
 
     @Test
     void rejectTooLongLabelWhileEncoding() {
-        ByteBuf buf = Unpooled.buffer(256);
+        final ByteBuf buf = Unpooled.buffer(256);
         // 63 is the maximum label length
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         appendLabel(sb, 64);
-        assertThrows(IllegalArgumentException.class, () -> DnsCodecUtil.encodeDomainName(sb.toString(), buf));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                DnsCodecUtil.encodeDomainName(sb.toString(), buf);
+            }
+        });
         buf.release();
     }
 
     @Test
     void rejectEmptyLabelWhileEncoding() {
-        ByteBuf buf = Unpooled.buffer(256);
+        final ByteBuf buf = Unpooled.buffer(256);
         // 63 is the maximum label length
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         appendLabel(sb, 5);
         appendLabel(sb, 0);
         appendLabel(sb, 5);
-        assertThrows(IllegalArgumentException.class, () -> DnsCodecUtil.encodeDomainName(sb.toString(), buf));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                DnsCodecUtil.encodeDomainName(sb.toString(), buf);
+            }
+        });
         buf.release();
     }
 
     @Test
     void rejectTooLongDomainNameWhileEncoding() {
-        ByteBuf buf = Unpooled.buffer(256);
+        final ByteBuf buf = Unpooled.buffer(256);
         // 255 is the maximum domain name
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         appendLabel(sb, 50);
         appendLabel(sb, 50);
         appendLabel(sb, 50);
         appendLabel(sb, 50);
         appendLabel(sb, 56);
 
-        assertThrows(IllegalArgumentException.class, () -> DnsCodecUtil.encodeDomainName(sb.toString(), buf));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                DnsCodecUtil.encodeDomainName(sb.toString(), buf);
+            }
+        });
         buf.release();
     }
 

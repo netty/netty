@@ -21,6 +21,8 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.function.LongFunction;
 import java.util.stream.Stream;
@@ -31,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpRequestTest {
-    public static Stream<String> invalidUris() {
-        return Stream.of(
+    public static List<String> invalidUris() {
+        return Arrays.asList(
                 "http://localhost/\r\n",
                 "/r\r\n?q=1",
                 "http://localhost/\r\n?q=1",
@@ -50,8 +52,8 @@ public class DefaultHttpRequestTest {
         );
     }
 
-    public static Stream<String> invalidMethods() {
-        return Stream.of(
+    public static List<String> invalidMethods() {
+        return Arrays.asList(
                 "GET ",
                 " GET",
                 "G ET",
@@ -158,8 +160,8 @@ public class DefaultHttpRequestTest {
                 });
     }
 
-    public static Stream<String> validMethods() {
-        return Stream.of("GET",
+    public static List<String> validMethods() {
+        return Arrays.asList("GET",
                 "POST",
                 "PUT",
                 "HEAD",
@@ -182,7 +184,7 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("invalidUris")
-    void constructorMustRejectIllegalUrisByDefault(String uri) {
+    void constructorMustRejectIllegalUrisByDefault(final String uri) {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -193,8 +195,8 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("invalidUris")
-    void setUriMustRejectIllegalUrisByDefault(String uri) {
-        DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+    void setUriMustRejectIllegalUrisByDefault(final String uri) {
+        final DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -217,7 +219,7 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("invalidMethods")
-    void constructorMustRejectIllegalHttpMethodByDefault(String method) {
+    void constructorMustRejectIllegalHttpMethodByDefault(final String method) {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -234,8 +236,8 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("invalidMethods")
-    void setMethodMustRejectIllegalHttpMethodByDefault(String method) {
-        DefaultHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+    void setMethodMustRejectIllegalHttpMethodByDefault(final String method) {
+        final DefaultHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -251,7 +253,7 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("validMethods")
-    void constructorMustAcceptAllHttpMethods(String method) {
+    void constructorMustAcceptAllHttpMethods(final String method) {
         new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
             @Override
             public AsciiString asciiName() {
@@ -264,7 +266,7 @@ public class DefaultHttpRequestTest {
 
     @ParameterizedTest
     @MethodSource("validMethods")
-    void setMethodMustAcceptAllHttpMethods(String method) {
+    void setMethodMustAcceptAllHttpMethods(final String method) {
         DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 
         request.setMethod(new HttpMethod("GET") {

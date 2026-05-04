@@ -54,6 +54,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -190,15 +192,21 @@ public class DataCompressionHttp2Test {
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(padding), eq(true));
     }
 
-    public static Stream<Arguments> paddingAndCompression() {
-        Stream.Builder<Arguments> builder = Stream.builder();
+    public static List<Arguments> paddingAndCompression() {
+        List<Arguments> arguments = new ArrayList<Arguments>();
         for (int padding : new int[]{0, 10}) {
             for (AsciiString compression : new AsciiString[]{
                     HttpHeaderValues.GZIP, HttpHeaderValues.BR, HttpHeaderValues.ZSTD, HttpHeaderValues.SNAPPY}) {
-                builder.add(Arguments.of(padding, compression));
+                final Object[] args = {padding, compression};
+                arguments.add(new Arguments() {
+                    @Override
+                    public Object[] get() {
+                        return args;
+                    }
+                });
             }
         }
-        return builder.build();
+        return arguments;
     }
 
     @ParameterizedTest
@@ -278,7 +286,8 @@ public class DataCompressionHttp2Test {
         });
     }
 
-    private void testEncodingMessage(int padding, String text, AsciiString compressionAlgorithmName) throws Exception {
+    private void testEncodingMessage(final int padding, final String text, AsciiString compressionAlgorithmName)
+            throws Exception {
         testEncodingMessage(padding, text, compressionAlgorithmName, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
@@ -294,8 +303,10 @@ public class DataCompressionHttp2Test {
         testEncodingMessage(padding, text.getBytes(CharsetUtil.ISO_8859_1), compressionAlgorithmName, assertions);
     }
 
-    private void testEncodingMessage(int padding, byte[] text, AsciiString compressionAlgorithmName,
-                                     Callable<Void> assertions) throws Exception {
+    private void testEncodingMessage(final int padding,
+                                     final byte[] text,
+                                     final AsciiString compressionAlgorithmName,
+                                     final Callable<Void> assertions) throws Exception {
         final ByteBuf data = Unpooled.copiedBuffer(text);
         bootstrapEnv(data.readableBytes());
         try {
