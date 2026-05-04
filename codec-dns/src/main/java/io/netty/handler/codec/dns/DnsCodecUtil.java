@@ -19,6 +19,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.*;
@@ -35,14 +36,27 @@ final class DnsCodecUtil {
             return;
         }
 
+        int totalLength = 0;
         final String[] labels = name.split("\\.");
         for (String label : labels) {
             final int labelLen = label.length();
             if (labelLen == 0) {
-                // zero-length label means the end of the name.
-                break;
+                throw new IllegalArgumentException("DNS name contains empty label: " + name);
             }
-
+            if (labelLen > 63) {
+                throw new IllegalArgumentException(
+                        "DNS label length " + labelLen + " exceeds maximum of 63: " + name);
+            }
+            int idx = label.indexOf('\0');
+            if (idx != -1) {
+                throw new IllegalArgumentException(
+                        "DNS label contains null byte at index " + idx);
+            }
+            totalLength += 1 + labelLen;
+            if (totalLength > 255) {
+                throw new IllegalArgumentException(
+                        "DNS name exceeds maximum length of 255: " + name);
+            }
             buf.writeByte(labelLen);
             ByteBufUtil.writeAscii(buf, label);
         }
@@ -95,8 +109,16 @@ final class DnsCodecUtil {
                 if (!in.isReadable(len)) {
                     throw new CorruptedFrameException("truncated label in a name");
                 }
+                // See https://datatracker.ietf.org/doc/html/rfc1035#section-2.3.4
+                if (len > 63) {
+                    throw new TooLongFrameException("label must be <= 63 but was " + len);
+                }
                 name.append(in.toString(in.readerIndex(), len, CharsetUtil.UTF_8)).append('.');
                 in.skipBytes(len);
+                // See https://datatracker.ietf.org/doc/html/rfc1035#section-2.3.4
+                if (name.length() > 255) {
+                    throw new TooLongFrameException("domain name must be <= 255 but was " + name.length());
+                }
             } else { // len == 0
                 break;
             }
