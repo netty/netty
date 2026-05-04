@@ -1352,6 +1352,32 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void mustRejectChunkSizeThatWouldCauseOverflow() {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "100000004\r\n" +
+                "test\r\n" +
+                "0\r\n" +
+                "\r\n" +
+                "GET /smuggled HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        // Request 1
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertFalse(content.decoderResult().isSuccess());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("Chunk size overflow");
+        content.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testConnectionClosedBeforeHeadersReceived() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseInitialLine =
