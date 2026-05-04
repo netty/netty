@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -86,12 +87,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         buf.writeIntLE(0);
         buf.writeByte(0);
 
-        assertThrows(DecompressionException.class, new Executable() {
-            @Override
-            public void execute() {
-                channel.writeInbound(buf);
-            }
-        });
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(buf));
     }
 
     @Test
