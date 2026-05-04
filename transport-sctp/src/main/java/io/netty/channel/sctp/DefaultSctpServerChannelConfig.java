@@ -85,7 +85,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
         } else if (option == ChannelOption.SO_SNDBUF) {
             setSendBufferSize((Integer) value);
         } else if (option == ChannelOption.SO_BACKLOG) {
-            setSendBufferSize((Integer) value);
+            setBacklog((Integer) value);
         } else if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
             setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
         } else {

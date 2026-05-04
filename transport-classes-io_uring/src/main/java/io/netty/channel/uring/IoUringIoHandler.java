@@ -644,8 +644,8 @@ public final class IoUringIoHandler implements IoHandler {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
+            assert iovArray.count() == 0;
         }
-        assert iovArray.count() == 0;
         return iovArray;
     }
 

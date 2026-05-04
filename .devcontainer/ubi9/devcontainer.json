@@ -1,0 +1,12 @@
+{
+  "name": "netty-on-ubi9",
+  "containerEnv": {
+  },
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "securityOpt": [ "seccomp=unconfined" ],
+  "runArgs": [
+    "--privileged"
+  ]
+}
