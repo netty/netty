@@ -21,7 +21,8 @@ import io.netty.util.internal.UnstableApi;
 
 /**
  * Shared API for various decompression algorithms. A decompressor reports its current status using {@link #status()}.
- * Status documentation lists which operations are permitted for which status.
+ * Status documentation lists which operations are permitted for which status. Callers must observe the current
+ * status before invoking an operation that is only valid for that status.
  * <p>
  * All methods may throw exceptions. If an exception is thrown, no further operations are permitted, except for
  * {@link #close()}.

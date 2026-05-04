@@ -85,9 +85,37 @@ public class InputBufferingDecompressorTest {
         output.release();
     }
 
+    @Test
+    public void takeOutputReleasesOutputWhenStatusFails() throws DecompressionException {
+        TestInputBufferingDecompressor decompressor = new TestInputBufferingDecompressor();
+        decompressor.statusException = new DecompressionException("status failed");
+        ByteBuf input = Unpooled.buffer(2).writeByte(1).writeByte(2);
+
+        decompressor.addInput(input);
+
+        assertSame(decompressor.statusException,
+                assertThrows(DecompressionException.class, decompressor::takeOutput));
+        assertEquals(0, decompressor.lastOutput.refCnt());
+        decompressor.close();
+    }
+
+    @Test
+    public void closeClearsCumulation() throws DecompressionException {
+        TestInputBufferingDecompressor decompressor = new TestInputBufferingDecompressor();
+        ByteBuf input = Unpooled.buffer(2).writeByte(1).writeByte(2);
+
+        decompressor.addInput(input);
+        decompressor.close();
+        decompressor.close();
+
+        assertEquals(0, input.refCnt());
+    }
+
     private static final class TestInputBufferingDecompressor extends InputBufferingDecompressor {
         int processInputCalls;
         DecompressionException processInputException;
+        DecompressionException statusException;
+        ByteBuf lastOutput;
 
         TestInputBufferingDecompressor() {
             super(ByteBufAllocator.DEFAULT);
@@ -108,6 +136,7 @@ public class InputBufferingDecompressorTest {
         ByteBuf processOutput(ByteBuf buf) {
             ByteBuf output = allocator.buffer(buf.readableBytes());
             output.writeBytes(buf);
+            lastOutput = output;
             return output;
         }
 
@@ -116,7 +145,10 @@ public class InputBufferingDecompressorTest {
         }
 
         @Override
-        public Status status() {
+        public Status status() throws DecompressionException {
+            if (statusException != null) {
+                throw statusException;
+            }
             return available() == 0 ? Status.NEED_INPUT : Status.NEED_OUTPUT;
         }
     }

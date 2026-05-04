@@ -55,28 +55,28 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     private final ByteBufChecksum checksum;
 
     /**
-     * Length of current received chunk of data.
+     * Length of the current received chunk of data.
      */
     private int chunkLength;
 
     /**
-     * Original of current received chunk of data.
-     * It is equal to {@link #chunkLength} for non compressed chunks.
+     * Original length of the current received chunk of data.
+     * It is equal to {@link #chunkLength} for uncompressed chunks.
      */
     private int originalLength;
 
     /**
-     * Indicates is this chunk compressed or not.
+     * Indicates whether this chunk is compressed.
      */
     private boolean isCompressed;
 
     /**
-     * Indicates is this chunk has checksum or not.
+     * Indicates whether this chunk has a checksum.
      */
     private boolean hasChecksum;
 
     /**
-     * Checksum value of current received chunk of data which has checksum.
+     * Checksum value of the current received chunk of data when present.
      */
     private int currentChecksum;
 
