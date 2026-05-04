@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  * Decompresses a {@link ByteBuf} encoded with the brotli format.
- *
+ * <p>
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
 public final class BrotliDecoder extends ByteToMessageDecoder {
@@ -47,6 +47,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
     }
 
     private final int inputBufferSize;
+    private final int outputBufferSize;
     private DecoderJNI.Wrapper decoder;
     private boolean destroyed;
     private boolean needsRead;
@@ -64,11 +65,22 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
      * @param inputBufferSize desired size of the input buffer in bytes
      */
     public BrotliDecoder(int inputBufferSize) {
+        this(inputBufferSize, DEFAULT_MAX_FORWARD_BYTES);
+    }
+
+    /**
+     * Creates a new BrotliDecoder
+     * @param inputBufferSize desired size of the input buffer in bytes
+     * @param outputBufferSize desired max size of the output buffer in bytes
+     *                         (produce multiple output buffers if exceeded)
+     */
+    public BrotliDecoder(int inputBufferSize, int outputBufferSize) {
         this.inputBufferSize = ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
+        this.outputBufferSize = ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize");
     }
 
     private void forwardOutput(ChannelHandlerContext ctx) {
-        ByteBuffer nativeBuffer = decoder.pull();
+        ByteBuffer nativeBuffer = decoder.pull(outputBufferSize);
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
         int remaining = nativeBuffer.remaining();
         if (accumBuffer == null) {
@@ -76,7 +88,7 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
         }
         accumBuffer.writeBytes(nativeBuffer);
         needsRead = false;
-        if (accumBuffer.readableBytes() >= DEFAULT_MAX_FORWARD_BYTES) {
+        if (accumBuffer.readableBytes() >= outputBufferSize) {
             ctx.fireChannelRead(accumBuffer);
             accumBuffer = null;
         }
