@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.SplittableRandom;
 import java.util.function.LongFunction;
@@ -32,30 +31,66 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpRequestTest {
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "http://localhost/\r\n",
-            "/r\r\n?q=1",
-            "http://localhost/\r\n?q=1",
-            "/r\r\n/?q=1",
-            "http://localhost/\r\n/?q=1",
-            "/r\r\n",
-            "http://localhost/ HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
-            "/r HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
-            "/ path",
-            "/path ",
-            " /path",
-            "http://localhost/ ",
-            " http://localhost/",
-            "http://local host/",
-    })
-    void constructorMustRejectIllegalUrisByDefault(final String uri) {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
-            }
-        });
+    public static Stream<String> invalidUris() {
+        return Stream.of(
+                "http://localhost/\r\n",
+                "/r\r\n?q=1",
+                "http://localhost/\r\n?q=1",
+                "/r\r\n/?q=1",
+                "http://localhost/\r\n/?q=1",
+                "/r\r\n",
+                "http://localhost/ HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+                "/r HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+                "/ path",
+                "/path ",
+                " /path",
+                "http://localhost/ ",
+                " http://localhost/",
+                "http://local host/"
+        );
+    }
+
+    public static Stream<String> invalidMethods() {
+        return Stream.of(
+                "GET ",
+                " GET",
+                "G ET",
+                " GET ",
+                "GET\r",
+                "GET\n",
+                "GET\r\n",
+                "GE\rT",
+                "GE\nT",
+                "GE\r\nT",
+                "\rGET",
+                "\nGET",
+                "\r\nGET",
+                " \r\nGET",
+                "\r \nGET",
+                "\r\n GET",
+                "\r\nGET ",
+                "\nGET ",
+                "\rGET ",
+                "\r GET",
+                " \rGET",
+                "\nGET ",
+                "\n GET",
+                " \nGET",
+                "GET \n",
+                "GET \r",
+                " GET\r",
+                " GET\r",
+                "GET \n",
+                " GET\n",
+                " GET\n",
+                "GE\nT ",
+                "GE\rT ",
+                " GE\rT",
+                " GE\rT",
+                "GE\nT ",
+                " GE\nT",
+                " GE\nT"
+        );
     }
 
     public static Stream<String> validUris() {
@@ -123,6 +158,19 @@ public class DefaultHttpRequestTest {
                 });
     }
 
+    public static Stream<String> validMethods() {
+        return Stream.of("GET",
+                "POST",
+                "PUT",
+                "HEAD",
+                "DELETE",
+                "OPTIONS",
+                "CONNECT",
+                "TRACE",
+                "PATCH",
+                "QUERY");
+    }
+
     private static String pick(SplittableRandom rng, String cs, int lowerBound, int upperBound) {
         int length = rng.nextInt(lowerBound, upperBound + 1);
         StringBuilder sb = new StringBuilder(length);
@@ -133,80 +181,58 @@ public class DefaultHttpRequestTest {
     }
 
     @ParameterizedTest
+    @MethodSource("invalidUris")
+    void constructorMustRejectIllegalUrisByDefault(String uri) {
+        assertThrows(IllegalArgumentException.class, () ->
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidUris")
+    void setUriMustRejectIllegalUrisByDefault(String uri) {
+        DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        assertThrows(IllegalArgumentException.class, () -> request.setUri(uri));
+    }
+
+    @ParameterizedTest
     @MethodSource("validUris")
     void constructorMustAcceptValidUris(String uri) {
         new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "GET ",
-            " GET",
-            "G ET",
-            " GET ",
-            "GET\r",
-            "GET\n",
-            "GET\r\n",
-            "GE\rT",
-            "GE\nT",
-            "GE\r\nT",
-            "\rGET",
-            "\nGET",
-            "\r\nGET",
-            " \r\nGET",
-            "\r \nGET",
-            "\r\n GET",
-            "\r\nGET ",
-            "\nGET ",
-            "\rGET ",
-            "\r GET",
-            " \rGET",
-            "\nGET ",
-            "\n GET",
-            " \nGET",
-            "GET \n",
-            "GET \r",
-            " GET\r",
-            " GET\r",
-            "GET \n",
-            " GET\n",
-            " GET\n",
-            "GE\nT ",
-            "GE\rT ",
-            " GE\rT",
-            " GE\rT",
-            "GE\nT ",
-            " GE\nT",
-            " GE\nT",
-    })
-    void constructorMustRejectIllegalHttpMethodByDefault(final String method) {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
+    @MethodSource("validUris")
+    void setUriMustAcceptValidUris(String uri) {
+        new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/").setUri(uri);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidMethods")
+    void constructorMustRejectIllegalHttpMethodByDefault(String method) {
+        assertThrows(IllegalArgumentException.class, () -> new DefaultHttpRequest(HttpVersion.HTTP_1_0,
+                new HttpMethod("GET") {
                     @Override
                     public AsciiString asciiName() {
                         return new AsciiString(method);
                     }
-                }, "/");
-            }
-        });
+                }, "/"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "GET",
-            "POST",
-            "PUT",
-            "HEAD",
-            "DELETE",
-            "OPTIONS",
-            "CONNECT",
-            "TRACE",
-            "PATCH",
-            "QUERY"
-    })
-    void constructorMustAcceptAllHttpMethods(final String method) {
+    @MethodSource("invalidMethods")
+    void setMethodMustRejectIllegalHttpMethodByDefault(String method) {
+        DefaultHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        assertThrows(IllegalArgumentException.class, () -> request.setMethod(new HttpMethod("GET") {
+            @Override
+            public AsciiString asciiName() {
+                return new AsciiString(method);
+            }
+        }));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validMethods")
+    void constructorMustAcceptAllHttpMethods(String method) {
         new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
             @Override
             public AsciiString asciiName() {
@@ -215,6 +241,21 @@ public class DefaultHttpRequestTest {
         }, "/");
 
         new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod(method), "/");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validMethods")
+    void setMethodMustAcceptAllHttpMethods(String method) {
+        DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+
+        request.setMethod(new HttpMethod("GET") {
+            @Override
+            public AsciiString asciiName() {
+                return new AsciiString(method);
+            }
+        });
+
+        request.setMethod(new HttpMethod(method));
     }
 
     @Test
