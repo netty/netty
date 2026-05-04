@@ -22,9 +22,12 @@ import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.util.AsciiString.*;
@@ -217,6 +220,95 @@ public class DefaultHttp2HeadersTest {
         Http2Headers headers = newHeaders();
         headers.add(name, value);
         assertTrue(headers.contains(name, value));
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] name={0} value={1}")
+    @MethodSource("invalidPseudoHeaders")
+    void headerValueValidation(String name, String value) {
+        // The second `true` parameter enables header value validation:
+        Http2Headers headers = new DefaultHttp2Headers(true, true, 10);
+        Class<? extends Exception> expectedType =
+                value.isEmpty() ? Http2Exception.class : IllegalArgumentException.class;
+        assertThrows(expectedType, () -> headers.add(name, value));
+    }
+
+    static Stream<Arguments> invalidPseudoHeaders() {
+        return Stream.of(
+                // NUL character (0x00)
+                Arguments.of(":method", "GET\0"),
+                Arguments.of(":method", "\0GET"),
+                Arguments.of(":scheme", "http\0"),
+                Arguments.of(":path", "/path\0with\0nulls"),
+                Arguments.of(":authority", "example.com\0"),
+
+                // CR character (0x0D)
+                Arguments.of(":method", "GET\r"),
+                Arguments.of(":scheme", "http\r"),
+                Arguments.of(":path", "/path\r"),
+                Arguments.of(":authority", "example.com\r"),
+
+                // LF character (0x0A)
+                Arguments.of(":method", "GET\n"),
+                Arguments.of(":scheme", "http\n"),
+                Arguments.of(":path", "/path\n"),
+                Arguments.of(":authority", "example.com\n"),
+
+                // CR LF sequence
+                Arguments.of(":method", "GET\r\n"),
+                Arguments.of(":scheme", "http\r\n"),
+                Arguments.of(":path", "/path\r\n"),
+                Arguments.of(":authority", "example.com\r\n"),
+
+                // DEL character (0x7F)
+                Arguments.of(":method", "GET\u007F"),
+                Arguments.of(":scheme", "http\u007F"),
+                Arguments.of(":path", "/path\u007F"),
+                Arguments.of(":authority", "example.com\u007F"),
+
+                // Control characters 0x01-0x08
+                Arguments.of(":method", "GET\u0001"),
+                Arguments.of(":method", "GET\u0002"),
+                Arguments.of(":method", "GET\u0003"),
+                Arguments.of(":method", "GET\u0004"),
+                Arguments.of(":method", "GET\u0005"),
+                Arguments.of(":method", "GET\u0006"),
+                Arguments.of(":method", "GET\u0007"),
+                Arguments.of(":method", "GET\u0008"),
+
+                // Control characters 0x0B, 0x0C
+                Arguments.of(":method", "GET\u000B"),
+                Arguments.of(":method", "GET\u000C"),
+
+                // Control characters 0x0E-0x1F
+                Arguments.of(":method", "GET\u000E"),
+                Arguments.of(":method", "GET\u000F"),
+                Arguments.of(":method", "GET\u0010"),
+                Arguments.of(":method", "GET\u0011"),
+                Arguments.of(":method", "GET\u0012"),
+                Arguments.of(":method", "GET\u0013"),
+                Arguments.of(":method", "GET\u0014"),
+                Arguments.of(":method", "GET\u0015"),
+                Arguments.of(":method", "GET\u0016"),
+                Arguments.of(":method", "GET\u0017"),
+                Arguments.of(":method", "GET\u0018"),
+                Arguments.of(":method", "GET\u0019"),
+                Arguments.of(":method", "GET\u001A"),
+                Arguments.of(":method", "GET\u001B"),
+                Arguments.of(":method", "GET\u001C"),
+                Arguments.of(":method", "GET\u001D"),
+                Arguments.of(":method", "GET\u001E"),
+                Arguments.of(":method", "GET\u001F"),
+
+                // Multiple illegal characters
+                Arguments.of(":path", "/\0\r\n\u007F"),
+                Arguments.of(":authority", "\u0001\u001F\u007F"),
+
+                // Embedded in middle of value
+                Arguments.of(":path", "/path/with\u0000embedded/nul"),
+                Arguments.of(":authority", "exam\u000Bple.com"),
+                Arguments.of(":scheme", "ht\u001Ftp"),
+                Arguments.of(":method", "GE\u007FT")
+        );
     }
 
     private static void verifyAllPseudoHeadersPresent(Http2Headers headers) {
