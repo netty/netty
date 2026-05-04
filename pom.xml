@@ -476,7 +476,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>25.0.3</graalvm.version>
-    <brotli4j.version>1.22.0</brotli4j.version>
+    <brotli4j.version>1.23.0</brotli4j.version>
     <aalto.version>1.3.4</aalto.version>
     <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
