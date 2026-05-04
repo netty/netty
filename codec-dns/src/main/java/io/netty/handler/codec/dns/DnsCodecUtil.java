@@ -38,10 +38,16 @@ final class DnsCodecUtil {
 
         int totalLength = 0;
         final String[] labels = name.split("\\.");
-        for (String label : labels) {
+        for (int i = 0; i < labels.length; i++) {
+            String label = labels[i];
             final int labelLen = label.length();
             if (labelLen == 0) {
-                throw new IllegalArgumentException("DNS name contains empty label: " + name);
+                if (i == labels.length - 1) {
+                    // zero-length label at the end means the end of the name.
+                    break;
+                } else {
+                    throw new IllegalArgumentException("DNS name contains empty label: " + name);
+                }
             }
             if (labelLen > 63) {
                 throw new IllegalArgumentException(

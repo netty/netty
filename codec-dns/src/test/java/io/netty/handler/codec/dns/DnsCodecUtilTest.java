@@ -62,6 +62,18 @@ public class DnsCodecUtilTest {
     }
 
     @Test
+    void rejectEmptyLabelWhileEncoding() {
+        ByteBuf buf = Unpooled.buffer(256);
+        // 63 is the maximum label length
+        StringBuilder sb = new StringBuilder();
+        appendLabel(sb, 5);
+        appendLabel(sb, 0);
+        appendLabel(sb, 5);
+        assertThrows(IllegalArgumentException.class, () -> DnsCodecUtil.encodeDomainName(sb.toString(), buf));
+        buf.release();
+    }
+
+    @Test
     void rejectTooLongDomainNameWhileEncoding() {
         ByteBuf buf = Unpooled.buffer(256);
         // 255 is the maximum domain name
