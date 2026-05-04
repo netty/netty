@@ -23,6 +23,7 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.MqttProperties.IntegerProperty;
 import io.netty.util.CharsetUtil;
+import io.netty.util.Signal;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
@@ -128,8 +129,22 @@ public final class MqttDecoder extends ByteToMessageDecoder {
                     return;
                 }
                 int bytesRemainingBeforeVariableHeader = bytesRemainingInVariablePart;
-                variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
-                if (bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
+                int initialAvailableBytes = buffer.readableBytes();
+                boolean bailOut = false;
+                try {
+                    variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
+                } catch (Signal signal) {
+                    if (initialAvailableBytes < maxBytesInMessage) {
+                        // Ask for REPLAY if the buffer was less than maxBytesInMessage
+                        throw signal;
+                    } else {
+                        // We couldn't parse the complete message, and it's already too large.
+                        // Swallow the Signal (we don't need more data) and instead bail out
+                        // and throw the TooLongFrameException below.
+                        bailOut = true;
+                    }
+                }
+                if (bailOut || bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
                     buffer.skipBytes(actualReadableBytes());
                     throw new TooLongFrameException("message length exceeds " + maxBytesInMessage + ": "
                             + bytesRemainingBeforeVariableHeader);
@@ -773,6 +788,10 @@ public final class MqttDecoder extends ByteToMessageDecoder {
         final long propertiesLength = decodeVariableByteInteger(buffer);
         int totalPropertiesLength = unpackA(propertiesLength);
         int numberOfBytesConsumed = unpackB(propertiesLength);
+        if (buffer.readableBytes() < totalPropertiesLength) {
+            // Force an early REPLAY to avoid repeatedly parsing the properties.
+            buffer.readSlice(totalPropertiesLength);
+        }
 
         MqttProperties decodedProperties = new MqttProperties();
         while (numberOfBytesConsumed < totalPropertiesLength) {
