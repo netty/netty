@@ -183,15 +183,24 @@ public class DefaultHttpRequestTest {
     @ParameterizedTest
     @MethodSource("invalidUris")
     void constructorMustRejectIllegalUrisByDefault(String uri) {
-        assertThrows(IllegalArgumentException.class, () ->
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
+            }
+        });
     }
 
     @ParameterizedTest
     @MethodSource("invalidUris")
     void setUriMustRejectIllegalUrisByDefault(String uri) {
         DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        assertThrows(IllegalArgumentException.class, () -> request.setUri(uri));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                request.setUri(uri);
+            }
+        });
     }
 
     @ParameterizedTest
@@ -209,25 +218,35 @@ public class DefaultHttpRequestTest {
     @ParameterizedTest
     @MethodSource("invalidMethods")
     void constructorMustRejectIllegalHttpMethodByDefault(String method) {
-        assertThrows(IllegalArgumentException.class, () -> new DefaultHttpRequest(HttpVersion.HTTP_1_0,
-                new HttpMethod("GET") {
-                    @Override
-                    public AsciiString asciiName() {
-                        return new AsciiString(method);
-                    }
-                }, "/"));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttpRequest(HttpVersion.HTTP_1_0,
+                        new HttpMethod("GET") {
+                            @Override
+                            public AsciiString asciiName() {
+                                return new AsciiString(method);
+                            }
+                        }, "/");
+            }
+        });
     }
 
     @ParameterizedTest
     @MethodSource("invalidMethods")
     void setMethodMustRejectIllegalHttpMethodByDefault(String method) {
         DefaultHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        assertThrows(IllegalArgumentException.class, () -> request.setMethod(new HttpMethod("GET") {
+        assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
-            public AsciiString asciiName() {
-                return new AsciiString(method);
+            public void execute() throws Throwable {
+                request.setMethod(new HttpMethod("GET") {
+                    @Override
+                    public AsciiString asciiName() {
+                        return new AsciiString(method);
+                    }
+                });
             }
-        }));
+        });
     }
 
     @ParameterizedTest
