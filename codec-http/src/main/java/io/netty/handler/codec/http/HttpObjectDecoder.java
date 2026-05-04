@@ -29,6 +29,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -846,8 +847,28 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         if (HttpUtil.isTransferEncodingChunked(message)) {
             this.chunked = true;
-            if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                handleTransferEncodingChunkedWithContentLength(message);
+            if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
+                Iterator<? extends CharSequence> encodingIt =
+                        message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
+                // Validate that chunked is the last encoding.
+                // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
+                CharSequence v = null;
+                while (encodingIt.hasNext()) {
+                    v = encodingIt.next();
+                }
+                final int vLen = v.length();
+                final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
+                // We only need to validate if we have more then the chunked value length contained as otherwise
+                // we know it is only chunked.
+                if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
+                        HttpHeaderValues.CHUNKED,0, chunkedValueLength)) {
+                        throw new IllegalArgumentException(
+                                "chunked must be the last encoding present in the Transfer-Encoding header");
+
+                }
+                if (!contentLengthFields.isEmpty()) {
+                    handleTransferEncodingChunkedWithContentLength(message);
+                }
             }
             return State.READ_CHUNK_SIZE;
         }
