@@ -678,7 +678,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testChunkedNotLastInTransferEncoding() {
+    public void testChunkedNotLastInTransferEncoding() throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding: chunked, identity\r\n" +
                 "Content-Length: 1\r\n" +
