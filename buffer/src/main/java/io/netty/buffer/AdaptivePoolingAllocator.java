@@ -475,7 +475,6 @@ final class AdaptivePoolingAllocator {
             }
             chunkCache.freeChunks();
         }
-
     }
 
     private interface ChunkCache {
