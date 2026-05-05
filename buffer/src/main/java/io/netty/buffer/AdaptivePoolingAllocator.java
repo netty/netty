@@ -1491,6 +1491,12 @@ final class AdaptivePoolingAllocator {
         // Catches segments returned between exhaustion and arming.
         // SC ordering (volatile write in armNotification + volatile reads here)
         // guarantees at least one side sees the other's write — no missed 0→1 transitions.
+        //
+        // Thread-local chunks: MUST be called from the owner thread — hasRemainingCapacity()
+        // reads the non-thread-safe localFreeList. Guaranteed because this is only called from
+        // offerChunk, which runs on the magazine's owning thread.
+        // Shared chunks: inherently safe — localFreeList is null, only the thread-safe
+        // externalFreeList is checked.
         boolean disarmIfSegmentsAvailable() {
             return hasRemainingCapacity() &&
                     STATE.compareAndSet(this, AVAILABLE_ARMED, AVAILABLE);
