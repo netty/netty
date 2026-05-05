@@ -534,14 +534,8 @@ final class AdaptivePoolingAllocator {
             SizeClassedChunk sized = (SizeClassedChunk) chunk;
             sized.armNotification();
             registerToFree(sized);
-            // Volatile write in armNotification + volatile reads in hasRemainingCapacity:
-            // SC ordering guarantees at least one side (us or the returning thread) sees
-            // the other's write — no missed 0→1 transitions on the free list.
-            if (sized.hasRemainingCapacity()) {
-                if (SizeClassedChunk.STATE.compareAndSet(sized, SizeClassedChunk.AVAILABLE_ARMED,
-                        SizeClassedChunk.AVAILABLE)) {
-                    notifyReady(sized);
-                }
+            if (sized.disarmIfSegmentsAvailable()) {
+                notifyReady(sized);
             }
             return true;
         }
@@ -1476,6 +1470,14 @@ final class AdaptivePoolingAllocator {
 
         void armNotification() {
             STATE.set(this, AVAILABLE_ARMED);
+        }
+
+        // Catches segments returned between exhaustion and arming.
+        // SC ordering (volatile write in armNotification + volatile reads here)
+        // guarantees at least one side sees the other's write — no missed 0→1 transitions.
+        boolean disarmIfSegmentsAvailable() {
+            return hasRemainingCapacity() &&
+                    STATE.compareAndSet(this, AVAILABLE_ARMED, AVAILABLE);
         }
 
         @Override
