@@ -19,8 +19,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -172,6 +174,56 @@ public class HttpServerCodecTest {
         assertEquals("HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
         buf.release();
 
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testConnectionClosedAfterResponseWhenBothTransferEncodingAndContentLengthRfc9112() {
+        // We reject these requests by default.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        HttpRequest request = ch.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertThat(request.decoderResult().cause()).isInstanceOf(ContentLengthNotAllowedException.class);
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testConnectionClosedAfterResponseWhenBothTransferEncodingAndContentLengthRfc7230() {
+        // Leniency, or "RFC 7230" mode, can be configured but the connection is then closed after.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec(
+                new HttpDecoderConfig().setUseRfc9112TransferEncoding(false)));
+
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        HttpRequest request = ch.readInbound();
+        assertFalse(request.decoderResult().isFailure());
+        assertFalse(HttpUtil.isKeepAlive(request));
+        LastHttpContent content = ch.readInbound();
+        ReferenceCountUtil.release(content);
+
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpUtil.setContentLength(response, 0);
+
+        assertTrue(ch.writeOutbound(response));
+        // Channel should be closed after the response is written
+        assertFalse(ch.isOpen());
+
+        ReferenceCountUtil.release(ch.readOutbound());
         assertFalse(ch.finishAndReleaseAll());
     }
 

@@ -32,7 +32,9 @@ import static io.netty.handler.codec.http3.QpackUtil.decodePrefixedIntegerAsInt;
 import static io.netty.util.internal.ObjectUtil.checkInRange;
 
 final class QpackEncoderHandler extends ByteToMessageDecoder {
-
+    private static final QpackException INVALID_LENGTH_STRING_LITERAL =
+            QpackException.newStatic(QpackEncoderHandler.class, "decodeStringLiteral(...)",
+                    "QPACK - invalid length for STRING_LITERAL");
     private final QpackHuffmanDecoder huffmanDecoder;
     private final QpackDecoder qpackDecoder;
     private boolean discard;
@@ -239,6 +241,9 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
             throws QpackException {
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
+        }
+        if (in.readableBytes() < length) {
+            throw INVALID_LENGTH_STRING_LITERAL;
         }
         byte[] buf = new byte[length];
         in.readBytes(buf);
