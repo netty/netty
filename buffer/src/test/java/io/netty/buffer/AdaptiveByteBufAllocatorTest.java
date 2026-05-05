@@ -25,8 +25,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -265,6 +267,171 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             for (ByteBuf buf : bufs) {
                 buf.release();
             }
+        }
+    }
+
+    @Test
+    void chunksShouldBeReusableAfterQueueOverflow() {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+
+        ByteBuf probe = allocator.heapBuffer(256);
+        long chunkSize = allocator.usedHeapMemory();
+        int buffersPerChunk = (int) (chunkSize / 256);
+        probe.release();
+
+        // Create enough chunks to overflow the reuse queue.
+        // CHUNK_REUSE_QUEUE = max(2, availableProcessors() * 2).
+        int queueCapacity = Math.max(2, NettyRuntime.availableProcessors() * 2);
+        int totalChunks = queueCapacity + 3;
+        int totalBuffers = totalChunks * buffersPerChunk;
+
+        // Round 1: allocate all buffers (creates totalChunks exhausted chunks)
+        List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
+        for (int i = 0; i < totalBuffers; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        // Release all — segments return to chunks.
+        // With the current code: overflowed chunks get markToDeallocate'd and deallocate here.
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+        bufs.clear();
+        long baselineAfterRound1 = allocator.usedHeapMemory();
+
+        // Round 2: allocate the same amount
+        for (int i = 0; i < totalBuffers; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        long round2Memory = allocator.usedHeapMemory();
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+
+        // If all chunks from round 1 were reusable, round 2 should not need more memory.
+        // With the current code, chunks that overflowed the bounded queue were permanently lost,
+        // so round 2 must allocate new chunks to replace them → round2Memory > baseline.
+        assertTrue(round2Memory <= baselineAfterRound1 + chunkSize,
+                "Round 2 should reuse chunks from round 1 without significant new allocation. " +
+                "Baseline after round 1: " + baselineAfterRound1 + ", Round 2 peak: " + round2Memory +
+                ", chunkSize: " + chunkSize);
+    }
+
+    @Test
+    void chunkMemoryShouldStabilizeAcrossAllocationCycles() {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+
+        ByteBuf probe = allocator.heapBuffer(256);
+        long chunkSize = allocator.usedHeapMemory();
+        int buffersPerChunk = (int) (chunkSize / 256);
+        probe.release();
+
+        int queueCapacity = Math.max(2, NettyRuntime.availableProcessors() * 2);
+        int buffersPerRound = (queueCapacity + 2) * buffersPerChunk;
+
+        long[] memoryPerRound = new long[6];
+        List<ByteBuf> bufs = new ArrayList<>(buffersPerRound);
+
+        for (int round = 0; round < 6; round++) {
+            for (int i = 0; i < buffersPerRound; i++) {
+                bufs.add(allocator.heapBuffer(256));
+            }
+            memoryPerRound[round] = allocator.usedHeapMemory();
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            bufs.clear();
+        }
+
+        // Memory at peak should be the same across all rounds if chunks are properly reused.
+        // Allow 1 chunk tolerance for the magazine's current/nextInLine slots.
+        long maxDelta = chunkSize;
+        assertEquals(memoryPerRound[1], memoryPerRound[5], maxDelta,
+                "Memory should stabilize by round 2, not grow. Per-round peaks: " +
+                Arrays.toString(memoryPerRound));
+    }
+
+    @Test
+    void benchmarkPatternChunkReuse() throws Exception {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+
+        int[] sizeFreq = {
+            256, 21272,
+            1024, 29289,
+            636, 5443,
+            15, 10344,
+            16639, 9269,
+            4574, 165,
+            8670, 195,
+            2048, 2636,
+            4096, 26,
+        };
+
+        ArrayList<Integer> sizeList = new ArrayList<>();
+        for (int i = 0; i < sizeFreq.length; i += 2) {
+            int size = sizeFreq[i];
+            int freq = Math.min(sizeFreq[i + 1], 2000);
+            for (int j = 0; j < freq; j++) {
+                sizeList.add(size);
+            }
+        }
+        int[] allSizes = new int[sizeList.size()];
+        for (int i = 0; i < allSizes.length; i++) {
+            allSizes[i] = sizeList.get(i);
+        }
+        SplittableRandom rng = new SplittableRandom(42);
+        for (int i = allSizes.length - 1; i > 0; i--) {
+            int j = rng.nextInt(i + 1);
+            int tmp = allSizes[i];
+            allSizes[i] = allSizes[j];
+            allSizes[j] = tmp;
+        }
+
+        // Run on a FastThreadLocalThread with EventExecutor mapped (like the benchmark's HarnessExecutor)
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        io.netty.util.concurrent.EventExecutor dummyExecutor =
+                io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
+        Runnable task = () -> {
+            try {
+                int maxLiveBuffers = 8192;
+                ByteBuf[] buffers = new ByteBuf[maxLiveBuffers];
+                SplittableRandom r = new SplittableRandom(99);
+
+                for (int i = 0; i < maxLiveBuffers; i++) {
+                    buffers[i] = allocator.heapBuffer(allSizes[i % allSizes.length]);
+                }
+                long memoryAfterFill = allocator.usedHeapMemory();
+
+                int ops = maxLiveBuffers * 4;
+                long memoryMid = 0;
+                for (int i = 0; i < ops; i++) {
+                    int slot = r.nextInt(maxLiveBuffers);
+                    buffers[slot].release();
+                    buffers[slot] = allocator.heapBuffer(
+                            allSizes[(maxLiveBuffers + i) % allSizes.length]);
+                    if (i == ops / 2) {
+                        memoryMid = allocator.usedHeapMemory();
+                    }
+                }
+                long memoryEnd = allocator.usedHeapMemory();
+
+                for (ByteBuf buf : buffers) {
+                    buf.release();
+                }
+
+                long maxGrowth = memoryAfterFill / 10;
+                assertTrue(memoryEnd - memoryAfterFill <= maxGrowth,
+                        "Memory should stabilize. After fill: " + memoryAfterFill / 1024 +
+                        " KiB, at end: " + memoryEnd / 1024 + " KiB");
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        };
+        Runnable mapped = io.netty.util.internal.ThreadExecutorMap.apply(task, dummyExecutor);
+        Thread ftlt = new io.netty.util.concurrent.FastThreadLocalThread(mapped);
+        ftlt.start();
+        ftlt.join();
+        if (error.get() != null) {
+            fail("Test failed on FastThreadLocalThread", error.get());
         }
     }
 
