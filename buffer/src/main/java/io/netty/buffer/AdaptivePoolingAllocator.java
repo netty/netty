@@ -577,7 +577,7 @@ final class AdaptivePoolingAllocator {
 
         private SizeClassedChunk drainReadyThreadLocal() {
             SizeClassedChunk chunk = localReadyHead;
-            if (chunk == null) {
+            if (chunk == null && readyHead != null) {
                 localReadyHead = READY_HEAD.getAndSet(this, null);
                 chunk = localReadyHead;
             }
@@ -934,7 +934,10 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocateWithoutLock(int size, int maxCapacity, AdaptiveByteBuf buf) {
-            Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
+            Chunk curr = nextInLine;
+            if (curr != null) {
+                curr = NEXT_IN_LINE.getAndSet(this, null);
+            }
             if (curr == MAGAZINE_FREED) {
                 // Allocation raced with a stripe-resize that freed this magazine.
                 restoreMagazineFreed();
@@ -991,7 +994,10 @@ final class AdaptivePoolingAllocator {
 
         private boolean allocateSlowPath(int size, int maxCapacity, AdaptiveByteBuf buf, int startingCapacity) {
             assert current == null;
-            Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
+            Chunk curr = nextInLine;
+            if (curr != null) {
+                curr = NEXT_IN_LINE.getAndSet(this, null);
+            }
             if (curr != null) {
                 if (curr == MAGAZINE_FREED) {
                     restoreMagazineFreed();
