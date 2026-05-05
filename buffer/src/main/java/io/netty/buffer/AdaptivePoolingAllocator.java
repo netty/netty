@@ -77,7 +77,7 @@ import java.util.function.IntConsumer;
  * This allows the allocator to quickly respond to changes in the application workload,
  * without suffering undue overhead from maintaining its statistics.
  * <p>
- * Since magazines are "relatively thread-local", the allocator has a central chunk cache that allow excess chunks
+ * Since magazines are "relatively thread-local", the allocator has a central chunk cache that allows excess chunks
  * from any magazine to be shared with other magazines.
  */
 @UnstableApi
@@ -477,11 +477,11 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private interface ChunkCache {
-        Chunk pollChunk(int size);
-        boolean offerChunk(Chunk chunk);
-        void freeChunks();
-        default void notifyReady(Chunk chunk) { }
+    private abstract static class ChunkCache {
+        abstract Chunk pollChunk(int size);
+        abstract boolean offerChunk(Chunk chunk);
+        abstract void freeChunks();
+        void notifyReady(Chunk chunk) { }
     }
 
     /**
@@ -498,7 +498,7 @@ final class AdaptivePoolingAllocator {
      * using a sentinel terminal node. Tracks all chunks for ownerThread/finalize cleanup.
      * Push-once per chunk lifetime, guarded by the {@link SizeClassedChunk#nextFree} link pointer.
      */
-    private static final class ParkingLotChunkCache implements ChunkCache {
+    private static final class ParkingLotChunkCache extends ChunkCache {
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ParkingLotChunkCache, SizeClassedChunk> READY_HEAD =
                 AtomicReferenceFieldUpdater.newUpdater(
@@ -539,6 +539,9 @@ final class AdaptivePoolingAllocator {
             return true;
         }
 
+        // Push-once: the intrusive nextFree link pointer is the insertion guard.
+        // No concurrent registerToFree on the same chunk — magazine ownership
+        // guarantees single-writer per chunk per lifecycle.
         private void registerToFree(SizeClassedChunk chunk) {
             if (chunk.nextFree != null) {
                 return;
@@ -563,6 +566,11 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        // Called exactly once from the dying owner thread (FastThreadLocal removal).
+        // No concurrent registerToFree — only the owner thread calls offerChunk.
+        // The first-segment-return vs markToDeallocate race is safe: markToDeallocate
+        // uses CAS (handles both AVAILABLE and AVAILABLE_ARMED), and notification CAS
+        // on the same state variable ensures only one wins.
         private void freeChunksThreadLocal() {
             SizeClassedChunk chunk = cleanupHead;
             while (chunk != SizeClassedChunk.CLEANUP_SENTINEL) {
@@ -588,6 +596,9 @@ final class AdaptivePoolingAllocator {
             return chunk;
         }
 
+        // freeChunksShared is called exactly once, from finalize(). The allocator must be
+        // unreachable for finalize to run, so no concurrent offerChunk/registerToFree calls.
+        // No null guard needed on the getAndSet result.
         private void freeChunksShared() {
             SizeClassedChunk chunk = CLEANUP_HEAD.getAndSet(this, null);
             while (chunk != SizeClassedChunk.CLEANUP_SENTINEL) {
@@ -618,7 +629,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static final class ConcurrentSkipListChunkCache implements ChunkCache {
+    private static final class ConcurrentSkipListChunkCache extends ChunkCache {
         private final ConcurrentSkipListIntObjMultimap<Chunk> chunks;
 
         private ConcurrentSkipListChunkCache() {
@@ -1744,6 +1755,7 @@ final class AdaptivePoolingAllocator {
         private AbstractByteBuf rootParent;
         Chunk chunk;
         private int length;
+
         private int maxFastCapacity;
         private ByteBuffer tmpNioBuf;
         private boolean hasArray;
