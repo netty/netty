@@ -114,6 +114,14 @@ public final class HttpProxyHandler extends ProxyHandler {
                             String username,
                             String password,
                             HttpHeaders headers,
+                            boolean ignoreDefaultPortsInConnectHostHeader) {
+        this(proxyAddress, username, password, headers, ignoreDefaultPortsInConnectHostHeader, true);
+    }
+
+    public HttpProxyHandler(SocketAddress proxyAddress,
+                            String username,
+                            String password,
+                            HttpHeaders headers,
                             boolean ignoreDefaultPortsInConnectHostHeader,
                             boolean validateInitialHeaders) {
         super(proxyAddress);
