@@ -435,6 +435,61 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
+    @Test
+    void chunkDeallocatesWhenNeverOfferedToCache() throws Exception {
+        // A chunk that is never exhausted (never offered to the cache, never registered
+        // in the cleanup list) must still deallocate correctly when the magazine is freed
+        // (thread death) and all its segments are returned by external threads.
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        long chunkSize = 128 * 1024; // MIN_CHUNK_SIZE
+
+        // Allocate a few buffers — NOT enough to exhaust the chunk.
+        // The chunk stays as 'current' in the magazine and is never offered to the cache.
+        int buffersPerChunk = (int) (chunkSize / 256);
+        int buffersToAllocate = Math.max(2, buffersPerChunk / 4);
+        List<ByteBuf> bufs = new ArrayList<>();
+
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        io.netty.util.concurrent.EventExecutor executor =
+                io.netty.util.concurrent.ImmediateEventExecutor.INSTANCE;
+        Runnable task = () -> {
+            try {
+                for (int i = 0; i < buffersToAllocate; i++) {
+                    bufs.add(allocator.heapBuffer(256));
+                }
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        };
+        // Thread-local path: FastThreadLocalThread + EventExecutor mapping.
+        // When the thread dies, the magazine is freed and markToDeallocate is
+        // called directly on the chunk (never registered in cleanup list).
+        Runnable mapped = io.netty.util.internal.ThreadExecutorMap.apply(task, executor);
+        Thread ftlt = new io.netty.util.concurrent.FastThreadLocalThread(mapped);
+        ftlt.start();
+        ftlt.join();
+        if (error.get() != null) {
+            fail("Allocation failed", error.get());
+        }
+
+        assertEquals(buffersToAllocate, bufs.size());
+
+        // Memory is still held — chunk is markToDeallocate'd but segments are outstanding.
+        long memoryBeforeRelease = allocator.usedHeapMemory();
+        assertTrue(memoryBeforeRelease >= chunkSize,
+                "Chunk should still be tracked: " + memoryBeforeRelease);
+
+        // Release all buffers from the main thread (external returns).
+        // Each releaseSegment goes through releaseSegmentExternal → deallocateIfNeeded.
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+
+        // After all segments returned, the chunk should be fully deallocated.
+        assertEquals(0, allocator.usedHeapMemory(),
+                "Chunk should be deallocated after all segments returned");
+    }
+
     private static void shuffle(SplittableRandom rng, Object array) {
         int len = Array.getLength(array);
         for (int i = 0; i < len; i++) {
