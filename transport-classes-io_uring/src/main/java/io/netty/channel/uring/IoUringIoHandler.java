@@ -282,7 +282,7 @@ public final class IoUringIoHandler implements IoHandler {
 
             if (logger.isTraceEnabled()) {
                 logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(op), data, res);
+                        ringBuffer.fd(), Native.opToStr(op), id, res);
             }
             if (id == EVENTFD_ID) {
                 handleEventFdRead();
