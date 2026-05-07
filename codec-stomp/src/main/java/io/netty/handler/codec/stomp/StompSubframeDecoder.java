@@ -99,7 +99,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         super(State.SKIP_CONTROL_CHARACTERS);
         checkPositive(maxLineLength, "maxLineLength");
         checkPositive(maxChunkSize, "maxChunkSize");
-        checkPositive(maxChunkSize, "maxNumHeaders");
+        checkPositive(maxNumHeaders, "maxNumHeaders");
 
         this.maxChunkSize = maxChunkSize;
         commandParser = new Utf8LineParser(new AppendableCharSequence(16), maxLineLength);
