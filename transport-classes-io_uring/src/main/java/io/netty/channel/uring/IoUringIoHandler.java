@@ -294,8 +294,8 @@ public final class IoUringIoHandler implements IoHandler {
                     byte op = UserData.decodeOp(udata);
                     long userData = UserData.decodeData(udata);
                     if (logger.isTraceEnabled()) {
-                        logger.trace("completed(ring {}): {}(userData={}, res={})",
-                                ringBuffer.fd(), Native.opToStr(op), userData, res);
+                        logger.trace("completed(ring {}): {}(id={}, res={})",
+                                ringBuffer.fd(), Native.opToStr(op), id, res);
                     }
                     registration.handle(res, flags, op, userData, extraCqeData);
                     return;
@@ -319,8 +319,8 @@ public final class IoUringIoHandler implements IoHandler {
                 }
 
                 if (logger.isTraceEnabled()) {
-                    logger.trace("completed(ring {}): {}(userData={}, res={})",
-                            ringBuffer.fd(), Native.opToStr(op), userData, res);
+                    logger.trace("completed(ring {}): {}(id={}, res={})",
+                            ringBuffer.fd(), Native.opToStr(op), id, res);
                 }
                 return;
             }
