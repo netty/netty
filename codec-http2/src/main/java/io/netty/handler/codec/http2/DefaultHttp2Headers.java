@@ -54,6 +54,15 @@ public class DefaultHttp2Headers
                 return;
             }
 
+            // RFC 9113 Section 8.2.1: HTTP/2 field names are valid HTTP/1.1 tokens (RFC 7230 Section 3.2.6)
+            // with the additional constraint that they MUST be lowercase. Reject anything outside the token
+            // grammar (non-ASCII, control characters, SP/HTAB, separators) before the lowercase check.
+            int tokenIndex = HttpHeaderValidationUtil.validateToken(name);
+            if (tokenIndex != -1) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                        "invalid header name [%s]", name));
+            }
+
             if (name instanceof AsciiString) {
                 final int index;
                 try {
