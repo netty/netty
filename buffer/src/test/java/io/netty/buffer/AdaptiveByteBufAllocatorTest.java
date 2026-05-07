@@ -268,6 +268,60 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void purgeScanShouldEvictIdleChunks(boolean threadLocal) throws Exception {
+        // Thread-local magazines require FastThreadLocalThread
+        // (allocate() checks currentThreadWillCleanupFastThreadLocals)
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
+        long purgePolls = threadLocal ?
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL :
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
+        Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
+        if (threadLocal) {
+            io.netty.util.concurrent.FastThreadLocalThread.runWithFastThreadLocal(test);
+        } else {
+            test.run();
+        }
+    }
+
+    private static void assertPurgeScanEvictsIdleChunks(AdaptiveByteBufAllocator allocator, long purgePolls) {
+        ByteBuf probe = allocator.heapBuffer(256);
+        long chunkSize = allocator.usedHeapMemory();
+        int buffersPerChunk = (int) (chunkSize / 256);
+        probe.release();
+
+        int totalChunks = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE + 3;
+        int totalBuffers = totalChunks * buffersPerChunk;
+        java.util.List<ByteBuf> bufs = new java.util.ArrayList<>(totalBuffers);
+        for (int i = 0; i < totalBuffers; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+        bufs.clear();
+        long memoryAfterRelease = allocator.usedHeapMemory();
+
+        int threshold = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD;
+        int pollsNeeded = (int) ((threshold + 2) * purgePolls);
+        for (int poll = 0; poll < pollsNeeded; poll++) {
+            for (int i = 0; i < buffersPerChunk; i++) {
+                bufs.add(allocator.heapBuffer(256));
+            }
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            bufs.clear();
+        }
+
+        long memoryAfterPurge = allocator.usedHeapMemory();
+        assertTrue(memoryAfterPurge < memoryAfterRelease,
+                "Memory should decrease after purge scans evict idle chunks. " +
+                "Before purge: " + memoryAfterRelease + ", after purge: " + memoryAfterPurge);
+    }
+
     private static void shuffle(SplittableRandom rng, Object array) {
         int len = Array.getLength(array);
         for (int i = 0; i < len; i++) {
