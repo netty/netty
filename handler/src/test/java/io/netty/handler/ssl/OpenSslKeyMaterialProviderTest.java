@@ -33,6 +33,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -72,7 +73,7 @@ public class OpenSslKeyMaterialProviderTest {
     }
 
     protected void assertRelease(OpenSslKeyMaterial material) {
-        assertTrue(material.release());
+        assertFalse(material.release());
     }
 
     @Test
@@ -89,6 +90,8 @@ public class OpenSslKeyMaterialProviderTest {
         assertRelease(material);
 
         provider.destroy();
+
+        assertEquals(0, material.refCnt());
     }
 
     /**
@@ -173,13 +176,14 @@ public class OpenSslKeyMaterialProviderTest {
             OpenSslKeyMaterial material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
             assertNotNull(material);
             assertEquals(2, sslPrivateKey.refCnt());
-            assertEquals(1, material.refCnt());
-            assertTrue(material.release());
-            assertEquals(1, sslPrivateKey.refCnt());
+            assertEquals(2, material.refCnt());
+            assertFalse(material.release());
+            assertEquals(2, sslPrivateKey.refCnt());
             // Can get material multiple times from the same key
             material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
             assertNotNull(material);
             assertEquals(2, sslPrivateKey.refCnt());
+            provider.destroy(); // Destroy single-entry cache.
             assertTrue(material.release());
             assertTrue(sslPrivateKey.release());
             assertEquals(0, sslPrivateKey.refCnt());
