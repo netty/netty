@@ -261,9 +261,21 @@ public class EpollIoHandler implements IoHandler {
                         case Cancelled:
                             return -1;
                         case Pending:
+                            if (epollIoOps.value == EpollIoOps.NONE.value) {
+                                // 0 is a special value that basically means we should remove the registration.
+                                // As we did not add the fd yet we should just return.
+                                return 0;
+                            }
                             Native.epollCtlAdd(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
                             state = RegistrationState.Added;
+                            return epollIoOps.value;
                         case Added:
+                            if (epollIoOps.value == EpollIoOps.NONE.value) {
+                                // 0 means there is nothing to handle anymore, unregister the fd as otherwise
+                                // we might get notified forever because of EPOLLHUP / EPOLLERR.
+                                Native.epollCtlDel(epollFd.intValue(), handle.fd().intValue());
+                                return 0;
+                            }
                             Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
                             return epollIoOps.value;
                         default:

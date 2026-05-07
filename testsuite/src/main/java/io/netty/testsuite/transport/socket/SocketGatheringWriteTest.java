@@ -23,7 +23,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -33,10 +35,12 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.compositeBuffer;
@@ -44,6 +48,7 @@ import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketGatheringWriteTest extends AbstractSocketTest {
@@ -204,9 +209,103 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         sh.received.release();
     }
 
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testGatheringWriteSameEventLoop(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testGatheringWriteSameEventLoop(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    private void testGatheringWriteSameEventLoop(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        // Ensure all clients are on the same EventLoop.
+        try {
+            cb = cb.clone(cb.group().next());
+        } catch (UnsupportedOperationException e) {
+            throw new TestAbortedException("Not supported by this EventLoopGroup: " + cb.group(), e);
+        }
+
+        AtomicInteger sHandlersIdx = new AtomicInteger(0);
+        AtomicInteger cHandlersIdx = new AtomicInteger(0);
+        final TestServerHandler[] sHandlers = new TestServerHandler[] {
+                new TestServerHandler(true, ImmediateEventExecutor.INSTANCE.newPromise(), data.length),
+                new TestServerHandler(true, ImmediateEventExecutor.INSTANCE.newPromise(), data.length)
+        };
+        final TestHandler[] cHandlers = new TestHandler[] {
+                new TestHandler(true),
+                new TestHandler(true)
+        };
+
+        cb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(cHandlers[cHandlersIdx.getAndIncrement()]);
+            }
+        });
+
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(sHandlers[sHandlersIdx.getAndIncrement()]);
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc1 = cb.connect(sc.localAddress()).sync().channel();
+        Channel cc2 = cb.connect(sc.localAddress()).sync().channel();
+
+        assertSame(cc1.eventLoop(), cc2.eventLoop());
+        ChannelPromise p1 = cc1.newPromise();
+        ChannelPromise p2 = cc2.newPromise();
+        cc1.eventLoop().execute(() -> {
+            for (int i = 0; i < data.length;) {
+                int length = Math.min(random.nextInt(1024 * 8), data.length - i);
+                cc1.write(randomBufferType(cc1.alloc(), data, i, length));
+                cc2.write(randomBufferType(cc2.alloc(), data, i, length));
+                i += length;
+            }
+            cc1.writeAndFlush(Unpooled.EMPTY_BUFFER, p1);
+            cc2.writeAndFlush(Unpooled.EMPTY_BUFFER, p2);
+        });
+
+        assertTrue(p1.await(60000));
+        p1.sync();
+        assertTrue(p2.await(60000));
+        p2.sync();
+
+        for (int i = 0; i < sHandlers.length; i++) {
+            TestServerHandler sh = sHandlers[i];
+            TestHandler ch = cHandlers[i];
+            sh.doneReadingPromise.sync();
+            sh.channel.close().sync();
+            ch.channel.close().sync();
+
+            if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
+                throw sh.exception.get();
+            }
+            if (sh.exception.get() != null) {
+                throw sh.exception.get();
+            }
+            if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
+                throw ch.exception.get();
+            }
+            if (ch.exception.get() != null) {
+                throw ch.exception.get();
+            }
+            ByteBuf expected = wrappedBuffer(data);
+            assertEquals(expected, sh.received);
+            expected.release();
+            sh.received.release();
+        }
+        sc.close().sync();
+    }
+
     private static final class TestServerHandler extends TestHandler {
         private final int expectedBytes;
-        private final Promise<Void> doneReadingPromise;
+        final Promise<Void> doneReadingPromise;
         final ByteBuf received = Unpooled.buffer();
 
         TestServerHandler(boolean autoRead, Promise<Void> doneReadingPromise, int expectedBytes) {

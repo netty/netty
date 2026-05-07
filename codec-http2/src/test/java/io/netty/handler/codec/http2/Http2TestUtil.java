@@ -58,6 +58,19 @@ import static org.mockito.Mockito.when;
  */
 public final class Http2TestUtil {
     /**
+     * A fake exception that can be used in tests to simulate errors. The stack trace is not filled in to avoid
+     * unnecessary overhead.
+     */
+    static final RuntimeException FAKE_EXCEPTION = new RuntimeException("Fake exception") {
+        private static final long serialVersionUID = -8316972447187527869L;
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+    };
+
+    /**
      * Interface that allows for running a operation that throws a {@link Http2Exception}.
      */
     interface Http2Runnable {

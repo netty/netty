@@ -91,7 +91,7 @@ public class HttpInvalidMessageTest {
     @Test
     public void testBadChunk() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0\r\n", CharsetUtil.UTF_8));
+        ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("BAD_LENGTH\r\n", CharsetUtil.UTF_8));
 

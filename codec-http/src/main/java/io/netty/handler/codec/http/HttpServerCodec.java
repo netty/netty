@@ -16,7 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
 import java.util.ArrayDeque;
@@ -69,6 +71,11 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     private long methodQueue;
     private int methodQueueSize;
     private Queue<Byte> methodOverflowQueue;
+
+    /**
+     * When set, the connection will be closed after the next response is written.
+     */
+    private boolean mustCloseAfterResponse;
 
     /**
      * Creates a new instance with the default decoder options
@@ -239,11 +246,26 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
                 }
             }
         }
+
+        @Override
+        protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
+            super.handleTransferEncodingChunkedWithContentLength(message);
+            mustCloseAfterResponse = true;
+        }
     }
 
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
         private byte methodFlag;
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            if (mustCloseAfterResponse && msg instanceof LastHttpContent) {
+                mustCloseAfterResponse = false;
+                promise = promise.unvoid().addListener(ChannelFutureListener.CLOSE);
+            }
+            super.write(ctx, msg, promise);
+        }
 
         @Override
         protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {

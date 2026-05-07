@@ -709,7 +709,6 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private static final class ListenerExceptionThrower implements Answer<Void> {
-        private static final RuntimeException FAKE_EXCEPTION = new RuntimeException("Fake Exception");
         private final boolean[] array;
         private final int index;
 
@@ -721,7 +720,7 @@ public class DefaultHttp2ConnectionTest {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
             array[index] = true;
-            throw FAKE_EXCEPTION;
+            throw Http2TestUtil.FAKE_EXCEPTION;
         }
     }
 

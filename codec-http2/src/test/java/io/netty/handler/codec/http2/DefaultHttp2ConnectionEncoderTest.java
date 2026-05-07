@@ -352,7 +352,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void writeHeadersUsingVoidPromise() throws Exception {
-        final Throwable cause = new RuntimeException("fake exception");
+        final Throwable cause = Http2TestUtil.FAKE_EXCEPTION;
         when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), any(Http2Headers.class),
                                  anyInt(), anyBoolean(), any(ChannelPromise.class)))
                 .then(new Answer<ChannelFuture>() {
