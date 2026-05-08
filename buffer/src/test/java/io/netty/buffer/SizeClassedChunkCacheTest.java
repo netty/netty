@@ -50,12 +50,12 @@ public class SizeClassedChunkCacheTest {
         return chunk;
     }
 
-    private static SizeClassedChunk idleChunk() {
-        // remaining == capacity → purge ages it. remaining == 0 → never selected.
+    private static SizeClassedChunk fullChunk() {
+        // remaining == capacity → purge ages it. Has capacity (all segments available).
         SizeClassedChunk chunk = mock(SizeClassedChunk.class);
-        when(chunk.remainingCapacity()).thenReturn(0);
-        when(chunk.capacity()).thenReturn(0);
-        when(chunk.hasRemainingCapacity()).thenReturn(false);
+        when(chunk.remainingCapacity()).thenReturn(4096);
+        when(chunk.capacity()).thenReturn(4096);
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
         return chunk;
     }
 
@@ -95,23 +95,31 @@ public class SizeClassedChunkCacheTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void idleChunkAgesEachPurgeAndIsEvictedPastThreshold(boolean threadLocal) {
+    void fullChunkAgesEachPurgeAndIsEvictedPastThreshold(boolean threadLocal) {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
 
         // Pad above retention floor so eviction is allowed
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
-        SizeClassedChunk idle = idleChunk();
+
+        // Working-set chunk absorbs scan picks — non-full, epoch=0 at head after partition
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+
+        SizeClassedChunk idle = fullChunk();
         cache.offerChunk(idle);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD; i++) {
-            cache.forcePurge();
+            SizeClassedChunk polled = cache.forcePurge();
+            assertSame(workingSet, polled);
+            cache.offerChunk(workingSet);
             assertEquals(i + 1, idle.purgeEpoch);
             verify(idle, never()).markToDeallocate();
         }
 
-        cache.forcePurge();
+        SizeClassedChunk polled = cache.forcePurge();
+        assertSame(workingSet, polled);
         verify(idle).markToDeallocate();
     }
 
@@ -260,44 +268,44 @@ public class SizeClassedChunkCacheTest {
 
         int floor = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
         int excess = 10;
-        int total = floor + excess;
 
-        // All chunks are idle — after purge, only the floor should survive
-        SizeClassedChunk[] allChunks = new SizeClassedChunk[total];
-        for (int i = 0; i < total; i++) {
-            allChunks[i] = idleChunk();
-            cache.offerChunk(allChunks[i]);
+        // Working-set chunk absorbs scan picks
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+
+        // Retention floor padding
+        for (int i = 0; i < floor - 1; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
         }
 
-        // Run enough purge cycles to evict all excess
+        // Excess full chunks — should age and be evicted
+        SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
+        for (int i = 0; i < excess; i++) {
+            excessChunks[i] = fullChunk();
+            cache.offerChunk(excessChunks[i]);
+        }
+
         int purgesNeeded = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1;
         for (int i = 0; i < purgesNeeded; i++) {
-            cache.forcePurge();
+            SizeClassedChunk polled = cache.forcePurge();
+            assertSame(workingSet, polled);
+            cache.offerChunk(workingSet);
         }
 
-        // Exactly `excess` chunks evicted, exactly `floor` retained
-        int evicted = 0;
-        int retained = 0;
-        for (SizeClassedChunk chunk : allChunks) {
-            try {
-                verify(chunk, atLeastOnce()).markToDeallocate();
-                evicted++;
-            } catch (AssertionError e) {
-                retained++;
-            }
+        for (SizeClassedChunk chunk : excessChunks) {
+            verify(chunk, atLeastOnce()).markToDeallocate();
         }
-        assertEquals(excess, evicted, "excess chunks should be evicted");
-        assertEquals(floor, retained, "retention floor chunks should survive");
+        verify(workingSet, never()).markToDeallocate();
     }
 
-    // --- epoch aging: polled chunks carry their epoch (no reset on poll) ---
-    // Thread-local: partition sub-ordering puts epoch=0 at head, epoch>0 behind.
-    //   Epoch reset on poll would defeat aging when polls > chunks (e.g., 2-core: 16 polls, 7 chunks).
-    // Shared: LRU preference in scanForCapacity achieves the same without epoch reset.
+    // --- epoch aging with working set ---
+    // Scan resets epoch on pick (the chunk is being used). Partition sub-ordering puts
+    // epoch=0 (recently used) at head, epoch>0 (idle) behind. Scan prefers head, so
+    // idle chunks age undisturbed behind the working set.
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void excessChunksAgeAndEvictDespiteBeingPolled(boolean threadLocal) {
+    void excessFullChunksAgeWhileWorkingSetIsPreferred(boolean threadLocal) {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
 
         // Pad to retention floor
@@ -305,23 +313,63 @@ public class SizeClassedChunkCacheTest {
             cache.offerChunk(chunkWithoutCapacity());
         }
 
-        // Add excess idle chunks above the floor
+        // Working-set chunk: non-full (remaining != capacity), has capacity.
+        // Purge resets its epoch to 0. Partition puts it at head. Scan picks it.
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+
+        // Excess full chunks: remaining == capacity, has capacity.
+        // Purge ages them. Partition puts them behind working-set (epoch>0).
+        // Scan doesn't reach them — working-set absorbs the pick.
         int excess = 3;
         SizeClassedChunk[] idleChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
-            idleChunks[i] = idleChunk();
+            idleChunks[i] = fullChunk();
             cache.offerChunk(idleChunks[i]);
         }
 
-        // Run enough purge cycles for excess to age past threshold and be evicted
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1; i++) {
-            cache.forcePurge();
+            SizeClassedChunk polled = cache.forcePurge();
+            assertSame(workingSet, polled, "cycle " + i + ": scan should prefer working-set chunk");
+            cache.offerChunk(workingSet);
         }
 
-        // All excess should be evicted — cache settles at the retention floor
         for (SizeClassedChunk idle : idleChunks) {
             verify(idle, atLeastOnce()).markToDeallocate();
         }
+        verify(workingSet, never()).markToDeallocate();
+    }
+
+    // --- full-but-active chunk must not be prematurely evicted ---
+    // A chunk that is polled every purge cycle but whose buffers are short-lived
+    // (all segments return before next purge) looks "full" (remaining == capacity)
+    // at purge time. Purge must not treat it as idle.
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void activeChunkWithShortLivedBuffersShouldNotBeEvicted(boolean threadLocal) {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+
+        // Pad above retention floor so eviction is allowed
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
+
+        // Full chunk: remaining==capacity>0, has capacity.
+        // Simulates short-lived buffers: chunk polled, used, all segments return before next purge.
+        SizeClassedChunk active = fullChunk();
+        cache.offerChunk(active);
+
+        int cycles = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 2;
+        for (int cycle = 0; cycle < cycles; cycle++) {
+            SizeClassedChunk polled = cache.forcePurge();
+            assertSame(active, polled, "cycle " + cycle + ": chunk should be polled, not evicted");
+            assertEquals(0, polled.purgeEpoch,
+                    "cycle " + cycle + ": actively-used chunk epoch should be reset");
+            cache.offerChunk(active);
+        }
+
+        verify(active, never()).markToDeallocate();
     }
 
     // --- shared cache: concurrent scanForCapacity must not livelock ---

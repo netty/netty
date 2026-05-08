@@ -624,8 +624,8 @@ final class AdaptivePoolingAllocator {
 
         @Override
         SizeClassedChunk forcePurge() {
-            runPurgeScan();
-            return scanForCapacity();
+            purgeBudget = 1;
+            return pollChunk(0);
         }
 
         @Override
@@ -640,6 +640,7 @@ final class AdaptivePoolingAllocator {
             if (notEmptyCount > 0) {
                 SizeClassedChunk chunk = chunks[head];
                 assert chunk.hasRemainingCapacity();
+                chunk.purgeEpoch = 0;
                 chunks[head] = null;
                 head = (head + 1) & (chunks.length - 1);
                 count--;
@@ -839,15 +840,15 @@ final class AdaptivePoolingAllocator {
 
         @Override
         SizeClassedChunk forcePurge() {
-            purgeBudget.set(CHUNK_PURGE_POLLS_SHARED);
-            return runPurgeScan();
+            purgeBudget.set(1);
+            return pollChunk(0);
         }
 
         @Override
         public SizeClassedChunk pollChunk(int size) {
             long budget = purgeBudget.decrementAndGet();
             if (budget == 0) {
-                return runPurgeScan();
+                runPurgeScan();
             }
             return scanForCapacity();
         }
@@ -911,11 +912,10 @@ final class AdaptivePoolingAllocator {
             return null;
         }
 
-        private SizeClassedChunk runPurgeScan() {
+        private void runPurgeScan() {
             long generation = ++purgeGeneration;
-            SizeClassedChunk selected = null;
             int noCapCount = 0;
-            int retained = 0;
+            int survivors = queue.size();
             SizeClassedChunk[] buf = noCapacityBuffer;
             SizeClassedChunk chunk;
             while ((chunk = queue.poll()) != null) {
@@ -928,23 +928,18 @@ final class AdaptivePoolingAllocator {
                 int remaining = chunk.remainingCapacity();
                 if (remaining == chunk.capacity()) {
                     chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && retained >= CHUNK_REUSE_QUEUE) {
+                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
                         chunk.markToDeallocate();
+                        survivors--;
                         continue;
                     }
                 } else {
                     chunk.purgeEpoch = 0;
                 }
-                retained++;
                 if (remaining > 0) {
-                    if (selected == null) {
-                        selected = chunk;
-                        selected.purgeEpoch = 0;
-                    } else {
-                        chunk.lastPurgeGeneration = generation;
-                        if (!queue.offer(chunk)) {
-                            chunk.markToDeallocate();
-                        }
+                    chunk.lastPurgeGeneration = generation;
+                    if (!queue.offer(chunk)) {
+                        chunk.markToDeallocate();
                     }
                 } else {
                     if (noCapCount == buf.length) {
@@ -962,7 +957,6 @@ final class AdaptivePoolingAllocator {
                 buf[i] = null;
             }
             purgeBudget.lazySet(CHUNK_PURGE_POLLS_SHARED);
-            return selected;
         }
 
         @Override
