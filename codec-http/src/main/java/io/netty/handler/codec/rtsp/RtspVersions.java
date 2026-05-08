@@ -18,6 +18,8 @@ package io.netty.handler.codec.rtsp;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Locale;
+
 /**
  * The version of RTSP.
  */
@@ -37,7 +39,9 @@ public final class RtspVersions {
     public static HttpVersion valueOf(String text) {
         ObjectUtil.checkNotNull(text, "text");
 
-        text = text.trim().toUpperCase();
+        // toUpperCase() must specify Locale.US so the comparison against "RTSP/1.0" is not
+        // affected by the JVM default locale (e.g. Turkish, where 'i' uppercases to 'İ').
+        text = text.trim().toUpperCase(Locale.US);
         if ("RTSP/1.0".equals(text)) {
             return RTSP_1_0;
         }
