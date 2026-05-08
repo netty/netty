@@ -69,7 +69,7 @@ public class AdaptiveByteBufAllocatorGrowthTest {
 
         int threadCount = 20;
         CountDownLatch startLatch = new CountDownLatch(1);
-        List<Future<Void>> futures = new ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>(THREAD_COUNT);
 
         for (int t = 0; t < threadCount; t++) {
             futures.add(THREAD_POOL.submit(() -> {

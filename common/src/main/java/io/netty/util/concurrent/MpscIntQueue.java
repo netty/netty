@@ -83,7 +83,11 @@ public interface MpscIntQueue {
      * @param op The reduction operation, taking a prior result and an element, and producing a new result.
      * @return The last result of the reduction operation.
      */
-    int weakPeekReduce(int limit, int initial, IntBinaryOperator op);
+    default int weakPeekReduce(int limit, int initial, IntBinaryOperator op) {
+        // There's no safe way to implement this method in terms of the other operations.
+        // Take the "weak" definition to the extreme and just return the initial value.
+        return initial;
+    }
 
     /**
      * Query if the queue is empty or not.

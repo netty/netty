@@ -39,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
-
     @Override
     protected AdaptiveByteBufAllocator newAllocator(boolean preferDirect) {
         return new AdaptiveByteBufAllocator(preferDirect);
@@ -118,7 +117,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     }
 
     @Test
-    void adaptiveChunkMustDeallocateOrReuseWthBufferRelease() {
+    void adaptiveChunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
         AdaptiveByteBufAllocator allocator = newAllocator(false);
         Deque<ByteBuf> bufs = new ArrayDeque<>();
         assertEquals(0, allocator.usedHeapMemory());
