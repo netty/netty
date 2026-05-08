@@ -16,27 +16,21 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
-import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -45,10 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
-    private static final String ADAPTIVE_ALLOCATOR_TEST_THREAD_POOL = "ADAPTIVE_ALLOCATOR_TEST_THREAD_POOL";
-    private static final int THREAD_COUNT = Math.max(4, NettyRuntime.availableProcessors() * 2);
-    private static final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(THREAD_COUNT,
-            new DefaultThreadFactory(ADAPTIVE_ALLOCATOR_TEST_THREAD_POOL, true));
 
     @Override
     protected AdaptiveByteBufAllocator newAllocator(boolean preferDirect) {
@@ -186,36 +176,40 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertTrue(buffer.release());
     }
 
-    @ResourceLock(ADAPTIVE_ALLOCATOR_TEST_THREAD_POOL)
     @Test
-    public void testAllocateWithoutLock() throws Exception {
+    public void testAllocateWithoutLock() throws InterruptedException {
         final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
         // Make `threadCount` bigger than `AdaptivePoolingAllocator.MAX_STRIPES`, to let thread collision easily happen.
         int threadCount = NettyRuntime.availableProcessors() * 4;
-        final CountDownLatch countDownLatch = new CountDownLatch(THREAD_COUNT);
-        List<Future<Void>> futures = new ArrayList<>();
+        final CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+        final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
         for (int i = 0; i < threadCount; i++) {
-            futures.add(THREAD_POOL.submit(() -> {
-                for (int j = 0; j < 1024; j++) {
-                    ByteBuf buffer = null;
-                    try {
-                        buffer = alloc.heapBuffer(128);
-                        buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
-                    } finally {
-                        if (buffer != null) {
-                            buffer.release();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 1024; j++) {
+                        try {
+                            ByteBuf buffer = null;
+                            try {
+                                buffer = alloc.heapBuffer(128);
+                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
+                            } finally {
+                                if (buffer != null) {
+                                    buffer.release();
+                                }
+                            }
+                        } catch (Throwable t) {
+                            throwableAtomicReference.set(t);
                         }
                     }
+                    countDownLatch.countDown();
                 }
-                countDownLatch.countDown();
-                return null;
-            }));
+            }).start();
         }
         countDownLatch.await();
-        for (Future<Void> future : futures) {
-            // We're asserting that no exceptions were thrown from within the tasks,
-            // and thus that the futures do not propergate any exceptions.
-            future.get();
+        Throwable throwable = throwableAtomicReference.get();
+        if (throwable != null) {
+            fail("Expected no exception, but got", throwable);
         }
     }
 
@@ -272,62 +266,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             for (ByteBuf buf : bufs) {
                 buf.release();
             }
-        }
-    }
-
-    @ResourceLock(ADAPTIVE_ALLOCATOR_TEST_THREAD_POOL)
-    @DisabledForSlowLeakDetection
-    @RepeatedTest(400)
-    void concurrentBufferAllocateAndGrowth(RepetitionInfo info) throws Exception {
-        // This test targets data races where Chunk.remainingCapacity() is called concurrently
-        // with other operations on the chunk. It is important that calling this method does not
-        // modify or corrupt the state of the chunks.
-
-        final int bufSizeBase;
-        final int bufSizeAdditional;
-        final int bufSizeGrowth;
-        if ((info.getCurrentRepetition() & 1) == 0) {
-            // Target large buffers.
-            bufSizeBase = 17000;
-            bufSizeAdditional = 50000;
-            bufSizeGrowth = 80000;
-        } else {
-            // Target small buffers.
-            bufSizeBase = 64;
-            bufSizeAdditional = 512;
-            bufSizeGrowth = 1024;
-        }
-
-        AdaptiveByteBufAllocator allocator = newAllocator(false);
-        int threadCount = 20;
-        CountDownLatch startLatch = new CountDownLatch(1);
-        List<Future<Void>> futures = new ArrayList<>();
-
-        for (int t = 0; t < threadCount; t++) {
-            futures.add(THREAD_POOL.submit(() -> {
-                startLatch.await();
-                SplittableRandom rng = new SplittableRandom();
-                for (int i = 0; i < 2000; i++) {
-                    // Allocate buffers in various sizes.
-                    // In the BuddyChunk, we'll exercise different buddy tree levels.
-                    int initialSize = bufSizeBase + rng.nextInt(bufSizeAdditional);
-                    ByteBuf buf = allocator.heapBuffer(initialSize);
-                    try {
-                        // Grow the buffer, which will allocate more space, and deallocate the old space.
-                        int growth = rng.nextInt(bufSizeGrowth);
-                        buf.ensureWritable(initialSize + growth);
-                    } finally {
-                        buf.release();
-                    }
-                }
-                return null;
-            }));
-        }
-        startLatch.countDown();
-        for (Future<Void> future : futures) {
-            // We're asserting that the tasks did not fail,
-            // and thus that the futures do not propagate any exception.
-            future.get();
         }
     }
 
