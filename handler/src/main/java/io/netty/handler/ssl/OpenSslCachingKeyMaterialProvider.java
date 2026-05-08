@@ -36,6 +36,7 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
     private final int maxCachedEntries;
     private final ConcurrentHashMap<String, OpenSslKeyMaterial> cache =
             new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+    private volatile boolean destroyed;
 
     OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxEntries) {
         super(keyManager, password);
@@ -111,6 +112,9 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
             if (old != material) {
                 material.release();
                 material = old;
+            } else if (destroyed) {
+                // We may have inserted an entry after the provider has been destroyed. Help with the cleanup.
+                removeAndReleaseAllEntries();
             }
         }
         return material;
@@ -122,15 +126,19 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
 
     @Override
     void destroy() {
+        destroyed = true;
         try {
-            // Remove and release all entries.
-            do  {
-                for (String alias : cache.keySet()) {
-                    removeAndRelease(alias);
-                }
-            } while (!cache.isEmpty());
+            removeAndReleaseAllEntries();
         } finally {
             super.destroy();
         }
+    }
+
+    private void removeAndReleaseAllEntries() {
+        do  {
+            for (String alias : cache.keySet()) {
+                removeAndRelease(alias);
+            }
+        } while (!cache.isEmpty());
     }
 }
