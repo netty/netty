@@ -44,6 +44,10 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
      */
     public static final int MAX_CLIENT_HELLO_LENGTH = 0xFFFFFF;
 
+    // Let's use a default limit of 64kb which should be big enough for almost everything in practice but still
+    // small enough to not allocate to much memory.
+    static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH = 64 * 1024;
+
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslClientHelloHandler.class);
 
@@ -54,7 +58,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     private ByteBuf handshakeBuffer;
 
     public SslClientHelloHandler() {
-        this(MAX_CLIENT_HELLO_LENGTH);
+        this(DEFAULT_MAX_CLIENT_HELLO_LENGTH);
     }
 
     protected SslClientHelloHandler(int maxClientHelloLength) {
