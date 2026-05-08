@@ -298,7 +298,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             bufSizeGrowth = 1024;
         }
 
-        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
         int threadCount = 20;
         CountDownLatch startLatch = new CountDownLatch(1);
         List<Future<Void>> futures = new ArrayList<>();
@@ -311,7 +311,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                     // Allocate buffers in various sizes.
                     // In the BuddyChunk, we'll exercise different buddy tree levels.
                     int initialSize = bufSizeBase + rng.nextInt(bufSizeAdditional);
-                    ByteBuf buf = allocator.directBuffer(initialSize);
+                    ByteBuf buf = allocator.heapBuffer(initialSize);
                     try {
                         // Grow the buffer, which will allocate more space, and deallocate the old space.
                         int growth = rng.nextInt(bufSizeGrowth);
