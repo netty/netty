@@ -704,13 +704,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             chunkRegistry = group.allocator.chunkRegistry;
         }
 
-        private MpscIntQueue createEmptyFreeList() {
+        private MpscAtomicIntegerArrayQueue createEmptyFreeList() {
             return new MpscAtomicIntegerArrayQueue(chunkSize / segmentSize, SizeClassedChunk.FREE_LIST_EMPTY);
         }
 
-        private MpscIntQueue createFreeList() {
+        private MpscAtomicIntegerArrayQueue createFreeList() {
             final int segmentsCount = chunkSize / segmentSize;
-            final MpscIntQueue freeList = new MpscAtomicIntegerArrayQueue(
+            final MpscAtomicIntegerArrayQueue freeList = new MpscAtomicIntegerArrayQueue(
                     segmentsCount, SizeClassedChunk.FREE_LIST_EMPTY);
             int segmentOffset = 0;
             for (int i = 0; i < segmentsCount; i++) {
@@ -1455,7 +1455,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private static final int PACK_OFFSET_MASK = 0xFFFF;
         private static final int PACK_SIZE_SHIFT = Integer.SIZE - Integer.numberOfLeadingZeros(PACK_OFFSET_MASK);
 
-        private final MpscIntQueue freeList;
+        private final MpscAtomicIntegerArrayQueue freeList;
         // The bits of each buddy: [1: is claimed][1: has claimed children][30: MIN_BUDDY_SIZE shift to get size]
         private final byte[] buddies;
         private final int freeListCapacity;
@@ -1512,10 +1512,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public void accept(int packed) {
             // Called by allocating thread when draining freeList.
-            int size = MIN_BUDDY_SIZE << (packed >> PACK_SIZE_SHIFT);
-            int offset = (packed & PACK_OFFSET_MASK) * MIN_BUDDY_SIZE;
+            int size = unpackSize(packed);
+            int offset = unpackOffset(packed);
             unreserveMatchingBuddy(1, size, offset, 0);
             allocatedBytes -= size;
+        }
+
+        private static int unpackSize(int packed) {
+            return MIN_BUDDY_SIZE << (packed >> PACK_SIZE_SHIFT);
+        }
+
+        private static int unpackOffset(int packed) {
+            return (packed & PACK_OFFSET_MASK) * MIN_BUDDY_SIZE;
         }
 
         @Override
@@ -1529,10 +1537,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public int remainingCapacity() {
+            int capacityInFreeList = 0;
             if (!freeList.isEmpty()) {
-                freeList.drain(freeListCapacity, this);
+                capacityInFreeList = freeList.weakPeekReduce(freeListCapacity, 0,
+                        new MpscAtomicIntegerArrayQueue.IntBinaryOperator() {
+                            @Override
+                            public int applyAsInt(int sum, int entry) {
+                                return sum + unpackSize(entry);
+                            }
+                        });
             }
-            return super.remainingCapacity();
+            return super.remainingCapacity() + capacityInFreeList;
         }
 
         @Override
