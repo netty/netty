@@ -290,45 +290,77 @@ public class SizeClassedChunkCacheTest {
         assertEquals(floor, retained, "retention floor chunks should survive");
     }
 
-    // --- stale epoch: chunk polled with accumulated epoch, reused, re-offered (thread-local only) ---
-    // Thread-local scanForCapacity resets purgeEpoch on poll (ring partitioning isolates idle chunks).
-    // Shared cache does not reset — FIFO rotation would reset all chunks, preventing aging.
+    // --- epoch aging: polled chunks carry their epoch (no reset on poll) ---
+    // Thread-local: partition sub-ordering puts epoch=0 at head, epoch>0 behind.
+    //   Epoch reset on poll would defeat aging when polls > chunks (e.g., 2-core: 16 polls, 7 chunks).
+    // Shared: LRU preference in scanForCapacity achieves the same without epoch reset.
 
-    @Test
-    void polledChunkWithStaleEpochShouldNotBeEvictedPrematurely() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void excessChunksAgeAndEvictDespiteBeingPolled(boolean threadLocal) {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
 
-        // Pad above retention floor
+        // Pad to retention floor
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
 
-        // A fully-free chunk that will age
-        SizeClassedChunk chunk = mock(SizeClassedChunk.class);
-        when(chunk.remainingCapacity()).thenReturn(4096);
-        when(chunk.capacity()).thenReturn(4096);
-        when(chunk.hasRemainingCapacity()).thenReturn(true);
-        cache.offerChunk(chunk);
-
-        // Age it to just below threshold via purge cycles
-        // Each purge: chunk is fully free (remaining==capacity) → epoch++
-        // It also has capacity, so scanForCapacity (called after purge) will poll it.
-        // We re-offer it each time to keep it in the cache.
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD - 1; i++) {
-            cache.forcePurge();
-            cache.offerChunk(chunk);
+        // Add excess idle chunks above the floor
+        int excess = 3;
+        SizeClassedChunk[] idleChunks = new SizeClassedChunk[excess];
+        for (int i = 0; i < excess; i++) {
+            idleChunks[i] = idleChunk();
+            cache.offerChunk(idleChunks[i]);
         }
 
-        // Chunk has been polled and re-offered each cycle.
-        SizeClassedChunk polled = cache.forcePurge();
-        assertNotNull(polled);
-        assertEquals(0, polled.purgeEpoch);
+        // Run enough purge cycles for excess to age past threshold and be evicted
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1; i++) {
+            cache.forcePurge();
+        }
 
-        // Re-offer as fully free (simulating: used briefly, all segments returned)
-        cache.offerChunk(polled);
+        // All excess should be evicted — cache settles at the retention floor
+        for (SizeClassedChunk idle : idleChunks) {
+            verify(idle, atLeastOnce()).markToDeallocate();
+        }
+    }
 
-        // One more purge — should NOT evict (epoch was reset on each poll)
-        cache.forcePurge();
-        verify(chunk, never()).markToDeallocate();
+    // --- shared cache: concurrent scanForCapacity must not livelock ---
+
+    @Test
+    void concurrentScansTerminateWhenNoCapacity() throws Exception {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+
+        // Fill with no-capacity chunks — no scan can find anything
+        for (int i = 0; i < 10; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
+
+        int threadCount = 4;
+        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(threadCount);
+        java.util.concurrent.atomic.AtomicReference<Throwable> error =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        for (int t = 0; t < threadCount; t++) {
+            new Thread(() -> {
+                try {
+                    startLatch.await();
+                    for (int i = 0; i < 1000; i++) {
+                        assertNull(cache.pollChunk(256));
+                    }
+                } catch (Throwable e) {
+                    error.compareAndSet(null, e);
+                } finally {
+                    doneLatch.countDown();
+                }
+            }).start();
+        }
+
+        startLatch.countDown();
+        // With the == sentinel check, threads could livelock here.
+        // With >= ordering, all scans terminate promptly.
+        boolean finished = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        assertTrue(finished, "Concurrent scans should terminate within 5 seconds, not livelock");
+        assertNull(error.get());
     }
 }
