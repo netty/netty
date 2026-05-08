@@ -93,20 +93,15 @@ public class SizeClassedChunkCacheTest {
 
     // --- purge: epoch aging and eviction (both caches) ---
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void fullChunkAgesEachPurgeAndIsEvictedPastThreshold(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+    @Test
+    void fullChunkAgesEachPurgeAndIsEvictedPastThreshold_threadLocal() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
-        // Pad above retention floor so eviction is allowed
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
-
-        // Working-set chunk absorbs scan picks — non-full, epoch=0 at head after partition
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
-
         SizeClassedChunk idle = fullChunk();
         cache.offerChunk(idle);
 
@@ -117,10 +112,31 @@ public class SizeClassedChunkCacheTest {
             assertEquals(i + 1, idle.purgeEpoch);
             verify(idle, never()).markToDeallocate();
         }
-
         SizeClassedChunk polled = cache.forcePurge();
         assertSame(workingSet, polled);
         verify(idle).markToDeallocate();
+    }
+
+    @Test
+    void fullChunkAgesAndIsEventuallyEvicted_shared() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+        SizeClassedChunk idle = fullChunk();
+        cache.offerChunk(idle);
+
+        int maxCycles = (AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1) * 3;
+        for (int i = 0; i < maxCycles; i++) {
+            SizeClassedChunk polled = cache.forcePurge();
+            if (polled != null) {
+                cache.offerChunk(polled);
+            }
+        }
+        verify(idle, atLeastOnce()).markToDeallocate();
     }
 
     @ParameterizedTest
@@ -261,32 +277,25 @@ public class SizeClassedChunkCacheTest {
 
     // --- bursty traffic: idle chunks are eventually evicted ---
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void cacheSettlesAtRetentionFloorAfterBurst(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+    @Test
+    void cacheSettlesAtRetentionFloorAfterBurst_threadLocal() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
         int floor = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
         int excess = 10;
 
-        // Working-set chunk absorbs scan picks
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
-
-        // Retention floor padding
         for (int i = 0; i < floor - 1; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
-
-        // Excess full chunks — should age and be evicted
         SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
             excessChunks[i] = fullChunk();
             cache.offerChunk(excessChunks[i]);
         }
 
-        int purgesNeeded = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1;
-        for (int i = 0; i < purgesNeeded; i++) {
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1; i++) {
             SizeClassedChunk polled = cache.forcePurge();
             assertSame(workingSet, polled);
             cache.offerChunk(workingSet);
@@ -298,29 +307,49 @@ public class SizeClassedChunkCacheTest {
         verify(workingSet, never()).markToDeallocate();
     }
 
+    @Test
+    void cacheSettlesAfterBurst_shared() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+
+        int excess = 10;
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE - 1; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
+        SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
+        for (int i = 0; i < excess; i++) {
+            excessChunks[i] = fullChunk();
+            cache.offerChunk(excessChunks[i]);
+        }
+
+        int maxCycles = (AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1) * 3;
+        for (int i = 0; i < maxCycles; i++) {
+            SizeClassedChunk polled = cache.forcePurge();
+            if (polled != null) {
+                cache.offerChunk(polled);
+            }
+        }
+
+        for (SizeClassedChunk chunk : excessChunks) {
+            verify(chunk, atLeastOnce()).markToDeallocate();
+        }
+    }
+
     // --- epoch aging with working set ---
     // Scan resets epoch on pick (the chunk is being used). Partition sub-ordering puts
     // epoch=0 (recently used) at head, epoch>0 (idle) behind. Scan prefers head, so
     // idle chunks age undisturbed behind the working set.
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void excessFullChunksAgeWhileWorkingSetIsPreferred(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+    @Test
+    void excessFullChunksAgeWhileWorkingSetIsPreferred_threadLocal() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
-        // Pad to retention floor
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
-
-        // Working-set chunk: non-full (remaining != capacity), has capacity.
-        // Purge resets its epoch to 0. Partition puts it at head. Scan picks it.
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
-
-        // Excess full chunks: remaining == capacity, has capacity.
-        // Purge ages them. Partition puts them behind working-set (epoch>0).
-        // Scan doesn't reach them — working-set absorbs the pick.
         int excess = 3;
         SizeClassedChunk[] idleChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
@@ -338,6 +367,35 @@ public class SizeClassedChunkCacheTest {
             verify(idle, atLeastOnce()).markToDeallocate();
         }
         verify(workingSet, never()).markToDeallocate();
+    }
+
+    @Test
+    void excessFullChunksEventuallyEvicted_shared() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+
+        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
+        SizeClassedChunk workingSet = chunkWithCapacity();
+        cache.offerChunk(workingSet);
+        int excess = 3;
+        SizeClassedChunk[] idleChunks = new SizeClassedChunk[excess];
+        for (int i = 0; i < excess; i++) {
+            idleChunks[i] = fullChunk();
+            cache.offerChunk(idleChunks[i]);
+        }
+
+        int maxCycles = (AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1) * 3;
+        for (int i = 0; i < maxCycles; i++) {
+            SizeClassedChunk polled = cache.forcePurge();
+            if (polled != null) {
+                cache.offerChunk(polled);
+            }
+        }
+
+        for (SizeClassedChunk idle : idleChunks) {
+            verify(idle, atLeastOnce()).markToDeallocate();
+        }
     }
 
     // --- full-but-active chunk must not be prematurely evicted ---

@@ -510,6 +510,28 @@ final class AdaptivePoolingAllocator {
     // Cached chunks are detached from magazines: no readInitInto can happen, so segment count
     // can only grow (external releaseSegment returns) and never shrink. Once a chunk reaches
     // full capacity (remainingCapacity == capacity), it stays fully free while in the cache.
+    //
+    // Epoch-based aging invariants (both caches):
+    //
+    // 1. CLASSIFICATION: purge scans all chunks. Full (remainingCapacity == capacity) → epoch++.
+    //    Non-full → epoch = 0. Only full chunks can accumulate epoch.
+    //
+    // 2. EVICTION: full chunks with epoch > CHUNK_PURGE_THRESHOLD are evicted (markToDeallocate).
+    //    Eviction is immediate — all segments are in, no outstanding references.
+    //    Non-full chunks are never evicted (deallocation would be deferred, not immediate).
+    //    At least CHUNK_REUSE_QUEUE chunks are always retained (retention floor).
+    //
+    // 3. SCAN RESET: scanForCapacity resets purgeEpoch = 0 on the chunk it picks. The scan
+    //    knows the chunk is being used. The chunk gets allocated from, becomes non-full, and
+    //    the next purge resets its epoch anyway (non-full → 0). The scan reset covers the case
+    //    where all segments return before the next purge (short-lived buffers).
+    //
+    // 4. CONVERGENCE: idle full chunks that are never picked by scan age undisturbed across
+    //    purge cycles. After CHUNK_PURGE_THRESHOLD + 1 consecutive cycles of being full and
+    //    unpolled, they are evicted. Chunks picked by scan get epoch reset — aging interrupted.
+    //    Thread-local: deterministic, exact (partition orders epoch=0 at head, scan always
+    //    takes head). Shared: approximate, converges over multiple cycles (FIFO queue ordering,
+    //    LRU preference in scan, retained counter in purge).
     abstract static class SizeClassedChunkCache implements ChunkCache {
         static SizeClassedChunkCache create(boolean isThreadLocal) {
             return isThreadLocal ? new ThreadLocalSizeClassedChunkCache() : new SharedSizeClassedChunkCache();
@@ -652,9 +674,9 @@ final class AdaptivePoolingAllocator {
 
         private SizeClassedChunk scanForCapacityFallback() {
             int mask = chunks.length - 1;
+            int emptyCount = count - notEmptyCount;
             int pos = (head + notEmptyCount) & mask;
-            int end = tail;
-            while (pos != end) {
+            for (int i = 0; i < emptyCount; i++) {
                 SizeClassedChunk chunk = chunks[pos];
                 if (chunk.hasRemainingCapacity()) {
                     chunk.purgeEpoch = 0;
@@ -819,8 +841,12 @@ final class AdaptivePoolingAllocator {
      * by this or a later scan, preventing livelock under concurrent access.
      *
      * <p><b>runPurgeScan</b> (every {@link #CHUNK_PURGE_POLLS_SHARED} polls):
-     * drains the queue, ages full chunks (epoch++), resets non-full (epoch=0),
-     * evicts past threshold while retaining at least {@link #CHUNK_REUSE_QUEUE} chunks.
+     * drains the queue, ages full chunks (epoch++), resets non-full (epoch=0).
+     * Non-candidate capacity chunks are re-offered inline. Eviction candidates (full,
+     * epoch past threshold) and no-capacity chunks are deferred to a buffer. After the drain,
+     * the buffer is walked with the known total: candidates are evicted while above
+     * {@link #CHUNK_REUSE_QUEUE}, remainder re-offered. No selection — that is
+     * {@code scanForCapacity}'s job (called after purge via {@code pollChunk}).
      */
     static final class SharedSizeClassedChunkCache extends SizeClassedChunkCache {
         // Must exceed CHUNK_REUSE_QUEUE (the retention floor) to leave room for burst absorption.
@@ -861,22 +887,16 @@ final class AdaptivePoolingAllocator {
             if (first.purgeEpoch == 0 && first.hasRemainingCapacity()) {
                 return first;
             }
-            if (first.hasRemainingCapacity()) {
-                return scanForCapacitySlow(first);
-            }
             long generation = scanGeneration.incrementAndGet();
             first.lastScanGeneration = generation;
+            if (first.hasRemainingCapacity()) {
+                return scanForCapacitySlow(generation, first);
+            }
             if (!queue.offer(first)) {
                 first.markToDeallocate();
                 return null;
             }
             return scanForCapacitySlow(generation, null);
-        }
-
-        private SizeClassedChunk scanForCapacitySlow(SizeClassedChunk fallback) {
-            long generation = scanGeneration.incrementAndGet();
-            fallback.lastScanGeneration = generation;
-            return scanForCapacitySlow(generation, fallback);
         }
 
         private SizeClassedChunk scanForCapacitySlow(long generation, SizeClassedChunk fallback) {
@@ -890,8 +910,8 @@ final class AdaptivePoolingAllocator {
                 }
                 if (chunk.hasRemainingCapacity()) {
                     if (chunk.purgeEpoch == 0) {
-                        if (fallback != null) {
-                            queue.offer(fallback);
+                        if (fallback != null && !queue.offer(fallback)) {
+                            fallback.markToDeallocate();
                         }
                         return chunk;
                     }
@@ -914,8 +934,8 @@ final class AdaptivePoolingAllocator {
 
         private void runPurgeScan() {
             long generation = ++purgeGeneration;
-            int noCapCount = 0;
-            int survivors = queue.size();
+            int bufCount = 0;
+            int retained = 0;
             SizeClassedChunk[] buf = noCapacityBuffer;
             SizeClassedChunk chunk;
             while ((chunk = queue.poll()) != null) {
@@ -925,12 +945,16 @@ final class AdaptivePoolingAllocator {
                     }
                     break;
                 }
+                retained++;
                 int remaining = chunk.remainingCapacity();
                 if (remaining == chunk.capacity()) {
                     chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
-                        chunk.markToDeallocate();
-                        survivors--;
+                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD) {
+                        if (bufCount == buf.length) {
+                            buf = Arrays.copyOf(buf, buf.length * 2);
+                            noCapacityBuffer = buf;
+                        }
+                        buf[bufCount++] = chunk;
                         continue;
                     }
                 } else {
@@ -942,19 +966,25 @@ final class AdaptivePoolingAllocator {
                         chunk.markToDeallocate();
                     }
                 } else {
-                    if (noCapCount == buf.length) {
+                    if (bufCount == buf.length) {
                         buf = Arrays.copyOf(buf, buf.length * 2);
                         noCapacityBuffer = buf;
                     }
-                    buf[noCapCount++] = chunk;
+                    buf[bufCount++] = chunk;
                 }
             }
-            for (int i = 0; i < noCapCount; i++) {
-                buf[i].lastPurgeGeneration = generation;
-                if (!queue.offer(buf[i])) {
-                    buf[i].markToDeallocate();
-                }
+            for (int i = 0; i < bufCount; i++) {
+                chunk = buf[i];
                 buf[i] = null;
+                if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && retained > CHUNK_REUSE_QUEUE) {
+                    chunk.markToDeallocate();
+                    retained--;
+                } else {
+                    chunk.lastPurgeGeneration = generation;
+                    if (!queue.offer(chunk)) {
+                        chunk.markToDeallocate();
+                    }
+                }
             }
             purgeBudget.lazySet(CHUNK_PURGE_POLLS_SHARED);
         }

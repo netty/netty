@@ -291,7 +291,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         int buffersPerChunk = (int) (chunkSize / 256);
         probe.release();
 
-        int totalChunks = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE + 3;
+        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 2 + 10;
         int totalBuffers = totalChunks * buffersPerChunk;
         java.util.List<ByteBuf> bufs = new java.util.ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
