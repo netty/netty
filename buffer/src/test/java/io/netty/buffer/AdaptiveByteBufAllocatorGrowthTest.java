@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.test.DisabledForSlowLeakDetection;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -36,6 +37,13 @@ public class AdaptiveByteBufAllocatorGrowthTest {
     private static final int THREAD_COUNT = Math.max(4, NettyRuntime.availableProcessors() * 2);
     private static final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(THREAD_COUNT,
             new DefaultThreadFactory("AdaptiveAllocatorGrowthTest", true));
+    private static AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false);
+
+    @AfterAll
+    static void cleanUp() {
+        allocator = null;
+        THREAD_POOL.shutdown();
+    }
 
     @DisabledForSlowLeakDetection
     @RepeatedTest(400)
@@ -59,7 +67,6 @@ public class AdaptiveByteBufAllocatorGrowthTest {
             bufSizeGrowth = 1024;
         }
 
-        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false);
         int threadCount = 20;
         CountDownLatch startLatch = new CountDownLatch(1);
         List<Future<Void>> futures = new ArrayList<>();
