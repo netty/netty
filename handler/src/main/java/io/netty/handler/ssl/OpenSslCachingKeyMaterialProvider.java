@@ -122,10 +122,15 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
 
     @Override
     void destroy() {
-        do {
-            for (String alias : cache.keySet()) {
-                removeAndRelease(alias);
-            }
-        } while (!cache.isEmpty());
+        try {
+            // Remove and release all entries.
+            do  {
+                for (String alias : cache.keySet()) {
+                    removeAndRelease(alias);
+                }
+            } while (!cache.isEmpty());
+        } finally {
+            super.destroy();
+        }
     }
 }

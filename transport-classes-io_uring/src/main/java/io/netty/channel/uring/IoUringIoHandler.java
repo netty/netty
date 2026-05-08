@@ -282,7 +282,7 @@ public final class IoUringIoHandler implements IoHandler {
 
             if (logger.isTraceEnabled()) {
                 logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(op), data, res);
+                        ringBuffer.fd(), Native.opToStr(op), id, res);
             }
             if (id == EVENTFD_ID) {
                 handleEventFdRead();
@@ -644,8 +644,8 @@ public final class IoUringIoHandler implements IoHandler {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
             submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
+            assert iovArray.count() == 0;
         }
-        assert iovArray.count() == 0;
         return iovArray;
     }
 

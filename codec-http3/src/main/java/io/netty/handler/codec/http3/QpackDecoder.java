@@ -47,6 +47,9 @@ final class QpackDecoder {
     private static final QpackException INVALID_REQUIRED_INSERT_COUNT =
             QpackException.newStatic(QpackDecoder.class, "decodeRequiredInsertCount(...)",
                     "QPACK - invalid required insert count");
+    private static final QpackException INVALID_LENGTH_ENCODED_LITERAL =
+            QpackException.newStatic(QpackDecoder.class, "decodeHuffmanEncodedLiteral(...)",
+                    "QPACK - invalid length for LITERAL");
     private static final QpackException MAX_BLOCKED_STREAMS_EXCEEDED =
             QpackException.newStatic(QpackDecoder.class, "shouldWaitForDynamicTableUpdates(...)",
                     "QPACK - exceeded max blocked streams");
@@ -398,6 +401,9 @@ final class QpackDecoder {
         assert length >= 0;
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
+        }
+        if (in.readableBytes() < length) {
+            throw INVALID_LENGTH_ENCODED_LITERAL;
         }
         byte[] buf = new byte[length];
         in.readBytes(buf);

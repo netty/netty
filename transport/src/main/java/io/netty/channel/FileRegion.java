@@ -67,6 +67,12 @@ public interface FileRegion extends ReferenceCounted {
 
     /**
      * Returns the bytes which was transferred already.
+     * <p>
+     * Note: some asynchronous transports (such as the {@code io_uring} transport when falling
+     * back to a chunked send for non-{@link DefaultFileRegion} implementations) advance this
+     * counter when bytes have been queued for submission, which may be before they reach the
+     * peer. If the channel is closed or the write fails after queuing, the reported value may
+     * overstate the number of bytes actually delivered.
      */
     long transferred();
 

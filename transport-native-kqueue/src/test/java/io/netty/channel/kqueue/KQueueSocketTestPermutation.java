@@ -47,9 +47,17 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
-
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
                 combo(serverSocket(), clientSocketWithFastOpen());
+
+        list.remove(list.size() - 1); // Exclude NIO x NIO test
+
+        return list;
+    }
+
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socketWithoutFastOpen() {
+        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
+                combo(serverSocket(), clientSocket());
 
         list.remove(list.size() - 1); // Exclude NIO x NIO test
 

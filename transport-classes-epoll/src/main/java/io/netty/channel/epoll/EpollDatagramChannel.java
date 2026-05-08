@@ -125,7 +125,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private EpollDatagramChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active, EpollIoOps.valueOf(0));
+        super(null, fd, active, EpollIoOps.EPOLLERR);
 
         // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
         try {

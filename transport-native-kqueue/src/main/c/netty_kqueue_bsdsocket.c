@@ -279,7 +279,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
 #ifdef LOCAL_PEERPID
     socklen_t len = sizeof(pid);
     // Getting the LOCAL_PEERPID is expected to return error in some cases (e.g. server socket FDs) - just return 0.
-    if (netty_unix_socket_getOption0(fd, SOCK_STREAM, LOCAL_PEERPID, &pid, len) < 0) {
+    if (netty_unix_socket_getOption0(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, len) < 0) {
         pid = 0;
     }
 #endif

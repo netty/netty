@@ -69,6 +69,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,18 +82,19 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QuicChannelConnectTest extends AbstractQuicTest {
 
@@ -1859,6 +1861,110 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             if (bytes == numBytes) {
                 latch.countDown();
             }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    @Timeout(10)
+    public void testConnectionCloseFrameDeliveredWhenParentClosedImmediately(Executor executor) throws Throwable {
+        int numConnections = 10;
+        int streamsPerConnection = 50;
+
+        CountDownLatch serverStreamsLatch = new CountDownLatch(numConnections * streamsPerConnection);
+        List<QuicChannel> serverConnections = Collections.synchronizedList(new ArrayList<>(numConnections));
+
+        Channel server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter() {
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                serverConnections.add((QuicChannel) ctx.channel());
+                ctx.fireChannelActive();
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                serverStreamsLatch.countDown();
+                ctx.fireChannelActive();
+            }
+        });
+
+        server.pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+            // simulate delay for writing and flushing packets so it would race with closing.
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ctx.executor().execute(() -> ctx.write(msg, promise));
+            }
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) {
+                ctx.executor().execute(ctx::flush);
+            }
+        });
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(executor);
+
+        CountDownLatch clientConnectionsLatch = new CountDownLatch(numConnections);
+        try {
+            for (int i = 0; i < numConnections; i++) {
+                QuicChannelBootstrap quicChannelBootstrap = QuicTestUtils.newQuicChannelBootstrap(channel);
+                quicChannelBootstrap.handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx,
+                                                   Object evt) {
+                        if (evt instanceof QuicConnectionCloseEvent) {
+                            clientConnectionsLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                });
+                QuicChannel quicChannel = quicChannelBootstrap.streamHandler(new ChannelInboundHandlerAdapter())
+                                                              .remoteAddress(address)
+                                                              .connect()
+                                                              .get();
+
+                for (int j = 0; j < streamsPerConnection; j++) {
+                    QuicStreamChannel stream =
+                            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter())
+                                       .sync().getNow();
+                    stream.writeAndFlush(Unpooled.directBuffer().writeZero(1)).sync();
+                }
+            }
+
+            assertTrue(serverStreamsLatch.await(5, TimeUnit.SECONDS), "Server did not receive all streams");
+            assertEquals(numConnections, serverConnections.size());
+
+            AtomicInteger closedConnections = new AtomicInteger();
+            server.eventLoop().execute(() -> {
+                for (int i = 0; i < numConnections; i++) {
+                    serverConnections.get(i).close().addListener(v -> {
+                        if (closedConnections.incrementAndGet() == numConnections) {
+                             server.close();
+                        }
+                    });
+                }
+            });
+
+            assertTrue(clientConnectionsLatch.await(5, TimeUnit.SECONDS),
+                       "Not all clients received QuicConnectionCloseEvent");
+        } finally {
+            server.close().sync();
+            channel.close().sync();
+            shutdown(executor);
         }
     }
 

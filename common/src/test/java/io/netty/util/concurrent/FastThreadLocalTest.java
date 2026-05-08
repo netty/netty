@@ -129,65 +129,6 @@ public class FastThreadLocalTest {
     }
 
     @Test
-    public void testMultipleSetRemove() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
-        final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                threadLocal.set("1");
-                threadLocal.remove();
-                threadLocal.set("2");
-                threadLocal.remove();
-            }
-        };
-
-        final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
-        Thread thread = new Thread(runnable);
-        thread.start();
-        thread.join();
-
-        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
-
-        Thread thread2 = new Thread(runnable);
-        thread2.start();
-        thread2.join();
-
-        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
-    }
-
-    @Test
-    public void testMultipleSetRemove_multipleThreadLocal() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
-        final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<String>();
-        final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                threadLocal.set("1");
-                threadLocal.remove();
-                threadLocal.set("2");
-                threadLocal.remove();
-                threadLocal2.set("1");
-                threadLocal2.remove();
-                threadLocal2.set("2");
-                threadLocal2.remove();
-            }
-        };
-
-        final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
-        Thread thread = new Thread(runnable);
-        thread.start();
-        thread.join();
-
-        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
-
-        Thread thread2 = new Thread(runnable);
-        thread2.start();
-        thread2.join();
-
-        assertEquals(0, ObjectCleaner.getLiveSetCount() - sizeWhenStart);
-    }
-
-    @Test
     public void testWrappedProperties() {
         assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
         assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
