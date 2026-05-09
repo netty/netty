@@ -297,23 +297,23 @@ public final class IoUringIoHandler implements IoHandler {
 
     private void handleFastPath(int res, int flags, long udata, ByteBuffer extraCqeData) {
         int id = UserData.decodeId(udata);
+        byte op = UserData.decodeOp(udata);
+        long userData = UserData.decodeData(udata);
         DefaultIoUringIoRegistration registration = registrations.get(id);
         if (registration != null) {
-            byte op = UserData.decodeOp(udata);
-            long userData = UserData.decodeData(udata);
-            if (logger.isTraceEnabled()) {
-                logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(op), id, res);
-            }
+            traceCompletion(registration, id, op, res);
             registration.handle(res, flags, op, userData, extraCqeData);
             return;
         }
         if (logger.isDebugEnabled()) {
-            logger.debug("ignoring completion for unknown registration (id={}, res={})", id, res);
+            logger.debug("ignoring packed completion for unknown registration (registrationId={}, op={}, userData={},"
+                            + " res={})",
+                    id, Native.opToStr(op), userData, res);
         }
     }
 
     private void handleSlowPath(int res, int flags, long udata, ByteBuffer extraCqeData) {
+        long sequence = PendingOpMap.tokenSequence(udata);
         int slot = pendingOps.findSlot(udata);
         if (slot != -1) {
             int registrationId = pendingOps.registrationId(slot);
@@ -328,18 +328,33 @@ public final class IoUringIoHandler implements IoHandler {
 
             // Resolve slow-path completions through the live registration table to align with the fast path.
             if (registration != null) {
+                traceCompletion(registration, registrationId, op, res);
                 registration.handle(res, flags, op, userData, extraCqeData);
+                return;
             }
-
-            if (logger.isTraceEnabled()) {
-                logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringBuffer.fd(), Native.opToStr(op), registrationId, res);
+            if (logger.isDebugEnabled()) {
+                logger.debug("ignoring slow-path completion for missing registration (registrationId={}, seq={}, "
+                                + "op={}, userData={}, res={})",
+                        registrationId, sequence, Native.opToStr(op), userData, res);
             }
             return;
         }
         if (logger.isDebugEnabled()) {
-            logger.debug("ignoring completion for unknown sequence (seq={}, res={})",
-                    PendingOpMap.tokenSequence(udata), res);
+            logger.debug("ignoring slow-path completion for unknown sequence (seq={}, res={})", sequence, res);
+        }
+    }
+
+    private void traceCompletion(DefaultIoUringIoRegistration registration, int registrationId, byte op, int res) {
+        if (!logger.isTraceEnabled()) {
+            return;
+        }
+        int fd = registration.fd();
+        if (fd != -1) {
+            logger.trace("completed(ring {}): {}(fd={}, res={})",
+                    ringBuffer.fd(), Native.opToStr(op), fd, res);
+        } else {
+            logger.trace("completed(ring {}): {}(registrationId={}, res={})",
+                    ringBuffer.fd(), Native.opToStr(op), registrationId, res);
         }
     }
 
@@ -610,6 +625,13 @@ public final class IoUringIoHandler implements IoHandler {
 
         private boolean canUseFastPath(long userData) {
             return ((short) userData) == userData;
+        }
+
+        private int fd() {
+            if (handle instanceof AbstractIoUringChannel) {
+                return ((AbstractIoUringChannel) handle).fd().intValue();
+            }
+            return -1;
         }
 
         @SuppressWarnings("unchecked")

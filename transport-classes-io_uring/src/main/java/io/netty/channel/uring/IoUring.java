@@ -184,9 +184,15 @@ public final class IoUring {
         pendingOpsInitialCapacity = SystemPropertyUtil.getInt(
                 "io.netty.iouring.pendingOpsInitialCapacity", DEFAULT_RING_SIZE);
         if (pendingOpsInitialCapacity <= 0) {
+            int configuredCapacity = pendingOpsInitialCapacity;
             pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(DEFAULT_RING_SIZE);
+            logger.warn("Invalid value {} for -Dio.netty.iouring.pendingOpsInitialCapacity; using {} instead.",
+                    configuredCapacity, pendingOpsInitialCapacity);
         } else if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
+            int configuredCapacity = pendingOpsInitialCapacity;
             pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(pendingOpsInitialCapacity);
+            logger.warn("Rounding -Dio.netty.iouring.pendingOpsInitialCapacity from {} up to {}.",
+                    configuredCapacity, pendingOpsInitialCapacity);
         }
         DEFAULT_PENDING_OPS_INITIAL_CAPACITY = pendingOpsInitialCapacity;
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {

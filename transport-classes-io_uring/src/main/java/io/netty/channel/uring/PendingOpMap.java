@@ -54,8 +54,6 @@ final class PendingOpMap {
     }
 
     void registerNormal(long token, int registrationId, byte op, long userData) {
-        validateToken(token);
-
         int startIndex = hashIndex(token, mask);
         int index = startIndex;
         int firstTombstone = -1;
@@ -77,9 +75,6 @@ final class PendingOpMap {
     }
 
     int findSlot(long token) {
-        if (token >= 0) {
-            return -1;
-        }
         int startIndex = hashIndex(token, mask);
         int index = startIndex;
         for (;;) {
@@ -185,16 +180,7 @@ final class PendingOpMap {
     }
 
     static long tokenSequence(long token) {
-        if (token >= 0) {
-            return 0;
-        }
         return token & Long.MAX_VALUE;
-    }
-
-    private static void validateToken(long token) {
-        if (token >= 0 || tokenSequence(token) <= TOMBSTONE) {
-            throw new IllegalArgumentException("token must be a slow-path token");
-        }
     }
 
     private static int hashIndex(long key, int mask) {
