@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Limits;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -183,12 +184,9 @@ public final class IoUring {
         pendingOpsInitialCapacity = SystemPropertyUtil.getInt(
                 "io.netty.iouring.pendingOpsInitialCapacity", DEFAULT_RING_SIZE);
         if (pendingOpsInitialCapacity <= 0) {
-            throw new IllegalArgumentException("io.netty.iouring.pendingOpsInitialCapacity: " +
-                                               pendingOpsInitialCapacity + " (expected: > 0)");
-        }
-        if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
-            throw new IllegalArgumentException("io.netty.iouring.pendingOpsInitialCapacity: " +
-                                               pendingOpsInitialCapacity + " (expected: power of 2)");
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(DEFAULT_RING_SIZE);
+        } else if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(pendingOpsInitialCapacity);
         }
         DEFAULT_PENDING_OPS_INITIAL_CAPACITY = pendingOpsInitialCapacity;
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {

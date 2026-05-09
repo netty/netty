@@ -42,7 +42,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -75,12 +74,12 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
-    private final PendingOpSlots pendingOps;
+    private final PendingOpMap pendingOps;
     private int nextRegistrationId = 1;
 
     private static final long INVALID_ID = 0;
-    private static final long EVENTFD_TOKEN = PendingOpSlots.token(1);
-    private static final long RINGFD_TOKEN = PendingOpSlots.token(2);
+    private static final long EVENTFD_TOKEN = PendingOpMap.token(1);
+    private static final long RINGFD_TOKEN = PendingOpMap.token(2);
     private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
 
     private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
@@ -134,7 +133,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registrations = new IntObjectHashMap<>();
-        pendingOps = new PendingOpSlots(IoUring.DEFAULT_PENDING_OPS_INITIAL_CAPACITY);
+        pendingOps = new PendingOpMap(IoUring.DEFAULT_PENDING_OPS_INITIAL_CAPACITY);
         eventfd = Native.newBlockingEventFd();
         eventfdReadBufCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
         eventfdReadBuf = eventfdReadBufCleanable.buffer();
@@ -284,54 +283,63 @@ public final class IoUringIoHandler implements IoHandler {
             if (udata == RINGFD_TOKEN) {
                 return;
             }
-            // Only remove from pendingOps if IORING_CQE_F_MORE is not set, as otherwise we know
-            // that we will receive more completions for the initial request.
-            boolean oneshotOp = (flags & Native.IORING_CQE_F_MORE) == 0;
-            int id = UserData.decodeId(udata);
-            if (id > 0) {
-                DefaultIoUringIoRegistration registration = registrations.get(id);
-                if (registration != null) {
-                    byte op = UserData.decodeOp(udata);
-                    long userData = UserData.decodeData(udata);
-                    if (logger.isTraceEnabled()) {
-                        logger.trace("completed(ring {}): {}(id={}, res={})",
-                                ringBuffer.fd(), Native.opToStr(op), id, res);
-                    }
-                    registration.handle(res, flags, op, userData, extraCqeData);
-                    return;
-                }
-            }
-            int slot = pendingOps.findSlot(udata);
-            if (slot != -1) {
-                int registrationId = pendingOps.registrationId(slot);
-                DefaultIoUringIoRegistration registration = registrations.get(registrationId);
-                byte op = pendingOps.op(slot);
-                long userData = pendingOps.userData(slot);
-
-                // Recycle if this completion is terminal (no more CQEs expected for this SQE).
-                if (oneshotOp) {
-                    pendingOps.release(slot);
-                }
-
-                // Resolve slow-path completions through the live registration table to align with the fast path.
-                if (registration != null) {
-                    registration.handle(res, flags, op, userData, extraCqeData);
-                }
-
-                if (logger.isTraceEnabled()) {
-                    logger.trace("completed(ring {}): {}(id={}, res={})",
-                            ringBuffer.fd(), Native.opToStr(op), id, res);
-                }
+            if (udata >= 0) {
+                handleFastPath(res, flags, udata, extraCqeData);
                 return;
             }
-            if (logger.isDebugEnabled()) {
-                logger.debug("ignoring completion for unknown sequence (seq={}, res={})",
-                        PendingOpSlots.tokenSequence(udata), res);
-            }
+            handleSlowPath(res, flags, udata, extraCqeData);
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
             handleLoopException(throwable);
+        }
+    }
+
+    private void handleFastPath(int res, int flags, long udata, ByteBuffer extraCqeData) {
+        int id = UserData.decodeId(udata);
+        DefaultIoUringIoRegistration registration = registrations.get(id);
+        if (registration != null) {
+            byte op = UserData.decodeOp(udata);
+            long userData = UserData.decodeData(udata);
+            if (logger.isTraceEnabled()) {
+                logger.trace("completed(ring {}): {}(id={}, res={})",
+                        ringBuffer.fd(), Native.opToStr(op), id, res);
+            }
+            registration.handle(res, flags, op, userData, extraCqeData);
+            return;
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("ignoring completion for unknown registration (id={}, res={})", id, res);
+        }
+    }
+
+    private void handleSlowPath(int res, int flags, long udata, ByteBuffer extraCqeData) {
+        int slot = pendingOps.findSlot(udata);
+        if (slot != -1) {
+            int registrationId = pendingOps.registrationId(slot);
+            DefaultIoUringIoRegistration registration = registrations.get(registrationId);
+            byte op = pendingOps.op(slot);
+            long userData = pendingOps.userData(slot);
+
+            // Recycle if this completion is terminal (no more CQEs expected for this SQE).
+            if ((flags & Native.IORING_CQE_F_MORE) == 0) {
+                pendingOps.release(slot);
+            }
+
+            // Resolve slow-path completions through the live registration table to align with the fast path.
+            if (registration != null) {
+                registration.handle(res, flags, op, userData, extraCqeData);
+            }
+
+            if (logger.isTraceEnabled()) {
+                logger.trace("completed(ring {}): {}(id={}, res={})",
+                        ringBuffer.fd(), Native.opToStr(op), registrationId, res);
+            }
+            return;
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("ignoring completion for unknown sequence (seq={}, res={})",
+                    PendingOpMap.tokenSequence(udata), res);
         }
     }
 
@@ -666,170 +674,6 @@ public final class IoUringIoHandler implements IoHandler {
                 removeLater = false;
                 remove();
             }
-        }
-    }
-
-    private static final class PendingOpSlots {
-        private int[] registrationIds;
-        private byte[] ops;
-        private long[] userDatas;
-        private long[] activeSequences;
-        private int mask;
-        private final AtomicLong nextSequence = new AtomicLong(3);
-
-        PendingOpSlots(int initialCapacity) {
-            int capacity = normalizeCapacity(initialCapacity);
-            registrationIds = new int[capacity];
-            ops = new byte[capacity];
-            userDatas = new long[capacity];
-            activeSequences = new long[capacity];
-            mask = capacity - 1;
-        }
-
-        long nextToken() {
-            long sequence = nextSequence.getAndIncrement();
-            if (sequence <= 0) {
-                // Monotonic sequence starting at 3; ~29k years to exhaust positive long space at 10M/s,
-                // so overflow is purely theoretical.
-                throw new IllegalStateException("slow path sequence overflow");
-            }
-            return token(sequence);
-        }
-
-        void registerNormal(long token, int registrationId, byte op, long userData) {
-            long sequence = tokenSequence(token);
-            int slot = ensureWritableSlot(sequence);
-            registrationIds[slot] = registrationId;
-            ops[slot] = op;
-            userDatas[slot] = userData;
-            activeSequences[slot] = sequence;
-        }
-
-        int findSlot(long token) {
-            long sequence = tokenSequence(token);
-            if (sequence == INVALID_ID) {
-                return -1;
-            }
-            int slot = slot(sequence, mask);
-            return activeSequences[slot] == sequence ? slot : -1;
-        }
-
-        int registrationId(int slot) {
-            return registrationIds[slot];
-        }
-
-        byte op(int slot) {
-            return ops[slot];
-        }
-
-        long userData(int slot) {
-            return userDatas[slot];
-        }
-
-        void release(long token) {
-            int slot = findSlot(token);
-            if (slot != -1) {
-                release(slot);
-            }
-        }
-
-        void release(int slot) {
-            registrationIds[slot] = 0;
-            ops[slot] = 0;
-            userDatas[slot] = 0;
-            activeSequences[slot] = INVALID_ID;
-        }
-
-        private int ensureWritableSlot(long sequence) {
-            int mask = this.mask;
-            int slot = slot(sequence, mask);
-            while (activeSequences[slot] != INVALID_ID) {
-                resize();
-                mask = this.mask;
-                slot = slot(sequence, mask);
-            }
-            return slot;
-        }
-
-        private void resize() {
-            int oldCapacity = activeSequences.length;
-            int newCapacity = oldCapacity << 1;
-            if (newCapacity <= 0) {
-                throw new IllegalStateException("slow path table overflow");
-            }
-
-            int[] oldRegistrationIds = registrationIds;
-            byte[] oldOps = ops;
-            long[] oldUserDatas = userDatas;
-            long[] oldActiveSequences = activeSequences;
-
-            int[] newRegistrationIds = new int[newCapacity];
-            byte[] newOps = new byte[newCapacity];
-            long[] newUserDatas = new long[newCapacity];
-            long[] newActiveSequences = new long[newCapacity];
-
-            for (int i = 0; i < oldCapacity; i++) {
-                long sequence = oldActiveSequences[i];
-                if (sequence == INVALID_ID) {
-                    continue;
-                }
-                int newSlot = (sequence & oldCapacity) == 0 ? i : i + oldCapacity;
-                newRegistrationIds[newSlot] = oldRegistrationIds[i];
-                newOps[newSlot] = oldOps[i];
-                newUserDatas[newSlot] = oldUserDatas[i];
-                newActiveSequences[newSlot] = sequence;
-            }
-
-            registrationIds = newRegistrationIds;
-            ops = newOps;
-            userDatas = newUserDatas;
-            activeSequences = newActiveSequences;
-            mask = newCapacity - 1;
-        }
-
-        /**
-         * sequence is always > 0, so its top bit (bit63) is always 0.
-         * sequence layout:
-         *   [ 0 | bit62 ... bit32 | bit31 | bit30 ... bit0 ]
-         * upperBits = sequence >>> 31:
-         *   [ 0 | bit62 ... bit32 | bit31 ]
-         * lowerBits = ((int) sequence & Integer.MAX_VALUE) | Integer.MIN_VALUE:
-         *   [ 1 | bit30 ... bit0 ]   // negative int, high bit is used as a token marker
-         * Final token layout:
-         *   [ 0 | bit62 ... bit32 | bit31 ][ 1 | bit30 ... bit0 ]
-         * @param sequence original sequence
-         * @return real userData
-         */
-        private static long token(long sequence) {
-            // We intentionally do not handle sequence wrap-around here.
-            // `nextSequence` would need to reach Long.MAX_VALUE and overflow,
-            // which is considered practically impossible in this context.
-            long upperBits = sequence >>> 31;
-            int lowerBits = ((int) sequence & Integer.MAX_VALUE) | Integer.MIN_VALUE;
-            return (upperBits << Integer.SIZE) | (lowerBits & 0xFFFFFFFFL);
-        }
-
-        private static long tokenSequence(long token) {
-            int lowerBits = (int) token;
-            if (lowerBits >= 0) {
-                return INVALID_ID;
-            }
-            return (token >>> Integer.SIZE) << 31 | (lowerBits & Integer.MAX_VALUE);
-        }
-
-        private static int slot(long sequence, int mask) {
-            return (int) sequence & mask;
-        }
-
-        private static int normalizeCapacity(int requestedCapacity) {
-            int capacity = 1;
-            while (capacity < requestedCapacity) {
-                capacity <<= 1;
-                if (capacity <= 0) {
-                    throw new IllegalArgumentException("requestedCapacity overflow");
-                }
-            }
-            return capacity;
         }
     }
 
