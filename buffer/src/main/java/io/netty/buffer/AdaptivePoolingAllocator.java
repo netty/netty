@@ -1487,10 +1487,18 @@ final class AdaptivePoolingAllocator {
         @Override
         public void accept(int packed) {
             // Called by allocating thread when draining freeList.
-            int size = MIN_BUDDY_SIZE << (packed >> PACK_SIZE_SHIFT);
-            int offset = (packed & PACK_OFFSET_MASK) * MIN_BUDDY_SIZE;
+            int size = unpackSize(packed);
+            int offset = unpackOffset(packed);
             unreserveMatchingBuddy(1, size, offset, 0);
             allocatedBytes -= size;
+        }
+
+        private static int unpackSize(int packed) {
+            return MIN_BUDDY_SIZE << (packed >> PACK_SIZE_SHIFT);
+        }
+
+        private static int unpackOffset(int packed) {
+            return (packed & PACK_OFFSET_MASK) * MIN_BUDDY_SIZE;
         }
 
         @Override
@@ -1504,10 +1512,12 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public int remainingCapacity() {
+            int capacityInFreeList = 0;
             if (!freeList.isEmpty()) {
-                freeList.drain(freeListCapacity, this);
+                capacityInFreeList = freeList.weakPeekReduce(freeListCapacity, 0,
+                        (sum, entry) -> sum + unpackSize(entry));
             }
-            return super.remainingCapacity();
+            return super.remainingCapacity() + capacityInFreeList;
         }
 
         @Override
