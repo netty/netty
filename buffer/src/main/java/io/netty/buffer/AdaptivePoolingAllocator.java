@@ -590,9 +590,10 @@ final class AdaptivePoolingAllocator {
      * </pre>
      *
      * <p><b>runPurgeScan</b> (every {@link #CHUNK_PURGE_POLLS_THREAD_LOCAL} polls) —
-     * ages idle chunks, evicts past threshold. Never selects — selection is always
-     * {@code scanForCapacity}. Compact (closeGap) only runs when an eviction removed
-     * something. Partition always runs to pick up chunks that gained capacity externally.
+     * two passes. Pass 1: age idle chunks (full → epoch++, non-full → epoch=0), evict
+     * past threshold, compact survivors (nulls stale slots inline). Pass 2: three-way
+     * Dutch-flag partition into [epoch=0 hasCap | epoch&gt;0 hasCap | noCap]. Never selects —
+     * selection is always {@code scanForCapacity}.
      *
      * <p>Case 1 — no eviction, an empty chunk gained capacity externally (common):
      * <pre>
@@ -601,8 +602,8 @@ final class AdaptivePoolingAllocator {
      *    ^head            ^tail
      *    notEmptyCount=2
      *
-     *   scan: age idle chunks. None past threshold. No eviction → no compact.
-     *   partition: E* now has capacity → swapped into notEmpty zone.
+     *   pass 1: age idle chunks. None past threshold. No compaction needed.
+     *   pass 2 (partition): E* now has capacity → placed in notEmpty zone.
      *
      *   after:
      *   [NE, NE, E*, E, _, _, _, _]
@@ -616,17 +617,15 @@ final class AdaptivePoolingAllocator {
      *   [E, NE, _,  IDLE*, NE, E, E, NE]
      *          ^tail ^head
      *
-     *   scan: IDLE* evicted (markToDeallocate). Remaining entries compacted → closeGap(kept).
+     *   pass 1: IDLE* evicted (markToDeallocate), survivors compacted, stale slots nulled.
+     *   [_, _, _,  NE, E, E, NE, E]
+     *     ^tail    ^head
+     *              |--- kept=6 ---|
      *
-     *   after closeGap:
-     *   [NE, _, _,  NE, E, E, NE, E]
-     *       ^tail   ^head
-     *               |--- kept=6 ---|
-     *
-     *   after partition: notEmpty swapped to front, empty to back.
-     *   [NE, _, _,  NE, NE, E, E, E]
-     *       ^tail   ^head
-     *               notEmptyCount=2, count=6
+     *   pass 2 (partition): three-way into [epoch=0 hasCap | epoch&gt;0 hasCap | noCap].
+     *   [_, _, _,  NE, NE, E, E, E]
+     *     ^tail    ^head
+     *              notEmptyCount=2, count=6
      * </pre>
      * Idle chunks ({@code remainingCapacity == capacity}) age via purgeEpoch and are evicted
      * past threshold, but at least {@link #CHUNK_REUSE_QUEUE} chunks are always retained.
@@ -696,7 +695,6 @@ final class AdaptivePoolingAllocator {
             int mask = chunks.length - 1;
             int kept = 0;
             int survivors = count;
-            boolean evicted = false;
             for (int i = 0; i < count; i++) {
                 int readIdx = (head + i) & mask;
                 SizeClassedChunk chunk = chunks[readIdx];
@@ -705,70 +703,62 @@ final class AdaptivePoolingAllocator {
                     chunk.purgeEpoch++;
                     if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
                         chunk.markToDeallocate();
+                        chunks[readIdx] = null;
                         survivors--;
-                        evicted = true;
                         continue;
                     }
                 } else {
                     chunk.purgeEpoch = 0;
                 }
-                if (evicted) {
-                    chunks[(head + kept) & mask] = chunk;
+                int writeIdx = (head + kept) & mask;
+                if (writeIdx != readIdx) {
+                    chunks[writeIdx] = chunk;
+                    chunks[readIdx] = null;
                 }
                 kept++;
             }
-            if (evicted) {
-                closeGap(kept);
-            }
-            partition(evicted ? kept : count);
-            purgeBudget = CHUNK_PURGE_POLLS_THREAD_LOCAL;
-        }
-
-        private void closeGap(int kept) {
-            int mask = chunks.length - 1;
-            int gapStart = (head + kept) & mask;
-            Arrays.fill(chunks, gapStart, gapStart <= tail ? tail : chunks.length, null);
-            if (gapStart > tail) {
-                Arrays.fill(chunks, 0, tail, null);
-            }
             tail = (head + kept) & mask;
             count = kept;
+            partition(kept);
+            purgeBudget = CHUNK_PURGE_POLLS_THREAD_LOCAL;
         }
 
         private void partition(int size) {
             int mask = chunks.length - 1;
-            // First pass: hasCapacity to front, noCapacity to back.
+            // Three-way Dutch-flag partition (Dijkstra):
+            //   [epoch=0 hasCap | epoch>0 hasCap | noCap]
+            //
+            // Epoch=0 chunks (recently used) go to the head so scanForCapacity picks them
+            // first. This prevents scan from picking epoch>0 chunks (idle, aging toward
+            // eviction) and resetting their epoch — which would restart their aging clock
+            // and slow convergence. The working set cycles at the front; excess ages
+            // undisturbed at the back.
             int lo = 0;
+            int mid = 0;
             int hi = size - 1;
-            while (lo <= hi) {
-                int loIdx = (head + lo) & mask;
-                if (chunks[loIdx].hasRemainingCapacity()) {
-                    lo++;
+            while (mid <= hi) {
+                int midIdx = (head + mid) & mask;
+                SizeClassedChunk chunk = chunks[midIdx];
+                if (chunk.hasRemainingCapacity()) {
+                    if (chunk.purgeEpoch == 0) {
+                        if (lo != mid) {
+                            int loIdx = (head + lo) & mask;
+                            chunks[midIdx] = chunks[loIdx];
+                            chunks[loIdx] = chunk;
+                        }
+                        lo++;
+                        mid++;
+                    } else {
+                        mid++;
+                    }
                 } else {
                     int hiIdx = (head + hi) & mask;
-                    SizeClassedChunk tmp = chunks[loIdx];
-                    chunks[loIdx] = chunks[hiIdx];
-                    chunks[hiIdx] = tmp;
+                    chunks[midIdx] = chunks[hiIdx];
+                    chunks[hiIdx] = chunk;
                     hi--;
                 }
             }
-            notEmptyCount = lo;
-            // Second pass: within the notEmpty zone [head, head+lo),
-            // sub-partition epoch==0 to front, epoch>0 behind.
-            int elo = 0;
-            int ehi = lo - 1;
-            while (elo <= ehi) {
-                int eloIdx = (head + elo) & mask;
-                if (chunks[eloIdx].purgeEpoch == 0) {
-                    elo++;
-                } else {
-                    int ehiIdx = (head + ehi) & mask;
-                    SizeClassedChunk tmp = chunks[eloIdx];
-                    chunks[eloIdx] = chunks[ehiIdx];
-                    chunks[ehiIdx] = tmp;
-                    ehi--;
-                }
-            }
+            notEmptyCount = mid;
         }
 
         @Override
