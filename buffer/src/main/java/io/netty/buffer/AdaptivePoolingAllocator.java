@@ -631,11 +631,11 @@ final class AdaptivePoolingAllocator {
      * past threshold, but at least {@link #CHUNK_REUSE_QUEUE} chunks are always retained.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
-        private SizeClassedChunk[] chunks;
-        private int head;
-        private int tail;
-        private int count;
-        private int notEmptyCount;
+        SizeClassedChunk[] chunks; // package-private for testing
+        int head;
+        int tail;
+        int count;
+        int notEmptyCount;
         private long purgeBudget;
 
         ThreadLocalSizeClassedChunkCache() {

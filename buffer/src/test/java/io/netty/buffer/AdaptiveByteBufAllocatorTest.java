@@ -291,7 +291,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         int buffersPerChunk = (int) (chunkSize / 256);
         probe.release();
 
-        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 2 + 10;
+        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
         int totalBuffers = totalChunks * buffersPerChunk;
         java.util.List<ByteBuf> bufs = new java.util.ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
@@ -305,7 +305,15 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         long memoryAfterRelease = allocator.usedHeapMemory();
 
         int threshold = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD;
-        int pollsNeeded = (int) ((threshold + 2) * purgePolls);
+        // Account for pollChunk calls burned during setup (one per chunk created)
+        // and partition shuffle: with N notEmpty and P polls, each chunk is polled
+        // P/N of the time. Epochs advance at rate 1-P/N per cycle. Need enough cycles
+        // for the slowest chunk to reach threshold.
+        int setupPolls = totalChunks;
+        int notEmpty = totalChunks - AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        double advanceRate = 1.0 - (double) purgePolls / notEmpty;
+        int cyclesNeeded = advanceRate > 0 ? (int) Math.ceil((threshold + 1) / advanceRate) + 2 : threshold + 2;
+        int pollsNeeded = setupPolls + (int) (cyclesNeeded * purgePolls);
         for (int poll = 0; poll < pollsNeeded; poll++) {
             for (int i = 0; i < buffersPerChunk; i++) {
                 bufs.add(allocator.heapBuffer(256));

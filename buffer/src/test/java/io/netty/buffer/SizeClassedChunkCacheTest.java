@@ -273,6 +273,46 @@ public class SizeClassedChunkCacheTest {
         }
     }
 
+    @Test
+    void wrappedRingCompactionLeavesNoStaleReferences() {
+        AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
+                (AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache)
+                        SizeClassedChunkCache.create(true);
+
+        // Fill 6 slots of the initial ring (size=8), purge, drain to advance head
+        for (int i = 0; i < 6; i++) {
+            cache.offerChunk(chunkWithCapacity());
+        }
+        cache.forcePurge();
+        while (cache.pollChunk(256) != null) {
+            // drain
+        }
+        assertTrue(cache.head > 0, "head should have advanced past 0");
+
+        // Offer 4 chunks — wraps past the array boundary
+        cache.offerChunk(chunkWithCapacity());
+        cache.offerChunk(chunkWithCapacity());
+        cache.offerChunk(fullChunk());
+        cache.offerChunk(fullChunk());
+        assertTrue(cache.tail < cache.head,
+                "ring should wrap: tail=" + cache.tail + " < head=" + cache.head);
+
+        // Purge partitions on the wrapped ring
+        SizeClassedChunk polled = cache.forcePurge();
+        assertNotNull(polled);
+
+        // Verify the backing array: exactly count non-null entries, no stale refs
+        int nonNull = 0;
+        for (int i = 0; i < cache.chunks.length; i++) {
+            if (cache.chunks[i] != null) {
+                nonNull++;
+            }
+        }
+        assertEquals(cache.count, nonNull,
+                "backing array should have exactly count=" + cache.count
+                        + " non-null entries, but found " + nonNull);
+    }
+
     // --- bursty traffic: idle chunks are eventually evicted ---
 
     @Test
