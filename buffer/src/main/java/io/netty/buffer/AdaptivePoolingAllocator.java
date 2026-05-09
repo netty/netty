@@ -698,8 +698,10 @@ final class AdaptivePoolingAllocator {
             for (int i = 0; i < count; i++) {
                 int readIdx = (head + i) & mask;
                 SizeClassedChunk chunk = chunks[readIdx];
-                int remaining = chunk.remainingCapacity();
-                if (remaining == chunk.capacity()) {
+                if (chunk.purgeEpoch > 0) {
+                    // Unpolled since last purge — still full (no allocations possible,
+                    // scan resets epoch to 0 on pick, so epoch>0 means no scan touched it).
+                    assert chunk.remainingCapacity() == chunk.capacity();
                     chunk.purgeEpoch++;
                     if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
                         chunk.markToDeallocate();
@@ -707,8 +709,8 @@ final class AdaptivePoolingAllocator {
                         survivors--;
                         continue;
                     }
-                } else {
-                    chunk.purgeEpoch = 0;
+                } else if (chunk.remainingCapacity() == chunk.capacity()) {
+                    chunk.purgeEpoch = 1;
                 }
                 int writeIdx = (head + kept) & mask;
                 if (writeIdx != readIdx) {

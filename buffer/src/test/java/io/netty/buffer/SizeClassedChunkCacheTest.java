@@ -141,11 +141,10 @@ public class SizeClassedChunkCacheTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void purgeResetsEpochForNonIdleChunks(boolean threadLocal) {
+    void nonFullChunkDoesNotAge(boolean threadLocal) {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
 
         SizeClassedChunk chunk = chunkWithCapacity();
-        chunk.purgeEpoch = 5;
         cache.offerChunk(chunk);
 
         cache.forcePurge();
@@ -154,11 +153,10 @@ public class SizeClassedChunkCacheTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void selectedChunkHasEpochReset(boolean threadLocal) {
+    void selectedFullChunkHasEpochReset(boolean threadLocal) {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
 
-        SizeClassedChunk chunk = chunkWithCapacity();
-        chunk.purgeEpoch = 2;
+        SizeClassedChunk chunk = fullChunk();
         cache.offerChunk(chunk);
 
         SizeClassedChunk selected = cache.forcePurge();
