@@ -362,14 +362,20 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         checkDstIndex(index, length, dstIndex, dst.capacity());
         if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
-        } else if (dst.nioBufferCount() > 0) {
-            for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
-                int bbLen = bb.remaining();
-                getBytes(index, bb);
-                index += bbLen;
-            }
         } else {
-            dst.setBytes(dstIndex, this, index, length);
+            ByteBuf unwrapped = dst instanceof WrappedByteBuf ? dst.unwrap() : dst;
+            if (unwrapped instanceof AbstractByteBuf) {
+                ByteBuffer dstBuf = unwrapped.internalNioBuffer(dstIndex, length);
+                PlatformDependent.absolutePut(dstBuf, dstBuf.position(), buffer, index, length);
+            } else if (dst.nioBufferCount() > 0) {
+                for (ByteBuffer bb : dst.nioBuffers(dstIndex, length)) {
+                    int bbLen = bb.remaining();
+                    getBytes(index, bb);
+                    index += bbLen;
+                }
+            } else {
+                dst.setBytes(dstIndex, this, index, length);
+            }
         }
         return this;
     }
