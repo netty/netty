@@ -894,7 +894,6 @@ final class AdaptivePoolingAllocator {
             }
             if (!queue.offer(first)) {
                 first.markToDeallocate();
-                return null;
             }
             return scanForCapacitySlow(generation, null);
         }
