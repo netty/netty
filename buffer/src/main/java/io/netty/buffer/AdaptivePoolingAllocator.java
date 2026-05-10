@@ -529,8 +529,10 @@ final class AdaptivePoolingAllocator {
     // 4. CONVERGENCE: idle full chunks that are never picked by scan age undisturbed across
     //    purge cycles. After CHUNK_PURGE_THRESHOLD + 1 consecutive cycles of being full and
     //    unpolled, they are evicted. Chunks picked by scan get epoch reset — aging interrupted.
-    //    Thread-local: deterministic, exact (partition orders epoch=0 at head, scan always
-    //    takes head). Shared: approximate, converges over multiple cycles (FIFO queue ordering,
+    //    Thread-local: partition orders [epoch=0 | 0<epoch<T | epoch>=T | noCap]. Scan takes
+    //    from head (epoch=0 first). Chunks with epoch>=threshold are placed at the back of
+    //    the hasCap zone so scan doesn't reach them — they age to threshold+1 and get evicted.
+    //    Shared: approximate, converges over multiple cycles (FIFO queue ordering,
     //    LRU preference in scan, retained counter in purge).
     abstract static class SizeClassedChunkCache implements ChunkCache {
         static SizeClassedChunkCache create(boolean isThreadLocal) {
@@ -591,9 +593,12 @@ final class AdaptivePoolingAllocator {
      *
      * <p><b>runPurgeScan</b> (every {@link #CHUNK_PURGE_POLLS_THREAD_LOCAL} polls) —
      * two passes. Pass 1: age idle chunks (full → epoch++, non-full → epoch=0), evict
-     * past threshold, compact survivors (nulls stale slots inline). Pass 2: three-way
-     * Dutch-flag partition into [epoch=0 hasCap | epoch&gt;0 hasCap | noCap]. Never selects —
-     * selection is always {@code scanForCapacity}.
+     * past threshold, compact survivors (nulls stale slots inline). Pass 2: partition
+     * hasCap to front / noCap to back, then three-way Dutch-flag within hasCap into
+     * [epoch=0 | 0&lt;epoch&lt;threshold | epoch&gt;=threshold]. Chunks with epoch&gt;=threshold
+     * are placed at the back of hasCap so scan doesn't reach them — they age to
+     * threshold+1 and get evicted. Never selects — selection is always
+     * {@code scanForCapacity}.
      *
      * <p>Case 1 — no eviction, an empty chunk gained capacity externally (common):
      * <pre>
@@ -622,7 +627,7 @@ final class AdaptivePoolingAllocator {
      *     ^tail    ^head
      *              |--- kept=6 ---|
      *
-     *   pass 2 (partition): three-way into [epoch=0 hasCap | epoch&gt;0 hasCap | noCap].
+     *   pass 2 (partition): [epoch=0 hasCap | 0&lt;epoch&lt;T hasCap | epoch&gt;=T hasCap | noCap].
      *   [_, _, _,  NE, NE, E, E, E]
      *     ^tail    ^head
      *              notEmptyCount=2, count=6
@@ -727,40 +732,56 @@ final class AdaptivePoolingAllocator {
 
         private void partition(int size) {
             int mask = chunks.length - 1;
-            // Three-way Dutch-flag partition (Dijkstra):
-            //   [epoch=0 hasCap | epoch>0 hasCap | noCap]
-            //
-            // Epoch=0 chunks (recently used) go to the head so scanForCapacity picks them
-            // first. This prevents scan from picking epoch>0 chunks (idle, aging toward
-            // eviction) and resetting their epoch — which would restart their aging clock
-            // and slow convergence. The working set cycles at the front; excess ages
-            // undisturbed at the back.
+            // Pass 1: hasCapacity to front, noCapacity to back.
             int lo = 0;
-            int mid = 0;
             int hi = size - 1;
-            while (mid <= hi) {
-                int midIdx = (head + mid) & mask;
-                SizeClassedChunk chunk = chunks[midIdx];
-                if (chunk.hasRemainingCapacity()) {
-                    if (chunk.purgeEpoch == 0) {
-                        if (lo != mid) {
-                            int loIdx = (head + lo) & mask;
-                            chunks[midIdx] = chunks[loIdx];
-                            chunks[loIdx] = chunk;
-                        }
-                        lo++;
-                        mid++;
-                    } else {
-                        mid++;
-                    }
+            while (lo <= hi) {
+                int loIdx = (head + lo) & mask;
+                if (chunks[loIdx].hasRemainingCapacity()) {
+                    lo++;
                 } else {
                     int hiIdx = (head + hi) & mask;
-                    chunks[midIdx] = chunks[hiIdx];
-                    chunks[hiIdx] = chunk;
+                    SizeClassedChunk tmp = chunks[loIdx];
+                    chunks[loIdx] = chunks[hiIdx];
+                    chunks[hiIdx] = tmp;
                     hi--;
                 }
             }
-            notEmptyCount = mid;
+            notEmptyCount = lo;
+            // Pass 2: three-way Dutch-flag within notEmpty:
+            //   [epoch=0 | 0<epoch<threshold | epoch>=threshold]
+            //
+            // Epoch=0 (recently used) at head — scan picks these first.
+            // Epoch>=threshold (about to be evicted) at back — scan doesn't reach them,
+            // so they age one more cycle to threshold+1 and get evicted.
+            //
+            // This ordering guarantees convergence regardless of count/polls ratio.
+            // Without it (e.g., a simple epoch=0/epoch>0 split with mid++), when
+            // count/polls == threshold the groups rotate perfectly and max epoch never
+            // exceeds threshold — eviction stalls at threshold * polls chunks.
+            int elo = 0;
+            int emid = 0;
+            int ehi = lo - 1;
+            while (emid <= ehi) {
+                int emidIdx = (head + emid) & mask;
+                SizeClassedChunk c = chunks[emidIdx];
+                if (c.purgeEpoch == 0) {
+                    if (elo != emid) {
+                        int eloIdx = (head + elo) & mask;
+                        chunks[emidIdx] = chunks[eloIdx];
+                        chunks[eloIdx] = c;
+                    }
+                    elo++;
+                    emid++;
+                } else if (c.purgeEpoch < CHUNK_PURGE_THRESHOLD) {
+                    emid++;
+                } else {
+                    int ehiIdx = (head + ehi) & mask;
+                    chunks[emidIdx] = chunks[ehiIdx];
+                    chunks[ehiIdx] = c;
+                    ehi--;
+                }
+            }
         }
 
         @Override

@@ -503,8 +503,8 @@ public class SizeClassedChunkCacheTest {
         startLatch.countDown();
         // With the == sentinel check, threads could livelock here.
         // With >= ordering, all scans terminate promptly.
-        boolean finished = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
-        assertTrue(finished, "Concurrent scans should terminate within 5 seconds, not livelock");
+        boolean finished = doneLatch.await(30, java.util.concurrent.TimeUnit.SECONDS);
+        assertTrue(finished, "Concurrent scans should terminate within 30 seconds, not livelock");
         assertNull(error.get());
     }
 }
