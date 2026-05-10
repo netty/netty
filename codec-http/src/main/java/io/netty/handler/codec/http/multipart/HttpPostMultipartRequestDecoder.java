@@ -41,6 +41,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -899,7 +900,11 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (encoding != null) {
             String code;
             try {
-                code = encoding.getValue().toLowerCase();
+                // RFC 2045 Content-Transfer-Encoding values are case-insensitive ASCII tokens.
+                // toLowerCase() without a Locale would corrupt them under Turkish (tr_TR) locale,
+                // where 'I' lowercases to 'ı' (U+0131) and "BINARY" becomes "bınary" - never
+                // matching the lowercase ASCII constants compared against below.
+                code = encoding.getValue().toLowerCase(Locale.US);
             } catch (IOException e) {
                 throw new ErrorDataDecoderException(e);
             }
