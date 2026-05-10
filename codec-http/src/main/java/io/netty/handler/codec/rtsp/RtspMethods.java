@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -119,7 +120,10 @@ public final class RtspMethods {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        name = checkNonEmptyAfterTrim(name, "name").toUpperCase();
+        // RFC 2326 RTSP method names are ASCII tokens. toUpperCase() without an explicit Locale
+        // uses the JVM default, which in Turkish (tr_TR) maps 'i' to 'İ' (U+0130) and breaks the
+        // lookup of methods such as "describe" or "redirect" against the cached uppercase keys.
+        name = checkNonEmptyAfterTrim(name, "name").toUpperCase(Locale.US);
         HttpMethod result = methodMap.get(name);
         if (result != null) {
             return result;
