@@ -326,6 +326,32 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testPublishMessageIncompleteVariableHeaderStillFailsWhenCurrentPacketTooLarge() throws Exception {
+        int maxBytesInMessage = 16;
+        int currentPacketRemainingLength = maxBytesInMessage + 1;
+        int claimedTopicNameLength = 32;
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(maxBytesInMessage));
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        byteBuf.writeByte(0x30);
+        byteBuf.writeByte(currentPacketRemainingLength);
+        byteBuf.writeShort(claimedTopicNameLength);
+        byteBuf.writeZero(maxBytesInMessage - 2);
+
+        try {
+            assertTrue(channel.writeInbound(byteBuf));
+            MqttMessage decodedMessage = channel.readInbound();
+            try {
+                assertTrue(decodedMessage.decoderResult().isFailure());
+                assertInstanceOf(TooLongFrameException.class, decodedMessage.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(decodedMessage);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     public void testPubAckMessage() throws Exception {
         testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBACK);
     }
