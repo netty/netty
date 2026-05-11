@@ -102,6 +102,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
+    private static final String DOT_LOCALHOST = '.' + LOCALHOST;
     private static final String WINDOWS_HOST_NAME;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
@@ -753,7 +754,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (hostname.endsWith(".")) {
             hostname = hostname.substring(0, hostname.length() - 1);
         }
-        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase().endsWith('.' + LOCALHOST);
+        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase().endsWith(DOT_LOCALHOST);
     }
 
     private InetAddress getLocalHostAddress() {
