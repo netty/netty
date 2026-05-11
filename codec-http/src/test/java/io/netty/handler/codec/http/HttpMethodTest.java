@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -122,9 +123,13 @@ public class HttpMethodTest {
                     .getBytes(StandardCharsets.US_ASCII);
             ch.writeInbound(Unpooled.wrappedBuffer(data));
             HttpRequest req = ch.readInbound();
-            assertNotNull(req);
-            assertFalse(req.decoderResult().isSuccess(),
-                    "decoder must reject method names containing NUL bytes");
+            try {
+                assertNotNull(req);
+                assertFalse(req.decoderResult().isSuccess(),
+                        "decoder must reject method names containing NUL bytes");
+            } finally {
+                ReferenceCountUtil.release(req);
+            }
         } finally {
             ch.finishAndReleaseAll();
         }
@@ -138,8 +143,12 @@ public class HttpMethodTest {
             byte[] data = "GET / HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
             ch.writeInbound(Unpooled.wrappedBuffer(data));
             HttpRequest req = ch.readInbound();
-            assertNotNull(req);
-            assertEquals(HttpMethod.GET, req.method());
+            try {
+                assertNotNull(req);
+                assertEquals(HttpMethod.GET, req.method());
+            } finally {
+                ReferenceCountUtil.release(req);
+            }
         } finally {
             ch.finishAndReleaseAll();
         }
