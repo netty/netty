@@ -219,7 +219,15 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
         try {
             future = lookup(ctx, clientHello);
             if (future.isDone()) {
-                onLookupComplete(ctx, future);
+                try {
+                    onLookupComplete(ctx, future);
+                } catch (DecoderException err) {
+                    ctx.fireExceptionCaught(err);
+                } catch (Exception cause) {
+                    ctx.fireExceptionCaught(new DecoderException(cause));
+                } catch (Throwable cause) {
+                    ctx.fireExceptionCaught(cause);
+                }
             } else {
                 suppressRead = true;
                 final ByteBuf finalClientHello = clientHello;
