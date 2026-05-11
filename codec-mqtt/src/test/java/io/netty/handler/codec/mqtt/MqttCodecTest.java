@@ -300,6 +300,20 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testPublishMessageIncompleteVariableHeaderDoesNotUseCumulationSizeForTooLongCheck() throws Exception {
+        MqttDecoder decoder = new MqttDecoder(16);
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        byteBuf.writeByte(0x30);
+        byteBuf.writeByte(10);
+        byteBuf.writeShort(32);
+        byteBuf.writeZero(14);
+
+        decoder.channelRead(ctx, byteBuf);
+
+        assertEquals(0, out.size());
+    }
+
+    @Test
     public void testPubAckMessage() throws Exception {
         testMessageWithOnlyFixedHeaderAndMessageIdVariableHeader(MqttMessageType.PUBACK);
     }
