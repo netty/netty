@@ -39,6 +39,7 @@ public class SizeClassedChunkCacheTest {
         when(chunk.remainingCapacity()).thenReturn(512);
         when(chunk.capacity()).thenReturn(4096);
         when(chunk.hasRemainingCapacity()).thenReturn(true);
+        when(chunk.hasFullCapacity()).thenReturn(false);
         return chunk;
     }
 
@@ -47,15 +48,17 @@ public class SizeClassedChunkCacheTest {
         when(chunk.remainingCapacity()).thenReturn(0);
         when(chunk.capacity()).thenReturn(4096);
         when(chunk.hasRemainingCapacity()).thenReturn(false);
+        when(chunk.hasFullCapacity()).thenReturn(false);
         return chunk;
     }
 
     private static SizeClassedChunk fullChunk() {
-        // remaining == capacity → purge ages it. Has capacity (all segments available).
+        // All segments available → purge ages it.
         SizeClassedChunk chunk = mock(SizeClassedChunk.class);
         when(chunk.remainingCapacity()).thenReturn(4096);
         when(chunk.capacity()).thenReturn(4096);
         when(chunk.hasRemainingCapacity()).thenReturn(true);
+        when(chunk.hasFullCapacity()).thenReturn(true);
         return chunk;
     }
 

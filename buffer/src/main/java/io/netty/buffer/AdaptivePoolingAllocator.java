@@ -124,11 +124,11 @@ final class AdaptivePoolingAllocator {
     static final int CHUNK_REUSE_QUEUE = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
 
-    static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = SystemPropertyUtil.getLong(
-            "io.netty.allocator.chunkPurgePollsThreadLocal", 16L);
+    static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
+            "io.netty.allocator.chunkPurgePollsThreadLocal", 16L));
 
-    static final long CHUNK_PURGE_POLLS_SHARED = SystemPropertyUtil.getLong(
-            "io.netty.allocator.chunkPurgePollsShared", 128L);
+    static final long CHUNK_PURGE_POLLS_SHARED = Math.max(1, SystemPropertyUtil.getLong(
+            "io.netty.allocator.chunkPurgePollsShared", 128L));
 
     static final int CHUNK_PURGE_THRESHOLD = SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkPurgeThreshold", 3);
@@ -704,9 +704,7 @@ final class AdaptivePoolingAllocator {
                 int readIdx = (head + i) & mask;
                 SizeClassedChunk chunk = chunks[readIdx];
                 if (chunk.purgeEpoch > 0) {
-                    // Unpolled since last purge — still full (no allocations possible,
-                    // scan resets epoch to 0 on pick, so epoch>0 means no scan touched it).
-                    assert chunk.remainingCapacity() == chunk.capacity();
+                    assert chunk.hasFullCapacity();
                     chunk.purgeEpoch++;
                     if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
                         chunk.markToDeallocate();
@@ -714,7 +712,7 @@ final class AdaptivePoolingAllocator {
                         survivors--;
                         continue;
                     }
-                } else if (chunk.remainingCapacity() == chunk.capacity()) {
+                } else if (chunk.hasFullCapacity()) {
                     chunk.purgeEpoch = 1;
                 }
                 int writeIdx = (head + kept) & mask;
@@ -958,8 +956,7 @@ final class AdaptivePoolingAllocator {
                     break;
                 }
                 retained++;
-                int remaining = chunk.remainingCapacity();
-                if (remaining == chunk.capacity()) {
+                if (chunk.hasFullCapacity()) {
                     chunk.purgeEpoch++;
                     if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD) {
                         if (bufCount == buf.length) {
@@ -972,6 +969,7 @@ final class AdaptivePoolingAllocator {
                 } else {
                     chunk.purgeEpoch = 0;
                 }
+                int remaining = chunk.remainingCapacity();
                 if (remaining > 0) {
                     chunk.lastPurgeGeneration = generation;
                     if (!queue.offer(chunk)) {
@@ -1807,6 +1805,15 @@ final class AdaptivePoolingAllocator {
                 return !localFreeList.isEmpty();
             }
             return !externalFreeList.isEmpty();
+        }
+
+        boolean hasFullCapacity() {
+            int free = externalFreeList.size();
+            IntStack local = localFreeList;
+            if (local != null) {
+                free += local.size();
+            }
+            return free == segments;
         }
 
         @Override
