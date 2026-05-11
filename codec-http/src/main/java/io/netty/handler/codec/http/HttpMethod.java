@@ -141,7 +141,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
             throw new IllegalArgumentException("name cannot be empty");
         }
         String trimmed = start == 0 && end == name.length() ? name : name.substring(start, end);
-        int index = HttpUtil.validateToken(trimmed);
+        int index = HttpHeaderValidationUtil.validateToken(trimmed);
         if (index != -1) {
             throw new IllegalArgumentException(
                     "Illegal character in HTTP Method: 0x" + Integer.toHexString(trimmed.charAt(index)));

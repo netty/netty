@@ -117,26 +117,32 @@ public class HttpMethodTest {
         // a known request-smuggling vector if silently stripped, so the decoder must
         // surface a decoder failure rather than producing a valid GET message.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        byte[] data = (NUL + "GET" + NUL + " / HTTP/1.1\r\nHost: x\r\n\r\n")
-                .getBytes(StandardCharsets.US_ASCII);
-        ch.writeInbound(Unpooled.wrappedBuffer(data));
-        HttpRequest req = ch.readInbound();
-        assertNotNull(req);
-        assertFalse(req.decoderResult().isSuccess(),
-                "decoder must reject method names containing NUL bytes");
-        ch.finishAndReleaseAll();
+        try {
+            byte[] data = (NUL + "GET" + NUL + " / HTTP/1.1\r\nHost: x\r\n\r\n")
+                    .getBytes(StandardCharsets.US_ASCII);
+            ch.writeInbound(Unpooled.wrappedBuffer(data));
+            HttpRequest req = ch.readInbound();
+            assertNotNull(req);
+            assertFalse(req.decoderResult().isSuccess(),
+                    "decoder must reject method names containing NUL bytes");
+        } finally {
+            ch.finishAndReleaseAll();
+        }
     }
 
     @Test
     public void requestDecoderAcceptsCleanMethod() {
         // Regression: ordinary GET requests must still parse normally.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
-        byte[] data = "GET / HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
-        ch.writeInbound(Unpooled.wrappedBuffer(data));
-        HttpRequest req = ch.readInbound();
-        assertNotNull(req);
-        assertEquals(HttpMethod.GET, req.method());
-        ch.finishAndReleaseAll();
+        try {
+            byte[] data = "GET / HTTP/1.1\r\nHost: x\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
+            ch.writeInbound(Unpooled.wrappedBuffer(data));
+            HttpRequest req = ch.readInbound();
+            assertNotNull(req);
+            assertEquals(HttpMethod.GET, req.method());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
     }
 
     private static Executable newInstance(final String name) {
