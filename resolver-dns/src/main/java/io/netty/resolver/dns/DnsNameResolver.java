@@ -83,6 +83,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -754,7 +755,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (hostname.endsWith(".")) {
             hostname = hostname.substring(0, hostname.length() - 1);
         }
-        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase().endsWith(DOT_LOCALHOST);
+        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase(Locale.US).endsWith(DOT_LOCALHOST);
     }
 
     private InetAddress getLocalHostAddress() {
