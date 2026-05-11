@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.TooLongFrameException;
@@ -301,16 +302,27 @@ public class MqttCodecTest {
 
     @Test
     public void testPublishMessageIncompleteVariableHeaderDoesNotUseCumulationSizeForTooLongCheck() throws Exception {
-        MqttDecoder decoder = new MqttDecoder(16);
+        int maxBytesInMessage = 16;
+        int currentPacketRemainingLength = 10;
+        int claimedTopicNameLength = 32;
+        int followingPingReqPackets = 3;
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(maxBytesInMessage));
         ByteBuf byteBuf = ALLOCATOR.buffer();
         byteBuf.writeByte(0x30);
-        byteBuf.writeByte(10);
-        byteBuf.writeShort(32);
-        byteBuf.writeZero(14);
+        byteBuf.writeByte(currentPacketRemainingLength);
+        byteBuf.writeShort(claimedTopicNameLength);
+        byteBuf.writeZero(currentPacketRemainingLength - 2);
+        for (int i = 0; i < followingPingReqPackets; i++) {
+            byteBuf.writeByte(0xC0);
+            byteBuf.writeByte(0);
+        }
 
-        decoder.channelRead(ctx, byteBuf);
-
-        assertEquals(0, out.size());
+        try {
+            assertFalse(channel.writeInbound(byteBuf));
+            assertNull(channel.readInbound());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     @Test
