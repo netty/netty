@@ -867,7 +867,7 @@ public class DnsNameResolverTest {
 
     private static List<Arguments> testResolveLocalhostWithoutDNSArgs() {
         DnsNameResolverChannelStrategy[] strategies = DnsNameResolverChannelStrategy.values();
-        List<String> names = asList("localhost", "localhost.", "test.localhost", "test.localhost.");
+        List<String> names = asList("localhost", "localhost.", "test.localhost", "TEsT.LOCalhost", "test.localhost.");
 
         List<Arguments> output = new ArrayList<>();
         for (DnsNameResolverChannelStrategy strategy : strategies) {
