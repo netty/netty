@@ -97,7 +97,7 @@ public class SizeClassedChunkCacheTest {
     // --- purge: epoch aging and eviction (both caches) ---
 
     @Test
-    void fullChunkAgesEachPurgeAndIsEvictedPastThreshold_threadLocal() {
+    void fullChunkAgesEachPurgeAndIsEvictedPastThresholdThreadLocal() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
@@ -121,7 +121,7 @@ public class SizeClassedChunkCacheTest {
     }
 
     @Test
-    void fullChunkAgesAndIsEventuallyEvicted_shared() {
+    void fullChunkAgesAndIsEventuallyEvictedShared() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
@@ -319,7 +319,7 @@ public class SizeClassedChunkCacheTest {
     // --- bursty traffic: idle chunks are eventually evicted ---
 
     @Test
-    void cacheSettlesAtRetentionFloorAfterBurst_threadLocal() {
+    void cacheSettlesAtRetentionFloorAfterBurstThreadLocal() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
         int floor = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
@@ -349,7 +349,7 @@ public class SizeClassedChunkCacheTest {
     }
 
     @Test
-    void cacheSettlesAfterBurst_shared() {
+    void cacheSettlesAfterBurstShared() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
 
         int excess = 10;
@@ -383,7 +383,7 @@ public class SizeClassedChunkCacheTest {
     // idle chunks age undisturbed behind the working set.
 
     @Test
-    void excessFullChunksAgeWhileWorkingSetIsPreferred_threadLocal() {
+    void excessFullChunksAgeWhileWorkingSetIsPreferredThreadLocal() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
@@ -411,7 +411,7 @@ public class SizeClassedChunkCacheTest {
     }
 
     @Test
-    void excessFullChunksEventuallyEvicted_shared() {
+    void excessFullChunksEventuallyEvictedShared() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
@@ -514,7 +514,7 @@ public class SizeClassedChunkCacheTest {
     // --- free: draining all chunks (thread-local) ---
 
     @Test
-    void pollChunkCannotDrainNoCapChunks_threadLocal() {
+    void pollChunkCannotDrainNoCapChunksThreadLocal() {
         AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
                 new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
 
@@ -538,7 +538,7 @@ public class SizeClassedChunkCacheTest {
     }
 
     @Test
-    void freeDrainsAllChunksIncludingNoCap_threadLocal() {
+    void freeDrainsAllChunksIncludingNoCapThreadLocal() {
         AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
                 new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
 
@@ -562,7 +562,7 @@ public class SizeClassedChunkCacheTest {
     }
 
     @Test
-    void freeDrainsAllChunks_shared() {
+    void freeDrainsAllChunksShared() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
 
         SizeClassedChunk cap = chunkWithCapacity();
