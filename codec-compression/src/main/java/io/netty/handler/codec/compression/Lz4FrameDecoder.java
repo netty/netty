@@ -51,6 +51,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
 public class Lz4FrameDecoder extends ByteToMessageDecoder {
+    private final int maxDecompressedLength;
     /**
      * Current state of stream.
      */
@@ -118,6 +119,21 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
+     * Creates a LZ4 decoder with fastest decoder instance available on your machine.
+     *
+     * @param validateChecksums  if {@code true}, the checksum field will be validated against the actual
+     *                           uncompressed data, and if the checksums do not match, a suitable
+     *                           {@link DecompressionException} will be thrown
+     * @param maxDecompressedLength
+     *                          maximum length of the decompressed block. If {@code 0} is given it uses {@code 32MB}
+     *                          by default.
+     */
+    public Lz4FrameDecoder(boolean validateChecksums, int maxDecompressedLength) {
+        this(LZ4Factory.fastestInstance(), validateChecksums ? new Lz4XXHash32(DEFAULT_SEED) : null,
+                maxDecompressedLength);
+    }
+
+    /**
      * Creates a new LZ4 decoder with customizable implementation.
      *
      * @param factory            user customizable {@link LZ4Factory} instance
@@ -143,8 +159,25 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
+        this(factory, checksum, MAX_BLOCK_SIZE);
+    }
+
+    /**
+     * Creates a new customizable LZ4 decoder.
+     *
+     * @param factory   user customizable {@link LZ4Factory} instance
+     *                  which may be JNI bindings to the original C implementation, a pure Java implementation
+     *                  or a Java implementation that uses the {@link sun.misc.Unsafe}
+     * @param checksum  the {@link Checksum} instance to use to check data for integrity.
+     *                  You may set {@code null} if you do not want to validate checksum of each block
+     * @param maxDecompressedLength
+     *                  maximum length of the decompressed block. If {@code 0} is given it uses {@code 32MB} by default.
+     */
+    public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum, int maxDecompressedLength) {
         decompressor = ObjectUtil.checkNotNull(factory, "factory").fastDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        this.maxDecompressedLength = maxDecompressedLength == 0 ? MAX_BLOCK_SIZE :
+                ObjectUtil.checkInRange(maxDecompressedLength, 0, MAX_BLOCK_SIZE, "maxDecompressedLength");
     }
 
     @Override
@@ -172,11 +205,17 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                 }
 
                 int decompressedLength = Integer.reverseBytes(in.readInt());
-                final int maxDecompressedLength = 1 << compressionLevel;
-                if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
+                if (decompressedLength > maxDecompressedLength) {
+                    throw new DecompressionException(String.format(
+                            "decompressedLength too large: %d (expected: 0-%d)",
+                            decompressedLength, maxDecompressedLength));
+                }
+
+                final int maxLocalDecompressedLength = 1 << compressionLevel;
+                if (decompressedLength < 0 || decompressedLength > maxLocalDecompressedLength) {
                     throw new DecompressionException(String.format(
                             "invalid decompressedLength: %d (expected: 0-%d)",
-                            decompressedLength, maxDecompressedLength));
+                            decompressedLength, maxLocalDecompressedLength));
                 }
                 if (decompressedLength == 0 && compressedLength != 0
                         || decompressedLength != 0 && compressedLength == 0

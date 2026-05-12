@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.13.Final-SNAPSHOT</version>
+    <version>4.2.14.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-common</artifactId>
@@ -51,6 +51,12 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-testkit</artifactId>
+      <version>${junit.platform.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

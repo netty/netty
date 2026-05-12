@@ -353,6 +353,10 @@ public final class JdkSslServerContext extends JdkSslContext {
 
     private static TrustManager[] wrapTrustManagerIfNeeded(
             TrustManager[] trustManagers, ResumptionController resumptionController) {
+
+        if (trustManagers == null) {
+            return null;
+        }
         if (WRAP_TRUST_MANAGER) {
             for (int i = 0; i < trustManagers.length; i++) {
                 TrustManager tm = trustManagers[i];

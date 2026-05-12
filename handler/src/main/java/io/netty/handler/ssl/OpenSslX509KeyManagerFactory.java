@@ -225,10 +225,14 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
 
                 @Override
                 void destroy() {
-                    for (Object material: materialMap.values()) {
-                        ReferenceCountUtil.release(material);
+                    try {
+                        for (Object material: materialMap.values()) {
+                            ReferenceCountUtil.release(material);
+                        }
+                        materialMap.clear();
+                    } finally {
+                        super.destroy();
                     }
-                    materialMap.clear();
                 }
             }
         }
