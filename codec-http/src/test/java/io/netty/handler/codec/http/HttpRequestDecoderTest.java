@@ -678,6 +678,16 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testChunkedNotLastInTransferEncoding() throws Exception {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked, identity\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        testInvalidHeaders0(requestStr);
+    }
+
+    @Test
     public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() throws Exception {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, true);
@@ -702,7 +712,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testContentLengthHeaderAndChunked() throws Exception {
+    public void testContentLengthHeaderAndChunkedHttp11() throws Exception {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: close\r\n" +
@@ -712,12 +722,45 @@ public class HttpRequestDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertThat(request.decoderResult().cause()).isInstanceOf(ContentLengthNotAllowedException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testContentLengthHeaderAndChunkedHttp11RFC7230() throws Exception {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(
+                new HttpDecoderConfig().setUseRfc9112TransferEncoding(false)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
         assertFalse(request.decoderResult().isFailure());
         assertTrue(request.headers().names().contains("Transfer-Encoding"));
         assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
         assertFalse(request.headers().contains("Content-Length"));
+        assertEquals("close", request.headers().get("Connection"));
         LastHttpContent c = channel.readInbound();
         c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testContentLengthHeaderAndChunkedHttp10() throws Exception {
+        String requestStr = "POST / HTTP/1.0\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertThat(request.decoderResult().cause()).isInstanceOf(TransferEncodingNotAllowedException.class);
         assertFalse(channel.finish());
     }
 
@@ -988,6 +1031,33 @@ public class HttpRequestDecoderTest {
         HttpContent content = channel.readInbound();
         assertTrue(content.decoderResult().isFailure());
         assertThat(content.decoderResult().cause()).isInstanceOf(NumberFormatException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void mustRejectChunkSizeThatWouldCauseOverflow() throws Exception {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "100000004\r\n" +
+                "test\r\n" +
+                "0\r\n" +
+                "\r\n" +
+                "GET /smuggled HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        // Request 1
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertFalse(content.decoderResult().isSuccess());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("Chunk size overflow");
+        content.release();
         assertFalse(channel.finish());
     }
 

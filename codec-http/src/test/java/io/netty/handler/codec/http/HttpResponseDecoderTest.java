@@ -744,6 +744,54 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testContentLengthHeaderAndChunkedHttp11() throws Exception {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertThat(response.decoderResult().cause()).isInstanceOf(ContentLengthNotAllowedException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testContentLengthHeaderAndChunkedHttp11RFC7230() throws Exception {
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder(
+                new HttpDecoderConfig().setUseRfc9112TransferEncoding(false)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertFalse(response.decoderResult().isFailure());
+        assertTrue(response.headers().names().contains("Transfer-Encoding"));
+        assertTrue(response.headers().contains("Transfer-Encoding", "chunked", false));
+        assertFalse(response.headers().contains("Content-Length"));
+        LastHttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testContentLengthHeaderAndChunkedHttp10() throws Exception {
+        String responseStr = "HTTP/1.0 200 OK\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertThat(response.decoderResult().cause()).isInstanceOf(TransferEncodingNotAllowedException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testResponseWithContentLengthFragmented() throws Exception {
         byte[] data = ("HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 10\r\n" +
@@ -1301,6 +1349,32 @@ public class HttpResponseDecoderTest {
         HttpContent content = channel.readInbound();
         assertTrue(content.decoderResult().isFailure());
         assertThat(content.decoderResult().cause()).isInstanceOf(NumberFormatException.class);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void mustRejectChunkSizeThatWouldCauseOverflow() throws Exception {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "100000004\r\n" +
+                "test\r\n" +
+                "0\r\n" +
+                "\r\n" +
+                "GET /smuggled HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        // Request 1
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        HttpContent content = channel.readInbound();
+        assertFalse(content.decoderResult().isSuccess());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("Chunk size overflow");
+        content.release();
         assertFalse(channel.finish());
     }
 

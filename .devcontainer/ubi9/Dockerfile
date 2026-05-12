@@ -1,0 +1,48 @@
+FROM redhat/ubi9
+
+RUN dnf install -y procps-ng \
+ apr-devel \
+ autoconf \
+ automake \
+ cmake \
+ g++ \
+ gcc \
+ git \
+ glibc-devel \
+ golang \
+ libtool \
+ libstdc++-static \
+ lksctp-tools \
+ make \
+ ninja-build \
+ openssl-devel \
+ tar \
+ unzip \
+ wget \
+ zip \
+ zlib-devel
+
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io?ci=true" | bash
+
+ARG java_version=25-zulu
+ENV JAVA_VERSION=$java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# install rust and setup PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
+
+# Cleanup
+RUN dnf clean all
+
+# when the JDK is GraalVM install native-image
+RUN if [ -O /root/.sdkman/candidates/java/current/bin/gu ]; then /root/.sdkman/candidates/java/current/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi

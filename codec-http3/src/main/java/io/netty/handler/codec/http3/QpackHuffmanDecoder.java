@@ -4649,6 +4649,9 @@ final class QpackHuffmanDecoder implements ByteProcessor {
     private static final QpackException BAD_ENCODING =  QpackException.newStatic(QpackHuffmanDecoder.class,
             "decode(...)", "QPACK - Bad Encoding");
 
+    private static final QpackException INVALID_LENGTH =  QpackException.newStatic(QpackHuffmanDecoder.class,
+            "decode(...)", "QPACK - Invalid length");
+
     private byte[] dest;
     private int k;
     private int state;
@@ -4665,6 +4668,9 @@ final class QpackHuffmanDecoder implements ByteProcessor {
     public AsciiString decode(ByteBuf buf, int length) throws QpackException {
         if (length == 0) {
             return AsciiString.EMPTY_STRING;
+        }
+        if (buf.readableBytes() < length) {
+            throw INVALID_LENGTH;
         }
         dest = new byte[length * 8 / 5];
         try {

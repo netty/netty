@@ -646,11 +646,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     outErrorCodeBuffer = null;
                 }
             } finally {
-                if (sendResult == SendResult.SOME) {
-                    // As this is the close let us flush it asap.
-                    forceFlushParent();
+                Future<Void> wf = null;
+                final InetSocketAddress sendToAddress = remote;
+                if (sendToAddress == null) {
+                    if (sendResult == SendResult.SOME) {
+                        // As this is the close let us flush it asap.
+                        forceFlushParent();
+                    } else {
+                        flushParent();
+                    }
                 } else {
-                    flushParent();
+                    // We need to ensure all writes were done before we actually notify the close promise as otherwise
+                    // we might not be able to write things to the underlying socket if the socket is closed as soon
+                    // as all QuicChannel.close() ChannelFutures are completed.
+                    wf = parent().writeAndFlush(new DatagramPacket(Unpooled.EMPTY_BUFFER, sendToAddress));
                 }
                 conn.free();
                 if (freeTask != null) {
@@ -660,7 +669,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 local = null;
                 remote = null;
-                promise.setSuccess(null);
+                if (wf == null) {
+                    promise.setSuccess(null);
+                } else {
+                    wf.addListener(__ -> {
+                        promise.setSuccess(null);
+                    });
+                }
             }
         }
     }

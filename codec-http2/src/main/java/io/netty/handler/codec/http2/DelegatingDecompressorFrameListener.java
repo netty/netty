@@ -77,6 +77,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
      * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
      *                      If zero, maximum size is not limited by decoder.
+     *                      Some compression codecs will output buffers up to 64 KiB in size,
+     *                      even if {@code maxAllocation} is configured lower.
      */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                                                int maxAllocation) {
@@ -109,6 +111,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
      * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
      *                      If zero, maximum size is not limited by decoder.
+     *                      Some compression codecs will output buffers up to 64 KiB in size,
+     *                      even if {@code maxAllocation} is configured lower.
      */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                     boolean strict, int maxAllocation) {
@@ -191,7 +195,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder())
+                    .handlers(new BrotliDecoder(maxAllocation))
                     .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
@@ -205,7 +209,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
                     .config(channel.config())
-                    .handlers(new ZstdDecoder())
+                    .handlers(new ZstdDecoder(maxAllocation))
                     .build();
         }
         // 'identity' or unsupported

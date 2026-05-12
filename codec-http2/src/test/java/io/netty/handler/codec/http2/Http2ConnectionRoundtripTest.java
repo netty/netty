@@ -609,7 +609,7 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void listenerExceptionShouldCloseConnection() throws Exception {
         final Http2Headers headers = dummyHeaders();
-        doThrow(new RuntimeException("Fake Exception")).when(serverListener).onHeadersRead(
+        doThrow(Http2TestUtil.FAKE_EXCEPTION).when(serverListener).onHeadersRead(
                 any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0), eq((short) 16),
                 eq(false), eq(0), eq(false));
 
@@ -797,7 +797,7 @@ public class Http2ConnectionRoundtripTest {
         clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                throw new RuntimeException("Fake Exception");
+                throw Http2TestUtil.FAKE_EXCEPTION;
             }
         });
 
