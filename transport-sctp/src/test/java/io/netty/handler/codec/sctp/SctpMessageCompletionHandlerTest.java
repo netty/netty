@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.sctp.SctpMessage;
+import io.netty.handler.codec.CodecException;
 import io.netty.util.SuppressForbidden;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +29,9 @@ import java.net.SocketAddress;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SctpMessageCompletionHandlerTest {
 
@@ -47,8 +51,61 @@ public class SctpMessageCompletionHandlerTest {
         assertEquals(0, buffer2.refCnt());
     }
 
+    @Test
+    public void testIncompleteMessagesLimited() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        SctpMessage message = new SctpMessage(new TestMessageInfo(false, 1), buffer);
+        assertFalse(channel.writeInbound(message));
+        assertEquals(1, buffer.refCnt());
+        SctpMessage message2 = new SctpMessage(new TestMessageInfo(false, 2), buffer2);
+        assertThrows(CodecException.class, () -> channel.writeInbound(message2));
+
+        assertEquals(1, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+        assertFalse(channel.finish());
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+    }
+
+    @Test
+    public void testFragmentsLimited() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertEquals(1, buffer.refCnt());
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer2)));
+        assertEquals(1, buffer2.refCnt());
+
+        assertThrows(CodecException.class, () ->
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer3)));
+        assertEquals(0, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+    }
+
+    @Test
+    public void testNotFragmented() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler());
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        SctpMessage message = new SctpMessage(new TestMessageInfo(true, 1), buffer);
+        assertTrue(channel.writeInbound(message));
+        SctpMessage read = channel.readInbound();
+        assertSame(message, read);
+        assertEquals(1, read.refCnt());
+        read.release();
+        assertFalse(channel.finish());
+    }
+
     @SuppressForbidden(reason = "test-only")
-    private final class TestMessageInfo extends MessageInfo {
+    private static final class TestMessageInfo extends MessageInfo {
 
         private final boolean complete;
         private final int streamNumber;
