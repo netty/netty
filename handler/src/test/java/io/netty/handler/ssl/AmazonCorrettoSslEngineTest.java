@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -30,7 +31,7 @@ import java.security.Security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-
+@Isolated("Adds and removes Security providers")
 @DisabledIf("checkIfAccpIsDisabled")
 public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
 
