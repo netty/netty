@@ -486,18 +486,16 @@ final class AdaptivePoolingAllocator {
         }
 
         private void freeChunkReuseQueue(Thread ownerThread) {
-            Chunk chunk;
-            while ((chunk = chunkCache.pollChunk(0)) != null) {
-                if (ownerThread != null && chunk instanceof SizeClassedChunk) {
-                    SizeClassedChunk threadLocalChunk = (SizeClassedChunk) chunk;
-                    assert ownerThread == threadLocalChunk.ownerThread;
-                    // no release segment can ever happen from the owner Thread since it's not running anymore
-                    // This is required to let the ownerThread to be GC'ed despite there are AdaptiveByteBuf
-                    // that reference some thread local chunk
-                    threadLocalChunk.ownerThread = null;
+            if (ownerThread != null && chunkCache instanceof ThreadLocalSizeClassedChunkCache) {
+                ThreadLocalSizeClassedChunkCache tlCache = (ThreadLocalSizeClassedChunkCache) chunkCache;
+                int mask = tlCache.chunks.length - 1;
+                for (int i = 0; i < tlCache.count; i++) {
+                    SizeClassedChunk chunk = tlCache.chunks[(tlCache.head + i) & mask];
+                    assert ownerThread == chunk.ownerThread;
+                    chunk.ownerThread = null;
                 }
-                chunk.markToDeallocate();
             }
+            chunkCache.free();
         }
     }
 
@@ -505,6 +503,10 @@ final class AdaptivePoolingAllocator {
         Chunk pollChunk(int size);
 
         boolean offerChunk(Chunk chunk);
+
+        void free();
+
+        boolean isEmpty();
     }
 
     // Cached chunks are detached from magazines: no readInitInto can happen, so segment count
@@ -825,6 +827,25 @@ final class AdaptivePoolingAllocator {
             }
             return sb.toString();
         }
+
+        @Override
+        public void free() {
+            int mask = chunks.length - 1;
+            for (int i = 0; i < count; i++) {
+                int idx = (head + i) & mask;
+                chunks[idx].markToDeallocate();
+                chunks[idx] = null;
+            }
+            head = 0;
+            tail = 0;
+            count = 0;
+            notEmptyCount = 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return count == 0;
+        }
     }
 
     /**
@@ -1003,6 +1024,19 @@ final class AdaptivePoolingAllocator {
         public boolean offerChunk(Chunk chunk) {
             return queue.offer((SizeClassedChunk) chunk);
         }
+
+        @Override
+        public void free() {
+            SizeClassedChunk chunk;
+            while ((chunk = queue.poll()) != null) {
+                chunk.markToDeallocate();
+            }
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return queue.isEmpty();
+        }
     }
 
     private static final class ConcurrentSkipListChunkCache implements ChunkCache {
@@ -1090,6 +1124,21 @@ final class AdaptivePoolingAllocator {
                 size = chunks.size();
             }
             return true;
+        }
+
+        @Override
+        public void free() {
+            for (IntEntry<Chunk> entry : chunks) {
+                Chunk chunk = entry.getValue();
+                if (chunk != null && chunks.remove(entry.getKey(), chunk)) {
+                    chunk.markToDeallocate();
+                }
+            }
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return chunks.isEmpty();
         }
     }
 

@@ -510,4 +510,71 @@ public class SizeClassedChunkCacheTest {
         assertTrue(finished, "Concurrent scans should terminate within 30 seconds, not livelock");
         assertNull(error.get());
     }
+
+    // --- free: draining all chunks (thread-local) ---
+
+    @Test
+    void pollChunkCannotDrainNoCapChunks_threadLocal() {
+        AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
+
+        cache.offerChunk(chunkWithCapacity());
+        cache.offerChunk(chunkWithoutCapacity());
+        cache.offerChunk(chunkWithCapacity());
+        cache.offerChunk(chunkWithoutCapacity());
+
+        int drained = 0;
+        while (cache.pollChunk(0) != null) {
+            drained++;
+            if (drained > 100) {
+                break;
+            }
+        }
+
+        // pollChunk uses scanForCapacity which skips noCap chunks — they're stuck.
+        // This is why free() is needed instead of a pollChunk drain loop.
+        assertEquals(2, cache.count);
+        verify(cache.chunks[cache.head], never()).markToDeallocate();
+    }
+
+    @Test
+    void freeDrainsAllChunksIncludingNoCap_threadLocal() {
+        AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
+
+        SizeClassedChunk cap1 = chunkWithCapacity();
+        SizeClassedChunk cap2 = chunkWithCapacity();
+        SizeClassedChunk noCap1 = chunkWithoutCapacity();
+        SizeClassedChunk noCap2 = chunkWithoutCapacity();
+
+        cache.offerChunk(cap1);
+        cache.offerChunk(noCap1);
+        cache.offerChunk(cap2);
+        cache.offerChunk(noCap2);
+
+        cache.free();
+
+        assertTrue(cache.isEmpty());
+        verify(cap1, atLeastOnce()).markToDeallocate();
+        verify(cap2, atLeastOnce()).markToDeallocate();
+        verify(noCap1, atLeastOnce()).markToDeallocate();
+        verify(noCap2, atLeastOnce()).markToDeallocate();
+    }
+
+    @Test
+    void freeDrainsAllChunks_shared() {
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+
+        SizeClassedChunk cap = chunkWithCapacity();
+        SizeClassedChunk noCap = chunkWithoutCapacity();
+
+        cache.offerChunk(cap);
+        cache.offerChunk(noCap);
+
+        cache.free();
+
+        assertTrue(cache.isEmpty());
+        verify(cap, atLeastOnce()).markToDeallocate();
+        verify(noCap, atLeastOnce()).markToDeallocate();
+    }
 }
