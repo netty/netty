@@ -30,7 +30,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -58,8 +58,7 @@ class HttpDataTest {
 
     @BeforeAll
     static void setUp() {
-        Random rndm = new Random();
-        rndm.nextBytes(BYTES);
+        new SplittableRandom().nextBytes(BYTES);
     }
 
     @ParameterizedHttpDataTest

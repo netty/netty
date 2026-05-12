@@ -22,9 +22,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -46,7 +47,7 @@ public class ByteArrayEncoderTest {
     @Test
     public void testEncode() {
         byte[] b = new byte[2048];
-        new Random().nextBytes(b);
+        new SplittableRandom().nextBytes(b);
         ch.writeOutbound(b);
         ByteBuf encoded = ch.readOutbound();
         assertEquals(wrappedBuffer(b), encoded);

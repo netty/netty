@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +53,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        new SplittableRandom(random.nextLong()).nextBytes(data);
     }
 
     public static Collection<Object[]> data() {

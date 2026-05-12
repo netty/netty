@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,7 +89,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         @Override
         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             byte[] data = new byte[1024];
-            random.nextBytes(data);
+            new SplittableRandom(random.nextLong()).nextBytes(data);
 
             buf = ctx.alloc().buffer();
             // call retain on it so it can't be put back on the pool

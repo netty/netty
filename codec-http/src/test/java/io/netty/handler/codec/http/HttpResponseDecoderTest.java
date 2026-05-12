@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -296,7 +296,7 @@ public class HttpResponseDecoderTest {
         assertEquals(HttpResponseStatus.OK, res.status());
 
         byte[] chunkBytes = new byte[10];
-        Random random = new Random();
+        SplittableRandom random = new SplittableRandom();
         random.nextBytes(chunkBytes);
         final ByteBuf chunk = ch.alloc().buffer().writeBytes(chunkBytes);
         final int chunkSize = chunk.readableBytes();

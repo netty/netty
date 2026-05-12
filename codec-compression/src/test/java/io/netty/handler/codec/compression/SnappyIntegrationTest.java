@@ -18,7 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 public class SnappyIntegrationTest extends AbstractIntegrationTest {
 
@@ -103,7 +103,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
 
     private void testWithSeed(long seed) {
         byte[] data = new byte[16 * 1048576];
-        new Random(seed).nextBytes(data);
+        new SplittableRandom(seed).nextBytes(data);
         testIdentity(data, true);
     }
 

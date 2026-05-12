@@ -18,6 +18,8 @@ package io.netty.handler.codec.compression;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
+import java.util.SplittableRandom;
+
 public class Bzip2IntegrationTest extends AbstractIntegrationTest {
 
     @Override
@@ -33,7 +35,7 @@ public class Bzip2IntegrationTest extends AbstractIntegrationTest {
     @Test
     public void test3Tables() throws Exception {
         byte[] data = new byte[500];
-        rand.nextBytes(data);
+        new SplittableRandom(rand.nextLong()).nextBytes(data);
         testIdentity(data, true);
         testIdentity(data, false);
     }
@@ -41,7 +43,7 @@ public class Bzip2IntegrationTest extends AbstractIntegrationTest {
     @Test
     public void test4Tables() throws Exception {
         byte[] data = new byte[1100];
-        rand.nextBytes(data);
+        new SplittableRandom(rand.nextLong()).nextBytes(data);
         testIdentity(data, true);
         testIdentity(data, false);
     }
@@ -49,7 +51,7 @@ public class Bzip2IntegrationTest extends AbstractIntegrationTest {
     @Test
     public void test5Tables() throws Exception {
         byte[] data = new byte[2300];
-        rand.nextBytes(data);
+        new SplittableRandom(rand.nextLong()).nextBytes(data);
         testIdentity(data, true);
         testIdentity(data, false);
     }

@@ -33,7 +33,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
@@ -105,7 +105,7 @@ public final class Http2TestUtil {
      */
     public static byte[] randomBytes(int size) {
         byte[] data = new byte[size];
-        new Random().nextBytes(data);
+        new SplittableRandom().nextBytes(data);
         return data;
     }
 

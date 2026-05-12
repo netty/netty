@@ -26,17 +26,17 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.Timeout;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +50,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     private static EventExecutorGroup group;
 
     static {
-        random.nextBytes(data);
+        new SplittableRandom(random.nextLong()).nextBytes(data);
     }
 
     @BeforeAll
@@ -200,8 +200,9 @@ public class SocketEchoTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            int length = Math.min(rng.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = randomBufferType(cc.alloc(), data, i, length);
             if (voidPromise) {
                 assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));

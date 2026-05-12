@@ -39,6 +39,7 @@ import org.opentest4j.TestAbortedException;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,7 +59,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        new SplittableRandom(random.nextLong()).nextBytes(data);
     }
 
     @AfterAll
@@ -139,8 +140,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     }
 
     public void testGatheringWriteBig(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         byte[] bigData = new byte[1024 * 1024 * 50];
-        random.nextBytes(bigData);
+        rng.nextBytes(bigData);
         testGatheringWrite0(sb, cb, bigData, false, true);
     }
 
@@ -159,8 +161,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
 
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 8), data.length - i);
+            int length = Math.min(rng.nextInt(1024 * 8), data.length - i);
             if (composite && i % 2 == 0) {
                 int firstBufLength = length / 2;
                 CompositeByteBuf comp = compositeBuffer();
@@ -261,8 +264,9 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
         ChannelPromise p1 = cc1.newPromise();
         ChannelPromise p2 = cc2.newPromise();
         cc1.eventLoop().execute(() -> {
+            SplittableRandom rng = new SplittableRandom(random.nextLong());
             for (int i = 0; i < data.length;) {
-                int length = Math.min(random.nextInt(1024 * 8), data.length - i);
+                int length = Math.min(rng.nextInt(1024 * 8), data.length - i);
                 cc1.write(randomBufferType(cc1.alloc(), data, i, length));
                 cc2.write(randomBufferType(cc2.alloc(), data, i, length));
                 i += length;

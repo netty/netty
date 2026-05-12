@@ -27,8 +27,9 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,7 +48,7 @@ public class PerFrameDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload));
 
@@ -77,7 +78,7 @@ public class PerFrameDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 WebSocketExtension.RSV3 | WebSocketExtension.RSV1, Unpooled.wrappedBuffer(payload));
@@ -106,11 +107,12 @@ public class PerFrameDeflateEncoderTest {
 
         // initialize
         byte[] payload1 = new byte[100];
-        random.nextBytes(payload1);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        rng.nextBytes(payload1);
         byte[] payload2 = new byte[100];
-        random.nextBytes(payload2);
+        rng.nextBytes(payload2);
         byte[] payload3 = new byte[100];
-        random.nextBytes(payload3);
+        rng.nextBytes(payload3);
 
         BinaryWebSocketFrame frame1 = new BinaryWebSocketFrame(false,
                 WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload1));
@@ -168,7 +170,7 @@ public class PerFrameDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerFrameDeflateEncoder(9, 15, false, ALWAYS_SKIP));
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
         BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(true,
                                                                     0, Unpooled.wrappedBuffer(payload));
 

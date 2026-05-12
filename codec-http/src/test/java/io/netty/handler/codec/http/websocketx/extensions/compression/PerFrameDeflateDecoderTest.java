@@ -25,9 +25,11 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.*;
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV1;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension.RSV3;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,7 +48,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -77,7 +79,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 RSV3, Unpooled.wrappedBuffer(payload));
@@ -129,7 +131,7 @@ public class PerFrameDeflateDecoderTest {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();

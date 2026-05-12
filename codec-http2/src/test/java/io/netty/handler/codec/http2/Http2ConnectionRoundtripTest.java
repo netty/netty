@@ -49,7 +49,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1282,7 +1282,7 @@ public class Http2ConnectionRoundtripTest {
      */
     private static ByteBuf randomBytes(int length) {
         final byte[] bytes = new byte[length];
-        new Random().nextBytes(bytes);
+        new SplittableRandom().nextBytes(bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 }

@@ -17,19 +17,17 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SWARUtilTest {
 
-    private final Random random = new Random();
-
     @Test
     void containsUpperCaseLong() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Long.BYTES) {
@@ -48,7 +46,7 @@ class SWARUtilTest {
     void containsUpperCaseInt() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Integer.BYTES) {
@@ -67,7 +65,7 @@ class SWARUtilTest {
     void containsLowerCaseLong() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Long.BYTES) {
@@ -86,7 +84,7 @@ class SWARUtilTest {
     void containsLowerCaseInt() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Integer.BYTES) {
@@ -105,7 +103,7 @@ class SWARUtilTest {
     void toUpperCaseLong() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Long.BYTES) {
@@ -125,7 +123,7 @@ class SWARUtilTest {
     void toUpperCaseInt() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Integer.BYTES) {
@@ -145,7 +143,7 @@ class SWARUtilTest {
     void toLowerCaseLong() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Long.BYTES) {
@@ -165,7 +163,7 @@ class SWARUtilTest {
     void toLowerCaseInt() {
         // given
         final byte[] asciiTable = getExtendedAsciiTable();
-        shuffleArray(asciiTable, random);
+        shuffleArray(asciiTable);
 
         // when
         for (int idx = 0; idx < asciiTable.length; idx += Integer.BYTES) {
@@ -181,9 +179,10 @@ class SWARUtilTest {
         }
     }
 
-    private static void shuffleArray(byte[] array, Random random) {
+    private static void shuffleArray(byte[] array) {
+        SplittableRandom rng = new SplittableRandom();
         for (int i = array.length - 1; i > 0; i--) {
-            final int index = random.nextInt(i + 1);
+            final int index = rng.nextInt(i + 1);
             final byte tmp = array[index];
             array[index] = array[i];
             array[i] = tmp;

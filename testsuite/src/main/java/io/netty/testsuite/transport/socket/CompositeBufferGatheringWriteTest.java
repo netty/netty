@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -306,7 +307,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
     private static byte[] newRandomBytes(int size, Random r) {
         byte[] bytes = new byte[size];
-        r.nextBytes(bytes);
+        new SplittableRandom(r.nextLong()).nextBytes(bytes);
         return bytes;
     }
 }

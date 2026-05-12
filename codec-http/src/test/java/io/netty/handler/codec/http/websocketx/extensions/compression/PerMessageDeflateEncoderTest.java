@@ -33,10 +33,12 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.SplittableRandom;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
-import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
-import static io.netty.util.CharsetUtil.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.NEVER_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.EMPTY_DEFLATE_BLOCK;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -56,7 +58,7 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                                                               WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload));
 
@@ -86,7 +88,7 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                                                               WebSocketExtension.RSV3 | WebSocketExtension.RSV1,
@@ -117,11 +119,12 @@ public class PerMessageDeflateEncoderTest {
 
         // initialize
         byte[] payload1 = new byte[100];
-        random.nextBytes(payload1);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        rng.nextBytes(payload1);
         byte[] payload2 = new byte[100];
-        random.nextBytes(payload2);
+        rng.nextBytes(payload2);
         byte[] payload3 = new byte[100];
-        random.nextBytes(payload3);
+        rng.nextBytes(payload3);
 
         BinaryWebSocketFrame frame1 = new BinaryWebSocketFrame(false,
                                                                WebSocketExtension.RSV3,
@@ -180,7 +183,7 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false,
                                                                                           ALWAYS_SKIP));
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        new SplittableRandom(random.nextLong()).nextBytes(payload);
 
         WebSocketFrame binaryFrame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload));
 
@@ -210,7 +213,7 @@ public class PerMessageDeflateEncoderTest {
 
         String textPayload = "not compressed payload";
         byte[] binaryPayload = new byte[101];
-        random.nextBytes(binaryPayload);
+        new SplittableRandom(random.nextLong()).nextBytes(binaryPayload);
 
         WebSocketFrame textFrame = new TextWebSocketFrame(textPayload);
         BinaryWebSocketFrame binaryFrame = new BinaryWebSocketFrame(Unpooled.wrappedBuffer(binaryPayload));
@@ -254,10 +257,11 @@ public class PerMessageDeflateEncoderTest {
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
 
         byte[] firstPayload = new byte[200];
-        random.nextBytes(firstPayload);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        rng.nextBytes(firstPayload);
 
         byte[] finalPayload = new byte[90];
-        random.nextBytes(finalPayload);
+        rng.nextBytes(finalPayload);
 
         BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(firstPayload));
         final ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, 0,

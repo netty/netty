@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -114,7 +114,7 @@ public class ByteBufUtilTest {
 
     private static void decodeRandomHexBytes(int len) {
         byte[] b = new byte[len];
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         rand.nextBytes(b);
         String hexDump = ByteBufUtil.hexDump(b);
         for (int i = 0; i <= len; i++) {  // going over sub-strings of various lengths including empty byte[].
@@ -183,7 +183,7 @@ public class ByteBufUtilTest {
     public void equalsBufferSubsections() {
         byte[] b1 = new byte[128];
         byte[] b2 = new byte[256];
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         rand.nextBytes(b1);
         rand.nextBytes(b2);
         final int iB1 = b1.length / 2;
@@ -193,7 +193,7 @@ public class ByteBufUtilTest {
         assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
-    private static int random(Random r, int min, int max) {
+    private static int random(SplittableRandom r, int min, int max) {
         return r.nextInt((max - min) + 1) + min;
     }
 
@@ -201,7 +201,7 @@ public class ByteBufUtilTest {
     public void notEqualsBufferSubsections() {
         byte[] b1 = new byte[50];
         byte[] b2 = new byte[256];
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         rand.nextBytes(b1);
         rand.nextBytes(b2);
         final int iB1 = b1.length / 2;
@@ -219,7 +219,7 @@ public class ByteBufUtilTest {
     public void notEqualsBufferOverflow() {
         byte[] b1 = new byte[8];
         byte[] b2 = new byte[16];
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         rand.nextBytes(b1);
         rand.nextBytes(b2);
         final int iB1 = b1.length / 2;
@@ -234,7 +234,7 @@ public class ByteBufUtilTest {
     public void notEqualsBufferUnderflow() {
         final byte[] b1 = new byte[8];
         final byte[] b2 = new byte[16];
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         rand.nextBytes(b1);
         rand.nextBytes(b2);
         final int iB1 = b1.length / 2;
