@@ -54,22 +54,23 @@ final class PendingOpMap {
     }
 
     void registerNormal(long token, int registrationId, byte op, long userData) {
-        int startIndex = hashIndex(token, mask);
-        int index = startIndex;
-        int firstTombstone = -1;
         for (;;) {
-            long existing = tokens[index];
-            if (existing == EMPTY) {
-                insertAt(firstTombstone == -1 ? index : firstTombstone, token, registrationId, op, userData);
-                return;
-            }
-            if (existing == TOMBSTONE && firstTombstone == -1) {
-                firstTombstone = index;
-            }
-            if ((index = probeNext(index)) == startIndex) {
-                rehash(expandCapacity(tokens.length));
-                registerNormal(token, registrationId, op, userData);
-                return;
+            int startIndex = hashIndex(token, mask);
+            int index = startIndex;
+            int firstTombstone = -1;
+            for (;;) {
+                long existing = tokens[index];
+                if (existing == EMPTY) {
+                    insertAt(firstTombstone == -1 ? index : firstTombstone, token, registrationId, op, userData);
+                    return;
+                }
+                if (existing == TOMBSTONE && firstTombstone == -1) {
+                    firstTombstone = index;
+                }
+                if ((index = probeNext(index)) == startIndex) {
+                    rehash(expandCapacity(tokens.length));
+                    break;
+                }
             }
         }
     }
