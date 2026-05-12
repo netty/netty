@@ -31,21 +31,23 @@
  */
 package io.netty.handler.codec.http2;
 
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,12 +58,17 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SI
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newTestEncoder;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 final class HpackTestCase {
 
-    private static final Gson GSON = new GsonBuilder()
-            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-            .registerTypeAdapter(HpackHeaderField.class, new HeaderFieldDeserializer())
-            .create();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+            .setVisibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE)
+            .setVisibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
+            .setVisibility(PropertyAccessor.CREATOR, JsonAutoDetect.Visibility.ANY)
+            .registerModule(new SimpleModule()
+                    .addDeserializer(HpackHeaderField.class, new HeaderFieldDeserializer()));
 
     int maxHeaderTableSize = -1;
     boolean sensitiveHeaders;
@@ -71,9 +78,8 @@ final class HpackTestCase {
     private HpackTestCase() {
     }
 
-    static HpackTestCase load(InputStream is) {
-        InputStreamReader r = new InputStreamReader(is);
-        HpackTestCase hpackTestCase = GSON.fromJson(r, HpackTestCase.class);
+    static HpackTestCase load(InputStream is) throws IOException {
+        HpackTestCase hpackTestCase = MAPPER.readValue(is, HpackTestCase.class);
         for (HeaderBlock headerBlock : hpackTestCase.headerBlocks) {
             headerBlock.encodedBytes = StringUtil.decodeHexDump(headerBlock.getEncodedStr());
         }
@@ -271,19 +277,23 @@ final class HpackTestCase {
         }
     }
 
-    static class HeaderFieldDeserializer implements JsonDeserializer<HpackHeaderField> {
+    static class HeaderFieldDeserializer extends StdDeserializer<HpackHeaderField> {
+
+        HeaderFieldDeserializer() {
+            super(HpackHeaderField.class);
+        }
 
         @Override
-        public HpackHeaderField deserialize(JsonElement json, Type typeOfT,
-                                            JsonDeserializationContext context) {
-            JsonObject jsonObject = json.getAsJsonObject();
-            Set<Map.Entry<String, JsonElement>> entrySet = jsonObject.entrySet();
-            if (entrySet.size() != 1) {
-                throw new JsonParseException("JSON Object has multiple entries: " + entrySet);
+        public HpackHeaderField deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            JsonNode node = p.getCodec().readTree(p);
+            Set<Map.Entry<String, JsonNode>> properties = node.properties();
+            if (properties.size() != 1) {
+                throw MismatchedInputException.from(p, HpackHeaderField.class,
+                        "JSON Object must have exactly one entry, got: " + properties.size());
             }
-            Map.Entry<String, JsonElement> entry = entrySet.iterator().next();
+            Map.Entry<String, JsonNode> entry = properties.iterator().next();
             String name = entry.getKey();
-            String value = entry.getValue().getAsString();
+            String value = entry.getValue().asText();
             return new HpackHeaderField(name, value);
         }
     }
