@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Locale;
+
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -119,7 +121,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
     }
 
     HttpVersion(String text, boolean strict, boolean keepAliveDefault) {
-        text = checkNonEmptyAfterTrim(text, "text").toUpperCase();
+        // toUpperCase() without an explicit Locale uses the JVM default. In Turkish locale
+        // (tr_TR) 'i' uppercases to 'İ' (U+0130), which would corrupt protocol strings such
+        // as "icap/1.0" or any custom HTTP-derived scheme that contains a lowercase 'i'.
+        text = checkNonEmptyAfterTrim(text, "text").toUpperCase(Locale.US);
 
         if (strict) {
             // Only single digit major / minor version is allowed.
@@ -197,7 +202,9 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private HttpVersion(
             String protocolName, int majorVersion, int minorVersion,
             boolean keepAliveDefault, boolean bytes) {
-        protocolName = checkNonEmptyAfterTrim(protocolName, "protocolName").toUpperCase();
+        // See the comment in the (text, strict, keepAliveDefault) constructor for why this needs
+        // an explicit Locale.US: avoids the Turkish-locale 'i' -> 'İ' corruption.
+        protocolName = checkNonEmptyAfterTrim(protocolName, "protocolName").toUpperCase(Locale.US);
 
         for (int i = 0; i < protocolName.length(); i ++) {
             if (Character.isISOControl(protocolName.charAt(i)) ||
