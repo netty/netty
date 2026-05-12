@@ -24,6 +24,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -1853,6 +1854,57 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             ReferenceCountUtil.release(composite2);
             ReferenceCountUtil.release(component);
         }
+    }
+
+    @Test
+    public void testDiscardReadComponentsDoesNotCorruptNextRead() {
+        int bufferSize = 32768;
+        byte[] sourceData = new byte[2 * bufferSize];
+        CompositeByteBuf compositeBuffer = newCompositeBuffer();
+
+        // First buffer component will be full of 1's
+        Arrays.fill(sourceData, (byte) 0x01);
+        ByteBuf buffer1 = newBuffer(2 * bufferSize);
+        buffer1.writeBytes(sourceData, 0, bufferSize);
+        assertEquals(bufferSize, buffer1.readableBytes());
+        compositeBuffer.addFlattenedComponents(true, buffer1);
+
+        // Second buffer component will be full of 2's, with a non-zero internal offset
+        Arrays.fill(sourceData, (byte) 0x02);
+        ByteBuf buffer2 = newBuffer(2 * bufferSize);
+        buffer2.writeBytes(sourceData, 0, 32781);
+        buffer2.skipBytes(32781);
+        buffer2.writeBytes(sourceData, 0, bufferSize);
+        compositeBuffer.addFlattenedComponents(true, buffer2);
+
+        // Read into the second buffer to establish cached component state
+        compositeBuffer.skipBytes(bufferSize + 9);
+        byte readByte = compositeBuffer.readByte();
+        assertEquals((byte) 0x02, readByte);
+
+        // Advance further but stay in the second buffer
+        compositeBuffer.skipBytes(22519);
+
+        // Discard the first buffer
+        compositeBuffer.discardReadComponents();
+
+        // Add more buffers
+        Arrays.fill(sourceData, (byte) 0x03);
+        ByteBuf buffer3 = newBuffer(bufferSize);
+        buffer3.writeBytes(sourceData, 0, bufferSize);
+        compositeBuffer.addFlattenedComponents(true, buffer3);
+
+        Arrays.fill(sourceData, (byte) 0x04);
+        ByteBuf buffer4 = newBuffer(bufferSize);
+        buffer4.writeBytes(sourceData, 0, bufferSize);
+        compositeBuffer.addFlattenedComponents(true, buffer4);
+
+        // Skip past the remaining second buffer data into the third buffer
+        compositeBuffer.skipBytes(bufferSize);
+        readByte = compositeBuffer.readByte();
+        assertEquals((byte) 0x03, readByte);
+
+        compositeBuffer.release();
     }
 
 }
