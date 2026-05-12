@@ -147,7 +147,7 @@ public class AdaptiveCumulatorTest {
         assertSame(throwingCumulatorError, actualError);
         assertEquals(0, in.refCnt());
         assertEquals(0, newComposite.refCnt());
-        assertEquals(0, contiguous.refCnt());
+        assertEquals(1, contiguous.refCnt());
       }
     }
   }

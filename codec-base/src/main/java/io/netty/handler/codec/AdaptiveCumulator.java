@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.ByteToMessageDecoder.Cumulator;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * "Adaptive" cumulator: cumulate {@link ByteBuf}s by dynamically switching
@@ -86,7 +87,7 @@ public class AdaptiveCumulator implements Cumulator {
     }
     CompositeByteBuf composite = null;
     try {
-      if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
+      if (isOwnedCompositeBuf(cumulation)) {
         composite = (CompositeByteBuf) cumulation;
         // Writer index must equal capacity if we are going to "write"
         // new components to the end
@@ -94,10 +95,19 @@ public class AdaptiveCumulator implements Cumulator {
           composite.capacity(composite.writerIndex());
         }
       } else {
-        composite = alloc.compositeBuffer(Integer.MAX_VALUE)
-            .addFlattenedComponents(true, cumulation);
+        composite = alloc.compositeBuffer(Integer.MAX_VALUE);
+        cumulation.retain();
+        try {
+          composite.addFlattenedComponents(true, cumulation);
+        } catch (RuntimeException e) {
+          cumulation.release();
+          throw e;
+        }
       }
       addInput(alloc, composite, in);
+      if (cumulation != composite) {
+        cumulation.release();
+      }
       in = null;
       return composite;
     } finally {
@@ -113,6 +123,11 @@ public class AdaptiveCumulator implements Cumulator {
     }
   }
 
+  private static boolean isOwnedCompositeBuf(ByteBuf buf) {
+    return buf instanceof CompositeByteBuf && buf.refCnt() == 1;
+  }
+
+  @VisibleForTesting
   void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
     if (shouldCompose(composite, in, composeMinSize)) {
       composite.addFlattenedComponents(true, in);
@@ -123,6 +138,7 @@ public class AdaptiveCumulator implements Cumulator {
     }
   }
 
+  @VisibleForTesting
   static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
     int componentCount = composite.numComponents();
     if (composite.numComponents() == 0) {
@@ -159,6 +175,7 @@ public class AdaptiveCumulator implements Cumulator {
    * This assumption
    * is verified in unit tests for this method.
    */
+  @VisibleForTesting
   static void mergeWithCompositeTail(
       ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
     int inputSize = in.readableBytes();
