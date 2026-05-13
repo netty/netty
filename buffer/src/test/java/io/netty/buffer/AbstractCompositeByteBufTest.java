@@ -1855,4 +1855,27 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         }
     }
 
+    @Test
+    public void testFindComponent() {
+        CompositeByteBuf composite = newCompositeBuffer();
+
+        ByteBuf b1 = newBuffer(10);
+        b1.writeByte('a');
+        composite.addComponent(true, b1);
+
+        ByteBuf b2 = newBuffer(10);
+        b2.writeByte('b');
+        composite.addComponent(true, b2);
+
+        ByteBuf b3 = newBuffer(10);
+        b3.writeByte('c');
+        composite.addComponent(true, b3);
+
+        assertEquals('a', composite.readByte());
+        composite.skipBytes(1);
+        assertEquals('c', composite.readByte());
+
+        composite.release();
+    }
+
 }
