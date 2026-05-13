@@ -1261,7 +1261,6 @@
         </dependencies>
         <configuration>
           <versionFormat>.*\.Final</versionFormat>
-          <oldVersion>4.2.0.Final</oldVersion>
           <analysisConfiguration>
             <revapi.filter>
               <elements>
