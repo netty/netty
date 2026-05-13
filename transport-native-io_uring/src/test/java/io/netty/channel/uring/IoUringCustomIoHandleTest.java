@@ -15,9 +15,8 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,7 +43,7 @@ public class IoUringCustomIoHandleTest {
 
     @Test
     public void testLongUserDataCompletionPreservesSubmittedUserData() throws Exception {
-        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         try {
             TestHandle handle = new TestHandle();
             IoRegistration registration = register(group, handle);
@@ -65,7 +64,7 @@ public class IoUringCustomIoHandleTest {
 
     @Test
     public void testShortUserDataUsesFastPath() throws Exception {
-        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         try {
             TestHandle handle = new TestHandle();
             IoRegistration registration = register(group, handle);
@@ -86,7 +85,7 @@ public class IoUringCustomIoHandleTest {
 
     @Test
     public void testOffExecutorSubmitWithLongUserData() throws Exception {
-        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         try {
             TestHandle handle = new TestHandle();
             IoRegistration registration = register(group, handle);
@@ -115,12 +114,12 @@ public class IoUringCustomIoHandleTest {
         }
     }
 
-    private static IoRegistration register(IoEventLoopGroup group, IoUringIoHandle handle) {
-        IoEventLoop loop = group.next();
+    private static IoRegistration register(MultiThreadIoEventLoopGroup group, IoUringIoHandle handle) {
+        EventLoop loop = group.next();
         return loop.register(handle).syncUninterruptibly().getNow();
     }
 
-    private static void shutdown(IoEventLoopGroup group) {
+    private static void shutdown(MultiThreadIoEventLoopGroup group) {
         group.shutdownGracefully().syncUninterruptibly();
     }
 
