@@ -75,7 +75,7 @@ public class EpollSocketChannelConfigTest {
 
     @Test
     public void testRandomTcpNotSentLowAt() {
-        final long expected = rand.nextLong(0, 0xFFFFFFFFL);
+        final long expected = rand.nextLong() & 0xFFFFFFFFL;
         final long actual;
         try {
             ch.config().setTcpNotSentLowAt(expected);

@@ -39,6 +39,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1282,7 +1283,7 @@ public class Http2ConnectionRoundtripTest {
      */
     private static ByteBuf randomBytes(int length) {
         final byte[] bytes = new byte[length];
-        new SplittableRandom().nextBytes(bytes);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 }

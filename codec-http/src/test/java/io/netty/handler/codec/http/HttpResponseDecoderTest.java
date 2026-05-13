@@ -22,6 +22,7 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -297,7 +298,7 @@ public class HttpResponseDecoderTest {
 
         byte[] chunkBytes = new byte[10];
         SplittableRandom random = new SplittableRandom();
-        random.nextBytes(chunkBytes);
+        PlatformDependent.splittableRandomNextBytes(random, chunkBytes);
         final ByteBuf chunk = ch.alloc().buffer().writeBytes(chunkBytes);
         final int chunkSize = chunk.readableBytes();
         ByteBuf partialChunk1 = chunk.retainedSlice(0, 5);

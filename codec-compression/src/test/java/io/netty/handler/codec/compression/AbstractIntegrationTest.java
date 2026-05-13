@@ -26,6 +26,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.Test;
 
@@ -107,7 +108,7 @@ public abstract class AbstractIntegrationTest {
     @Test
     public void testLargeRandom() throws Exception {
         final byte[] data = new byte[1024 * 1024];
-        new SplittableRandom(rand.nextLong()).nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(rand.nextLong()), data);
         testIdentity(data, true);
         testIdentity(data, false);
     }
@@ -115,7 +116,7 @@ public abstract class AbstractIntegrationTest {
     @Test
     public void testPartRandom() throws Exception {
         final byte[] data = new byte[10240];
-        new SplittableRandom(rand.nextLong()).nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(rand.nextLong()), data);
         for (int i = 0; i < 1024; i++) {
             data[i] = 2;
         }

@@ -30,6 +30,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -59,7 +60,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        new SplittableRandom(random.nextLong()).nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     @AfterAll
@@ -142,7 +143,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     public void testGatheringWriteBig(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         SplittableRandom rng = new SplittableRandom(random.nextLong());
         byte[] bigData = new byte[1024 * 1024 * 50];
-        rng.nextBytes(bigData);
+        PlatformDependent.splittableRandomNextBytes(rng, bigData);
         testGatheringWrite0(sb, cb, bigData, false, true);
     }
 

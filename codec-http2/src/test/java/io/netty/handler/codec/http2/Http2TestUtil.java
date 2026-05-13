@@ -29,6 +29,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.internal.PlatformDependent;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -105,7 +106,7 @@ public final class Http2TestUtil {
      */
     public static byte[] randomBytes(int size) {
         byte[] data = new byte[size];
-        new SplittableRandom().nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), data);
         return data;
     }
 

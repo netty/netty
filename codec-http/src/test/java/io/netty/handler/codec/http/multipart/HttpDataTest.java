@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,7 @@ class HttpDataTest {
 
     @BeforeAll
     static void setUp() {
-        new SplittableRandom().nextBytes(BYTES);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), BYTES);
     }
 
     @ParameterizedHttpDataTest

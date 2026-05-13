@@ -22,6 +22,7 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
@@ -48,7 +49,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        new SplittableRandom(random.nextLong()).nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -79,7 +80,7 @@ public class PerFrameDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        new SplittableRandom(random.nextLong()).nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 RSV3, Unpooled.wrappedBuffer(payload));
@@ -131,7 +132,7 @@ public class PerFrameDeflateDecoderTest {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
-        new SplittableRandom(random.nextLong()).nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();

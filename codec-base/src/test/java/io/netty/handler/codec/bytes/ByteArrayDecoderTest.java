@@ -17,6 +17,7 @@ package io.netty.handler.codec.bytes;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +40,7 @@ public class ByteArrayDecoderTest {
     @Test
     public void testDecode() {
         byte[] b = new byte[2048];
-        new SplittableRandom().nextBytes(b);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), b);
         ch.writeInbound(wrappedBuffer(b));
         assertArrayEquals(b, ch.readInbound());
     }

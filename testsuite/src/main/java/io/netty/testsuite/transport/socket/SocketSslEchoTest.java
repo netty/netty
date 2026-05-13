@@ -39,6 +39,7 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -81,7 +82,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        new SplittableRandom(random.nextLong()).nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
 
         try {
             X509Bundle cert = new CertificateBuilder()

@@ -318,7 +318,7 @@ public class DataCompressionHttp2Test {
     public void deflateEncodingWriteLargeMessage(final int padding) throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
-        new SplittableRandom().nextBytes(bytes);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), bytes);
         bootstrapEnv(BUFFER_SIZE);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {

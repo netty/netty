@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -115,7 +116,7 @@ public class ByteBufUtilTest {
     private static void decodeRandomHexBytes(int len) {
         byte[] b = new byte[len];
         SplittableRandom rand = new SplittableRandom();
-        rand.nextBytes(b);
+        PlatformDependent.splittableRandomNextBytes(rand, b);
         String hexDump = ByteBufUtil.hexDump(b);
         for (int i = 0; i <= len; i++) {  // going over sub-strings of various lengths including empty byte[].
             byte[] b2 = Arrays.copyOfRange(b, i, b.length);
@@ -184,8 +185,8 @@ public class ByteBufUtilTest {
         byte[] b1 = new byte[128];
         byte[] b2 = new byte[256];
         SplittableRandom rand = new SplittableRandom();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        PlatformDependent.splittableRandomNextBytes(rand, b1);
+        PlatformDependent.splittableRandomNextBytes(rand, b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -202,8 +203,8 @@ public class ByteBufUtilTest {
         byte[] b1 = new byte[50];
         byte[] b2 = new byte[256];
         SplittableRandom rand = new SplittableRandom();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        PlatformDependent.splittableRandomNextBytes(rand, b1);
+        PlatformDependent.splittableRandomNextBytes(rand, b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -220,8 +221,8 @@ public class ByteBufUtilTest {
         byte[] b1 = new byte[8];
         byte[] b2 = new byte[16];
         SplittableRandom rand = new SplittableRandom();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        PlatformDependent.splittableRandomNextBytes(rand, b1);
+        PlatformDependent.splittableRandomNextBytes(rand, b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -235,8 +236,8 @@ public class ByteBufUtilTest {
         final byte[] b1 = new byte[8];
         final byte[] b2 = new byte[16];
         SplittableRandom rand = new SplittableRandom();
-        rand.nextBytes(b1);
-        rand.nextBytes(b2);
+        PlatformDependent.splittableRandomNextBytes(rand, b1);
+        PlatformDependent.splittableRandomNextBytes(rand, b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;

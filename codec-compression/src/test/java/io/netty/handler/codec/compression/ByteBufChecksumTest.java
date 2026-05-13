@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.PlatformDependent;
 import net.jpountz.xxhash.XXHashFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ public class ByteBufChecksumTest {
 
     @BeforeAll
     public static void setUp() {
-        new SplittableRandom().nextBytes(BYTE_ARRAY);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), BYTE_ARRAY);
     }
 
     @Test

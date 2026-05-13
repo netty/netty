@@ -51,7 +51,7 @@ public class EpollSpliceTest {
     private static final byte[] data = new byte[1048576];
 
     static {
-        new SplittableRandom(random.nextLong()).nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     @Test

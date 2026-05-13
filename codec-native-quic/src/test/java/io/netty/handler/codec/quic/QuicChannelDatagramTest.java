@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -45,7 +46,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
     static final byte[] data = new byte[512];
 
     static {
-        new SplittableRandom().nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), data);
     }
 
     @ParameterizedTest

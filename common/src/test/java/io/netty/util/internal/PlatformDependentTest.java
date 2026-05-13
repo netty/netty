@@ -120,7 +120,7 @@ public class PlatformDependentTest {
         SplittableRandom rng = new SplittableRandom(r.nextLong());
         for (int i = 0; i < 1000; ++i) {
             bytes1 = new byte[i];
-            rng.nextBytes(bytes1);
+            PlatformDependent.splittableRandomNextBytes(rng, bytes1);
             bytes2 = bytes1.clone();
             assertTrue(equalsChecker.equals(bytes1, 0, bytes2, 0, bytes1.length));
         }

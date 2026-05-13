@@ -26,6 +26,7 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -89,7 +90,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         @Override
         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             byte[] data = new byte[1024];
-            new SplittableRandom(random.nextLong()).nextBytes(data);
+            PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
 
             buf = ctx.alloc().buffer();
             // call retain on it so it can't be put back on the pool

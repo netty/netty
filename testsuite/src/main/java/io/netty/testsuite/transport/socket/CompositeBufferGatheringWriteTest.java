@@ -28,6 +28,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -307,7 +308,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
     private static byte[] newRandomBytes(int size, Random r) {
         byte[] bytes = new byte[size];
-        new SplittableRandom(r.nextLong()).nextBytes(bytes);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(r.nextLong()), bytes);
         return bytes;
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.ByteProcessor.IndexOfProcessor;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,8 +43,8 @@ public class AsciiStringMemoryTest {
         a = new byte[128];
         b = new byte[256];
         SplittableRandom rng = new SplittableRandom();
-        rng.nextBytes(a);
-        rng.nextBytes(b);
+        PlatformDependent.splittableRandomNextBytes(rng, a);
+        PlatformDependent.splittableRandomNextBytes(rng, b);
         aOffset = 22;
         bOffset = 53;
         length = 100;
