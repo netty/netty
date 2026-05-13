@@ -43,7 +43,7 @@ public class HttpConversionUtilFuzzTest {
                 HttpVersion.HTTP_1_1,
                 HttpMethod.GET,
                 requestTarget,
-                new DefaultHttpHeaders(false),
+                new DefaultHttpHeaders(),
                 false);
         msg.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTP.name());
 
@@ -100,12 +100,8 @@ public class HttpConversionUtilFuzzTest {
         }
         int authorityStart = schemeEnd + 3;
         int pathStart = requestTarget.indexOf('/', authorityStart);
-        int queryStart = requestTarget.indexOf('?', authorityStart);
-        int fragmentStart = requestTarget.indexOf('#', authorityStart);
-        int delimiter = pathStart == -1 ? queryStart : queryStart == -1 ? pathStart : Math.min(pathStart, queryStart);
-        delimiter = delimiter == -1 ? fragmentStart :
-                fragmentStart == -1 ? delimiter : Math.min(delimiter, fragmentStart);
-        return delimiter == -1 || requestTarget.charAt(delimiter) != '/';
+        int delimiter = HttpConversionUtil.queryOrFragmentStart(requestTarget, authorityStart);
+        return pathStart == -1 || (delimiter != -1 && delimiter < pathStart);
     }
 
     private static boolean hasFragmentBeforeQuery(final String requestTarget) {

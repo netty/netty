@@ -632,8 +632,11 @@ public final class HttpConversionUtil {
             if (!isValidScheme(uri, i)) {
                 i = 0;
             } else {
-                i = uri.indexOf('/', i + 3);
-                if (i == -1) {
+                int authorityStart = i + 3;
+                // Netty change: only accept '/' before query/fragment as path start.
+                int queryOrFragmentStart = queryOrFragmentStart(uri, authorityStart);
+                i = uri.indexOf('/', authorityStart);
+                if (i == -1 || (queryOrFragmentStart != -1 && queryOrFragmentStart < i)) {
                     // contains no /
                     return "/";
                 }
@@ -651,7 +654,7 @@ public final class HttpConversionUtil {
     }
 
     /**
-     * Extract the query out of a request-target or returns the empty string if no query was found.
+     * Extract the query out of a request-target or returns {@code null} if no query was found.
      */
     private static String parseQuery(String uri) {
         int i = uri.indexOf('?');
@@ -680,6 +683,13 @@ public final class HttpConversionUtil {
         }
     }
 
+    static int queryOrFragmentStart(String uri, int searchStart) {
+        int queryStart = uri.indexOf('?', searchStart);
+        int fragmentStart = uri.indexOf('#', searchStart);
+        return queryStart == -1 ? fragmentStart :
+                fragmentStart == -1 ? queryStart : Math.min(queryStart, fragmentStart);
+    }
+
     // Netty addition: detect authority for HTTP/2 :scheme/:authority extraction.
     static boolean hasSchemeAndAuthority(String requestTarget) {
         int schemeEnd = requestTarget.indexOf("://");
@@ -701,12 +711,10 @@ public final class HttpConversionUtil {
         int authorityStart = schemeEnd + 3;
         // Netty addition: strip before path/query/fragment; Vert.x parsePath does not validate authority.
         int pathStart = requestTarget.indexOf('/', authorityStart);
-        int queryStart = requestTarget.indexOf('?', authorityStart);
-        int fragmentStart = requestTarget.indexOf('#', authorityStart);
-        // Netty change: strip path/query/fragment before URI validates scheme and authority.
-        int delimiter = pathStart == -1 ? queryStart : queryStart == -1 ? pathStart : Math.min(pathStart, queryStart);
-        delimiter = delimiter == -1 ? fragmentStart :
-                fragmentStart == -1 ? delimiter : Math.min(delimiter, fragmentStart);
+        int delimiter = queryOrFragmentStart(requestTarget, authorityStart);
+        if (pathStart != -1 && (delimiter == -1 || pathStart < delimiter)) {
+            delimiter = pathStart;
+        }
         if (delimiter == -1) {
             return requestTarget;
         }
@@ -733,7 +741,7 @@ public final class HttpConversionUtil {
     }
 
     private static boolean isAlpha(char c) {
-        return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
     }
 
     // package-private for testing only

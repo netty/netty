@@ -250,7 +250,7 @@ public class HttpConversionUtilTest {
     @Test
     public void handlesAbsoluteRequestWhoseQueryHasUrlCharactersRejectedByJavaNetUri() {
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "https://bh.contextweb.com/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}", false);
+                "https://bh.contextweb.com/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}", true);
 
         Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
 
@@ -263,7 +263,7 @@ public class HttpConversionUtilTest {
     @Test
     public void handlesAbsoluteRequestWhosePathHasUrlCharactersRejectedByJavaNetUri() {
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                "http://example.com/orders/{id}/items|details?expand={details}#section", false);
+                "http://example.com/orders/{id}/items|details?expand={details}#section", true);
 
         Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
 
@@ -344,7 +344,7 @@ public class HttpConversionUtilTest {
         final HttpRequest msg = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET,
                 "http://[bad host]/p?q={x}",
-                new DefaultHttpHeaders(false),
+                new DefaultHttpHeaders(),
                 false);
 
         assertThrows(IllegalArgumentException.class, new Executable() {
