@@ -61,13 +61,15 @@ import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
-import static io.netty.util.internal.StringUtil.length;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 
 /**
  * Provides utility methods and constants for the HTTP/2 to HTTP conversion
  */
 public final class HttpConversionUtil {
+    // Parsing logic adapted from Vert.x HttpUtils.parsePath/parseQuery:
+    // https://github.com/eclipse-vertx/vert.x/blob/98a8ef6c8b408009ff86eb8277fd0bbb2b866857/
+    // vertx-core/src/main/java/io/vertx/core/http/impl/HttpUtils.java#L279-L319
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP to HTTP/2.
      */
@@ -438,11 +440,18 @@ public final class HttpConversionUtil {
                 out.path(new AsciiString(request.uri()));
                 setHttp2Scheme(inHeaders, out);
             } else {
-                URI requestTargetUri = URI.create(request.uri());
-                out.path(toHttp2Path(requestTargetUri));
-                // Take from the request-line if HOST header was empty
-                host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
-                setHttp2Scheme(inHeaders, requestTargetUri, out);
+                String requestTarget = request.uri();
+                out.path(toHttp2Path(requestTarget));
+                if (hasSchemeAndAuthority(requestTarget)) {
+                    URI requestTargetUri = URI.create(http2PathlessRequestTarget(requestTarget));
+                    // Take from the request-line if HOST header was empty
+                    host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
+                    setHttp2Scheme(inHeaders, requestTargetUri, out);
+                } else if (hasScheme(requestTarget)) {
+                    setHttp2Scheme(inHeaders, scheme(requestTarget), -1, out);
+                } else {
+                    setHttp2Scheme(inHeaders, out);
+                }
             }
             setHttp2Authority(host, out);
             out.method(request.method().asciiName());
@@ -592,25 +601,139 @@ public final class HttpConversionUtil {
     }
 
     /**
-     * Generate an HTTP/2 {code :path} from a URI in accordance with
+     * Generate an HTTP/2 {code :path} from a request-target in accordance with
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
-    private static AsciiString toHttp2Path(URI uri) {
-        StringBuilder pathBuilder = new StringBuilder(length(uri.getRawPath()) +
-                length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
-        if (!isNullOrEmpty(uri.getRawPath())) {
-            pathBuilder.append(uri.getRawPath());
+    private static AsciiString toHttp2Path(String uri) {
+        String path = dropEmptyFragment(parsePath(uri));
+        String query = parseQuery(uri);
+        if (isNullOrEmpty(query)) {
+            return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
         }
-        if (!isNullOrEmpty(uri.getRawQuery())) {
-            pathBuilder.append('?');
-            pathBuilder.append(uri.getRawQuery());
+        StringBuilder pathBuilder = new StringBuilder(path.length() + query.length() + 1);
+        pathBuilder.append(path);
+        appendQuery(pathBuilder, query);
+        return new AsciiString(pathBuilder.toString());
+    }
+
+    /**
+     * Extract the path out of the request-target. Based on Vert.x' HttpUtils.parsePath logic.
+     */
+    private static String parsePath(String uri) {
+        if (uri.isEmpty()) {
+            return "";
         }
-        if (!isNullOrEmpty(uri.getRawFragment())) {
-            pathBuilder.append('#');
-            pathBuilder.append(uri.getRawFragment());
+        int i;
+        if (uri.charAt(0) == '/') {
+            i = 0;
+        } else {
+            i = uri.indexOf("://");
+            // Netty change: validate the scheme before treating :// as authority syntax.
+            if (!isValidScheme(uri, i)) {
+                i = 0;
+            } else {
+                i = uri.indexOf('/', i + 3);
+                if (i == -1) {
+                    // contains no /
+                    return "/";
+                }
+            }
         }
-        String path = pathBuilder.toString();
-        return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
+
+        int queryStart = uri.indexOf('?', i);
+        if (queryStart == -1) {
+            queryStart = uri.length();
+            if (i == 0) {
+                return uri;
+            }
+        }
+        return uri.substring(i, queryStart);
+    }
+
+    /**
+     * Extract the query out of a request-target or returns the empty string if no query was found.
+     */
+    private static String parseQuery(String uri) {
+        int i = uri.indexOf('?');
+        if (i == -1) {
+            return null;
+        } else {
+            return uri.substring(i + 1);
+        }
+    }
+
+    private static String dropEmptyFragment(String path) {
+        // Netty change: old URI-based conversion dropped an empty fragment delimiter.
+        return path.endsWith("#") ? path.substring(0, path.length() - 1) : path;
+    }
+
+    private static void appendQuery(StringBuilder pathBuilder, String query) {
+        int fragmentStart = query.indexOf('#');
+        if (fragmentStart == 0) {
+            // Netty change: old URI-based conversion skipped an empty query before a fragment.
+            pathBuilder.append(query);
+        } else if (fragmentStart == query.length() - 1) {
+            // Netty change: old URI-based conversion dropped an empty fragment delimiter after a query.
+            pathBuilder.append('?').append(query, 0, fragmentStart);
+        } else {
+            pathBuilder.append('?').append(query);
+        }
+    }
+
+    // Netty addition: detect authority for HTTP/2 :scheme/:authority extraction.
+    static boolean hasSchemeAndAuthority(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf("://");
+        return isValidScheme(requestTarget, schemeEnd);
+    }
+
+    private static boolean hasScheme(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf(':');
+        return isValidScheme(requestTarget, schemeEnd);
+    }
+
+    private static String scheme(String requestTarget) {
+        return requestTarget.substring(0, requestTarget.indexOf(':'));
+    }
+
+    // Netty addition: prepare only scheme://authority for URI validation.
+    private static String http2PathlessRequestTarget(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf("://");
+        int authorityStart = schemeEnd + 3;
+        // Netty addition: strip before path/query/fragment; Vert.x parsePath does not validate authority.
+        int pathStart = requestTarget.indexOf('/', authorityStart);
+        int queryStart = requestTarget.indexOf('?', authorityStart);
+        int fragmentStart = requestTarget.indexOf('#', authorityStart);
+        // Netty change: strip path/query/fragment before URI validates scheme and authority.
+        int delimiter = pathStart == -1 ? queryStart : queryStart == -1 ? pathStart : Math.min(pathStart, queryStart);
+        delimiter = delimiter == -1 ? fragmentStart :
+                fragmentStart == -1 ? delimiter : Math.min(delimiter, fragmentStart);
+        if (delimiter == -1) {
+            return requestTarget;
+        }
+        return delimiter == authorityStart ? requestTarget.substring(0, delimiter + 1) :
+                requestTarget.substring(0, delimiter);
+    }
+
+    // Netty addition: validate the text before :// as a scheme.
+    static boolean isValidScheme(String uri, int schemeEnd) {
+        if (schemeEnd <= 0) {
+            return false;
+        }
+        char first = uri.charAt(0);
+        if (!isAlpha(first)) {
+            return false;
+        }
+        for (int i = 1; i < schemeEnd; ++i) {
+            char c = uri.charAt(i);
+            if (!isAlpha(c) && (c < '0' || c > '9') && c != '+' && c != '-' && c != '.') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isAlpha(char c) {
+        return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
     }
 
     // package-private for testing only
@@ -635,9 +758,12 @@ public final class HttpConversionUtil {
     }
 
     private static void setHttp2Scheme(HttpHeaders in, URI uri, Http2Headers out) {
-        String value = uri.getScheme();
-        if (!isNullOrEmpty(value)) {
-            out.scheme(new AsciiString(value));
+        setHttp2Scheme(in, uri.getScheme(), uri.getPort(), out);
+    }
+
+    private static void setHttp2Scheme(HttpHeaders in, String scheme, int port, Http2Headers out) {
+        if (!isNullOrEmpty(scheme)) {
+            out.scheme(new AsciiString(scheme));
             return;
         }
 
@@ -648,9 +774,9 @@ public final class HttpConversionUtil {
             return;
         }
 
-        if (uri.getPort() == HTTPS.port()) {
+        if (port == HTTPS.port()) {
             out.scheme(HTTPS.name());
-        } else if (uri.getPort() == HTTP.port()) {
+        } else if (port == HTTP.port()) {
             out.scheme(HTTP.name());
         } else {
             throw new IllegalArgumentException(":scheme must be specified. " +
