@@ -577,7 +577,7 @@ public class MqttCodecTest {
         ByteBuf encoded = MqttEncoder.doEncode(ctx, message);
         try {
             final int total = encoded.readableBytes();
-            assertTrue(total > 2 && total < DEFAULT_MAX_BYTES_IN_MESSAGE);
+            assertThat(total).isGreaterThan(2).isLessThan(DEFAULT_MAX_BYTES_IN_MESSAGE);
 
             // Split right after the fixed header so the first channelRead leaves the
             // decoder mid-way through the variable header, triggering a REPLAY signal.
