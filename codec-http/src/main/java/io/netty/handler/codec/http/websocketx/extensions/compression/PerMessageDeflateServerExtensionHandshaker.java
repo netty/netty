@@ -283,21 +283,13 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
-        if (serverWindowSize > MAX_WINDOW_SIZE || serverWindowSize < MIN_WINDOW_SIZE) {
-            throw new IllegalArgumentException(
-                    "serverWindowSize: " + serverWindowSize + " (expected: 8-15)");
-        }
-        if (memLevel < MIN_MEM_LEVEL || memLevel > MAX_MEM_LEVEL) {
-            throw new IllegalArgumentException(
-                    "memLevel: " + memLevel + " (expected: 1-9)");
-        }
         this.compressionLevel = compressionLevel;
         this.allowServerWindowSize = allowServerWindowSize;
         this.preferredClientWindowSize = preferredClientWindowSize;
         this.allowServerNoContext = allowServerNoContext;
         this.preferredClientNoContext = preferredClientNoContext;
-        this.serverWindowSize = serverWindowSize;
-        this.memLevel = memLevel;
+        this.serverWindowSize = checkInRange(serverWindowSize, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, "serverWindowSize");
+        this.memLevel = checkInRange(memLevel, MIN_MEM_LEVEL, MAX_MEM_LEVEL, "memLevel");
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
         this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
