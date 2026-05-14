@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Limits;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -54,6 +55,7 @@ public final class IoUring {
     static final int NUM_ELEMENTS_IOVEC;
     static final int DEFAULT_RING_SIZE;
     static final int DEFAULT_CQ_SIZE;
+    static final int DEFAULT_PENDING_OPS_INITIAL_CAPACITY;
     static final int DISABLE_SETUP_CQ_SIZE = -1;
 
     private static final InternalLogger logger;
@@ -80,6 +82,7 @@ public final class IoUring {
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
         int numElementsIoVec = 10;
+        int pendingOpsInitialCapacity;
 
         String kernelVersion = "[unknown]";
         try {
@@ -178,7 +181,20 @@ public final class IoUring {
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
 
         DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
-
+        pendingOpsInitialCapacity = SystemPropertyUtil.getInt(
+                "io.netty.iouring.pendingOpsInitialCapacity", DEFAULT_RING_SIZE);
+        if (pendingOpsInitialCapacity <= 0) {
+            int configuredCapacity = pendingOpsInitialCapacity;
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(DEFAULT_RING_SIZE);
+            logger.warn("Invalid value {} for -Dio.netty.iouring.pendingOpsInitialCapacity; using {} instead.",
+                    configuredCapacity, pendingOpsInitialCapacity);
+        } else if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
+            int configuredCapacity = pendingOpsInitialCapacity;
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(pendingOpsInitialCapacity);
+            logger.warn("Rounding -Dio.netty.iouring.pendingOpsInitialCapacity from {} up to {}.",
+                    configuredCapacity, pendingOpsInitialCapacity);
+        }
+        DEFAULT_PENDING_OPS_INITIAL_CAPACITY = pendingOpsInitialCapacity;
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {
             DEFAULT_CQ_SIZE = Math.max(DEFAULT_RING_SIZE,
                     SystemPropertyUtil.getInt("io.netty.iouring.cqSize", 4096));

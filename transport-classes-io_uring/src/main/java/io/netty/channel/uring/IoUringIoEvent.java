@@ -28,7 +28,7 @@ public final class IoUringIoEvent implements IoEvent {
     private byte opcode;
     private int res;
     private int flags;
-    private short data;
+    private long userData;
     private ByteBuffer extraCqeData;
 
     /**
@@ -38,20 +38,34 @@ public final class IoUringIoEvent implements IoEvent {
      * @param flags     the flags
      * @param opcode    the op code
      * @param data      the user data that was given as part of the submission.
+     * @deprecated use {@link #IoUringIoEvent(int,int,byte,long)} instead.
      */
+    @Deprecated
     public IoUringIoEvent(int res, int flags, byte opcode, short data) {
+        this(res, flags, opcode, (long) data);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param res       the result.
+     * @param flags     the flags
+     * @param opcode    the op code
+     * @param userData  the user data that was given as part of the submission.
+     */
+    public IoUringIoEvent(int res, int flags, byte opcode, long userData) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.data = data;
+        this.userData = userData;
     }
 
     // Used internally to reduce object creation
-    void update(int res, int flags, byte opcode, short data, ByteBuffer extraCqeData) {
+    void update(int res, int flags, byte opcode, long userData, ByteBuffer extraCqeData) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.data = data;
+        this.userData = userData;
         this.extraCqeData = extraCqeData;
     }
 
@@ -86,9 +100,20 @@ public final class IoUringIoEvent implements IoEvent {
      * Returns the data that is passed as part of {@link IoUringIoOps}.
      *
      * @return  data.
+     * @deprecated use {@link #userData()} instead.
      */
+    @Deprecated
     public short data() {
-        return data;
+        return (short) userData;
+    }
+
+    /**
+     * Returns the user data that was passed as part of the submission.
+     *
+     * @return  user data.
+     */
+    public long userData() {
+        return userData;
     }
 
     /**
@@ -108,7 +133,7 @@ public final class IoUringIoEvent implements IoEvent {
                 "opcode=" + opcode +
                 ", res=" + res +
                 ", flags=" + flags +
-                ", data=" + data +
+                ", userData=" + userData +
                 '}';
     }
 }
