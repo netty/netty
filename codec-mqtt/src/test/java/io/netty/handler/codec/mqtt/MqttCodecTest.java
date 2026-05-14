@@ -567,6 +567,42 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testFragmentedMessageIsNotReportedAsTooLarge() throws Exception {
+        // Regression test for https://github.com/netty/netty/issues/16776.
+        // When the variable header cannot be decoded yet because more data is needed,
+        // the decoder must ask for REPLAY rather than incorrectly raising a
+        // TooLongFrameException, as long as the declared remaining length is within
+        // maxBytesInMessage.
+        final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1);
+        ByteBuf encoded = MqttEncoder.doEncode(ctx, message);
+        try {
+            final int total = encoded.readableBytes();
+            assertTrue(total > 2 && total < DEFAULT_MAX_BYTES_IN_MESSAGE);
+
+            // Split right after the fixed header so the first channelRead leaves the
+            // decoder mid-way through the variable header, triggering a REPLAY signal.
+            final int splitPoint = 2;
+            ByteBuf head = encoded.copy(encoded.readerIndex(), splitPoint);
+            ByteBuf tail = encoded.copy(encoded.readerIndex() + splitPoint, total - splitPoint);
+
+            mqttDecoder.channelRead(ctx, head);
+            assertEquals(0, out.size(), "decoder must wait for more data, not emit a frame");
+
+            mqttDecoder.channelRead(ctx, tail);
+            assertEquals(1, out.size());
+
+            final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
+            assertFalse(decodedMessage.decoderResult().isFailure(),
+                    "unexpected decoder failure: " + decodedMessage.decoderResult().cause());
+            validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+            validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+            validateConnectPayload(message.payload(), decodedMessage.payload());
+        } finally {
+            encoded.release();
+        }
+    }
+
+    @Test
     public void testConnectMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
         props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 10));

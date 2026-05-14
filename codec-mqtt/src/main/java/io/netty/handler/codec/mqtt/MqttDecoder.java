@@ -97,20 +97,18 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             case READ_VARIABLE_HEADER:  try {
                 int bytesRemainingBeforeVariableHeader = bytesRemainingInVariablePart;
-                int initialAvailableBytes = buffer.readableBytes();
                 boolean bailOut = false;
                 try {
                     variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
                 } catch (Signal signal) {
-                    if (initialAvailableBytes < maxBytesInMessage) {
-                        // Ask for REPLAY if the buffer was less than maxBytesInMessage
+                    if (bytesRemainingBeforeVariableHeader <= maxBytesInMessage) {
+                        // The declared message size fits within the limit; ask for REPLAY so the
+                        // decoder can resume once more data is available.
                         throw signal;
-                    } else {
-                        // We couldn't parse the complete message, and it's already too large.
-                        // Swallow the Signal (we don't need more data) and instead bail out
-                        // and throw the TooLongFrameException below.
-                        bailOut = true;
                     }
+                    // The declared message size already exceeds the limit; don't wait for more
+                    // data, bail out and throw the TooLongFrameException below.
+                    bailOut = true;
                 }
                 if (bailOut || bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
                     buffer.skipBytes(actualReadableBytes());
