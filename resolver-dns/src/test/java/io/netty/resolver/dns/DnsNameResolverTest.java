@@ -867,7 +867,7 @@ public class DnsNameResolverTest {
         DnsNameResolverChannelStrategy[] strategies = DnsNameResolverChannelStrategy.values();
         List<String> names = asList("localhost", "localhost.", "test.localhost", "TEsT.LOCalhost", "test.localhost.");
 
-        List<Arguments> output = new ArrayList<>();
+        List<Arguments> output = new ArrayList<Arguments>();
         for (DnsNameResolverChannelStrategy strategy : strategies) {
             for (String name : names) {
                 output.add(Arguments.of(strategy, ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, name));
