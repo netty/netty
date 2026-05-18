@@ -1183,7 +1183,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
-            int requestCountDown, int trailersCountDown, int goAwayCountDown, long maxConcurrentStreams)
+            int requestCountDown, int trailersCountDown, int goAwayCountDown, final long maxConcurrentStreams)
             throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         requestLatch = new CountDownLatch(requestCountDown);
