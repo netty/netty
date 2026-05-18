@@ -863,15 +863,15 @@ public class DnsNameResolverTest {
         testResolve0(strategy, ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, WINDOWS_HOST_NAME);
     }
 
-    private static List<Arguments> testResolveLocalhostWithoutDNSArgs() {
+    private static List<Object[]> testResolveLocalhostWithoutDNSArgs() {
         DnsNameResolverChannelStrategy[] strategies = DnsNameResolverChannelStrategy.values();
         List<String> names = asList("localhost", "localhost.", "test.localhost", "TEsT.LOCalhost", "test.localhost.");
 
-        List<Arguments> output = new ArrayList<Arguments>();
+        List<Object[]> output = new ArrayList<Object[]>();
         for (DnsNameResolverChannelStrategy strategy : strategies) {
             for (String name : names) {
-                output.add(Arguments.of(strategy, ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, name));
-                output.add(Arguments.of(strategy, ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, name));
+                output.add(new Object[] { strategy, ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, name });
+                output.add(new Object[] { strategy, ResolvedAddressTypes.IPV6_ONLY, NetUtil.LOCALHOST6, name });
             }
         }
 
