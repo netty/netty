@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -621,7 +622,7 @@ public final class HttpConversionUtil {
      */
     private static String parsePath(String uri) {
         if (uri.isEmpty()) {
-            return "";
+            return StringUtil.EMPTY_STRING;
         }
         int i;
         if (uri.charAt(0) == '/') {

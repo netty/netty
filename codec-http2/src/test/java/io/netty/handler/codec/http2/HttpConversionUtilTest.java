@@ -297,6 +297,18 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void handlesAbsoluteRequestWithoutPathWhoseQueryOrFragmentContainsSlash() {
+        HttpRequest querySlash = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com?next=/home", true);
+        HttpRequest fragmentSlash = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com#/home", true);
+
+        assertEquals(new AsciiString("/?next=/home"),
+                HttpConversionUtil.toHttp2Headers(querySlash, true).path());
+        assertEquals(new AsciiString("/"), HttpConversionUtil.toHttp2Headers(fragmentSlash, true).path());
+    }
+
+    @Test
     public void handlesEmptyRequestTargetUsingLegacyEmptyPathFallback() {
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "", true);
         msg.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
