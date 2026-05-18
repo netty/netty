@@ -461,4 +461,20 @@ public class StompSubframeDecoderTest {
         assertInstanceOf(TooLongFrameException.class,
                 headersSubFrame.decoderResult().cause());
     }
+
+    @Test
+    void testMaxNumHeadersEnforcedForInvalidHeaders() {
+        // limit to 1 header as CONNECT_FRAME has 2.
+        channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, 3, false));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+
+        assertInstanceOf(TooLongFrameException.class,
+                headersSubFrame.decoderResult().cause());
+    }
 }

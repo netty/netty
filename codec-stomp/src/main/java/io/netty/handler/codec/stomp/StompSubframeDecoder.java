@@ -351,7 +351,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
         private final boolean validateHeaders;
         private final int maxNumHeaders;
-
+        private int numHeaders;
         private String name;
         private boolean valid;
 
@@ -368,13 +368,15 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             shouldUnescape = shouldUnescape(headersSubframe.command());
             AppendableCharSequence value = super.parse(buf);
             if (value == null || (name == null && value.length() == 0)) {
+                numHeaders = 0;
                 return false;
             }
 
+            numHeaders++;
+            if (maxNumHeaders <= numHeaders) {
+                throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
+            }
             if (valid) {
-                if (maxNumHeaders <= headersSubframe.headers().size()) {
-                    throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
-                }
                 headersSubframe.headers().add(name, value.toString());
             } else if (validateHeaders) {
                 if (StringUtil.isNullOrEmpty(name)) {
