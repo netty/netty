@@ -24,6 +24,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -35,6 +37,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class IpSubnetFilterTest {
+
+    @Test
+    void noClassCastExceptionIpv4RuleOnly() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("10.10.0.0/16", IpFilterRuleType.ACCEPT);
+        IpSubnetFilter filter = new IpSubnetFilter(false, rule);
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet4Address.getLoopbackAddress(), 80)));
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet6Address.getLoopbackAddress(), 80)));
+    }
+
+    @Test
+    void noClassCastExceptionIpv6RuleOnly() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("::1/16", IpFilterRuleType.ACCEPT);
+        IpSubnetFilter filter = new IpSubnetFilter(false, rule);
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet4Address.getLoopbackAddress(), 80)));
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet6Address.getLoopbackAddress(), 80)));
+    }
 
     @Test
     public void testIpv4DefaultRoute() {
