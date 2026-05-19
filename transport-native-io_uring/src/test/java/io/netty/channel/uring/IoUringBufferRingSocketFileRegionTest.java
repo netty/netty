@@ -46,6 +46,12 @@ public class IoUringBufferRingSocketFileRegionTest extends SocketFileRegionTest 
         return true;
     }
 
+    @Override
+    protected long maxFileRegionPerCallEmit() {
+        // Same chunk-size cap as the non-buffer-ring io_uring transport.
+        return IoUringSocketFileRegionTest.CONFIGURED_CHUNK_SIZE;
+    }
+
     //@Disabled("Fix me")
     @Test
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {

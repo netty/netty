@@ -26,23 +26,30 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
@@ -65,6 +72,17 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
     protected boolean supportsCustomFileRegion() {
         return true;
+    }
+
+    /**
+     * Largest per-call output (in bytes) the transport can carry from a custom
+     * {@link FileRegion#transferTo} into the socket without truncation. Defaults to
+     * {@link Long#MAX_VALUE}; transports that copy through an intermediate buffer should
+     * override this to their per-call cap so {@link #testFileRegionEmittingMoreThanCount}
+     * skips when the cap is below the test payload.
+     */
+    protected long maxFileRegionPerCallEmit() {
+        return Long.MAX_VALUE;
     }
 
     @Test
@@ -118,6 +136,18 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    public void testFileRegionEmittingMoreThanCount(TestInfo testInfo) throws Throwable {
+        assumeTrue(supportsCustomFileRegion());
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testFileRegionEmittingMoreThanCount(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, false, true, true);
     }
@@ -164,6 +194,61 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
         cc.close().sync();
         sc.close().sync();
+    }
+
+    /**
+     * Regression for the case where a custom {@link FileRegion} emits more bytes through
+     * {@link FileRegion#transferTo} than {@link FileRegion#count()} advertises -- the shape
+     * of an on-the-fly encryption or framing layer whose {@code count()} reports the source
+     * size while {@code transferTo()} writes larger output. Every transport that supports
+     * custom FileRegions must deliver all emitted bytes to the peer; this test pins that
+     * contract.
+     */
+    public void testFileRegionEmittingMoreThanCount(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        // Small payload sized to exercise the truncation path without bulk data.
+        final int reportedCount = 5;
+        final int actualEmitted = 20;
+        // Below the transport's per-call cap the truncation is unavoidable; skip.
+        assumeTrue(actualEmitted <= maxFileRegionPerCallEmit(),
+                "transport's per-call output cap is smaller than the region's emit; "
+                        + "scenario is not covered");
+
+        byte[] expected = new byte[actualEmitted];
+        for (int i = 0; i < actualEmitted; i++) {
+            expected[i] = (byte) i;
+        }
+        ReceivingHandler sh = new ReceivingHandler(expected);
+        sb.childOption(ChannelOption.AUTO_READ, true);
+        cb.option(ChannelOption.AUTO_READ, true);
+        sb.childHandler(sh);
+        cb.handler(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                // drop
+            }
+        });
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        try {
+            EmitMoreThanCountFileRegion region =
+                    new EmitMoreThanCountFileRegion(reportedCount, expected);
+            cc.writeAndFlush(region).sync();
+            sh.awaitCompletion();
+            assertNull(sh.exception.get());
+            assertEquals(expected.length, sh.counter,
+                    "expected " + expected.length + " bytes from a region whose transferTo() "
+                            + "emits more than count(); receiver got " + sh.counter);
+            // Pin the fixture's post-write state so a future transport change that calls
+            // transferTo() twice fails here rather than going unnoticed.
+            assertEquals(reportedCount, region.transferred(),
+                    "fixture should advance transferred() to reportedCount after one call");
+            assertEquals(reportedCount, region.count(),
+                    "fixture count() must stay at reportedCount");
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+        }
     }
 
     private static void testFileRegion0(
@@ -385,6 +470,171 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         @Override
         public FileRegion touch(Object hint) {
             region.touch(hint);
+            return this;
+        }
+    }
+
+    /**
+     * Inbound handler used by {@link #testFileRegionEmittingMoreThanCount}: compares each
+     * inbound chunk against the expected payload and counts down {@code done} once the
+     * full payload has arrived or an error is observed.
+     */
+    protected static final class ReceivingHandler extends SimpleChannelInboundHandler<ByteBuf> {
+        private final byte[] expected;
+        private final CountDownLatch done = new CountDownLatch(1);
+        public final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        // The happens-before edge from CountDownLatch.countDown -> await already makes the
+        // final value visible to the reader; volatile lets a stalled awaitCompletion read
+        // partial progress for diagnostics before the latch releases.
+        public volatile int counter;
+
+        public ReceivingHandler(byte[] expected) {
+            this.expected = expected;
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
+            int readable = in.readableBytes();
+            byte[] actual = new byte[readable];
+            in.readBytes(actual);
+            int offset = counter;
+            if (offset + readable > expected.length) {
+                failed(new AssertionError("Received more than " + expected.length + " bytes"));
+                ctx.close();
+                return;
+            }
+            for (int i = 0; i < actual.length; i++) {
+                if (actual[i] != expected[offset + i]) {
+                    failed(new AssertionError("Byte mismatch at index " + (offset + i)));
+                    ctx.close();
+                    return;
+                }
+            }
+            counter += readable;
+            if (counter == expected.length) {
+                done.countDown();
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            failed(cause);
+            ctx.close();
+        }
+
+        private void failed(Throwable cause) {
+            if (exception.compareAndSet(null, cause)) {
+                done.countDown();
+            }
+        }
+
+        public void awaitCompletion() throws InterruptedException {
+            if (!done.await(30, TimeUnit.SECONDS)) {
+                fail("Timed out waiting for " + expected.length
+                        + " bytes, received " + counter);
+            }
+        }
+    }
+
+    /**
+     * Single-shot {@link FileRegion} that emits {@code payload.length} bytes through
+     * {@link #transferTo} while reporting only {@code reportedCount} via {@link #count()} --
+     * the shape of an on-the-fly encryption or framing layer.
+     *
+     * <ul>
+     *   <li>{@link #count()} returns {@code reportedCount} for the lifetime of the region.</li>
+     *   <li>The first {@code transferTo} call writes the supplied {@code payload} to the
+     *       target in a single {@code write(ByteBuffer)} call, advances {@code transferred}
+     *       to {@code reportedCount}, and returns {@code payload.length}. A short write
+     *       throws {@link IOException} -- the call site upholds
+     *       {@code maxFileRegionPerCallEmit() >= payload.length} so this should not happen.</li>
+     *   <li>Subsequent calls return 0.</li>
+     * </ul>
+     */
+    private static final class EmitMoreThanCountFileRegion extends AbstractReferenceCounted
+            implements FileRegion {
+        private final long reportedCount;
+        private final byte[] payload;
+        // emitted/transferred are accessed only on the EventLoop, so no synchronization
+        // is needed.
+        private boolean emitted;
+        private long transferred;
+
+        EmitMoreThanCountFileRegion(long reportedCount, byte[] payload) {
+            if (reportedCount < 1 || payload.length <= reportedCount) {
+                throw new IllegalArgumentException(
+                        "reportedCount must be >= 1 and payload.length must be > reportedCount; "
+                                + "got reportedCount=" + reportedCount
+                                + ", payload.length=" + payload.length);
+            }
+            this.reportedCount = reportedCount;
+            this.payload = payload;
+        }
+
+        @Override
+        public long position() {
+            return 0;
+        }
+
+        @Override
+        public long count() {
+            return reportedCount;
+        }
+
+        @Override
+        public long transferred() {
+            return transferred;
+        }
+
+        @Override
+        @Deprecated
+        public long transfered() {
+            return transferred;
+        }
+
+        @Override
+        public long transferTo(WritableByteChannel target, long position) throws IOException {
+            if (emitted) {
+                return 0;
+            }
+            int n = target.write(ByteBuffer.wrap(payload));
+            // The maxFileRegionPerCallEmit() gate at the call site guarantees the target
+            // accepts the full payload; a short write here means a transport regression.
+            if (n < payload.length) {
+                throw new IOException("EmitMoreThanCountFileRegion expected target to accept "
+                        + payload.length + " bytes in one call but only " + n + " were accepted");
+            }
+            // Advance transferred() to count() to model an encryption/framing region whose
+            // source is reported "delivered" once the wider output is emitted.
+            emitted = true;
+            transferred = reportedCount;
+            return n;
+        }
+
+        @Override
+        protected void deallocate() {
+            // No native resources held.
+        }
+
+        @Override
+        public FileRegion retain() {
+            super.retain();
+            return this;
+        }
+
+        @Override
+        public FileRegion retain(int increment) {
+            super.retain(increment);
+            return this;
+        }
+
+        @Override
+        public FileRegion touch() {
+            return this;
+        }
+
+        @Override
+        public FileRegion touch(Object hint) {
             return this;
         }
     }

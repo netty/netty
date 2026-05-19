@@ -50,6 +50,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
      * for the io_uring async send path. Overridable via the {@code io.netty.iouring.fileRegionChunkSize}
      * system property; capped at 16 MiB to guard against pathological configurations that would
      * risk direct-memory OOM.
+     *
+     * <p>Each chunk caps the size of a single {@code transferTo()} call: a custom
+     * {@link FileRegion} whose per-call output exceeds this chunk size will have the excess
+     * silently dropped by the backing {@code WritableByteChannel}. Operators tuning this
+     * down must ensure it stays at or above the largest per-call output their FileRegion
+     * implementations can produce.
      */
     private static final int FILE_REGION_MAX_CHUNK_SIZE = Math.min(16 * 1024 * 1024,
             Math.max(1, SystemPropertyUtil.getInt("io.netty.iouring.fileRegionChunkSize", 64 * 1024)));
@@ -337,13 +343,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (buf == null) {
                 long remaining = region.count() - region.transferred();
                 if (remaining > 0) {
-                    int chunkSize = (int) Math.min(remaining, FILE_REGION_MAX_CHUNK_SIZE);
-                    buf = alloc().directBuffer(chunkSize);
+                    // Allocate the full chunk unconditionally: a custom FileRegion may emit
+                    // more bytes through transferTo() than count() advertises -- e.g. an
+                    // on-the-fly encryption or framing layer whose count() reports the source
+                    // size while transferTo() emits larger output -- so a buffer sized to the
+                    // remaining bytes would truncate that output.
                     try {
+                        buf = alloc().directBuffer(FILE_REGION_MAX_CHUNK_SIZE);
                         ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
                         while (buf.writableBytes() > 0) {
-                            long t = region.transferTo(ch, region.transferred());
-                            if (t <= 0) {
+                            long transferred = region.transferTo(ch, region.transferred());
+                            if (transferred <= 0) {
                                 break;
                             }
                         }
@@ -354,9 +364,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                             + region.count() + ", transferred=" + region.transferred() + ')'));
                             return 0;
                         }
-                    } catch (Exception e) {
-                        buf.release();
-                        handleWriteError(e);
+                    } catch (Throwable cause) {
+                        // Catch Throwable so an OutOfDirectMemoryError from directBuffer() or
+                        // any Error from transferTo() releases the chunk (when already
+                        // allocated) and surfaces on the write future instead of leaking.
+                        if (buf != null) {
+                            buf.release();
+                        }
+                        handleWriteError(cause);
                         return 0;
                     }
                 } else {

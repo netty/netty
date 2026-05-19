@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,6 +30,7 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,10 +49,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
 
-    // Configured chunk size for the io_uring generic FileRegion fallback. Reads and clamps the
-    // same system property the transport does so the test stays accurate if an operator
-    // overrides it (transport caps at 16 MiB and floors at 1).
-    private static final int CONFIGURED_CHUNK_SIZE = Math.min(16 * 1024 * 1024,
+    // Configured chunk size for the io_uring generic FileRegion fallback. Mirrors the
+    // transport's own clamp (cap 16 MiB, floor 1). Shared with the buffer-ring sibling
+    // test for its maxFileRegionPerCallEmit() override.
+    static final int CONFIGURED_CHUNK_SIZE = Math.min(16 * 1024 * 1024,
             Math.max(1, Integer.getInteger("io.netty.iouring.fileRegionChunkSize", 64 * 1024)));
     // With the default 64 KiB chunk size this demands 8 chunks; with an override larger than
     // the payload chunking simply isn't exercised but the transfer is still validated.
@@ -74,12 +73,20 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
         return true;
     }
 
+    @Override
+    protected long maxFileRegionPerCallEmit() {
+        // The io_uring fallback copies into a fixed chunk buffer; per-call output above
+        // this size is dropped by the backing WritableByteChannel.
+        return CONFIGURED_CHUNK_SIZE;
+    }
+
     @Test
     public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
         super.testFileRegionCountLargerThenFile(testInfo);
     }
 
     @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
     public void testCustomFileRegionChunking(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -90,6 +97,7 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
     }
 
     @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
     public void testTwoCustomFileRegionsWithChunking(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -207,56 +215,6 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
         return file;
     }
 
-    private static final class ReceivingHandler extends SimpleChannelInboundHandler<ByteBuf> {
-        private final byte[] expected;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
-        volatile int counter;
-
-        ReceivingHandler(byte[] expected) {
-            this.expected = expected;
-        }
-
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
-            int readable = in.readableBytes();
-            byte[] actual = new byte[readable];
-            in.readBytes(actual);
-            int offset = counter;
-            if (offset + readable > expected.length) {
-                exception.compareAndSet(null, new AssertionError(
-                        "Received more than " + expected.length + " bytes"));
-                ctx.close();
-                return;
-            }
-            for (int i = 0; i < actual.length; i++) {
-                if (actual[i] != expected[offset + i]) {
-                    exception.compareAndSet(null, new AssertionError(
-                            "Byte mismatch at index " + (offset + i)));
-                    ctx.close();
-                    return;
-                }
-            }
-            counter += readable;
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            exception.compareAndSet(null, cause);
-            ctx.close();
-        }
-
-        void awaitCompletion() throws InterruptedException {
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
-            while (counter < expected.length && exception.get() == null) {
-                if (System.nanoTime() > deadline) {
-                    throw new AssertionError("Timed out waiting for " + expected.length
-                            + " bytes, received " + counter);
-                }
-                Thread.sleep(50);
-            }
-        }
-    }
-
     /**
      * Wraps a {@link DefaultFileRegion} so it is routed through the io_uring generic
      * (non-splice) chunking path and counts {@link #transferTo} invocations so tests can assert
@@ -336,4 +294,5 @@ public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
             return this;
         }
     }
+
 }
