@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -175,7 +176,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
                     return ipFilterRuleTypeIPv4 == IpFilterRuleType.ACCEPT;
                 }
             }
-        } else if (ipv6Rules != null) {
+        } else if (ipv6Rules != null && remoteAddress.getAddress() instanceof Inet6Address) {
             int indexOf = Arrays.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv6 == null) {
