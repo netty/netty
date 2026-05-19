@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.collection.CharObjectHashMap;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
@@ -303,6 +304,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
     }
 
     public static Http2Settings defaultSettings() {
-        return new Http2Settings().maxHeaderListSize(DEFAULT_HEADER_LIST_SIZE);
+        return new Http2Settings().maxHeaderListSize(DEFAULT_HEADER_LIST_SIZE)
+                .maxConcurrentStreams(DEFAULT_MAX_CONCURRENT_STREAMS);
     }
 }
