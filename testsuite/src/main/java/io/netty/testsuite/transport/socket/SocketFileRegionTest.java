@@ -27,6 +27,7 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -411,12 +412,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         final AtomicInteger transferToCallsPastCompletion = new AtomicInteger();
 
         OvershootDetectingFileRegion(long count) {
-            if (count < 2) {
-                throw new IllegalArgumentException(
-                        "count must be > 1 so the chunk buffer retains writable capacity "
-                                + "after the first source byte is written");
-            }
-            this.count = count;
+            // count must be > 1 so the chunk buffer retains writable capacity after the first
+            // source byte is written -- otherwise the drain-loop overshoot path is not exercised.
+            this.count = ObjectUtil.checkInRange(count, 2L, Long.MAX_VALUE, "count");
         }
 
         @Override
