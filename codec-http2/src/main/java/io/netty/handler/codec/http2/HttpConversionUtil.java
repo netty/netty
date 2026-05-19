@@ -448,10 +448,13 @@ public final class HttpConversionUtil {
                     // Take from the request-line if HOST header was empty
                     host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
                     setHttp2Scheme(inHeaders, requestTargetUri, out);
-                } else if (hasScheme(requestTarget)) {
-                    setHttp2Scheme(inHeaders, scheme(requestTarget), -1, out);
                 } else {
-                    setHttp2Scheme(inHeaders, out);
+                    int schemeEnd = schemeEnd(requestTarget);
+                    if (schemeEnd != -1) {
+                        setHttp2Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                    } else {
+                        setHttp2Scheme(inHeaders, out);
+                    }
                 }
             }
             setHttp2Authority(host, out);
@@ -697,13 +700,9 @@ public final class HttpConversionUtil {
         return isValidScheme(requestTarget, schemeEnd);
     }
 
-    private static boolean hasScheme(String requestTarget) {
+    private static int schemeEnd(String requestTarget) {
         int schemeEnd = requestTarget.indexOf(':');
-        return isValidScheme(requestTarget, schemeEnd);
-    }
-
-    private static String scheme(String requestTarget) {
-        return requestTarget.substring(0, requestTarget.indexOf(':'));
+        return isValidScheme(requestTarget, schemeEnd) ? schemeEnd : -1;
     }
 
     // Netty addition: prepare only scheme://authority for URI validation.
