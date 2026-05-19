@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -49,6 +50,7 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
@@ -215,6 +217,15 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
         try {
+            // OioByteStreamChannel#doWriteFileRegion drains using a locally-tracked
+            // bytes-written counter as the transferTo position (ignoring transferred()), so an
+            // ill-behaved FileRegion that advances transferred() past actual bytes written --
+            // the exact pattern this fixture uses to exercise the overshoot path -- cannot
+            // satisfy OIO's loop without violating the position invariant. The overshoot
+            // detection is meaningless on OIO for the same reason; skip the permutation.
+            assumeFalse(cc instanceof OioSocketChannel,
+                    "OIO transport does not honour transferred() for drain-loop termination");
+
             OvershootDetectingFileRegion region = new OvershootDetectingFileRegion(regionSize);
             // sync() blocks until the write future completes, by which point every
             // transferTo() call the transport is going to make has already been made --
