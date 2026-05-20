@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -52,6 +53,7 @@ import static java.util.Objects.requireNonNull;
  */
 public final class IoUringIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
+    private static final int WAKEUP_CLOSED = 1 << 30;
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
@@ -61,6 +63,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final byte[] inet6AddressArray = new byte[SockaddrIn.IPV6_ADDRESS_LENGTH];
 
     private final AtomicBoolean eventfdAsyncNotify = new AtomicBoolean();
+    private final AtomicInteger wakeupWriters = new AtomicInteger();
     private final FileDescriptor eventfd;
     private final CleanableDirectBuffer eventfdReadBufCleanable;
     private final ByteBuffer eventfdReadBuf;
@@ -510,6 +513,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
         closeCompleted = true;
         ringBuffer.close();
+        closeWakeupGate();
         try {
             eventfd.close();
         } catch (IOException e) {
@@ -709,9 +713,36 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public void wakeup() {
         if (!executor.isExecutorThread(Thread.currentThread()) &&
-                !eventfdAsyncNotify.getAndSet(true)) {
-            // write to the eventfd which will then trigger an eventfd read completion.
-            Native.eventFdWrite(eventfd.intValue(), 1L);
+            !eventfdAsyncNotify.getAndSet(true)) {
+            // Reserve a writer slot so the event-loop thread cannot close the eventfd while we are in the
+            // middle of eventFdWrite(). If the gate has already been closed (loop is being destroyed),
+            // simply drop the wakeup: there is no loop left to wake up, and writing to a closed (and
+            // possibly recycled) fd would either throw EBADF or, worse, hit an unrelated fd.
+            int s;
+            do {
+                s = wakeupWriters.get();
+                if ((s & WAKEUP_CLOSED) != 0) {
+                    return;
+                }
+            } while (!wakeupWriters.compareAndSet(s, s + 1));
+            try {
+                // write to the eventfd which will then trigger an eventfd read completion.
+                Native.eventFdWrite(eventfd.intValue(), 1L);
+            } finally {
+                wakeupWriters.decrementAndGet();
+            }
+        }
+    }
+
+    private void closeWakeupGate() {
+        int s;
+        do {
+            s = wakeupWriters.get();
+        } while (!wakeupWriters.compareAndSet(s, s | WAKEUP_CLOSED));
+        // Wait for any thread still inside eventFdWrite() to leave. eventFdWrite is a single write(2)
+        // syscall on an eventfd, so this spin is bounded to a few microseconds in practice.
+        while ((wakeupWriters.get() & ~WAKEUP_CLOSED) != 0) {
+            Thread.onSpinWait();
         }
     }
 
