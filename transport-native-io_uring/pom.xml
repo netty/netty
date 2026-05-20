@@ -30,7 +30,6 @@
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <fallbackModuleName>io.netty.transport.io_uring</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
-    <maven.compiler.release>9</maven.compiler.release>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
@@ -411,41 +410,6 @@
               <sources>
                 <source>${nativeSourceDirectory}</source>
               </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>add-iouring-handler-shadow-test-source</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>add-test-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-test-sources/iouring-handler-shadow</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.gmaven</groupId>
-        <artifactId>groovy-maven-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>3.0.25</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>generate-iouring-handler-shadow</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <configuration>
-              <source>${project.basedir}/src/test/script/generate-iouring-handler-shadow.groovy</source>
             </configuration>
           </execution>
         </executions>
