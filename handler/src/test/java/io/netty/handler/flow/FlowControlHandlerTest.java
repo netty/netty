@@ -49,6 +49,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.*;
@@ -661,6 +662,187 @@ public class FlowControlHandlerTest {
             client.close();
             server.close();
         }
+    }
+
+    @Test
+    public void testCompletingReadWithNonEmptyQueue() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        assertFalse(channel.writeInbound("msg1", "msg2"));
+        assertEquals(0, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.read();
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        channel.read();
+        assertEquals(2, reads.get());
+        assertEquals(2, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testSuppressingUpstreamReadCompletes() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        assertEquals(0, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.flushInbound();
+        channel.flushInbound();
+        channel.flushInbound();
+
+        assertEquals(0, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.read();
+        channel.writeOneInbound("msg").syncUninterruptibly();
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        channel.flushInbound();
+        channel.flushInbound();
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        channel.read();
+        channel.flushInbound();
+
+        assertEquals(1, reads.get());
+        assertEquals(2, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testEmptyRead() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        // Downstream issues a read() but upstream has no data and only fires channelReadComplete.
+        // FlowControlHandler must forward that channelReadComplete to satisfy the outstanding read.
+        channel.read();
+        channel.flushInbound();
+
+        assertEquals(0, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testMultipleReadsOnEmptyQueue() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        channel.read();
+        channel.read();
+        channel.read();
+
+        channel.writeOneInbound("msg1");
+
+        assertEquals(1, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.flushInbound();
+
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        channel.read();
+        channel.read();
+        channel.read();
+
+        // empty read
+        channel.flushInbound();
+
+        assertEquals(1, reads.get());
+        assertEquals(2, readCompletes.get());
+
+        // quick check that internal state is not broken
+        channel.writeOneInbound("msg2");
+        channel.flushInbound();
+
+        assertEquals(1, reads.get());
+        assertEquals(2, readCompletes.get());
+
+        channel.read();
+
+        assertEquals(2, reads.get());
+        assertEquals(3, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     /**

@@ -32,7 +32,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * The {@link FlowControlHandler} ensures that only one message per {@code read()} is sent downstream.
- *
+ * <p>
  * Classes such as {@link ByteToMessageDecoder} or {@link MessageToByteEncoder} are free to emit as
  * many events as they like for any given input. A channel's auto reading configuration doesn't usually
  * apply in these scenarios. This is causing problems in downstream {@link ChannelHandler}s that would
@@ -73,7 +73,25 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     private ChannelConfig config;
 
-    private boolean shouldConsume;
+    /**
+     * Number of unsatisfied downstream {@code read()} calls. A downstream {@code read()} is considered unsatisfied
+     * if it has not yet been paired with a {@code fireChannelRead} or a cumulative {@code fireChannelReadComplete}.
+     * <p>
+     * A {@code read()} can be satisfied in three ways, whichever comes first:
+     * <ul>
+     *     <li>inside the {@code read()} call itself, by {@code dequeue()}ing a message</li>
+     *     <li>in a {@code channelRead()}</li>
+     *     <li>in a {@code channelReadComplete()}</li>
+     * </ul>
+     * <p>
+     * When one or more {@code read()} calls are unsatisfied, a downstream {@code channelReadComplete} is fired
+     * only when either of the following happens:
+     * <ul>
+     *     <li>{@code unsatisfiedReads} returns to zero after {@code dequeue()}ing, or</li>
+     *     <li>an upstream {@code channelReadComplete} arrives</li>
+     * </ul>
+     */
+    private int unsatisfiedReads;
 
     public FlowControlHandler() {
         this(true);
@@ -123,6 +141,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         super.handlerRemoved(ctx);
         if (!isQueueEmpty()) {
             dequeue(ctx, queue.size());
+            ctx.fireChannelReadComplete();
         }
         destroy();
     }
@@ -135,13 +154,11 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
-        if (dequeue(ctx, 1) == 0) {
-            // It seems no messages were consumed. We need to read() some
-            // messages from upstream and once one arrives it need to be
-            // relayed to downstream to keep the flow going.
-            shouldConsume = true;
-            ctx.read();
-        } else if (config.isAutoRead()) {
+        unsatisfiedReads++;
+
+        if (dequeue(ctx, 1) > 0) {
+            satisfyRead(ctx);
+        } else {
             ctx.read();
         }
     }
@@ -154,23 +171,35 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
         queue.offer(msg);
 
+        // Snapshot before dequeue(), which may re-enter read() via fireChannelRead(...).
+        boolean shouldSatisfyRead = unsatisfiedReads > 0;
         // We just received one message. Do we need to relay it regardless
-        // of the auto reading configuration? The answer is yes if this
-        // method was called as a result of a prior read() call.
-        int minConsume = shouldConsume ? 1 : 0;
-        shouldConsume = false;
+        // of the auto-reading configuration? The answer is yes if this
+        // method call originates from a prior read call.
+        int minConsume = shouldSatisfyRead? 1 : 0;
 
-        dequeue(ctx, minConsume);
+        if (dequeue(ctx, minConsume) > 0 && shouldSatisfyRead) {
+            satisfyRead(ctx);
+        }
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        if (isQueueEmpty()) {
+        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
+        // channelReadComplete; spurious upstream completions with no pending read are dropped.
+        satisfyAllReads(ctx);
+    }
+
+    private void satisfyRead(ChannelHandlerContext ctx) {
+        if (unsatisfiedReads > 0 && --unsatisfiedReads == 0) {
             ctx.fireChannelReadComplete();
-        } else {
-            // Don't relay completion events from upstream as they
-            // make no sense in this context. See dequeue() where
-            // a new set of completion events is being produced.
+        }
+    }
+
+    private void satisfyAllReads(ChannelHandlerContext ctx) {
+        if (unsatisfiedReads > 0) {
+            unsatisfiedReads = 0;
+            ctx.fireChannelReadComplete();
         }
     }
 
@@ -178,7 +207,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * Dequeues one or many (or none) messages depending on the channel's auto
      * reading state and returns the number of messages that were consumed from
      * the internal queue.
-     *
+     * <p>
      * The {@code minConsume} argument is used to force {@code dequeue()} into
      * consuming that number of messages regardless of the channel's auto
      * reading configuration.
@@ -189,8 +218,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int dequeue(ChannelHandlerContext ctx, int minConsume) {
         int consumed = 0;
 
-        // fireChannelRead(...) may call ctx.read() and so this method may reentrance. Because of this we need to
-        // check if queue was set to null in the meantime and if so break the loop.
+        // fireChannelRead(...) may call ctx.read() and so this method may be re-entered. Because of that
+        // we need to check if queue was set to null in the meantime and, if so, break out of the loop.
         while (queue != null && (consumed < minConsume || config.isAutoRead())) {
             Object msg = queue.poll();
             if (msg == null) {
@@ -201,16 +230,9 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             ctx.fireChannelRead(msg);
         }
 
-        // We're firing a completion event every time one (or more)
-        // messages were consumed and the queue ended up being drained
-        // to an empty state.
         if (queue != null && queue.isEmpty()) {
             queue.recycle();
             queue = null;
-
-            if (consumed > 0) {
-                ctx.fireChannelReadComplete();
-            }
         }
 
         return consumed;
