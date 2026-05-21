@@ -267,7 +267,24 @@ public class MqttCodecTest {
     }
 
     @Test
-    public void testConnectMessageNoPassword() throws Exception {
+    public void testConnectMessagePasswordOnlyForMqtt31() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(
+                MqttVersion.MQTT_3_1,
+                null,
+                PASSWORD,
+                MqttProperties.NO_PROPERTIES,
+                MqttProperties.NO_PROPERTIES);
+
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
+    }
+
+    @Test
+    public void testConnectMessagePasswordOnlyForMqtt311() throws Exception {
         final MqttConnectMessage message = createConnectMessage(
                 MqttVersion.MQTT_3_1_1,
                 null,
@@ -281,6 +298,31 @@ public class MqttCodecTest {
                 MqttEncoder.doEncode(ctx, message);
             }
         });
+    }
+
+    @Test
+    public void testConnectMessagePasswordOnlyForMqtt5() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(
+                MqttVersion.MQTT_5,
+                null,
+                PASSWORD,
+                MqttProperties.NO_PROPERTIES,
+                MqttProperties.NO_PROPERTIES);
+
+        assertFalse(message.variableHeader().hasUserName());
+        assertTrue(message.variableHeader().hasPassword());
+
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        mqttDecoder.channelRead(ctx, byteBuf);
+
+        assertEquals(1, out.size());
+
+        final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
+
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateConnectPayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
