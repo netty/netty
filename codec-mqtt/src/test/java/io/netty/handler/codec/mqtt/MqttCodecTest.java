@@ -274,7 +274,12 @@ public class MqttCodecTest {
                 MqttProperties.NO_PROPERTIES,
                 MqttProperties.NO_PROPERTIES);
 
-        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+        assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
     }
 
     @Test
