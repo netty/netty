@@ -83,6 +83,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -102,8 +103,8 @@ public class DnsNameResolver extends InetNameResolver {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
+    private static final String DOT_LOCALHOST = '.' + LOCALHOST;
     private static final String WINDOWS_HOST_NAME;
-    private static final InetAddress LOCALHOST_ADDRESS;
     private static final DnsRecord[] EMPTY_ADDITIONALS = new DnsRecord[0];
     private static final DnsRecordType[] IPV4_ONLY_RESOLVED_RECORD_TYPES =
             {DnsRecordType.A};
@@ -136,18 +137,14 @@ public class DnsNameResolver extends InetNameResolver {
     static {
         if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
             DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_ONLY;
-            LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
         } else {
             if (NetUtil.isIpV6AddressesPreferred()) {
                 DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV6_PREFERRED;
-                LOCALHOST_ADDRESS = NetUtil.LOCALHOST6;
             } else {
                 DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_PREFERRED;
-                LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
             }
         }
         logger.debug("Default ResolvedAddressTypes: {}", DEFAULT_RESOLVE_ADDRESS_TYPES);
-        logger.debug("Localhost address: {}", LOCALHOST_ADDRESS);
 
         String hostName;
         try {
@@ -711,7 +708,7 @@ public class DnsNameResolver extends InetNameResolver {
             return null;
         }
         InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-        return address == null && isLocalWindowsHost(hostname) ? LOCALHOST_ADDRESS : address;
+        return address == null && isLocalHostAddress(hostname)? getLocalHostAddress() : address;
     }
 
     private List<InetAddress> resolveHostsFileEntries(String hostname) {
@@ -724,23 +721,54 @@ public class DnsNameResolver extends InetNameResolver {
                     .addresses(hostname, resolvedAddressTypes);
         } else {
             InetAddress address = hostsFileEntriesResolver.address(hostname, resolvedAddressTypes);
-            addresses = address != null ? Collections.singletonList(address) : null;
+            addresses = address != null? Collections.singletonList(address) : null;
         }
-        return addresses == null && isLocalWindowsHost(hostname) ?
-                Collections.singletonList(LOCALHOST_ADDRESS) : addresses;
+        return addresses == null && isLocalHostAddress(hostname)?
+                Collections.singletonList(getLocalHostAddress()) : addresses;
     }
 
     /**
-     * Checks whether the given hostname is the localhost/host (computer) name on Windows OS.
-     * Windows OS removed the localhost/host (computer) name information from the hosts file in the later versions
-     * and such hostname cannot be resolved from hosts file.
-     * See https://github.com/netty/netty/issues/5386
-     * See https://github.com/netty/netty/issues/11142
+     * Checks whether the given hostname refers to the current computer. This is the case for:
+     * <ul>
+     *     <li>localhost.</li>
+     *     <li>any domain within .localhost.</li>
+     *     <li>the hostname of the local computer on Windows</li>
+     * </ul>
+     * <p>
+     * According to RFC 6761 Section 6.3, localhost and subdomains of localhost should be resolved to the loopback
+     * address by name resolution libraries without querying DNS servers. The hostname of the local machine can usually
+     * be resolved from the hosts file, but on Windows, this is no longer possible.
+     *
+     * @param hostname the hostname that's being looked up
+     * @return true if the hostname should point to the loopback adress. False otherwise.
+     * @see <a href="https://github.com/netty/netty/issues/5386">Issue 5386</a>
+     * @see <a href="https://github.com/netty/netty/issues/11142">Issue 11142</a>
+     * @see <a href="https://github.com/netty/netty/issues/16744">Issue 16744</a>
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc6761.html#section-6.3">RFC 6761</a>
      */
-    private static boolean isLocalWindowsHost(String hostname) {
-        return PlatformDependent.isWindows() &&
-                (LOCALHOST.equalsIgnoreCase(hostname) ||
-                        (WINDOWS_HOST_NAME != null && WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)));
+    private static boolean isLocalHostAddress(String hostname) {
+        if (PlatformDependent.isWindows() && WINDOWS_HOST_NAME != null &&
+            WINDOWS_HOST_NAME.equalsIgnoreCase(hostname)) {
+            return true;
+        }
+
+        if (hostname.endsWith(".")) {
+            hostname = hostname.substring(0, hostname.length() - 1);
+        }
+        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase(Locale.US).endsWith(DOT_LOCALHOST);
+    }
+
+    private InetAddress getLocalHostAddress() {
+        switch (resolvedAddressTypes) {
+        case IPV4_ONLY:
+        case IPV4_PREFERRED:
+            return NetUtil.LOCALHOST4;
+        case IPV6_ONLY:
+        case IPV6_PREFERRED:
+            return NetUtil.LOCALHOST6;
+        default:
+            throw new IllegalStateException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
+        }
     }
 
     /**

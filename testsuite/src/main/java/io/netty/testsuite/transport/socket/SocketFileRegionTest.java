@@ -26,23 +26,31 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.socket.oio.OioSocketChannel;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
@@ -118,6 +126,18 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testFileRegionDrainStopsAtCompletion(TestInfo testInfo) throws Throwable {
+        assumeTrue(supportsCustomFileRegion());
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testFileRegionDrainStopsAtCompletion(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
     public void testFileRegion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         testFileRegion0(sb, cb, false, true, true);
     }
@@ -164,6 +184,64 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
         cc.close().sync();
         sc.close().sync();
+    }
+
+    /**
+     * Reproducer for a {@code FileRegion} drain-loop overshoot. Transports must short-circuit
+     * as soon as the region reports {@code transferred() >= count()}; any extra
+     * {@code transferTo} call violates the contract and would corrupt
+     * implementations that lazily emit per-chunk framing.
+     *
+     * <p>A custom {@link FileRegion} whose {@code transferTo} advances {@code transferred}
+     * past the bytes it writes to the target on a single call (legal: an encryption- or
+     * framing-on-write FileRegion that flushes a complete inner chunk in one call behaves
+     * this way) records every {@code transferTo} invocation made past
+     * {@code transferred == count}. The expected behaviour for every transport is that
+     * {@code transferToCallsPastCompletion} stays zero.
+     */
+    public void testFileRegionDrainStopsAtCompletion(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        // Region size > 1 so any chunked transport (e.g. io_uring's generic FileRegion fallback)
+        // that sizes its chunk buffer from count() retains spare capacity after the first
+        // (and only) source byte is written -- without that spare capacity an inner drain loop
+        // would exit on writableBytes() == 0 and the overshoot path would not be exercised.
+        final int regionSize = 16;
+
+        sb.childHandler(new SimpleChannelInboundHandler<ByteBuf>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                // drain
+            }
+        });
+        cb.handler(new ChannelInboundHandlerAdapter());
+
+        Channel sc = sb.bind().sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        try {
+            // OioByteStreamChannel#doWriteFileRegion drains using a locally-tracked
+            // bytes-written counter as the transferTo position (ignoring transferred()), so an
+            // ill-behaved FileRegion that advances transferred() past actual bytes written --
+            // the exact pattern this fixture uses to exercise the overshoot path -- cannot
+            // satisfy OIO's loop without violating the position invariant. The overshoot
+            // detection is meaningless on OIO for the same reason; skip the permutation.
+            assumeFalse(cc instanceof OioSocketChannel,
+                    "OIO transport does not honour transferred() for drain-loop termination");
+
+            OvershootDetectingFileRegion region = new OvershootDetectingFileRegion(regionSize);
+            // sync() blocks until the write future completes, by which point every
+            // transferTo() call the transport is going to make has already been made --
+            // the fixture's call counter is observable here without any timing wait. Ref
+            // ownership is transferred to the pipeline on writeAndFlush(), which releases
+            // it as the write completes (success or failure).
+            cc.writeAndFlush(region).sync();
+            int overshoot = region.transferToCallsPastCompletion.get();
+            assertEquals(0, overshoot,
+                    "transferTo() invoked " + overshoot
+                            + " time(s) after region.transferred() reached region.count()="
+                            + regionSize);
+        } finally {
+            cc.close().sync();
+            sc.close().sync();
+        }
     }
 
     private static void testFileRegion0(
@@ -313,6 +391,111 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }
+        }
+    }
+
+    /**
+     * Custom {@link FileRegion} that advances {@code transferred()} past the bytes it writes
+     * to the target on a single {@code transferTo} call -- the same pattern an
+     * encryption-on-write or framing FileRegion follows when it reports an inner chunk as
+     * "delivered" once that chunk fully drains. Records every {@code transferTo} invocation
+     * made after the region has been fully transferred so a drain-loop overshoot is visible
+     * synchronously on the writer side.
+     *
+     * <ul>
+     *   <li>{@link #count()} returns the constant configured size.</li>
+     *   <li>The first {@code transferTo} call writes one byte to the target; once that
+     *       byte is accepted it advances {@code transferred} to {@code count} and returns
+     *       the bytes written.</li>
+     *   <li>Every subsequent {@code transferTo} call increments
+     *       {@link #transferToCallsPastCompletion} and writes one phantom byte to mimic
+     *       the protocol-corrupting side effect a real overshoot would produce.</li>
+     * </ul>
+     * The {@code transferred} field is written and read only on the EventLoop (in
+     * {@code transferTo} and the surrounding drain loop), so no synchronization is needed.
+     * The cross-thread observation channel is the {@link AtomicInteger} counter, which the
+     * test reads after {@code writeAndFlush(...).sync()} establishes the happens-before.
+     */
+    private static final class OvershootDetectingFileRegion extends AbstractReferenceCounted
+            implements FileRegion {
+        private final long count;
+        private long transferred;
+        final AtomicInteger transferToCallsPastCompletion = new AtomicInteger();
+
+        OvershootDetectingFileRegion(long count) {
+            // count must be > 1 so the chunk buffer retains writable capacity after the first
+            // source byte is written -- otherwise the drain-loop overshoot path is not exercised.
+            this.count = ObjectUtil.checkInRange(count, 2L, Long.MAX_VALUE, "count");
+        }
+
+        @Override
+        public long position() {
+            return 0;
+        }
+
+        @Override
+        public long count() {
+            return count;
+        }
+
+        @Override
+        public long transferred() {
+            return transferred;
+        }
+
+        @Override
+        @Deprecated
+        public long transfered() {
+            return transferred;
+        }
+
+        @Override
+        public long transferTo(WritableByteChannel target, long position) throws IOException {
+            // Per FileRegion's contract, the caller passes transferred() as position. Surface
+            // a violation via IOException so the transport's catch (Exception) at the write
+            // site routes it to the write future's cause -- a JUnit AssertionError would
+            // bypass that catch and wedge the EventLoop.
+            if (position != transferred) {
+                throw new IOException("transferTo position " + position + " != transferred() "
+                        + transferred);
+            }
+            if (transferred < count) {
+                int n = target.write(ByteBuffer.wrap(new byte[] { 0x42 }));
+                if (n > 0) {
+                    transferred = count;
+                }
+                return n;
+            }
+            transferToCallsPastCompletion.incrementAndGet();
+            return target.write(ByteBuffer.wrap(new byte[] { (byte) 0xFF }));
+        }
+
+        @Override
+        protected void deallocate() {
+            // No native resources to release. The overshoot counter is observed on the
+            // writer thread immediately after sync() returns; nothing else needs cleanup.
+        }
+
+        @Override
+        public FileRegion retain() {
+            super.retain();
+            return this;
+        }
+
+        @Override
+        public FileRegion retain(int increment) {
+            super.retain(increment);
+            return this;
+        }
+
+        @Override
+        public FileRegion touch() {
+            return this;
+        }
+
+        @Override
+        public FileRegion touch(Object hint) {
+            return this;
         }
     }
 

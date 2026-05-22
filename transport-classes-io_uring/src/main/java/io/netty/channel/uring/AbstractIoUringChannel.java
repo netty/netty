@@ -455,7 +455,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            short data = event.data();
+            short data = (short) event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:

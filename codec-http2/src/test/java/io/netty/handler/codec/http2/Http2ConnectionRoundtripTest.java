@@ -269,7 +269,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(5), eq(headers),
                 anyInt(), anyShort(), anyBoolean(), eq(0), eq(true));
 
-        bootstrapEnv(1, 2, 2, 0, 0);
+        bootstrapEnv(1, 2, 2, 0, 0, -1);
 
         // Set the maxHeaderListSize to 100 so we may be able to write some headers, but not all. We want to verify
         // that we don't corrupt state if some can be written but not all.
@@ -802,7 +802,7 @@ public class Http2ConnectionRoundtripTest {
 
     @Test
     public void noMoreStreamIdsShouldSendGoAway() throws Exception {
-        bootstrapEnv(1, 1, 4, 1, 1);
+        bootstrapEnv(1, 1, 4, 1, 1, -1);
 
         // Don't wait for the server to close streams
         setClientGracefulShutdownTime(0);
@@ -845,7 +845,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 2, 1, 1);
+        bootstrapEnv(1, 1, 2, 1, 1, -1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
@@ -925,7 +925,7 @@ public class Http2ConnectionRoundtripTest {
             }
         }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class));
 
-        bootstrapEnv(1, 1, 3, 1, 1);
+        bootstrapEnv(1, 1, 3, 1, 1, -1);
 
         // We want both sides to do graceful shutdown during the test.
         setClientGracefulShutdownTime(10000);
@@ -1098,7 +1098,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), anyInt(),
                 any(ByteBuf.class), anyInt(), anyBoolean());
         try {
-            bootstrapEnv(numStreams * length, 1, numStreams * 4 + 1 , numStreams);
+            bootstrapEnv(numStreams * length, 1, numStreams * 4 + 1 , numStreams, -1, numStreams);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
                 public void run() throws Http2Exception {
@@ -1144,11 +1144,12 @@ public class Http2ConnectionRoundtripTest {
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
             int requestCountDown, int trailersCountDown) throws Exception {
-        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1);
+        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1, -1);
     }
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
-            int requestCountDown, int trailersCountDown, int goAwayCountDown) throws Exception {
+            int requestCountDown, int trailersCountDown, int goAwayCountDown, long maxConcurrentStreams)
+            throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(settingsAckCount);
@@ -1170,11 +1171,14 @@ public class Http2ConnectionRoundtripTest {
                 serverFrameCountDown =
                         new FrameCountDown(serverListener, serverSettingsAckLatch,
                                 requestLatch, dataLatch, trailersLatch, goAwayLatch);
-                serverHandlerRef.set(new Http2ConnectionHandlerBuilder()
+                Http2ConnectionHandlerBuilder builder = new Http2ConnectionHandlerBuilder()
                         .server(true)
                         .frameListener(serverFrameCountDown)
-                        .validateHeaders(false)
-                        .build());
+                        .validateHeaders(false);
+                if (maxConcurrentStreams != -1) {
+                    builder.initialSettings(Http2Settings.defaultSettings().maxConcurrentStreams(maxConcurrentStreams));
+                }
+                serverHandlerRef.set(builder.build());
                 p.addLast(serverHandlerRef.get());
                 serverInitLatch.countDown();
             }
