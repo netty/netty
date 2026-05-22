@@ -263,11 +263,19 @@ final class SubmissionQueue {
             return submit(submit, minComplete, Native.IORING_ENTER_GETEVENTS);
         }
         assert submit == 0;
+        if (minComplete == 0 && !cqRingNeedsFlush()) {
+            return 0;
+        }
         int ret = ioUringEnter(0, minComplete, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
             throw new UncheckedIOException(Errors.newIOException("io_uring_enter", ret));
         }
         return ret; // should be 0
+    }
+
+    private boolean cqRingNeedsFlush() {
+        int sqFlags = flags();
+        return (sqFlags & (Native.IORING_SQ_CQ_OVERFLOW | Native.IORING_SQ_TASKRUN)) != 0;
     }
 
     private int submit(int toSubmit, int minComplete, int flags) {
