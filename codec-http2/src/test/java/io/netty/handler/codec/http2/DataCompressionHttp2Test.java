@@ -54,9 +54,9 @@ import org.mockito.stubbing.Answer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.SplittableRandom;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -318,7 +318,7 @@ public class DataCompressionHttp2Test {
     public void deflateEncodingWriteLargeMessage(final int padding) throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         bootstrapEnv(BUFFER_SIZE);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {

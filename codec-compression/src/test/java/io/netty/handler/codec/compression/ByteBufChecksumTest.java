@@ -17,12 +17,11 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.PlatformDependent;
 import net.jpountz.xxhash.XXHashFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
@@ -36,7 +35,7 @@ public class ByteBufChecksumTest {
 
     @BeforeAll
     public static void setUp() {
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), BYTE_ARRAY);
+        ThreadLocalRandom.current().nextBytes(BYTE_ARRAY);
     }
 
     @Test

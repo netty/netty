@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -115,8 +114,7 @@ public class ByteBufUtilTest {
 
     private static void decodeRandomHexBytes(int len) {
         byte[] b = new byte[len];
-        SplittableRandom rand = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rand, b);
+        ThreadLocalRandom.current().nextBytes(b);
         String hexDump = ByteBufUtil.hexDump(b);
         for (int i = 0; i <= len; i++) {  // going over sub-strings of various lengths including empty byte[].
             byte[] b2 = Arrays.copyOfRange(b, i, b.length);
@@ -184,9 +182,8 @@ public class ByteBufUtilTest {
     public void equalsBufferSubsections() {
         byte[] b1 = new byte[128];
         byte[] b2 = new byte[256];
-        SplittableRandom rand = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rand, b1);
-        PlatformDependent.splittableRandomNextBytes(rand, b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -194,24 +191,23 @@ public class ByteBufUtilTest {
         assertTrue(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
 
-    private static int random(SplittableRandom r, int min, int max) {
-        return r.nextInt((max - min) + 1) + min;
+    private static int random(int min, int max) {
+        return ThreadLocalRandom.current().nextInt((max - min) + 1) + min;
     }
 
     @Test
     public void notEqualsBufferSubsections() {
         byte[] b1 = new byte[50];
         byte[] b2 = new byte[256];
-        SplittableRandom rand = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rand, b1);
-        PlatformDependent.splittableRandomNextBytes(rand, b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
         System.arraycopy(b1, iB1, b2, iB2, length);
         // Randomly pick an index in the range that will be compared and make the value at that index differ between
         // the 2 arrays.
-        int diffIndex = random(rand, iB1, iB1 + length - 1);
+        int diffIndex = random(iB1, iB1 + length - 1);
         ++b1[diffIndex];
         assertFalse(ByteBufUtil.equals(Unpooled.wrappedBuffer(b1), iB1, Unpooled.wrappedBuffer(b2), iB2, length));
     }
@@ -220,9 +216,8 @@ public class ByteBufUtilTest {
     public void notEqualsBufferOverflow() {
         byte[] b1 = new byte[8];
         byte[] b2 = new byte[16];
-        SplittableRandom rand = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rand, b1);
-        PlatformDependent.splittableRandomNextBytes(rand, b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;
@@ -235,9 +230,8 @@ public class ByteBufUtilTest {
     public void notEqualsBufferUnderflow() {
         final byte[] b1 = new byte[8];
         final byte[] b2 = new byte[16];
-        SplittableRandom rand = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rand, b1);
-        PlatformDependent.splittableRandomNextBytes(rand, b2);
+        ThreadLocalRandom.current().nextBytes(b1);
+        ThreadLocalRandom.current().nextBytes(b2);
         final int iB1 = b1.length / 2;
         final int iB2 = iB1 + b1.length;
         final int length = b1.length - iB1;

@@ -34,6 +34,7 @@ import java.net.InetSocketAddress;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,7 +47,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
     static final byte[] data = new byte[512];
 
     static {
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), data);
+        ThreadLocalRandom.current().nextBytes(data);
     }
 
     @ParameterizedTest

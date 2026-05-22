@@ -37,6 +37,7 @@ import org.mockito.stubbing.Answer;
 import java.util.SplittableRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
@@ -106,7 +107,7 @@ public final class Http2TestUtil {
      */
     public static byte[] randomBytes(int size) {
         byte[] data = new byte[size];
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), data);
+        ThreadLocalRandom.current().nextBytes(data);
         return data;
     }
 

@@ -28,7 +28,6 @@ import io.netty.handler.traffic.TrafficCounter;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -39,9 +38,9 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.SplittableRandom;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -69,7 +68,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     private static EventExecutorGroup groupForGlobal;
     private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
     static {
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), data);
+        ThreadLocalRandom.current().nextBytes(data);
     }
 
     @BeforeAll

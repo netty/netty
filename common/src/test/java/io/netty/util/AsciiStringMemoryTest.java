@@ -16,11 +16,10 @@
 package io.netty.util;
 
 import io.netty.util.ByteProcessor.IndexOfProcessor;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,9 +41,8 @@ public class AsciiStringMemoryTest {
     public void setup() {
         a = new byte[128];
         b = new byte[256];
-        SplittableRandom rng = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(rng, a);
-        PlatformDependent.splittableRandomNextBytes(rng, b);
+        ThreadLocalRandom.current().nextBytes(a);
+        ThreadLocalRandom.current().nextBytes(b);
         aOffset = 22;
         bOffset = 53;
         length = 100;

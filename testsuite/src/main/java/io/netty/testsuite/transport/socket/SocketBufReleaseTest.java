@@ -26,13 +26,11 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
-import java.util.Random;
-import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -77,7 +75,6 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
     private static class BufWriterHandler extends SimpleChannelInboundHandler<Object> {
 
-        private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
         private ByteBuf buf;
         private final Promise<Channel> channelFuture = new DefaultPromise<Channel>(executor);
@@ -90,7 +87,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         @Override
         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             byte[] data = new byte[1024];
-            PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
+            ThreadLocalRandom.current().nextBytes(data);
 
             buf = ctx.alloc().buffer();
             // call retain on it so it can't be put back on the pool

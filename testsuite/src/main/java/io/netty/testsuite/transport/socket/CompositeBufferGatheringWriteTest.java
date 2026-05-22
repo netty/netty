@@ -28,15 +28,13 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
-import java.util.Random;
-import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -173,11 +171,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            Random r = new Random();
             final int soSndBuf = 1024;
             ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
             final ByteBuf expectedContent = alloc.buffer(soSndBuf * 2);
-            expectedContent.writeBytes(newRandomBytes(expectedContent.writableBytes(), r));
+            expectedContent.writeBytes(newRandomBytes(expectedContent.writableBytes()));
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
             sb.childOption(ChannelOption.SO_SNDBUF, soSndBuf)
@@ -306,9 +303,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         return compositeByteBuf;
     }
 
-    private static byte[] newRandomBytes(int size, Random r) {
+    private static byte[] newRandomBytes(int size) {
         byte[] bytes = new byte[size];
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(r.nextLong()), bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return bytes;
     }
 }

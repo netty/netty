@@ -39,7 +39,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,9 +49,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
-import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1283,7 +1282,7 @@ public class Http2ConnectionRoundtripTest {
      */
     private static ByteBuf randomBytes(int length) {
         final byte[] bytes = new byte[length];
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 }

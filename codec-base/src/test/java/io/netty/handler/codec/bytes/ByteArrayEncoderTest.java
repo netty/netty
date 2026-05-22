@@ -18,12 +18,11 @@ package io.netty.handler.codec.bytes;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -48,7 +47,7 @@ public class ByteArrayEncoderTest {
     @Test
     public void testEncode() {
         byte[] b = new byte[2048];
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), b);
+        ThreadLocalRandom.current().nextBytes(b);
         ch.writeOutbound(b);
         ByteBuf encoded = ch.readOutbound();
         assertEquals(wrappedBuffer(b), encoded);

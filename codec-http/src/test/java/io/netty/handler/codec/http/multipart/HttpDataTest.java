@@ -32,6 +32,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -59,7 +60,7 @@ class HttpDataTest {
 
     @BeforeAll
     static void setUp() {
-        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(), BYTES);
+        ThreadLocalRandom.current().nextBytes(BYTES);
     }
 
     @ParameterizedHttpDataTest

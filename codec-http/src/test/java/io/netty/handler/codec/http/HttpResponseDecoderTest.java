@@ -22,7 +22,6 @@ import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -31,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -297,8 +296,7 @@ public class HttpResponseDecoderTest {
         assertEquals(HttpResponseStatus.OK, res.status());
 
         byte[] chunkBytes = new byte[10];
-        SplittableRandom random = new SplittableRandom();
-        PlatformDependent.splittableRandomNextBytes(random, chunkBytes);
+        ThreadLocalRandom.current().nextBytes(chunkBytes);
         final ByteBuf chunk = ch.alloc().buffer().writeBytes(chunkBytes);
         final int chunkSize = chunk.readableBytes();
         ByteBuf partialChunk1 = chunk.retainedSlice(0, 5);
