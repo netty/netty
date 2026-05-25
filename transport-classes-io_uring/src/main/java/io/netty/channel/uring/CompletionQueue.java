@@ -116,13 +116,16 @@ final class CompletionQueue {
      * Process the completion events in the {@link CompletionQueue} and return the number of processed
      * events.
      */
-    int process(CompletionCallback callback) {
+    // Returns packed long: total completions in upper 32 bits, real I/O completions in lower 32 bits.
+    // Unpack: total = (int)(result >>> 32), realIo = (int) result.
+    long process(CompletionCallback callback) {
         if (closed) {
             return 0;
         }
         int tail = (int) INT_HANDLE.getVolatile(ktail, 0);
         try {
-            int i = 0;
+            int total = 0;
+            int realIo = 0;
             while (ringHead != tail) {
                 int cqeIdx = cqeIdx(ringHead, ringMask);
                 int cqePosition = cqeIdx * cqeLength;
@@ -144,9 +147,10 @@ final class CompletionQueue {
                 }
                 // Check if we should just skip it.
                 if ((flags & Native.IORING_CQE_F_SKIP) == 0) {
-                    i++;
-
-                    callback.handle(res, flags, udata, extraCqeData);
+                    total++;
+                    if (callback.handle(res, flags, udata, extraCqeData)) {
+                        realIo++;
+                    }
                 }
 
                 if (ringHead == tail) {
@@ -156,7 +160,7 @@ final class CompletionQueue {
                     tail = (int) INT_HANDLE.getVolatile(ktail, 0);
                 }
             }
-            return i;
+            return ((long) total << 32) | (realIo & 0xFFFFFFFFL);
         } finally {
             // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
             INT_HANDLE.setRelease(khead, 0, ringHead);
