@@ -248,6 +248,126 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void handlesAbsoluteRequestWhoseQueryHasUrlCharactersRejectedByJavaNetUri() {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "https://bh.contextweb.com/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}", true);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
+
+        assertEquals(new AsciiString("/bh/rtset?pid=558355&ev=1&us_privacy=${us_privacy}"), out.path());
+        assertEquals(new AsciiString("https"), out.scheme());
+        assertEquals(new AsciiString("bh.contextweb.com"), out.authority());
+        assertEquals(HttpMethod.GET.asciiName(), out.method());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWhosePathHasUrlCharactersRejectedByJavaNetUri() {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "http://example.com/orders/{id}/items|details?expand={details}#section", true);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, false);
+
+        assertEquals(new AsciiString("/orders/{id}/items|details?expand={details}#section"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWithoutPathUsingVertxCompatiblePath() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com?x=1#frag", true);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/?x=1#frag"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWithAuthorityOnlyUsingVertxCompatiblePath() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com", true);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWithoutPathWhoseQueryOrFragmentContainsSlash() {
+        HttpRequest querySlash = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com?next=/home", true);
+        HttpRequest fragmentSlash = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com#/home", true);
+
+        assertEquals(new AsciiString("/?next=/home"),
+                HttpConversionUtil.toHttp2Headers(querySlash, true).path());
+        assertEquals(new AsciiString("/"), HttpConversionUtil.toHttp2Headers(fragmentSlash, true).path());
+    }
+
+    @Test
+    public void handlesEmptyRequestTargetUsingLegacyEmptyPathFallback() {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "", true);
+        msg.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertNull(out.authority());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWithMissingAuthorityUsingUriAuthority() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://?x=1#frag", true);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/?x=1#frag"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertNull(out.authority());
+    }
+
+    @Test
+    public void handlesAbsoluteRequestWithEmptyQueryOrFragmentUsingVertxCompatiblePath() {
+        HttpRequest emptyQuery = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path?", true);
+        HttpRequest emptyFragment = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path#", true);
+        HttpRequest emptyQueryWithFragment = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path?#frag", true);
+        HttpRequest queryWithEmptyFragment = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path?x#", true);
+
+        assertEquals(new AsciiString("/path"), HttpConversionUtil.toHttp2Headers(emptyQuery, true).path());
+        assertEquals(new AsciiString("/path"), HttpConversionUtil.toHttp2Headers(emptyFragment, true).path());
+        assertEquals(new AsciiString("/path#frag"),
+                HttpConversionUtil.toHttp2Headers(emptyQueryWithFragment, true).path());
+        assertEquals(new AsciiString("/path?x"),
+                HttpConversionUtil.toHttp2Headers(queryWithEmptyFragment, true).path());
+    }
+
+    @Test
+    public void rejectsAbsoluteRequestWithMalformedAuthority() {
+        final HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET,
+                "http://[bad host]/p?q={x}",
+                new DefaultHttpHeaders(),
+                false);
+
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.toHttp2Headers(msg, false);
+            }
+        });
+    }
+
+    @Test
     public void addHttp2ToHttpHeadersCombinesCookies() throws Http2Exception {
         Http2Headers inHeaders = new DefaultHttp2Headers();
         inHeaders.add("yes", "no");
