@@ -103,8 +103,6 @@ public final class DefaultQuicStreamFrame extends DefaultByteBufHolder implement
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (fin ? 1 : 0);
-        return result;
+        return 31 * super.hashCode() + (fin ? 1 : 0);
     }
 }

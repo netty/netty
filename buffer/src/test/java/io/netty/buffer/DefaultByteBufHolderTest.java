@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 
+import static io.netty.util.internal.ObjectUtil.hashSum;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -100,9 +101,7 @@ public class DefaultByteBufHolderTest {
 
         @Override
         public int hashCode() {
-            int result = super.hashCode();
-            result = 31 * result + extraField;
-            return result;
+            return hashSum(super.hashCode(), extraField);
         }
     }
 }

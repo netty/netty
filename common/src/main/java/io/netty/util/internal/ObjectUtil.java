@@ -14,8 +14,11 @@
  */
 package io.netty.util.internal;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A grab-bag of useful utility methods.
@@ -346,5 +349,47 @@ public final class ObjectUtil {
      */
     public static long longValue(Long wrapper, long defaultValue) {
         return wrapper != null ? wrapper : defaultValue;
+    }
+
+    public static int hash(@Nullable Object object) {
+        return Objects.hashCode(object);
+    }
+
+    public static int hash(boolean value) {
+        return Boolean.hashCode(value);
+    }
+
+    public static int hash(@Nullable Object first, @Nullable Object second) {
+        return hashSum(hash(first), hash(second));
+    }
+
+    public static int hash(@Nullable Object first, @Nullable Object second, @Nullable Object third) {
+        return hashSum(hash(first), hash(second), hash(third));
+    }
+
+    public static int hash(@Nullable Object first, @Nullable Object second, @Nullable Object third,
+                           @Nullable Object fourth) {
+        return hashSum(hash(first), hash(second), hash(third), hash(fourth));
+    }
+
+    public static int hash(@Nullable Object first, @Nullable Object second, @Nullable Object third,
+                           @Nullable Object fourth, @Nullable Object fifth) {
+        return hashSum(hash(first), hash(second), hash(third), hash(fourth), hash(fifth));
+    }
+
+    public static int hashSum(int firstHash, int secondHash) {
+        return 31 * firstHash + secondHash;
+    }
+
+    public static int hashSum(int firstHash, int secondHash, int thirdHash) {
+        return 31 * (31 * firstHash + secondHash) + thirdHash;
+    }
+
+    public static int hashSum(int firstHash, int secondHash, int thirdHash, int fourthHash) {
+        return 31 * (31 * (31 * firstHash + secondHash) + thirdHash) + fourthHash;
+    }
+
+    public static int hashSum(int firstHash, int secondHash, int thirdHash, int fourthHash, int fifthHash) {
+        return 31 * (31 * (31 * (31 * firstHash + secondHash) + thirdHash) + fourthHash) + fifthHash;
     }
 }

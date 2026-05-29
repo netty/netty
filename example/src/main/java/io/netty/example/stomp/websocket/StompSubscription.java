@@ -18,6 +18,8 @@ package io.netty.example.stomp.websocket;
 import io.netty.channel.Channel;
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 public final class StompSubscription {
 
     private final String id;
@@ -53,23 +55,13 @@ public final class StompSubscription {
         }
 
         StompSubscription that = (StompSubscription) obj;
-
-        if (!id.equals(that.id)) {
-            return false;
-        }
-
-        if (!destination.equals(that.destination)) {
-            return false;
-        }
-
-        return channel.equals(that.channel);
+        return id.equals(that.id) &&
+                destination.equals(that.destination) &&
+                channel.equals(that.channel);
     }
 
     @Override
     public int hashCode() {
-        int result = id.hashCode();
-        result = 31 * result + destination.hashCode();
-        result = 31 * result + channel.hashCode();
-        return result;
+        return hash(id, destination, channel);
     }
 }

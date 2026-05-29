@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML processing instruction
  */
@@ -46,22 +50,13 @@ public class XmlProcessingInstruction {
         }
 
         XmlProcessingInstruction that = (XmlProcessingInstruction) o;
-
-        if (data != null ? !data.equals(that.data) : that.data != null) {
-            return false;
-        }
-        if (target != null ? !target.equals(that.target) : that.target != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(data, that.data) &&
+                Objects.equals(target, that.target);
     }
 
     @Override
     public int hashCode() {
-        int result = data != null ? data.hashCode() : 0;
-        result = 31 * result + (target != null ? target.hashCode() : 0);
-        return result;
+        return hash(data, target);
     }
 
     @Override

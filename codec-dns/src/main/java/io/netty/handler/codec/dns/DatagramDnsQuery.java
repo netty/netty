@@ -19,6 +19,10 @@ import io.netty.channel.AddressedEnvelope;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * A {@link DnsQuery} implementation for UDP/IP.
@@ -156,35 +160,13 @@ public class DatagramDnsQuery extends DefaultDnsQuery
         }
 
         @SuppressWarnings("unchecked")
-        final AddressedEnvelope<?, SocketAddress> that = (AddressedEnvelope<?, SocketAddress>) obj;
-        if (sender() == null) {
-            if (that.sender() != null) {
-                return false;
-            }
-        } else if (!sender().equals(that.sender())) {
-            return false;
-        }
-
-        if (recipient() == null) {
-            if (that.recipient() != null) {
-                return false;
-            }
-        } else if (!recipient().equals(that.recipient())) {
-            return false;
-        }
-
-        return true;
+        AddressedEnvelope<?, SocketAddress> that = (AddressedEnvelope<?, SocketAddress>) obj;
+        return Objects.equals(sender(), that.sender()) &&
+          Objects.equals(recipient(), that.recipient());
     }
 
     @Override
     public int hashCode() {
-        int hashCode = super.hashCode();
-        if (sender() != null) {
-            hashCode = hashCode * 31 + sender().hashCode();
-        }
-        if (recipient() != null) {
-            hashCode = hashCode * 31 + recipient().hashCode();
-        }
-        return hashCode;
+        return hashSum(super.hashCode(), hash(sender()), hash(recipient()));
     }
 }
