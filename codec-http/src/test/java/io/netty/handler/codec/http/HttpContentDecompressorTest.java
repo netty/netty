@@ -112,6 +112,10 @@ public class HttpContentDecompressorTest {
         assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
         assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
 
+        assertEquals(0, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.read();
         assertEquals(1, reads.get());
         assertEquals(1, readCompletes.get());
 

@@ -75,7 +75,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     /**
      * Number of unsatisfied downstream {@code read()} calls. A downstream {@code read()} is considered unsatisfied
-     * if it has not yet been paired with a {@code fireChannelRead} or a cumulative {@code fireChannelReadComplete}.
+     * if auto-read is off and if it has not yet been paired with a {@code fireChannelRead} or
+     * a cumulative {@code fireChannelReadComplete}.
      * <p>
      * A {@code read()} can be satisfied in three ways, whichever comes first:
      * <ul>
@@ -83,11 +84,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      *     <li>in a {@code channelRead()}</li>
      *     <li>in a {@code channelReadComplete()}</li>
      * </ul>
+     * A {@code read()} can be satisfied with auto-read on.
      * <p>
      * When one or more {@code read()} calls are unsatisfied, a downstream {@code channelReadComplete} is fired
      * only when either of the following happens:
      * <ul>
-     *     <li>{@code unsatisfiedReads} returns to zero after {@code dequeue()}ing, or</li>
+     *     <li>auto-read is off and {@code unsatisfiedReads} returns to zero after {@code dequeue()}ing, or</li>
      *     <li>an upstream {@code channelReadComplete} arrives</li>
      * </ul>
      */
@@ -140,7 +142,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
         if (!isQueueEmpty()) {
-            dequeue(ctx, queue.size());
+            dequeueAll(ctx);
             ctx.fireChannelReadComplete();
         }
         destroy();
@@ -154,12 +156,22 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
-        unsatisfiedReads++;
-
-        if (dequeue(ctx, 1) > 0) {
-            satisfyRead(ctx);
-        } else {
+        if (config.isAutoRead()) {
+            dequeueAll(ctx);
             ctx.read();
+        } else {
+            unsatisfiedReads++;
+
+            if (dequeueOne(ctx)) {
+                if (unsatisfiedReads == 0) {
+                    ctx.fireChannelReadComplete();
+                }
+            } else {
+                // Could not satisfy the read() from the queue.
+                // We need to request data from upstream so we can satisfy the read() in channelRead() or
+                // channelReadComplete() if it is going to be an empty read.
+                ctx.read();
+            }
         }
     }
 
@@ -171,15 +183,14 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
         queue.offer(msg);
 
-        // Snapshot before dequeue(), which may re-enter read() via fireChannelRead(...).
-        boolean shouldSatisfyRead = unsatisfiedReads > 0;
-        // We just received one message. Do we need to relay it regardless
-        // of the auto-reading configuration? The answer is yes if this
-        // method call originates from a prior read call.
-        int minConsume = shouldSatisfyRead? 1 : 0;
+        if (config.isAutoRead()) {
+            dequeueAll(ctx);
+        } else if (unsatisfiedReads > 0) {
+            dequeueOne(ctx);
 
-        if (dequeue(ctx, minConsume) > 0 && shouldSatisfyRead) {
-            satisfyRead(ctx);
+            if (unsatisfiedReads == 0) {
+                ctx.fireChannelReadComplete();
+            }
         }
     }
 
@@ -187,40 +198,34 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
         // channelReadComplete; spurious upstream completions with no pending read are dropped.
-        satisfyAllReads(ctx);
-    }
-
-    private void satisfyRead(ChannelHandlerContext ctx) {
-        if (unsatisfiedReads > 0 && --unsatisfiedReads == 0) {
-            ctx.fireChannelReadComplete();
-        }
-    }
-
-    private void satisfyAllReads(ChannelHandlerContext ctx) {
-        if (unsatisfiedReads > 0) {
+        if (config.isAutoRead() || unsatisfiedReads > 0) {
             unsatisfiedReads = 0;
             ctx.fireChannelReadComplete();
         }
     }
 
+    private boolean dequeueOne(ChannelHandlerContext ctx) {
+        return dequeue(ctx, 1) > 0;
+    }
+
+    private int dequeueAll(ChannelHandlerContext ctx) {
+        return dequeue(ctx, -1);
+    }
+
     /**
-     * Dequeues one or many (or none) messages depending on the channel's auto
-     * reading state and returns the number of messages that were consumed from
-     * the internal queue.
-     * <p>
-     * The {@code minConsume} argument is used to force {@code dequeue()} into
-     * consuming that number of messages regardless of the channel's auto
-     * reading configuration.
+     * Dequeues up to {@code maxConsume} messages, fires them downstream and
+     * updates {@code unsatisfiedReads} accordingly. If {@code maxConsume} is negative,
+     * there is no upper limit on the number of messages to dequeue and fire downstream.
      *
      * @see #read(ChannelHandlerContext)
      * @see #channelRead(ChannelHandlerContext, Object)
      */
-    private int dequeue(ChannelHandlerContext ctx, int minConsume) {
+    private int dequeue(ChannelHandlerContext ctx, int maxConsume) {
         int consumed = 0;
 
         // fireChannelRead(...) may call ctx.read() and so this method may be re-entered. Because of that
         // we need to check if queue was set to null in the meantime and, if so, break out of the loop.
-        while (queue != null && (consumed < minConsume || config.isAutoRead())) {
+        while (queue != null && (consumed < maxConsume || maxConsume < 0)) {
             Object msg = queue.poll();
             if (msg == null) {
                 break;
@@ -234,6 +239,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             queue.recycle();
             queue = null;
         }
+
+        unsatisfiedReads = Math.max(unsatisfiedReads - consumed, 0);
 
         return consumed;
     }
