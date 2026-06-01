@@ -24,6 +24,7 @@ import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.CodecException;
 import io.netty.util.SuppressForbidden;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketAddress;
 
@@ -53,14 +54,19 @@ public class SctpMessageCompletionHandlerTest {
 
     @Test
     public void testIncompleteMessagesLimited() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
         ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         SctpMessage message = new SctpMessage(new TestMessageInfo(false, 1), buffer);
         assertFalse(channel.writeInbound(message));
         assertEquals(1, buffer.refCnt());
-        SctpMessage message2 = new SctpMessage(new TestMessageInfo(false, 2), buffer2);
-        assertThrows(CodecException.class, () -> channel.writeInbound(message2));
+        final SctpMessage message2 = new SctpMessage(new TestMessageInfo(false, 2), buffer2);
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(message2);
+            }
+        });
 
         assertEquals(1, buffer.refCnt());
         assertEquals(0, buffer2.refCnt());
@@ -71,10 +77,10 @@ public class SctpMessageCompletionHandlerTest {
 
     @Test
     public void testFragmentsLimited() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
         ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
-        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        final ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
 
         assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
         assertEquals(1, buffer.refCnt());
@@ -82,8 +88,12 @@ public class SctpMessageCompletionHandlerTest {
         assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer2)));
         assertEquals(1, buffer2.refCnt());
 
-        assertThrows(CodecException.class, () ->
-                channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer3)));
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer3));
+            }
+        });
         assertEquals(0, buffer3.refCnt());
 
         assertFalse(channel.finish());
