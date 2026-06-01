@@ -3056,15 +3056,18 @@ public class DnsNameResolverTest {
                     // Valid CNAME (in bailiwick of query)
                     records.add(new TestDnsServer.TestResourceRecord(
                             "x.netty.io", RecordType.CNAME,
-                            Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
                     // Invalid CNAME (out of bailiwick of query)
                     records.add(new TestDnsServer.TestResourceRecord(
                             "cname.netty.io", RecordType.CNAME,
-                            Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "evil.com")));
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "evil.com")));
                     // Provide an A record to satisfy the resolution
                     records.add(new TestDnsServer.TestResourceRecord(
                             "evil.com", RecordType.A,
-                            Collections.singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
                     return records;
                 }
                 return Collections.emptySet();
