@@ -1321,7 +1321,7 @@ public class HAProxyMessageDecoderTest {
 
     @Test
     public void testReadTlvsLeaksRetainedBufferWhenSecondSSLTLVIsMalformed() {
-        ByteBuf data = Unpooled.buffer();
+        final ByteBuf data = Unpooled.buffer();
         data.writeBytes(new byte[] {
                 13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,   // v2 signature
                 33, 17,                                            // V2|PROXY, TCP4
@@ -1332,7 +1332,12 @@ public class HAProxyMessageDecoderTest {
         });
 
         assertEquals(1, data.refCnt());
-        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                HAProxyMessage.decodeHeader(data);
+            }
+        });
 
         try {
             assertEquals(1, data.refCnt(),
@@ -1357,7 +1362,12 @@ public class HAProxyMessageDecoderTest {
         });
 
         assertEquals(1, data.refCnt());
-        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                HAProxyMessage.decodeHeader(data);
+            }
+        });
 
         try {
             assertEquals(1, data.refCnt(),
