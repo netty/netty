@@ -232,13 +232,16 @@ public final class HttpDecoderConfig implements Cloneable {
      * security vulnerabilities, when multiple systems disagree on the meaning of leniently parsed messages.
      * <p>
      * When <em>strict line parsing</em> is enabled ({@code true}), then Netty will enforce that start- and header
-     * field-lines MUST be separated by a CR LF octet pair, and will produce messagas with failed
+     * field-lines MUST be separated by a CR LF octet pair, and will produce messages with failed
      * {@link io.netty.handler.codec.DecoderResult}s.
+     * Additionally, Netty will enforce that only CR LF characters precede the initial line, if any.
      * <p>
      * When <em>strict line parsing</em> is disabled ({@code false}), then Netty will accept lone LF octets as line
-     * seperators for the start- and header field-lines.
+     * separators for the start- and header field-lines.
+     * Additionally, Netty will ignore any ISO control and line separator characters prior to the initial line.
      * <p>
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-message-format">RFC 9112 Section 2.1</a>.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-message-format">RFC 9112 Section 2.1</a> and
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-2.2-6">RFC 9112 Section 2.2</a>.
      * @param strictLineParsing Whether <em>strict line parsing</em> should be enabled ({@code true}),
      * or not ({@code false}).
      * @return This decoder config.
