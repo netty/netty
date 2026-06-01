@@ -76,7 +76,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
                             "Too many incomplete sctp messages in flight: " + maxIncompleteSctpMessages);
                 }
                 //first incomplete message
-                frag = new ArrayList<>();
+                frag = new ArrayList<ByteBuf>();
                 frag.add(byteBuf.retain());
                 incompleteSctpMessages.put(streamIdentifier, frag);
             }
