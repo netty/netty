@@ -17,6 +17,8 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -41,7 +43,8 @@ public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory
 
     public static final TrustManagerFactory INSTANCE = new InsecureTrustManagerFactory();
 
-    private static final TrustManager tm = new X509TrustManager() {
+    private static final TrustManager tm = wrapIfNeeded(new X509TrustManager() {
+
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String s) {
             if (logger.isDebugEnabled()) {
@@ -60,7 +63,18 @@ public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory
         public X509Certificate[] getAcceptedIssuers() {
             return EmptyArrays.EMPTY_X509_CERTIFICATES;
         }
-    };
+    });
+
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    static X509TrustManager wrapIfNeeded(X509TrustManager tm) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            // This needs to be X509ExtendedTrustManager so hostname verification is skipped as well.
+            // Otherwise the JDK will internally wrap it with AbstractTrustManagerWrapper and add hostname verification
+            // by itself.
+            return new X509TrustManagerWrapper(tm);
+        }
+        return tm;
+    }
 
     private InsecureTrustManagerFactory() { }
 
