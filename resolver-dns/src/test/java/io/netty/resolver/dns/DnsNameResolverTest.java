@@ -3046,26 +3046,29 @@ public class DnsNameResolverTest {
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testCnameCacheBailiwick(DnsNameResolverChannelStrategy strategy) throws Exception {
-        final Map<String, String> cache = new ConcurrentHashMap<>();
+        final Map<String, String> cache = new ConcurrentHashMap<String, String>();
 
-        TestDnsServer dnsServer = new TestDnsServer(question -> {
-            if ("x.netty.io".equals(question.getDomainName())) {
-                Set<ResourceRecord> records = new HashSet<>();
-                // Valid CNAME (in bailiwick of query)
-                records.add(new TestDnsServer.TestResourceRecord(
-                        "x.netty.io", RecordType.CNAME,
-                        Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
-                // Invalid CNAME (out of bailiwick of query)
-                records.add(new TestDnsServer.TestResourceRecord(
-                        "cname.netty.io", RecordType.CNAME,
-                        Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "evil.com")));
-                // Provide an A record to satisfy the resolution
-                records.add(new TestDnsServer.TestResourceRecord(
-                        "evil.com", RecordType.A,
-                        Collections.singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
-                return records;
+        TestDnsServer dnsServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
+                if ("x.netty.io".equals(question.getDomainName())) {
+                    Set<ResourceRecord> records = new HashSet<>();
+                    // Valid CNAME (in bailiwick of query)
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "x.netty.io", RecordType.CNAME,
+                            Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                    // Invalid CNAME (out of bailiwick of query)
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname.netty.io", RecordType.CNAME,
+                            Collections.singletonMap(DnsAttribute.DOMAIN_NAME.toLowerCase(), "evil.com")));
+                    // Provide an A record to satisfy the resolution
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "evil.com", RecordType.A,
+                            Collections.singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
+                    return records;
+                }
+                return Collections.emptySet();
             }
-            return Collections.emptySet();
         });
         dnsServer.start();
         DnsNameResolver resolver = null;
