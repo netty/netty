@@ -18,13 +18,13 @@ package io.netty.handler.codec.haproxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -251,13 +251,48 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         // In most cases there are less than 4 TLVs available
         List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
 
-        do {
-            haProxyTLVs.add(haProxyTLV);
-            if (haProxyTLV instanceof HAProxySSLTLV) {
-                haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).encapsulatedTLVs());
-            }
-        } while ((haProxyTLV = readNextTLV(header, 0)) != null);
+        try {
+            do {
+                haProxyTLVs.add(haProxyTLV);
+                if (haProxyTLV instanceof HAProxySSLTLV) {
+                    haProxyTLVs.addAll(((HAProxySSLTLV) haProxyTLV).encapsulatedTLVs());
+                }
+            } while ((haProxyTLV = readNextTLV(header, 0)) != null);
+        } catch (Throwable t) {
+            // Release all previously read TLVs before rethrowing as otherwise we would leak.
+            releaseTlvs(haProxyTLVs);
+            PlatformDependent.throwException(t);
+        }
         return haProxyTLVs;
+    }
+
+    private static void releaseDeep(List<HAProxyTLV> children) {
+        for (HAProxyTLV child : children) {
+            child.release();
+            if (child instanceof HAProxySSLTLV) {
+                releaseDeep(((HAProxySSLTLV) child).encapsulatedTLVs());
+            }
+        }
+    }
+
+    private static void releaseTlvs(List<HAProxyTLV> tlvs) {
+        int skip = 0;
+        for (HAProxyTLV tlv : tlvs) {
+            if (skip > 0) {
+                skip--;
+                // This TLV is a flattened depth-1 child. If it encapsulates anything (depth-2+),
+                // those deeper children were NOT flattened, so we must release them recursively.
+                if (tlv instanceof HAProxySSLTLV) {
+                    releaseDeep(((HAProxySSLTLV) tlv).encapsulatedTLVs());
+                }
+            } else if (tlv instanceof HAProxySSLTLV) {
+                // This is a top-level (depth-0) SSL TLV.
+                // Its immediate children (depth-1) were flattened into this list,
+                // so we must skip them in the outer loop to avoid treating them as top-level TLVs.
+                skip = ((HAProxySSLTLV) tlv).encapsulatedTLVs().size();
+            }
+            tlv.release();
+        }
     }
 
     private static HAProxyTLV readNextTLV(final ByteBuf header, int nestingLevel) {
@@ -284,13 +319,19 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             if (byteBuf.readableBytes() >= 4) {
 
                 final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
-                do {
-                    final HAProxyTLV haProxyTLV = readNextTLV(byteBuf, nestingLevel + 1);
-                    if (haProxyTLV == null) {
-                        break;
-                    }
-                    encapsulatedTlvs.add(haProxyTLV);
-                } while (byteBuf.readableBytes() >= 4);
+                try {
+                    do {
+                        final HAProxyTLV haProxyTLV = readNextTLV(byteBuf, nestingLevel + 1);
+                        if (haProxyTLV == null) {
+                            break;
+                        }
+                        encapsulatedTlvs.add(haProxyTLV);
+                    } while (byteBuf.readableBytes() >= 4);
+                }  catch (Throwable t) {
+                    // Release all previously read TLVs before rethrowing as otherwise we would leak.
+                    releaseTlvs(encapsulatedTlvs);
+                    PlatformDependent.throwException(t);
+                }
 
                 return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
             }
@@ -599,9 +640,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     @Override
     protected void deallocate() {
         try {
-            for (HAProxyTLV tlv : tlvs) {
-                tlv.release();
-            }
+            releaseTlvs(tlvs);
         } finally {
             final ResourceLeakTracker<HAProxyMessage> leak = this.leak;
             if (leak != null) {
