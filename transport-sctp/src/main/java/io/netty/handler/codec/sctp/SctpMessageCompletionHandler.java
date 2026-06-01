@@ -37,7 +37,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final IntObjectMap<List<ByteBuf>> incompleteSctpMessages = new IntObjectHashMap<>();
+    private final IntObjectMap<List<ByteBuf>> incompleteSctpMessages = new IntObjectHashMap<List<ByteBuf>>();
     private final int maxIncompleteSctpMessages;
     private final int maxFragments;
 
