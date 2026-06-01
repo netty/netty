@@ -641,8 +641,9 @@ abstract class DnsResolveContext<T> {
                 final DnsRecordType type = question.type();
 
                 if (type == DnsRecordType.CNAME) {
-                    onResponseCNAME(question, buildAliasMap(envelope.content(), cnameCache(), parent.executor()),
-                                    queryLifecycleObserver, promise);
+                    onResponseCNAME(question,
+                            buildAliasMap(question.name(), envelope.content(), cnameCache(), parent.executor()),
+                            queryLifecycleObserver, promise);
                     return;
                 }
 
@@ -832,7 +833,7 @@ abstract class DnsResolveContext<T> {
 
         // We often get a bunch of CNAMES as well when we asked for A/AAAA.
         final DnsResponse response = envelope.content();
-        final Map<String, String> cnames = buildAliasMap(response, cnameCache(), parent.executor());
+        final Map<String, String> cnames = buildAliasMap(question.name(), response, cnameCache(), parent.executor());
         final int answerCount = response.count(DnsSection.ANSWER);
 
         boolean found = false;
@@ -991,7 +992,8 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private static Map<String, String> buildAliasMap(DnsResponse response, DnsCnameCache cache, EventLoop loop) {
+    private static Map<String, String> buildAliasMap(
+            String queryName, DnsResponse response, DnsCnameCache cache, EventLoop loop) {
         final int answerCount = response.count(DnsSection.ANSWER);
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {
@@ -1022,7 +1024,13 @@ abstract class DnsResolveContext<T> {
             String nameWithDot = hostnameWithDot(name);
             String mappingWithDot = hostnameWithDot(mapping);
             if (!nameWithDot.equalsIgnoreCase(mappingWithDot)) {
-                cache.cache(nameWithDot, mappingWithDot, r.timeToLive(), loop);
+                String queryNameWithDot = hostnameWithDot(queryName.toLowerCase(Locale.US));
+                // Only cache the CNAME if the owner is in the bailiwick of the original query name.
+                boolean inBailiwick = nameWithDot.equals(queryNameWithDot) ||
+                        nameWithDot.endsWith("." + queryNameWithDot);
+                if (inBailiwick) {
+                    cache.cache(nameWithDot, mappingWithDot, r.timeToLive(), loop);
+                }
                 cnames.put(name, mapping);
             }
         }
