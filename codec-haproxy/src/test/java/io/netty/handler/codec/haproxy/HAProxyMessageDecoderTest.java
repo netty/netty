@@ -1349,7 +1349,7 @@ public class HAProxyMessageDecoderTest {
 
     @Test
     public void testEncapsulatedTLVsLeakWhenInnerSSLTLVIsMalformed() {
-        ByteBuf data = Unpooled.buffer();
+        final ByteBuf data = Unpooled.buffer();
         data.writeBytes(new byte[] {
                 13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,     // v2 signature
                 33, 17,                                            // V2|PROXY, TCP4
