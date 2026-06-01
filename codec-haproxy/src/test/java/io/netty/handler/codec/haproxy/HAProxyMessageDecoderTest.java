@@ -27,6 +27,8 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -1255,5 +1257,114 @@ public class HAProxyMessageDecoderTest {
                 ch.writeInbound(data);
             }
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(shorts = {
+            4, // Use a length which is < 5.
+            Short.MAX_VALUE // Use a length which is > readable bytes.
+    })
+    public void testInvalidTLVLengthCorrectlyHandled(short length) throws Exception {
+        ByteArrayOutputStream headerWriter = new ByteArrayOutputStream();
+        //src_ip = "AAAA", dst_ip = "BBBB", src_port = "CC", dst_port = "DD"
+        headerWriter.write(new byte[] {'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'D', 'D'});
+        //write TLV
+        ByteBuffer tlvLengthBuf = ByteBuffer.allocate(2);
+        tlvLengthBuf.order(ByteOrder.BIG_ENDIAN);
+        //write PP2_TYPE_SSL TLV
+        headerWriter.write(0x20); //PP2_TYPE_SSL
+        //notice that the TLV length cannot be bigger than 0xffff
+        tlvLengthBuf.clear();
+        tlvLengthBuf.putShort(length);
+        //add to the header
+        headerWriter.write(tlvLengthBuf.array());
+        //write client field
+        headerWriter.write(1);
+        //write verify field
+        headerWriter.write(new byte[] {'V', 'V', 'V', 'V'});
+        //subtract the client and verify fields
+
+        byte[] header = headerWriter.toByteArray();
+        ByteBuffer numsWrite = ByteBuffer.allocate(2);
+        numsWrite.order(ByteOrder.BIG_ENDIAN);
+        numsWrite.putShort((short) header.length);
+
+        final  ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x00,
+                (byte) 0x0D,
+                (byte) 0x0A,
+                (byte) 0x51,
+                (byte) 0x55,
+                (byte) 0x49,
+                (byte) 0x54,
+                (byte) 0x0A
+        });
+        //verCmd = 32
+        byte versionCmd = 0x20 | 1; //V2 | ProxyCmd
+        data.writeByte(versionCmd);
+        data.writeByte(17); //TPAF_TCP4_BYTE
+        data.writeBytes(numsWrite.array());
+        data.writeBytes(header);
+
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(data);
+            }
+        });
+    }
+
+    @Test
+    public void testReadTlvsLeaksRetainedBufferWhenSecondSSLTLVIsMalformed() {
+        ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,   // v2 signature
+                33, 17,                                            // V2|PROXY, TCP4
+                0, 26,                                             // remaining = 26 (12 addr + 8 TLV#1 + 6 TLV#2)
+                65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 68, 68,  // addr + ports
+                32, 0, 5, 1, 0, 0, 0, 0,                         // TLV #1: PP2_TYPE_SSL len=5, client=1, verify=0
+                32, 0, 3, 65, 66, 67                              // TLV #2: PP2_TYPE_SSL len=3 (MALFORMED: len < 5)
+        });
+
+        assertEquals(1, data.refCnt());
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+
+        try {
+            assertEquals(1, data.refCnt(),
+                    "TLV #1 rawContent leaked in readTlvs() - expected refCnt=1, got " + data.refCnt());
+        } finally {
+            data.release();
+        }
+    }
+
+    @Test
+    public void testEncapsulatedTLVsLeakWhenInnerSSLTLVIsMalformed() {
+        ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,     // v2 signature
+                33, 17,                                            // V2|PROXY, TCP4
+                0, 34,                                             // remaining = 34 (12 addr + 22 outer SSL TLV)
+                65, 65, 65, 65, 66, 66, 66, 66, 67, 67, 68, 68,    // addr + ports
+                32, 0, 19,                                         // outer SSL: type=0x20, len=19
+                5, 0, 0, 0, 0,                                     // outer: client=0x05, verify=0
+                33, 0, 5, 84, 76, 83, 118, 49,                     // inner SSL_VERSION: "TLSv1" (readRetainedSlice)
+                32, 0, 3, 65, 66, 67                               // inner SSL: len=3 (MALFORMED) → throws
+        });
+
+        assertEquals(1, data.refCnt());
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(data));
+
+        try {
+            assertEquals(1, data.refCnt(),
+                    "Inner PP2_TYPE_SSL_VERSION buffer leaked in encapsulated TLV loop - " +
+                            "expected refCnt=1, got " + data.refCnt());
+        } finally {
+            data.release();
+        }
     }
 }
