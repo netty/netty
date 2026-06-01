@@ -31,16 +31,21 @@ public class RedisArrayAggregatorTest {
 
     @Test
     public void testLimitNested() {
-        byte[] arrayHeader = "*1\r\n".getBytes(CharsetUtil.US_ASCII);
+        final byte[] arrayHeader = "*1\r\n".getBytes(CharsetUtil.US_ASCII);
         int maxNestedDepth = 100;
-        EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder(),
+        final EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder(),
                 new RedisArrayAggregator(maxNestedDepth));
         for (int i = 0; i < maxNestedDepth; i++) {
             assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
         }
 
         // Next write should trigger an exception.
-        assertThrows(CodecException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader));
+            }
+        });
         assertFalse(channel.finishAndReleaseAll());
     }
 
