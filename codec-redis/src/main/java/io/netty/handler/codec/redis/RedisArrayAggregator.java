@@ -20,6 +20,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -34,7 +35,36 @@ import java.util.List;
 @UnstableApi
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
 
+    private static final int DEFAULT_MAX_ARRAY_LENGTH = RedisConstants.REDIS_MAX_ARRAY_LENGTH;
     private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);
+    private final int maxElements;
+
+    /**
+     * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
+     * and its subsequent elements into an {@link ArrayRedisMessage}.
+     * <p>
+     * This constructor specifies a maximum number of elements of 1.000.000,
+     * but this default can be increased with the {@value RedisConstants#PROP_REDIS_MAX_ARRAY_LENGTH} system property.
+     *
+     * @deprecated Use {@link #RedisArrayAggregator(int)} instead to define a max size of the array to aggregate.
+     */
+    @Deprecated
+    public RedisArrayAggregator() {
+        this(DEFAULT_MAX_ARRAY_LENGTH);
+    }
+
+    /**
+     * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
+     * and its subsequent elements into an {@link ArrayRedisMessage}.
+     * <p>
+     * A {@link CodecException} will be thrown if the array header specify a length greater than
+     * the given number of max elements.
+     * @param maxElements The maximum number of elements to aggregate in a single message.
+     */
+    public RedisArrayAggregator(int maxElements) {
+        super(RedisMessage.class);
+        this.maxElements = ObjectUtil.checkPositive(maxElements, "maxElements");
+    }
 
     public RedisArrayAggregator() {
         super(RedisMessage.class);
@@ -75,8 +105,8 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             return ArrayRedisMessage.EMPTY_INSTANCE;
         } else if (header.length() > 0L) {
             // Currently, this codec doesn't support `long` length for arrays because Java's List.size() is int.
-            if (header.length() > Integer.MAX_VALUE) {
-                throw new CodecException("this codec doesn't support longer length than " + Integer.MAX_VALUE);
+            if (header.length() > maxElements) {
+                throw new CodecException("this codec doesn't support longer length than " + maxElements);
             }
 
             // start aggregating array
