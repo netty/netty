@@ -27,24 +27,38 @@ import java.util.Arrays;
 
 final class Hmac {
 
-    private static final FastThreadLocal<Mac> MACS = new FastThreadLocal<Mac>() {
+    private static final String ALGORITHM = "HmacSHA256";
+
+    // Two independent keys so that CID signing and reset-token signing are
+    // cryptographically decoupled: an observer cannot derive one output from
+    // the other even when both use the same input value (RFC 9000 §21.11).
+    private static final byte[] CID_KEY   = new byte[32];
+    private static final byte[] TOKEN_KEY = new byte[32];
+
+    static {
+        SecureRandom rng = new SecureRandom();
+        rng.nextBytes(CID_KEY);
+        rng.nextBytes(TOKEN_KEY);
+    }
+
+    private static final FastThreadLocal<Mac> CID_MACS = new FastThreadLocal<Mac>() {
         @Override
         protected Mac initialValue() {
-            return newMac();
+            return newMac(CID_KEY);
         }
     };
 
-    private static final String ALGORITM = "HmacSHA256";
-    private static final byte[] randomKey = new byte[16];
+    private static final FastThreadLocal<Mac> TOKEN_MACS = new FastThreadLocal<Mac>() {
+        @Override
+        protected Mac initialValue() {
+            return newMac(TOKEN_KEY);
+        }
+    };
 
-    static {
-        new SecureRandom().nextBytes(randomKey);
-    }
-
-    private static Mac newMac() {
+    private static Mac newMac(byte[] key) {
         try {
-            SecretKeySpec keySpec = new SecretKeySpec(randomKey, ALGORITM);
-            Mac mac = Mac.getInstance(ALGORITM);
+            SecretKeySpec keySpec = new SecretKeySpec(key, ALGORITHM);
+            Mac mac = Mac.getInstance(ALGORITHM);
             mac.init(keySpec);
             return mac;
         } catch (NoSuchAlgorithmException | InvalidKeyException exception) {
@@ -52,8 +66,7 @@ final class Hmac {
         }
     }
 
-    static ByteBuffer sign(ByteBuffer input, int outLength) {
-        Mac mac = MACS.get();
+    private static ByteBuffer sign(Mac mac, ByteBuffer input, int outLength) {
         mac.reset();
         mac.update(input);
         byte[] signBytes = mac.doFinal();
@@ -61,6 +74,14 @@ final class Hmac {
             signBytes = Arrays.copyOf(signBytes, outLength);
         }
         return ByteBuffer.wrap(signBytes);
+    }
+
+    static ByteBuffer signCid(ByteBuffer input, int outLength) {
+        return sign(CID_MACS.get(), input, outLength);
+    }
+
+    static ByteBuffer signToken(ByteBuffer input, int outLength) {
+        return sign(TOKEN_MACS.get(), input, outLength);
     }
 
     private Hmac() { }
