@@ -3052,7 +3052,7 @@ public class DnsNameResolverTest {
             @Override
             public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
                 if ("x.netty.io".equals(question.getDomainName())) {
-                    Set<ResourceRecord> records = new HashSet<>();
+                    Set<ResourceRecord> records = new HashSet<ResourceRecord>();
                     // Valid CNAME (in bailiwick of query)
                     records.add(new TestDnsServer.TestResourceRecord(
                             "x.netty.io", RecordType.CNAME,
