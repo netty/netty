@@ -542,7 +542,7 @@ public class MqttCodecTest {
         // rather than a separate PINGRESP. The decoder must reject this as one invalid
         // message rather than silently accept two.
         EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder());
-        ByteBuf byteBuf = ALLOCATOR.buffer();
+        ByteBuf byteBuf = channel.alloc().buffer();
         // Fixed header byte 1: PINGREQ (type 12), all flags 0.
         byteBuf.writeByte(0xC0);
         // Remaining Length 2 - invalid per MQTT 3.1.1 / 5.0 spec (PINGREQ has no variable
@@ -565,7 +565,7 @@ public class MqttCodecTest {
             // No second message: the trailing bytes belong to the malformed frame.
             assertNull(channel.readInbound());
         } finally {
-            channel.finishAndReleaseAll();
+            assertFalse(channel.finishAndReleaseAll());
         }
     }
 
