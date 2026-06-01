@@ -18,7 +18,9 @@ package io.netty.handler.codec.redis;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -33,10 +35,40 @@ import java.util.List;
 @UnstableApi
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
 
+    private static final int DEFAULT_MAX_ARRAY_LENGTH = RedisConstants.REDIS_MAX_ARRAY_LENGTH;
+    private final int maxNestedArrayDepth;
     private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);
+    private final int maxElements;
 
+    /**
+<<<<<<< HEAD
+     * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
+     * and its subsequent elements into an {@link ArrayRedisMessage}.
+     * <p>
+     * This constructor specifies a maximum number of elements of 1.000.000,
+     * but this default can be increased with the {@value RedisConstants#PROP_REDIS_MAX_ARRAY_LENGTH} system property.
+     *
+     * @deprecated Use {@link #RedisArrayAggregator(int, int)} instead to define a max size of the array to aggregate.
+     */
+    @Deprecated
     public RedisArrayAggregator() {
+        // Let's impose some limit at least by default.
+        this(DEFAULT_MAX_ARRAY_LENGTH, 1024);
+    }
+
+    /**
+     * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
+     * and its subsequent elements into an {@link ArrayRedisMessage}.
+     * <p>
+     * A {@link CodecException} will be thrown if the array header specify a length greater than
+     * the given number of max elements.
+     * @param maxElements The maximum number of elements to aggregate in a single message.
+     * @param maxNestedArrayDepth   the maximum depth of the nested array before an exception will be thrown
+     */
+    public RedisArrayAggregator(int maxElements, int maxNestedArrayDepth) {
         super(RedisMessage.class);
+        this.maxElements = ObjectUtil.checkPositive(maxElements, "maxElements");
+        this.maxNestedArrayDepth = ObjectUtil.checkPositive(maxNestedArrayDepth, "maxNestedArrayDepth");
     }
 
     @Override
@@ -74,10 +106,13 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             return ArrayRedisMessage.EMPTY_INSTANCE;
         } else if (header.length() > 0L) {
             // Currently, this codec doesn't support `long` length for arrays because Java's List.size() is int.
-            if (header.length() > Integer.MAX_VALUE) {
-                throw new CodecException("this codec doesn't support longer length than " + Integer.MAX_VALUE);
+            if (header.length() > maxElements) {
+                throw new CodecException("this codec doesn't support longer length than " + maxElements);
             }
 
+            if (depths.size() >= maxNestedArrayDepth) {
+                throw new CodecException("max nested array depth exceeded: "  + maxNestedArrayDepth);
+            }
             // start aggregating array
             depths.push(new AggregateState((int) header.length()));
             return null;
@@ -92,6 +127,28 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         AggregateState(int length) {
             this.length = length;
             this.children = new ArrayList<RedisMessage>(length);
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        for (AggregateState state : depths) {
+            for (RedisMessage message : state.children) {
+                ReferenceCountUtil.safeRelease(message);
+            }
+        }
+        depths.clear();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        if (!depths.isEmpty()) {
+            ctx.fireExceptionCaught(new PrematureChannelClosureException(
+                    "channel gone inactive with " + depths.size() +
+                            " messages still incomplete"));
         }
     }
 }

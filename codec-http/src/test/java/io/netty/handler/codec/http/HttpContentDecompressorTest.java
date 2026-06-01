@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -25,6 +24,8 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.Zstd;
+import io.netty.handler.flow.FlowControlHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,6 +79,54 @@ public class HttpContentDecompressorTest {
         // read was triggered by the HttpContentDecompressor itself as it did not produce any message to the next
         // inbound handler.
         assertEquals(2, readCalled.get());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    // See https://github.com/netty/netty/issues/15053.
+    @Test
+    public void testFlowControlHandlerEmitsOneMessagePerRead() {
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new FlowControlHandler(),
+                new HttpContentDecompressor(0),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                        ReferenceCountUtil.release(msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+
+        channel.config().setAutoRead(false);
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+
+        assertFalse(channel.writeInbound(response));
+        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+
+        assertEquals(0, reads.get());
+        assertEquals(0, readCompletes.get());
+
+        channel.read();
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+
+        channel.read();
+        assertEquals(2, reads.get());
+        assertEquals(2, readCompletes.get());
+
+        channel.read();
+        assertEquals(3, reads.get());
+        assertEquals(3, readCompletes.get());
+
         assertFalse(channel.finishAndReleaseAll());
     }
 

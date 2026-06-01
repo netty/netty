@@ -940,10 +940,6 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
     char control[CMSG_SPACE(sizeof(int))] = { 0 };
     char iovecData[1];
 
-    descriptorMessage.msg_control = control;
-    descriptorMessage.msg_controllen = sizeof(control);
-    descriptorMessage.msg_iov = iov;
-    descriptorMessage.msg_iovlen = 1;
     iov[0].iov_base = iovecData;
     iov[0].iov_len = sizeof(iovecData);
 
@@ -951,6 +947,14 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
     int err;
 
     for (;;) {
+        // Reset descriptorMessage to an initial start at the beginning of the loop as we might run it multiple
+        // times.
+        memset(&descriptorMessage, 0, sizeof(descriptorMessage));
+        descriptorMessage.msg_control = control;
+        descriptorMessage.msg_controllen = sizeof(control);
+        descriptorMessage.msg_iov = iov;
+        descriptorMessage.msg_iovlen = 1;
+
         do {
             res = recvmsg(fd, &descriptorMessage, 0);
             // Keep on reading if we was interrupted
@@ -964,21 +968,60 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
             return -err;
         }
 
-        struct cmsghdr* cmsg = CMSG_FIRSTHDR(&descriptorMessage);
-        if (!cmsg) {
-            return -errno;
+        // Walk every cmsg; close any SCM_RIGHTS fds we cannot use so they
+        // are never silently leaked (e.g. peer sent more than one fd).
+        jint result = -1;
+        err = 0;
+
+        // If ancillary data was truncated the kernel auto-closes fds that
+        // did not fit but it is still an error we must not retry and so should report it back to the caller.
+        // Beside this we also need to ensure we close all other fds so they not leak.
+        if (descriptorMessage.msg_flags & MSG_CTRUNC) {
+            err = EMSGSIZE;
         }
 
-        if ((cmsg->cmsg_len == CMSG_LEN(sizeof(int))) && (cmsg->cmsg_level == SOL_SOCKET) && (cmsg->cmsg_type == SCM_RIGHTS)) {
-            socketFd = *((int *) CMSG_DATA(cmsg));
-            // set as non blocking as we want to use it with kqueue/epoll
-            if (fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
-                err = errno;
-                close(socketFd);
-                return -err;
+        struct cmsghdr* cmsg = CMSG_FIRSTHDR(&descriptorMessage);
+        while (cmsg != NULL) {
+            if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
+                int nfds = (int) ((cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int));
+                int* fds  = (int*) CMSG_DATA(cmsg);
+
+                if (nfds == 1 && err == 0) {
+                    socketFd = fds[0];
+
+                    // set as non blocking as we want to use it with kqueue/epoll
+                    if (fcntl(socketFd, F_SETFL, O_NONBLOCK) == -1) {
+                        err = errno;
+                        close(socketFd);
+                    } else {
+                        result = socketFd;
+                    }
+                } else {
+                    // Peer sent an unexpected number of fds; close them all
+                    // and signal an error so the caller does not retry blindly.
+                    for (int i = 0; i < nfds; i++) {
+                        close(fds[i]);
+                    }
+                    if (result >= 0) {
+                        // Already accepted one fd above; undo it.
+                        close(result);
+                        result = -1;
+                    }
+                    // check if we need to update the err or if we already did set it to an error.
+                    if (err == 0) {
+                        err = EINVAL;
+                    }
+                }
             }
-            return socketFd;
+            cmsg = CMSG_NXTHDR(&descriptorMessage, cmsg);
         }
+        if (result != -1) {
+            return result;
+        }
+        if (err != 0) {
+            return -err;
+        }
+        // No SCM_RIGHTS cmsg found and no error; try again.
     }
 }
 
