@@ -26,10 +26,14 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.internal.InternalHttpConversionUtil;
 import io.netty.util.AsciiString;
 
 import java.net.URI;
 
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.hasSchemeAndAuthority;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.isValidScheme;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.queryOrFragmentStart;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -81,26 +85,26 @@ public class HttpConversionUtilFuzzTest {
 
     private static boolean isOpaqueSchemeSpecificPart(final String requestTarget) {
         int schemeEnd = requestTarget.indexOf(':');
-        return HttpConversionUtil.isValidScheme(requestTarget, schemeEnd) && schemeEnd + 1 < requestTarget.length()
+        return isValidScheme(requestTarget, schemeEnd) && schemeEnd + 1 < requestTarget.length()
                 && requestTarget.charAt(schemeEnd + 1) != '/';
     }
 
     private static boolean isSchemeOnlyAbsolutePath(final String requestTarget) {
         int schemeEnd = requestTarget.indexOf(':');
-        return HttpConversionUtil.isValidScheme(requestTarget, schemeEnd) && schemeEnd + 1 < requestTarget.length()
+        return isValidScheme(requestTarget, schemeEnd) && schemeEnd + 1 < requestTarget.length()
                 && requestTarget.charAt(schemeEnd + 1) == '/'
-                && !HttpConversionUtil.hasSchemeAndAuthority(requestTarget)
+                && !hasSchemeAndAuthority(requestTarget)
                 && (schemeEnd + 2 >= requestTarget.length() || requestTarget.charAt(schemeEnd + 2) != '/');
     }
 
     private static boolean isAbsoluteFormWithoutPathSlash(final String requestTarget) {
         int schemeEnd = requestTarget.indexOf("://");
-        if (!HttpConversionUtil.hasSchemeAndAuthority(requestTarget)) {
+        if (!hasSchemeAndAuthority(requestTarget)) {
             return false;
         }
         int authorityStart = schemeEnd + 3;
         int pathStart = requestTarget.indexOf('/', authorityStart);
-        int delimiter = HttpConversionUtil.queryOrFragmentStart(requestTarget, authorityStart);
+        int delimiter = queryOrFragmentStart(requestTarget, authorityStart);
         return pathStart == -1 || (delimiter != -1 && delimiter < pathStart);
     }
 
@@ -127,7 +131,7 @@ public class HttpConversionUtilFuzzTest {
             host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
             oldSetHttp2Scheme(inHeaders, requestTargetUri, out);
         }
-        HttpConversionUtil.setHttp2Authority(host, out);
+        InternalHttpConversionUtil.setHttp2Authority(host, out);
         out.method(request.method().asciiName());
         return out;
     }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http2;
+package io.netty.microbench.handler.codec.http2;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -24,6 +24,10 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.handler.codec.http2.internal.InternalHttpConversionUtil;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -103,7 +107,7 @@ public class Http2RequestTargetConversionBenchmark extends AbstractMicrobenchmar
             host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
             oldSetHttp2Scheme(inHeaders, requestTargetUri, out);
         }
-        HttpConversionUtil.setHttp2Authority(host, out);
+        InternalHttpConversionUtil.setHttp2Authority(host, out);
         out.method(request.method().asciiName());
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         return out;
