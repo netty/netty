@@ -104,7 +104,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-              ctx.channel().config(), new BrotliDecoder());
+              ctx.channel().config(), new BrotliDecoder(maxAllocation));
         }
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
@@ -114,7 +114,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
 
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdDecoder());
+                    ctx.channel().config(), new ZstdDecoder(maxAllocation));
         }
 
         // 'identity' or unsupported
