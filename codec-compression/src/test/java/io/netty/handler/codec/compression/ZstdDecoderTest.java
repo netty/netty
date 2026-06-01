@@ -61,11 +61,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
             assertThrows(DecompressionException.class,
                     () -> ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
         } finally {
-            try {
-                ch.finishAndReleaseAll();
-            } catch (Exception ignore) {
-                // handler is in CORRUPTED state, ignore
-            }
+            ch.finishAndReleaseAll();
         }
     }
 

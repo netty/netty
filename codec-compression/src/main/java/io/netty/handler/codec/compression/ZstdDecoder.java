@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.ZstdIOException;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -43,6 +42,10 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
     /**
+     * Default maximum size of a single output buffer, in bytes (4 MiB).
+     */
+    public static final int DEFAULT_MAXIMUM_ALLOCATION_SIZE = 4 * 1024 * 1024;
+    /**
      * Default upper bound on the {@code Window_Log} accepted by the decoder.
      * {@code 27} corresponds to a 128 MiB decompression window.
      */
@@ -66,13 +69,31 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         CORRUPTED
     }
 
+    /**
+     * Creates a new decoder with the {@link #DEFAULT_MAXIMUM_ALLOCATION_SIZE},
+     * and the {@link #DEFAULT_MAX_WINDOW_LOG} window log size.
+     * <p>
+     * The window log size bounds the memory usage of the sliding window for ZSTD frame decompression.
+     * Frames declaring a larger window will be rejected to bound the memory the decoder may allocate per stream.
+     *
+     */
     public ZstdDecoder() {
-        this(4 * 1024 * 1024);
+        this(DEFAULT_MAXIMUM_ALLOCATION_SIZE, DEFAULT_MAX_WINDOW_LOG);
     }
 
+    /**
+     * Creates a new decoder with the given maximum allocation size,
+     * and the {@link #DEFAULT_MAX_WINDOW_LOG} window log size.
+     * <p>
+     * The window log size bounds the memory usage of the sliding window for ZSTD frame decompression.
+     * Frames declaring a larger window will be rejected to bound the memory the decoder may allocate per stream.
+     *
+     * @param maximumAllocationSize maximum size of a single output buffer.
+     */
     public ZstdDecoder(int maximumAllocationSize) {
         this(maximumAllocationSize, DEFAULT_MAX_WINDOW_LOG);
     }
+
     /**
      * Creates a new decoder with an explicit upper bound on the accepted {@code Window_Log}.
      *
