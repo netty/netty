@@ -593,6 +593,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromConnection(Http2Connection connection) {
+        // Enforce the advertised maxConcurrentStreams limit on the remote endpoint immediately,
+        // without waiting for the SETTINGS_ACK round-trip.
+        enforceMaxActiveStreams(connection, initialSettings);
+
         Long maxHeaderListSize = initialSettings.maxHeaderListSize();
         Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
                 maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
@@ -644,6 +648,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromCodec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+        // Enforce the advertised maxConcurrentStreams limit on the remote endpoint immediately,
+        // without waiting for the SETTINGS_ACK round-trip.
+        enforceMaxActiveStreams(encoder.connection(), initialSettings);
+
         int maxConsecutiveEmptyDataFrames = decoderEnforceMaxConsecutiveEmptyDataFrames();
         if (maxConsecutiveEmptyDataFrames > 0) {
             decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
@@ -678,6 +686,13 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             handler.decoder().frameListener(frameListener);
         }
         return handler;
+    }
+
+    private static void enforceMaxActiveStreams(Http2Connection connection, Http2Settings initialSettings) {
+        Long maxConcurrentStreams = initialSettings.maxConcurrentStreams();
+        if (maxConcurrentStreams != null) {
+            connection.remote().maxActiveStreams((int) Math.min(maxConcurrentStreams, Integer.MAX_VALUE));
+        }
     }
 
     /**
