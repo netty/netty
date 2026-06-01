@@ -341,4 +341,67 @@ public class RedisDecoderTest {
         assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
         assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
     }
+
+    @Test
+    public void shouldLimitIntegerTo64IntSigned() {
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i <= RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('0');
+        }
+        assertFalse(channel.writeInbound(buf));
+
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(byteBufOf("1"));
+            }
+        });
+    }
+
+    @Test
+    public void testPositiveLongWithCr() {
+        EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder());
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i < RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('0');
+        }
+        buf.writeByte('\r');
+
+        // 19 digits + \r = 20 bytes.
+        // It's a valid incomplete RESP number waiting for \n.
+        assertFalse(channel.writeInbound(buf));
+
+        ByteBuf buf2 = Unpooled.buffer();
+        buf2.writeByte('\n');
+        assertFalse(channel.writeInbound(buf2));
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testGiantPayloadEndingWithCrBypassesLengthCheck() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder());
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i < RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('1');
+        }
+        assertFalse(channel.writeInbound(buf));
+
+        // We expect that sending 1000 more bytes will exceed the maximum valid length capacity,
+        // regardless of whether the final byte is '\r'. It should throw a DecoderException.
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                for (int i = 0; i < 1000; i++) {
+                    ByteBuf chunk = Unpooled.buffer();
+                    chunk.writeByte('a');
+                    chunk.writeByte('\r');
+                    channel.writeInbound(chunk);
+                }
+            }
+        });
+        assertFalse(channel.finish());
+    }
 }
