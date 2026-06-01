@@ -1412,6 +1412,22 @@
                   <new>method void io.netty.handler.codec.http.HttpObjectDecoder::clearContentLength()</new>
                   <justification>Final methods added as utility</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.redis.RedisArrayAggregator</old>
+                  <new>method void io.netty.handler.codec.redis.RedisArrayAggregator::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::exceptionCaught(io.netty.channel.ChannelHandlerContext, java.lang.Throwable) throws java.lang.Exception @ io.netty.handler.codec.sctp.SctpMessageCompletionHandler</old>
+                  <new>method void io.netty.handler.codec.sctp.SctpMessageCompletionHandler::exceptionCaught(io.netty.channel.ChannelHandlerContext, java.lang.Throwable) throws java.lang.Exception</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
