@@ -715,7 +715,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void defaultSettingsShouldEnforceMaxConcurrentStreamsOnRemoteEndpoint() throws Exception {
         // Build a server handler using default settings (no explicit maxConcurrentStreams override).
-        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+        final Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
                 .frameListener(new Http2FrameAdapter())
                 .build();
 
@@ -759,7 +759,7 @@ public class DefaultHttp2ConnectionTest {
     public void customMaxConcurrentStreamsShouldBeEnforcedOnRemoteEndpoint() throws Exception {
         final int maxConcurrentStreams = 150;
 
-        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+        final Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
                 .frameListener(new Http2FrameAdapter())
                 .initialSettings(new Http2Settings().maxConcurrentStreams(maxConcurrentStreams))
                 .build();
@@ -798,7 +798,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void defaultSettingsShouldEnforceMaxConcurrentStreamsOnRemoteEndpointWithCodec()
             throws Exception {
-        DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
+        final DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
         DefaultHttp2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
         Http2ConnectionDecoder decoder =
@@ -840,7 +840,7 @@ public class DefaultHttp2ConnectionTest {
             throws Exception {
         final int maxConcurrentStreams = 150;
 
-        DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
+        final DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
         DefaultHttp2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
         Http2ConnectionDecoder decoder =
