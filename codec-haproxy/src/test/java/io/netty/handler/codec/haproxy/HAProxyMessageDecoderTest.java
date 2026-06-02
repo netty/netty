@@ -767,6 +767,99 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testV2WithNestedSslTLVs() {
+        ch = new EmbeddedChannel(new HAProxyMessageDecoder());
+
+        // Outer SSL TLV (type=0x20, content=28):
+        //   client(1)=0x05  verify(4)=0
+        //   Inner SSL TLV (type=0x20, content=13):     <-- depth-1 nested SSL
+        //     client(1)=0x01  verify(4)=0
+        //     PP2_TYPE_SSL_VERSION (type=0x21, len=5): "TLSv1"   <-- depth-2 leaf
+        //   PP2_TYPE_SSL_CN (type=0x22, len=4): "LEAF"           <-- depth-1 leaf
+        final byte[] bytes = {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,   // v2 signature
+                33, 17,                                            // v2|PROXY, TCP4
+                0, 43,                                             // remaining: 12 + 31
+                127, 0, 0, 1, 127, 0, 0, 1, -55, -90, 7, 89,     // addresses + ports
+                32, 0, 28,                                         // outer SSL: type=0x20, len=28
+                5, 0, 0, 0, 0,                                    // outer: client=0x05, verify=0
+                32, 0, 13,                                         // inner SSL: type=0x20, len=13
+                1, 0, 0, 0, 0,                                    // inner: client=0x01, verify=0
+                33, 0, 5, 84, 76, 83, 118, 49,                    // SSL_VERSION: "TLSv1"
+                34, 0, 4, 76, 69, 65, 70                           // SSL_CN: "LEAF"
+        };
+
+        int startChannels = ch.pipeline().names().size();
+        assertTrue(ch.writeInbound(copiedBuffer(bytes)));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        HAProxyMessage msg = (HAProxyMessage) msgObj;
+
+        assertEquals(HAProxyProtocolVersion.V2, msg.protocolVersion());
+        assertEquals(HAProxyCommand.PROXY, msg.command());
+        assertEquals(HAProxyProxiedProtocol.TCP4, msg.proxiedProtocol());
+        assertEquals("127.0.0.1", msg.sourceAddress());
+        assertEquals("127.0.0.1", msg.destinationAddress());
+        assertEquals(51622, msg.sourcePort());
+        assertEquals(1881, msg.destinationPort());
+        final List<HAProxyTLV> tlvs = msg.tlvs();
+
+        // Flattened list: [outerSSL, innerSSL, SSL_CN]
+        // SSL_CN is a direct child of outer, so it is flattened.
+        // innerSSL is also a direct child of outer, so it is flattened.
+        // But "TLSv1" (SSL_VERSION) is a child of innerSSL (depth 2) — NOT flattened.
+        assertEquals(3, tlvs.size());
+        final HAProxyTLV firstTlv = tlvs.get(0);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, firstTlv.type());
+        final HAProxySSLTLV sslTlv = (HAProxySSLTLV) firstTlv;
+        assertEquals(0, sslTlv.verify());
+        assertTrue(sslTlv.isPP2ClientSSL());
+        assertTrue(sslTlv.isPP2ClientCertSess());
+        assertFalse(sslTlv.isPP2ClientCertConn());
+
+        final HAProxyTLV secondTlv = tlvs.get(1);
+
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL, secondTlv.type());
+        final HAProxySSLTLV innerSslTlv = (HAProxySSLTLV) secondTlv;
+
+        // The depth-2 leaf: SSL_VERSION "TLSv1" lives inside innerSslTlv
+        assertEquals(1, innerSslTlv.encapsulatedTLVs().size());
+        final HAProxyTLV depth2Leaf = innerSslTlv.encapsulatedTLVs().get(0);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, depth2Leaf.type());
+        ByteBuf versionBuf = depth2Leaf.content();
+        byte[] versionContent = new byte[versionBuf.readableBytes()];
+        versionBuf.readBytes(versionContent);
+        assertArrayEquals("TLSv1".getBytes(CharsetUtil.US_ASCII), versionContent);
+
+        final HAProxyTLV thirdTLV = tlvs.get(2);
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_CN, thirdTLV.type());
+        ByteBuf thirdContentBuf = thirdTLV.content();
+        byte[] thirdContent = new byte[thirdContentBuf.readableBytes()];
+        thirdContentBuf.readBytes(thirdContent);
+        assertArrayEquals("LEAF".getBytes(CharsetUtil.US_ASCII), thirdContent);
+
+        assertTrue(sslTlv.encapsulatedTLVs().contains(secondTlv));
+        assertTrue(sslTlv.encapsulatedTLVs().contains(thirdTLV));
+
+        assertTrue(0 < firstTlv.refCnt());
+        assertTrue(0 < secondTlv.refCnt());
+        assertTrue(0 < thirdTLV.refCnt());
+        assertTrue(0 < depth2Leaf.refCnt());
+        assertTrue(msg.release());
+
+        // The depth-2 leaf TLV must be fully released after message.release().
+        // It is a child of the inner SSL TLV (depth 1), but readTlvs() only flattens
+        // one level of encapsulated TLVs.
+        assertEquals(0, depth2Leaf.refCnt(), "Depth-2 leaf TLV leaked");
+        assertEquals(0, firstTlv.refCnt());
+        assertEquals(0, secondTlv.refCnt());
+        assertEquals(0, thirdTLV.refCnt());
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testReleaseHAProxyMessage() {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder());
 
