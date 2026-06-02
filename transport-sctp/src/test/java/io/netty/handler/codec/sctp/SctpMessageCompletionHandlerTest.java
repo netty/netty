@@ -67,12 +67,10 @@ public class SctpMessageCompletionHandlerTest {
                 channel.writeInbound(message2);
             }
         });
-
-        assertEquals(1, buffer.refCnt());
-        assertEquals(0, buffer2.refCnt());
-        assertFalse(channel.finish());
+        // exceptionCaught closes the channel, triggering handlerRemoved which releases all buffered fragments
         assertEquals(0, buffer.refCnt());
         assertEquals(0, buffer2.refCnt());
+        assertFalse(channel.finish());
     }
 
     @Test
