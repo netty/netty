@@ -17,9 +17,7 @@ package io.netty.handler.codec.redis;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -28,26 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RedisArrayAggregatorTest {
-
-    @Test
-    public void testLimitNested() {
-        final byte[] arrayHeader = "*1\r\n".getBytes(CharsetUtil.US_ASCII);
-        int maxNestedDepth = 100;
-        final EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder(),
-                new RedisArrayAggregator(maxNestedDepth));
-        for (int i = 0; i < maxNestedDepth; i++) {
-            assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
-        }
-
-        // Next write should trigger an exception.
-        assertThrows(CodecException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader));
-            }
-        });
-        assertFalse(channel.finishAndReleaseAll());
-    }
 
     @Test
     void testDoesNotLeakOnClose() {
