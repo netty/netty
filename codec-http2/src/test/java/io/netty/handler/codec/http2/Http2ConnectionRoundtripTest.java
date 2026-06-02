@@ -1192,10 +1192,13 @@ public class Http2ConnectionRoundtripTest {
                 final int streamId = (Integer) invocationOnMock.getArgument(1);
                 Http2Headers responseHeaders = new DefaultHttp2Headers().status("200");
                 http2Server.encoder().writeHeaders(sCtx, streamId, responseHeaders, 0, true, sCtx.newPromise())
-                        .addListener(future -> {
-                            serverWriteError.set(future.cause());
-                            responseLatch.countDown();
-                        });
+                        .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        serverWriteError.set(future.cause());
+                        responseLatch.countDown();
+                    }
+                });
                 http2Server.flush(sCtx);
                 return null;
             }
