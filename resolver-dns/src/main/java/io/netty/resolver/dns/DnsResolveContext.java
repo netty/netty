@@ -1417,7 +1417,7 @@ abstract class DnsResolveContext<T> {
             }
         }
 
-        private static void cacheUnresolved(
+        private void cacheUnresolved(
                 AuthoritativeNameServer server, AuthoritativeDnsServerCache authoritativeCache, EventLoop loop) {
             // We still want to cached the unresolved address
             server.address = InetSocketAddress.createUnresolved(
@@ -1427,11 +1427,20 @@ abstract class DnsResolveContext<T> {
             cache(server, authoritativeCache, loop);
         }
 
-        private static void cache(AuthoritativeNameServer server, AuthoritativeDnsServerCache cache, EventLoop loop) {
+        private void cache(AuthoritativeNameServer server, AuthoritativeDnsServerCache cache, EventLoop loop) {
             // Cache NS record if not for a root server as we should never cache for root servers.
-            if (!server.isRootServer()) {
-                cache.cache(server.domainName, server.address, server.ttl, loop);
+            if (server.isRootServer()) {
+                return;
             }
+            // Bailiwick check (RFC 2181 §5.4.1): only cache a nameserver entry when its zone
+            // equals the question name or is a subdomain of it. A server that is authoritative
+            // for a child zone must not be trusted to supply authoritative NS records for a
+            // parent zone, which would allow cache poisoning of the parent.
+            if (!server.domainName.equals(questionName) &&
+                    !server.domainName.endsWith("." + questionName)) {
+                return;
+            }
+            cache.cache(server.domainName, server.address, server.ttl, loop);
         }
 
         /**
