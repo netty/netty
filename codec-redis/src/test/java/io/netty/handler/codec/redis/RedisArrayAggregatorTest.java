@@ -42,6 +42,7 @@ public class RedisArrayAggregatorTest {
         assertThrows(CodecException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
         assertFalse(channel.finishAndReleaseAll());
     }
+
     @Test
     void testDoesNotLeakOnClose() {
         EmbeddedChannel ch = new EmbeddedChannel(new RedisArrayAggregator());

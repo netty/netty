@@ -62,11 +62,10 @@ public class SctpMessageCompletionHandlerTest {
         SctpMessage message2 = new SctpMessage(new TestMessageInfo(false, 2), buffer2);
         assertThrows(CodecException.class, () -> channel.writeInbound(message2));
 
-        assertEquals(1, buffer.refCnt());
-        assertEquals(0, buffer2.refCnt());
-        assertFalse(channel.finish());
+        // exceptionCaught closes the channel, triggering handlerRemoved which releases all buffered fragments
         assertEquals(0, buffer.refCnt());
         assertEquals(0, buffer2.refCnt());
+        assertFalse(channel.finish());
     }
 
     @Test
