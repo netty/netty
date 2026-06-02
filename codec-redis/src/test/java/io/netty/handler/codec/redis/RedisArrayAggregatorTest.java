@@ -12,12 +12,13 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
+import io.netty.handler.codec.CodecException;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -58,5 +59,25 @@ public class RedisArrayAggregatorTest {
         ch.pipeline().remove(RedisArrayAggregator.class);
         assertEquals(0, redisMessage.refCnt());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testLimitNested() {
+        final byte[] arrayHeader = "*1\r\n".getBytes(CharsetUtil.US_ASCII);
+        int maxNestedDepth = 100;
+        final EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder(),
+                new RedisArrayAggregator(RedisConstants.REDIS_MAX_ARRAY_LENGTH, maxNestedDepth));
+        for (int i = 0; i < maxNestedDepth; i++) {
+            assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
+        }
+
+        // Next write should trigger an exception.
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader));
+            }
+        });
+        assertFalse(channel.finishAndReleaseAll());
     }
 }
