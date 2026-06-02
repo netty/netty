@@ -311,7 +311,16 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         final int length = header.readUnsignedShort();
         switch (type) {
         case PP2_TYPE_SSL:
-            final ByteBuf rawContent = header.retainedSlice(header.readerIndex(), length);
+            if (length < 5) {
+                throw new HAProxyProtocolException("TLV length must be at least 5 but was: " + length);
+            }
+            if (length > header.readableBytes()) {
+                throw new HAProxyProtocolException("TLV length must be smaller or equal the readable bytes (" +
+                        header.readableBytes() + ") but was: " + length);
+            }
+            // Slice the rawContent but only retain it if we didn't see an error as otherwise we might
+            // leak.
+            final ByteBuf rawContent = header.slice(header.readerIndex(), length);
             final ByteBuf byteBuf = header.readSlice(length);
             final byte client = byteBuf.readByte();
             final int verify = byteBuf.readInt();
@@ -327,15 +336,14 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                         }
                         encapsulatedTlvs.add(haProxyTLV);
                     } while (byteBuf.readableBytes() >= 4);
-                }  catch (Throwable t) {
-                    // Release all previously read TLVs before rethrowing as otherwise we would leak.
+                } catch (Throwable t) {
                     releaseTlvs(encapsulatedTlvs);
                     PlatformDependent.throwException(t);
                 }
 
-                return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
+                return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent.retain());
             }
-            return new HAProxySSLTLV(verify, client, Collections.<HAProxyTLV>emptyList(), rawContent);
+            return new HAProxySSLTLV(verify, client, Collections.<HAProxyTLV>emptyList(), rawContent.retain());
         // If we're not dealing with an SSL Type, we can use the same mechanism
         case PP2_TYPE_ALPN:
         case PP2_TYPE_AUTHORITY:

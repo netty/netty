@@ -641,8 +641,9 @@ abstract class DnsResolveContext<T> {
                 final DnsRecordType type = question.type();
 
                 if (type == DnsRecordType.CNAME) {
-                    onResponseCNAME(question, buildAliasMap(envelope.content(), cnameCache(), parent.executor()),
-                                    queryLifecycleObserver, promise);
+                    onResponseCNAME(question,
+                            buildAliasMap(question.name(), envelope.content(), cnameCache(), parent.executor()),
+                            queryLifecycleObserver, promise);
                     return;
                 }
 
@@ -832,7 +833,7 @@ abstract class DnsResolveContext<T> {
 
         // We often get a bunch of CNAMES as well when we asked for A/AAAA.
         final DnsResponse response = envelope.content();
-        final Map<String, String> cnames = buildAliasMap(response, cnameCache(), parent.executor());
+        final Map<String, String> cnames = buildAliasMap(question.name(), response, cnameCache(), parent.executor());
         final int answerCount = response.count(DnsSection.ANSWER);
 
         boolean found = false;
@@ -991,7 +992,8 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private static Map<String, String> buildAliasMap(DnsResponse response, DnsCnameCache cache, EventLoop loop) {
+    private static Map<String, String> buildAliasMap(
+            String queryName, DnsResponse response, DnsCnameCache cache, EventLoop loop) {
         final int answerCount = response.count(DnsSection.ANSWER);
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {
@@ -1022,7 +1024,13 @@ abstract class DnsResolveContext<T> {
             String nameWithDot = hostnameWithDot(name);
             String mappingWithDot = hostnameWithDot(mapping);
             if (!nameWithDot.equalsIgnoreCase(mappingWithDot)) {
-                cache.cache(nameWithDot, mappingWithDot, r.timeToLive(), loop);
+                String queryNameWithDot = hostnameWithDot(queryName.toLowerCase(Locale.US));
+                // Only cache the CNAME if the owner is in the bailiwick of the original query name.
+                boolean inBailiwick = nameWithDot.equals(queryNameWithDot) ||
+                        nameWithDot.endsWith("." + queryNameWithDot);
+                if (inBailiwick) {
+                    cache.cache(nameWithDot, mappingWithDot, r.timeToLive(), loop);
+                }
                 cnames.put(name, mapping);
             }
         }
@@ -1409,7 +1417,7 @@ abstract class DnsResolveContext<T> {
             }
         }
 
-        private static void cacheUnresolved(
+        private void cacheUnresolved(
                 AuthoritativeNameServer server, AuthoritativeDnsServerCache authoritativeCache, EventLoop loop) {
             // We still want to cached the unresolved address
             server.address = InetSocketAddress.createUnresolved(
@@ -1419,11 +1427,20 @@ abstract class DnsResolveContext<T> {
             cache(server, authoritativeCache, loop);
         }
 
-        private static void cache(AuthoritativeNameServer server, AuthoritativeDnsServerCache cache, EventLoop loop) {
+        private void cache(AuthoritativeNameServer server, AuthoritativeDnsServerCache cache, EventLoop loop) {
             // Cache NS record if not for a root server as we should never cache for root servers.
-            if (!server.isRootServer()) {
-                cache.cache(server.domainName, server.address, server.ttl, loop);
+            if (server.isRootServer()) {
+                return;
             }
+            // Bailiwick check (RFC 2181 §5.4.1): only cache a nameserver entry when its zone
+            // equals the question name or is a subdomain of it. A server that is authoritative
+            // for a child zone must not be trusted to supply authoritative NS records for a
+            // parent zone, which would allow cache poisoning of the parent.
+            if (!server.domainName.equals(questionName) &&
+                    !server.domainName.endsWith("." + questionName)) {
+                return;
+            }
+            cache.cache(server.domainName, server.address, server.ttl, loop);
         }
 
         /**
