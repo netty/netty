@@ -62,7 +62,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
             assertThrows(DecompressionException.class, new Executable() {
                 @Override
                 public void execute()  {
-                    ch.writeInbound(Unpooled.wrappedBuffer(compressed))
+                    ch.writeInbound(Unpooled.wrappedBuffer(compressed));
                 }
             });
         } finally {
@@ -103,7 +103,8 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     private static byte[] compressWithWindowLog(byte[] data, int windowLog) {
-        try (ZstdCompressCtx ctx = new ZstdCompressCtx()) {
+        ZstdCompressCtx ctx = new ZstdCompressCtx();
+        try {
             ctx.setLevel(Zstd.defaultCompressionLevel());
             ctx.setWindowLog(windowLog);
             byte[] dst = new byte[(int) Zstd.compressBound(data.length)];
@@ -111,6 +112,8 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
             byte[] out = new byte[written];
             System.arraycopy(dst, 0, out, 0, written);
             return out;
+        } finally {
+            ctx.close();
         }
     }
 }
