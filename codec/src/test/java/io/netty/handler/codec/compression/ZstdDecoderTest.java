@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
 
@@ -53,13 +54,17 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
         new Random(12345L).nextBytes(payload);
 
         // Compressed with windowLog = 21 (2 MiB window).
-        byte[] compressed = compressWithWindowLog(payload, 21);
+        final byte[] compressed = compressWithWindowLog(payload, 21);
 
         // Decoder caps Window_Log at 15 (32 KiB) -> the frame must be rejected.
-        EmbeddedChannel ch = new EmbeddedChannel(new ZstdDecoder(4 * 1024 * 1024, 15));
+        final EmbeddedChannel ch = new EmbeddedChannel(new ZstdDecoder(4 * 1024 * 1024, 15));
         try {
-            assertThrows(DecompressionException.class,
-                    () -> ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute()  {
+                    ch.writeInbound(Unpooled.wrappedBuffer(compressed))
+                }
+            });
         } finally {
             ch.finishAndReleaseAll();
         }
