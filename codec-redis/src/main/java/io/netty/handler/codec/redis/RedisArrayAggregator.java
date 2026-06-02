@@ -41,7 +41,6 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
     private final int maxElements;
 
     /**
-<<<<<<< HEAD
      * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
      * and its subsequent elements into an {@link ArrayRedisMessage}.
      * <p>
@@ -111,6 +110,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             }
 
             if (depths.size() >= maxNestedArrayDepth) {
+                releaseAndClearDepths();
                 throw new CodecException("max nested array depth exceeded: "  + maxNestedArrayDepth);
             }
             // start aggregating array
@@ -133,6 +133,10 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved(ctx);
+        releaseAndClearDepths();
+    }
+
+    private void releaseAndClearDepths() {
         for (AggregateState state : depths) {
             for (RedisMessage message : state.children) {
                 ReferenceCountUtil.safeRelease(message);

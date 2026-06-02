@@ -517,6 +517,41 @@ public class MqttCodecTest {
         testMessageWithOnlyFixedHeader(MqttMessage.DISCONNECT);
     }
 
+    @Test
+    public void testPingReqWithNonZeroRemainingLengthIsRejected() throws Exception {
+        // Regression for https://github.com/netty/netty/issues/16851: PINGREQ is a 2-byte
+        // fixed-header-only packet (0xC0 0x00). The bytes below claim Remaining Length 2,
+        // which makes the trailing 0xD0 0x00 part of the same (malformed) PINGREQ frame
+        // rather than a separate PINGRESP. The decoder must reject this as one invalid
+        // message rather than silently accept two.
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder());
+        ByteBuf byteBuf = channel.alloc().buffer();
+        // Fixed header byte 1: PINGREQ (type 12), all flags 0.
+        byteBuf.writeByte(0xC0);
+        // Remaining Length 2 - invalid per MQTT 3.1.1 / 5.0 spec (PINGREQ has no variable
+        // header or payload, so Remaining Length must be 0).
+        byteBuf.writeByte(0x02);
+        // Two leftover bytes still inside the malformed packet's frame:
+        byteBuf.writeByte(0xD0);
+        byteBuf.writeByte(0x00);
+
+        try {
+            assertTrue(channel.writeInbound(byteBuf));
+            MqttMessage first = channel.readInbound();
+            try {
+                assertTrue(first.decoderResult().isFailure(),
+                        "expected a failed message for the malformed PINGREQ");
+                assertInstanceOf(DecoderException.class, first.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(first);
+            }
+            // No second message: the trailing bytes belong to the malformed frame.
+            assertNull(channel.readInbound());
+        } finally {
+            assertFalse(channel.finishAndReleaseAll());
+        }
+    }
+
     //All 0..F message type codes are valid in MQTT 5
     @Test
     public void testUnknownMessageType() throws Exception {
