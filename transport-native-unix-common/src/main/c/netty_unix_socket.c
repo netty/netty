@@ -997,9 +997,10 @@ static jint netty_unix_socket_recvFd(JNIEnv* env, jclass clazz, jint fd) {
                         result = socketFd;
                     }
                 } else {
+                    int i = 0;
                     // Peer sent an unexpected number of fds; close them all
                     // and signal an error so the caller does not retry blindly.
-                    for (int i = 0; i < nfds; i++) {
+                    for (i = 0; i < nfds; i++) {
                         close(fds[i]);
                     }
                     if (result >= 0) {
