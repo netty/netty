@@ -3043,6 +3043,80 @@ public class DnsNameResolverTest {
         }
     }
 
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testCnameCacheBailiwick(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final Map<String, String> cache = new ConcurrentHashMap<String, String>();
+
+        TestDnsServer dnsServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
+                if ("x.netty.io".equals(question.getDomainName())) {
+                    Set<ResourceRecord> records = new HashSet<ResourceRecord>();
+                    // Valid CNAME (in bailiwick of query)
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "x.netty.io", RecordType.CNAME,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                    // Invalid CNAME (out of bailiwick of query)
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname.netty.io", RecordType.CNAME,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "evil.com")));
+                    // Provide an A record to satisfy the resolution
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "evil.com", RecordType.A,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
+                    return records;
+                }
+                return Collections.emptySet();
+            }
+        });
+        dnsServer.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver(strategy)
+                    .recursionDesired(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()))
+                    .resolveCache(NoopDnsCache.INSTANCE)
+                    .cnameCache(new DnsCnameCache() {
+                        @Override
+                        public String get(String hostname) {
+                            return cache.get(hostname);
+                        }
+
+                        @Override
+                        public void cache(String hostname, String cname, long originalTtl, EventLoop loop) {
+                            cache.put(hostname, cname);
+                        }
+
+                        @Override
+                        public void clear() {
+                        }
+
+                        @Override
+                        public boolean clear(String hostname) {
+                            return false;
+                        }
+                    });
+            resolver = builder.build();
+            resolver.resolveAll("x.netty.io").syncUninterruptibly();
+
+            // The CNAME for x.netty.io should be cached because it was the queried name
+            assertEquals("cname.netty.io.", cache.get("x.netty.io."));
+            // The CNAME for cname.netty.io should NOT be cached because it is out of bailiwick for x.netty.io
+            assertNull(cache.get("cname.netty.io."));
+        } finally {
+            dnsServer.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
     @Test
     public void testInstanceWithNullPreferredAddressType() {
         new DnsNameResolver(
