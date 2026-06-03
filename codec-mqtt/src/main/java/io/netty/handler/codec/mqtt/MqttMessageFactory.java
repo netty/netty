@@ -26,7 +26,7 @@ public final class MqttMessageFactory {
 
     public static MqttMessage newMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader, Object payload) {
         switch (mqttFixedHeader.messageType()) {
-            case CONNECT :
+            case CONNECT:
                 return new MqttConnectMessage(
                         mqttFixedHeader,
                         (MqttConnectVariableHeader) variableHeader,
@@ -65,24 +65,28 @@ public final class MqttMessageFactory {
                         (MqttPublishVariableHeader) variableHeader,
                         (ByteBuf) payload);
 
+            //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
             case PUBACK:
-                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
                 return new MqttPubAckMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBREC:
+                return new MqttPubRecMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBREL:
+                return new MqttPubRelMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
             case PUBCOMP:
-                //Having MqttPubReplyMessageVariableHeader or MqttMessageIdVariableHeader
-                return new MqttMessage(mqttFixedHeader, variableHeader);
+                return new MqttPubCompMessage(mqttFixedHeader, (MqttMessageIdVariableHeader) variableHeader);
+
+            //Having MqttReasonCodeAndPropertiesVariableHeader
+            case DISCONNECT:
+                return new MqttDisconnectMessage(
+                        mqttFixedHeader,
+                        (MqttReasonCodeAndPropertiesVariableHeader) variableHeader);
+            case AUTH:
+                return new MqttAuthMessage(mqttFixedHeader, (MqttReasonCodeAndPropertiesVariableHeader) variableHeader);
 
             case PINGREQ:
+                return new MqttPingReqMessage(mqttFixedHeader);
             case PINGRESP:
-                return new MqttMessage(mqttFixedHeader);
-
-            case DISCONNECT:
-            case AUTH:
-                //Having MqttReasonCodeAndPropertiesVariableHeader
-                return new MqttMessage(mqttFixedHeader,
-                        variableHeader);
+                return new MqttPingRespMessage(mqttFixedHeader);
 
             default:
                 throw new IllegalArgumentException("unknown message type: " + mqttFixedHeader.messageType());
@@ -90,12 +94,12 @@ public final class MqttMessageFactory {
     }
 
     public static MqttMessage newInvalidMessage(Throwable cause) {
-        return new MqttMessage(null, null, null, DecoderResult.failure(cause));
+        return new InvalidMqttMessage(null, null, null, DecoderResult.failure(cause));
     }
 
     public static MqttMessage newInvalidMessage(MqttFixedHeader mqttFixedHeader, Object variableHeader,
                                                 Throwable cause) {
-        return new MqttMessage(mqttFixedHeader, variableHeader, null, DecoderResult.failure(cause));
+        return new InvalidMqttMessage(mqttFixedHeader, variableHeader, null, DecoderResult.failure(cause));
     }
 
     private MqttMessageFactory() { }
