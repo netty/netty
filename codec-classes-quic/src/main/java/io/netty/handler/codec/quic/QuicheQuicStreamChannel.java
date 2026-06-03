@@ -864,6 +864,17 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         capacity = cap;
                     }
                     if (res < 0) {
+                        if (res == Quiche.QUICHE_ERR_DONE
+                                && cap == Quiche.QUICHE_ERR_INVALID_STREAM_STATE) {
+                            // quiche_conn_stream_send(...) reports QUICHE_ERR_DONE not only when there is no
+                            // capacity to buffer more data (in which case the stream still exists and reports a
+                            // capacity >= 0), but also when the stream was already closed and garbage collected.
+                            // The latter happens when the peer sent a STOP_SENDING frame, and we also received the FIN.
+                            // In that case the stream no longer exists, so quiche_conn_stream_capacity(...) reports
+                            // QUICHE_ERR_INVALID_STREAM_STATE. Report it as QUICHE_ERR_STREAM_STOPPED to fail the
+                            // promise instead of queuing it forever.
+                            return Quiche.QUICHE_ERR_STREAM_STOPPED;
+                        }
                         return res;
                     }
                     if (readable && res == 0) {

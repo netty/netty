@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class QuicStreamShutdownTest extends AbstractQuicTest {
 
@@ -76,6 +78,71 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
 
             latch.await();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testWriteAfterStreamClosedFailsPromise(Executor executor) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> writeCauseRef = new AtomicReference<>();
+        AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        try {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt instanceof ChannelInputShutdownEvent) {
+                                // At this point the remote already sent STOP_SENDING (shutdownInput) and FIN
+                                // (shutdownOutput). The stream is therefore fully closed and
+                                // quiche_conn_stream_send(...) reports QUICHE_ERR_DONE for this write. The promise
+                                // must be failed instead of being silently queued and hanging forever.
+                                ctx.writeAndFlush(Unpooled.buffer().writeLong(8)).addListener(f -> {
+                                    if (f.isSuccess()) {
+                                        errorRef.compareAndSet(null,
+                                                new AssertionError("Write should have failed but succeeded"));
+                                    } else {
+                                        writeCauseRef.compareAndSet(null, f.cause());
+                                    }
+                                    latch.countDown();
+                                });
+                            }
+                        }
+                    });
+
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get();
+
+            QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).sync().getNow();
+
+            // Creates the stream on the remote peer.
+            streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
+            // Sends a STOP_SENDING frame, to which quiche will respond with a RESET_STREAM frame.
+            streamChannel.shutdownInput().sync();
+            // Sends a STREAM frame with the FIN bit set, which closes the stream on the remote peer.
+            streamChannel.shutdownOutput().sync();
+
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                fail("Timeout while waiting for the write promise to be failed");
+            }
+            Throwable error = errorRef.get();
+            if (error != null) {
+                fail("Failure during execution", error);
+            }
+            assertInstanceOf(ChannelOutputShutdownException.class, writeCauseRef.get());
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);
