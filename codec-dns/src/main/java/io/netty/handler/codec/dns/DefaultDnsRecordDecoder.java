@@ -108,19 +108,25 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
             final int pref = in.getUnsignedShort(offset);
             ByteBuf exchange = null;
+            ByteBuf out = null;
             try {
                 exchange = DnsCodecUtil.decompressDomainName(
                         in.duplicate().setIndex(offset + 2, offset + length));
 
                 // Build decompressed RDATA = [preference][expanded exchange name]
-                final ByteBuf out = in.alloc().buffer(2 + exchange.readableBytes());
+                out = in.alloc().buffer(2 + exchange.readableBytes());
                 out.writeShort(pref);
                 out.writeBytes(exchange);
 
-                return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+                DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+                out = null;
+                return record;
             } finally {
                 if (exchange != null) {
                     exchange.release();
+                }
+                if (out != null) {
+                    out.release();
                 }
             }
         }
