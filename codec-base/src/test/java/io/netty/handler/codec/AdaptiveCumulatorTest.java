@@ -55,7 +55,6 @@ public class AdaptiveCumulatorTest {
 
     private final ByteBufAllocator alloc = new UnpooledByteBufAllocator(false);
     private AdaptiveCumulator cumulator;
-    private AdaptiveCumulator throwingCumulator;
     private final UnsupportedOperationException throwingCumulatorError = new UnsupportedOperationException();
 
     private ByteBuf contiguous;
@@ -65,20 +64,7 @@ public class AdaptiveCumulatorTest {
     public void setUp() {
       contiguous = ByteBufUtil.writeAscii(alloc, DATA_INITIAL);
       in = ByteBufUtil.writeAscii(alloc, DATA_INCOMING);
-
-      cumulator = new AdaptiveCumulator(0) {
-        @Override
-        void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
-          composite.addFlattenedComponents(true, in);
-        }
-      };
-
-      throwingCumulator = new AdaptiveCumulator(0) {
-        @Override
-        void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
-          throw throwingCumulatorError;
-        }
-      };
+      cumulator = new AdaptiveCumulator(0);
     }
 
     @Test
@@ -120,9 +106,14 @@ public class AdaptiveCumulatorTest {
 
     @Test
     public void cumulate_compositeCumulation_inputReleasedOnError() {
-      CompositeByteBuf composite = alloc.compositeBuffer().addComponent(true, contiguous);
+      CompositeByteBuf composite = new CompositeByteBuf(alloc, false, Integer.MAX_VALUE, contiguous) {
+        @Override
+        public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+          throw throwingCumulatorError;
+        }
+      };
       try {
-        throwingCumulator.cumulate(alloc, composite, in);
+        cumulator.cumulate(alloc, composite, in);
         fail("Cumulator didn't throw");
       } catch (UnsupportedOperationException actualError) {
         assertSame(throwingCumulatorError, actualError);
@@ -136,18 +127,83 @@ public class AdaptiveCumulatorTest {
 
     @Test
     public void cumulate_contiguousCumulation_inputAndNewCompositeReleasedOnError() {
-      CompositeByteBuf newComposite = alloc.compositeBuffer(Integer.MAX_VALUE);
+      CompositeByteBuf newComposite = new CompositeByteBuf(alloc, false, Integer.MAX_VALUE) {
+        @Override
+        public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+          if (buffer == in) {
+            throw throwingCumulatorError;
+          }
+          return super.addFlattenedComponents(increaseWriterIndex, buffer);
+        }
+      };
       ByteBufAllocator mockAlloc = mock(ByteBufAllocator.class);
       when(mockAlloc.compositeBuffer(anyInt())).thenReturn(newComposite);
 
       try {
-        throwingCumulator.cumulate(mockAlloc, contiguous, in);
+        cumulator.cumulate(mockAlloc, contiguous, in);
         fail("Cumulator didn't throw");
       } catch (UnsupportedOperationException actualError) {
         assertSame(throwingCumulatorError, actualError);
         assertEquals(0, in.refCnt());
         assertEquals(0, newComposite.refCnt());
         assertEquals(1, contiguous.refCnt());
+      }
+    }
+
+    @Test
+    public void cumulate_sharedCompositeCumulation_retainedAndReleasedOnError() {
+      final CompositeByteBuf compositeCumulation = alloc.compositeBuffer(Integer.MAX_VALUE);
+      compositeCumulation.addComponent(true, contiguous);
+      compositeCumulation.retain();
+      assertEquals(2, compositeCumulation.refCnt());
+
+      ByteBufAllocator mockAlloc = mock(ByteBufAllocator.class);
+      CompositeByteBuf newComposite = new CompositeByteBuf(alloc, false, Integer.MAX_VALUE) {
+        @Override
+        public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+          if (buffer == compositeCumulation) {
+            throw throwingCumulatorError;
+          }
+          return super.addFlattenedComponents(increaseWriterIndex, buffer);
+        }
+      };
+      when(mockAlloc.compositeBuffer(anyInt())).thenReturn(newComposite);
+
+      try {
+        cumulator.cumulate(mockAlloc, compositeCumulation, in);
+        fail("Cumulator didn't throw");
+      } catch (UnsupportedOperationException actualError) {
+        assertSame(throwingCumulatorError, actualError);
+        assertEquals(0, in.refCnt());
+        assertEquals(2, compositeCumulation.refCnt());
+      } finally {
+        compositeCumulation.release();
+        compositeCumulation.release();
+      }
+    }
+
+    @Test
+    public void cumulate_contiguousCumulation_inputAddComponent0FailureDoubleRelease() {
+      ByteBufAllocator failAlloc = mock(ByteBufAllocator.class);
+      when(failAlloc.heapBuffer(anyInt())).thenThrow(throwingCumulatorError);
+      when(failAlloc.directBuffer(anyInt())).thenThrow(throwingCumulatorError);
+
+      CompositeByteBuf newComposite = new CompositeByteBuf(alloc, false, 1) {
+        @Override
+        public ByteBufAllocator alloc() {
+          return failAlloc;
+        }
+      };
+
+      ByteBufAllocator mockAlloc = mock(ByteBufAllocator.class);
+      when(mockAlloc.compositeBuffer(anyInt())).thenReturn(newComposite);
+
+      try {
+        cumulator.cumulate(mockAlloc, contiguous, in);
+        fail("Cumulator didn't throw");
+      } catch (UnsupportedOperationException actualError) {
+        assertSame(throwingCumulatorError, actualError);
+        assertEquals(0, in.refCnt());
       }
     }
   }
@@ -194,7 +250,12 @@ public class AdaptiveCumulatorTest {
       setUp(composeMinSize, tailData, inData);
       try {
         Assumptions.assumeTrue(composite.numComponents() == 0);
-        assertTrue(AdaptiveCumulator.shouldCompose(composite, in, composeMinSize));
+        AdaptiveCumulator cumulator = new AdaptiveCumulator(composeMinSize);
+        ByteBuf cumulation = cumulator.cumulate(alloc, composite, in);
+        composite = null;
+        in = null;
+        assertEquals(inData, cumulation.toString(US_ASCII));
+        cumulation.release();
       } finally {
         tearDown();
       }
@@ -206,8 +267,15 @@ public class AdaptiveCumulatorTest {
       setUp(composeMinSize, tailData, inData);
       try {
         Assumptions.assumeTrue(composite.numComponents() > 0);
+        Assumptions.assumeTrue(in.isReadable());
         Assumptions.assumeTrue(tail.readableBytes() + in.readableBytes() >= composeMinSize);
-        assertTrue(AdaptiveCumulator.shouldCompose(composite, in, composeMinSize));
+        AdaptiveCumulator cumulator = new AdaptiveCumulator(composeMinSize);
+        CompositeByteBuf cumulation = (CompositeByteBuf) cumulator.cumulate(alloc, composite, in);
+        composite = null;
+        in = null;
+        assertEquals(2, cumulation.numComponents());
+        assertEquals(tailData + inData, cumulation.toString(US_ASCII));
+        cumulation.release();
       } finally {
         tearDown();
       }
@@ -220,7 +288,13 @@ public class AdaptiveCumulatorTest {
       try {
         Assumptions.assumeTrue(composite.numComponents() > 0);
         Assumptions.assumeTrue(tail.readableBytes() + in.readableBytes() < composeMinSize);
-        assertFalse(AdaptiveCumulator.shouldCompose(composite, in, composeMinSize));
+        AdaptiveCumulator cumulator = new AdaptiveCumulator(composeMinSize);
+        CompositeByteBuf cumulation = (CompositeByteBuf) cumulator.cumulate(alloc, composite, in);
+        composite = null;
+        in = null;
+        assertEquals(1, cumulation.numComponents());
+        assertEquals(tailData + inData, cumulation.toString(US_ASCII));
+        cumulation.release();
       } finally {
         tearDown();
       }
@@ -294,8 +368,10 @@ public class AdaptiveCumulatorTest {
       int originalNumComponents = composite.numComponents();
       int compositeReaderIndexBounded = Math.min(compositeReaderIndex, composite.writerIndex());
       composite.readerIndex(compositeReaderIndexBounded);
+      Assumptions.assumeTrue(composite.isReadable());
 
-      AdaptiveCumulator.mergeWithCompositeTail(alloc, composite, in);
+      AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+      cumulator.cumulate(alloc, composite, in);
 
       assertEquals(originalNumComponents, composite.numComponents(),
           "When tail is expanded, the number of components in the cumulation must not change");
@@ -342,7 +418,9 @@ public class AdaptiveCumulatorTest {
 
       int compositeReaderIndexBounded = Math.min(compositeReaderIndex, composite.writerIndex());
       composite.readerIndex(compositeReaderIndexBounded);
-      AdaptiveCumulator.mergeWithCompositeTail(alloc, composite, in);
+      Assumptions.assumeTrue(composite.isReadable());
+      AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+      cumulator.cumulate(alloc, composite, in);
 
       assertEquals(cumulationOriginalComponentsNum, composite.numComponents());
       ByteBuf replacedTail = composite.component(composite.numComponents() - 1);
@@ -474,7 +552,8 @@ public class AdaptiveCumulatorTest {
       };
 
       try {
-        AdaptiveCumulator.mergeWithCompositeTail(alloc, compositeThrows, in);
+        AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+        cumulator.cumulate(alloc, compositeThrows, in);
         fail("Cumulator didn't throw");
       } catch (UnsupportedOperationException actualError) {
         assertSame(expectedError, actualError);
@@ -506,7 +585,8 @@ public class AdaptiveCumulatorTest {
       when(mockAlloc.buffer(anyInt())).thenReturn(newTail);
 
       try {
-        AdaptiveCumulator.mergeWithCompositeTail(mockAlloc, compositeRo, in);
+        AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+        cumulator.cumulate(mockAlloc, compositeRo, in);
         fail("Cumulator didn't throw");
       } catch (UnsupportedOperationException actualError) {
         assertSame(expectedError, actualError);
