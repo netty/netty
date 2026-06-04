@@ -121,6 +121,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
         return null;
     }
 
+    static final long DEFAULT_HANDSHAKE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(10);
     protected final long handshakeTimeoutMillis;
     private ScheduledFuture<?> timeoutFuture;
     private String hostname;
@@ -129,7 +130,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
      * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
      */
     protected AbstractSniHandler(long handshakeTimeoutMillis) {
-        this(0, handshakeTimeoutMillis);
+        this(DEFAULT_MAX_CLIENT_HELLO_LENGTH, handshakeTimeoutMillis);
     }
 
     /**
@@ -142,7 +143,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     }
 
     public AbstractSniHandler() {
-        this(0, 0L);
+        this(DEFAULT_MAX_CLIENT_HELLO_LENGTH, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     @Override
