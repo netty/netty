@@ -552,7 +552,11 @@ public final class MqttDecoder extends ByteToMessageDecoder {
                 return decodePublishPayload(buffer);
 
             default:
-                // unknown payload , no byte consumed
+                // No payload for this message type. If the fixed header's Remaining Length
+                // claimed bytes beyond what the variable header consumed (e.g. a PINGREQ
+                // with non-zero Remaining Length), the frame is malformed.
+                // See https://github.com/netty/netty/issues/16851
+                validateNoBytesRemain(0);
                 return null;
         }
     }
