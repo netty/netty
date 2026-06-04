@@ -18,6 +18,7 @@ package io.netty.handler.codec.redis;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -92,6 +93,28 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         AggregateState(int length) {
             this.length = length;
             this.children = new ArrayList<RedisMessage>(length);
+        }
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+        for (AggregateState state : depths) {
+            for (RedisMessage message : state.children) {
+                ReferenceCountUtil.safeRelease(message);
+            }
+        }
+        depths.clear();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+
+        if (!depths.isEmpty()) {
+            ctx.fireExceptionCaught(new PrematureChannelClosureException(
+                    "channel gone inactive with " + depths.size() +
+                            " messages still incomplete"));
         }
     }
 }
