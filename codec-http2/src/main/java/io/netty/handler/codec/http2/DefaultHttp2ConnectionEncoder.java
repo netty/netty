@@ -100,7 +100,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         }
 
         Long maxHeaderListSize = settings.maxHeaderListSize();
-        if (maxHeaderListSize != null) {
+        if (maxHeaderListSize != null && !connection.isServer()) {
+            // Servers ignore the MAX_HEADER_LIST_SIZE setting from clients.
+            // It's advisory in spec (RFC 9113 §6.5.2) and best praxis is to ignore it.
             outboundHeaderConfig.maxHeaderListSize(maxHeaderListSize);
         }
 

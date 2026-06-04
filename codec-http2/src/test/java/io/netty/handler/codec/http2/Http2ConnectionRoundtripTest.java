@@ -1142,6 +1142,71 @@ public class Http2ConnectionRoundtripTest {
         }
     }
 
+    @Test
+    public void serverShouldNotEnforceClientAdvertisedMaxHeaderListSize() throws Exception {
+        // Verifies that SETTINGS_MAX_HEADER_LIST_SIZE sent by a client is treated as advisory
+        // (per RFC 9113 §6.5.2) and does not prevent the server from encoding response headers.
+        final CountDownLatch clientSettingsAckLatch = new CountDownLatch(2);
+        final CountDownLatch responseLatch = new CountDownLatch(1);
+        final AtomicReference<Throwable> serverWriteError = new AtomicReference<Throwable>();
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                final ChannelHandlerContext sCtx = serverCtx();
+                final int streamId = (Integer) invocationOnMock.getArgument(1);
+                Http2Headers responseHeaders = new DefaultHttp2Headers().status("200");
+                http2Server.encoder().writeHeaders(sCtx, streamId, responseHeaders, 0, true, sCtx.newPromise())
+                        .addListener(future -> {
+                            serverWriteError.set(future.cause());
+                            responseLatch.countDown();
+                        });
+                http2Server.flush(sCtx);
+                return null;
+            }
+        }).when(serverListener).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+                clientSettingsAckLatch.countDown();
+                return null;
+            }
+        }).when(clientListener).onSettingsAckRead(any(ChannelHandlerContext.class));
+
+        bootstrapEnv(0, 1, 2, 0);
+
+        // Client advertises a tiny MAX_HEADER_LIST_SIZE (2 bytes) to the server.
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeSettings(ctx(),
+                        new Http2Settings().maxHeaderListSize(2),
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        // Wait for the server to acknowledge both the initial settings and our custom settings.
+        assertTrue(clientSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+
+        // Send a request; the server will attempt to respond with headers far exceeding 2 bytes.
+        final short weight = 16;
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, dummyHeaders(), 0, weight, false, 0, true,
+                        newPromise());
+                http2Client.flush(ctx());
+            }
+        });
+
+        assertTrue(responseLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertNull(serverWriteError.get(),
+                "Server must succeed writing response headers regardless of client's SETTINGS_MAX_HEADER_LIST_SIZE");
+    }
+
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
             int requestCountDown, int trailersCountDown) throws Exception {
         bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, -1, -1);
