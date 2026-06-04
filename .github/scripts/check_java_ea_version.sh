@@ -19,7 +19,7 @@ set -e
 # Keep this version in sync with docker-compose.centos-7.26.yaml
 export EXPECTED_VERSION='26.ea.35'
 
-curl -s "https://get.sdkman.io" | bash
+curl -s "https://beta.sdkman.io?ci=true" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
 export JAVA_VERSION=$(sdk list java | grep 26.*-open|head -n 1|cut -f 3 -d '|')
 echo "Java version: '$JAVA_VERSION'" | tee version.txt
