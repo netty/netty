@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -86,7 +85,7 @@ public class FlowControlHandlerTest {
         serverBootstrap.group(GROUP)
             .channel(NioServerSocketChannel.class)
             .childOption(ChannelOption.AUTO_READ, autoRead)
-            .childHandler(new ChannelInitializer<Channel>() {
+            .childHandler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
@@ -170,7 +169,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testAutoReadingOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch latch = new CountDownLatch(3);
 
         ChannelInboundHandler handler = new ChannelInboundHandler() {
@@ -218,7 +217,7 @@ public class FlowControlHandlerTest {
     @Test
     public void testFlowAutoReadOn() throws Exception {
         final CountDownLatch latch = new CountDownLatch(3);
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
 
         class TestHandler implements ChannelOutboundHandler, ChannelInboundHandler {
 
@@ -249,12 +248,7 @@ public class FlowControlHandlerTest {
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
         } finally {
             client.close();
             server.close();
@@ -267,7 +261,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowToggleAutoRead() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(1);
@@ -336,12 +330,7 @@ public class FlowControlHandlerTest {
             setAutoReadLatch2.countDown();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
         } finally {
             client.close();
             server.close();
@@ -355,7 +344,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowAutoReadOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
@@ -398,12 +387,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
         } finally {
             client.close();
             server.close();
@@ -417,7 +401,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowAutoReadOffAndQueueNonEmpty() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
@@ -451,12 +435,7 @@ public class FlowControlHandlerTest {
             // channelRead(1)
             peer.read();
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
-            assertFalse(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertFalse(peer.executor().submit(flow::isQueueEmpty).get());
 
             // Write the second message
             client.writeAndFlush(newOneMessage())
@@ -470,12 +449,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
         } finally {
             client.close();
             server.close();
@@ -484,9 +458,9 @@ public class FlowControlHandlerTest {
 
     @Test
     public void testReentranceNotCausesNPE() throws Throwable {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch latch = new CountDownLatch(3);
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -521,12 +495,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
 
             Throwable cause = causeRef.get();
             if (cause != null) {
@@ -541,7 +510,7 @@ public class FlowControlHandlerTest {
     @Test
     public void testSwallowedReadComplete() throws Exception {
         final long delayMillis = 100;
-        final Queue<IdleStateEvent> userEvents = new LinkedBlockingQueue<IdleStateEvent>();
+        final Queue<IdleStateEvent> userEvents = new LinkedBlockingQueue<>();
         final EmbeddedChannel channel = new EmbeddedChannel(false, false,
             new FlowControlHandler(),
             new IdleStateHandler(delayMillis, 0, 0, MILLISECONDS),
@@ -596,7 +565,7 @@ public class FlowControlHandlerTest {
 
     @Test
     public void testRemoveFlowControl() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
 
         final CountDownLatch latch = new CountDownLatch(3);
 
@@ -609,7 +578,7 @@ public class FlowControlHandlerTest {
                 ctx.fireChannelActive();
             }
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 latch.countDown();
                 ctx.fireChannelRead(msg);
             }
@@ -624,12 +593,7 @@ public class FlowControlHandlerTest {
                 if (num >= 3) {
                     //We have received 3 messages. Remove myself later
                     final ChannelHandler handler = this;
-                    ctx.channel().executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            ctx.pipeline().remove(handler);
-                        }
-                    });
+                    ctx.channel().executor().execute(() -> ctx.pipeline().remove(handler));
                 }
             }
         };
@@ -652,12 +616,7 @@ public class FlowControlHandlerTest {
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
-            assertTrue(peer.executor().submit(new Callable<Boolean>() {
-                @Override
-                public Boolean call() {
-                    return flow.isQueueEmpty();
-                }
-            }).get());
+            assertTrue(peer.executor().submit(flow::isQueueEmpty).get());
         } finally {
             client.close();
             server.close();
@@ -671,7 +630,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
@@ -708,7 +667,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
@@ -759,7 +718,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
@@ -792,7 +751,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
@@ -852,7 +811,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
@@ -893,7 +852,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
                 new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         reads.incrementAndGet();
