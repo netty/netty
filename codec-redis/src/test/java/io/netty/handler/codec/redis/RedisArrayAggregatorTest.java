@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RedisArrayAggregatorTest {
 
     @Test
-    void testDoesNotLeakOnClose() {
+    void testDoesNotLeakOnClose() throws Exception {
         final EmbeddedChannel ch = new EmbeddedChannel(new RedisArrayAggregator());
         assertFalse(ch.writeInbound(new ArrayHeaderRedisMessage(2)));
 
@@ -47,7 +47,7 @@ public class RedisArrayAggregatorTest {
     }
 
     @Test
-    void testDoesNotLeakOnRemoval() {
+    void testDoesNotLeakOnRemoval() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new RedisArrayAggregator());
         assertFalse(ch.writeInbound(new ArrayHeaderRedisMessage(2)));
 
