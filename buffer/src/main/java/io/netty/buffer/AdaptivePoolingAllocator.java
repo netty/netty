@@ -957,15 +957,17 @@ final class AdaptivePoolingAllocator {
             return null;
         }
 
-        private void offerOrDeallocate(SizeClassedChunk chunk) {
+        private boolean offerOrDeallocate(SizeClassedChunk chunk) {
             if (!queue.offer(chunk)) {
                 chunk.markToDeallocate();
+                return false;
             }
+            return true;
         }
 
-        private void offerOrDeallocate(SizeClassedChunk chunk, long generation) {
+        private boolean offerOrDeallocate(SizeClassedChunk chunk, long generation) {
             chunk.lastPurgeGeneration = generation;
-            offerOrDeallocate(chunk);
+            return offerOrDeallocate(chunk);
         }
 
         private void runPurgeScan() {
@@ -990,7 +992,9 @@ final class AdaptivePoolingAllocator {
                 }
                 int remaining = chunk.remainingCapacity();
                 if (remaining > 0) {
-                    offerOrDeallocate(chunk, generation);
+                    if (!offerOrDeallocate(chunk, generation)) {
+                        retained--;
+                    }
                 } else {
                     deferred.add(chunk);
                 }
@@ -1001,7 +1005,9 @@ final class AdaptivePoolingAllocator {
                     chunk.markToDeallocate();
                     retained--;
                 } else {
-                    offerOrDeallocate(chunk, generation);
+                    if (!offerOrDeallocate(chunk, generation)) {
+                        retained--;
+                    }
                 }
             }
             deferred.clear();

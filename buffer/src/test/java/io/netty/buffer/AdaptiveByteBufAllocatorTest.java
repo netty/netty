@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
@@ -25,8 +26,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -279,7 +282,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
         Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
         if (threadLocal) {
-            io.netty.util.concurrent.FastThreadLocalThread.runWithFastThreadLocal(test);
+            FastThreadLocalThread.runWithFastThreadLocal(test);
         } else {
             test.run();
         }
@@ -293,7 +296,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
         int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
         int totalBuffers = totalChunks * buffersPerChunk;
-        java.util.List<ByteBuf> bufs = new java.util.ArrayList<>(totalBuffers);
+        List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
             bufs.add(allocator.heapBuffer(256));
         }
