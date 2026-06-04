@@ -48,8 +48,9 @@ public abstract class AbstractHttp2StreamFrame implements Http2StreamFrame {
     @Override
     public int hashCode() {
         Http2FrameStream stream = this.stream;
+        // Must be consistent with equals; super.hashCode() is Object's identity hash.
         if (stream == null) {
-            return super.hashCode();
+            return 0;
         }
         return stream.hashCode();
     }
