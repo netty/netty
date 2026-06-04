@@ -35,7 +35,7 @@ import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnabledIfEnvironmentVariable(named = "FUZZ_TEST", matches = "1")
+@EnabledIfEnvironmentVariable(named = "JAZZER_FUZZ", matches = "1")
 public class HttpConversionUtilFuzzTest {
 
     @FuzzTest(maxDuration = "30s")
