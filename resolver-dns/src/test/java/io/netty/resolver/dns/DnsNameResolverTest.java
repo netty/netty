@@ -1560,10 +1560,8 @@ public class DnsNameResolverTest {
                 assertNull(nsCache.cache.get("netty.io."));
                 DnsServerAddressStream entries = nsCache.cache.get("record.netty.io.");
 
-                // First address should be resolved (as we received a matching additional record), second is unresolved.
-                assertEquals(2, entries.size());
-                assertFalse(entries.next().isUnresolved());
-                assertTrue(entries.next().isUnresolved());
+                // Should be null because of bailiwick check.
+                assertNull(entries);
 
                 assertNull(nsCache.cache.get(hostname));
 
@@ -1573,27 +1571,15 @@ public class DnsNameResolverTest {
                 observer = lifecycleObserverFactory.observers.poll();
                 assertNotNull(observer);
                 assertTrue(lifecycleObserverFactory.observers.isEmpty());
-                assertEquals(2, observer.events.size());
+                assertEquals(4, observer.events.size());
                 writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
-                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
-                assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
-                succeededEvent = (QuerySucceededEvent) observer.events.poll();
+                QueryRedirectedEvent ev = (QueryRedirectedEvent) observer.events.poll();
 
-                resolver.resolveAll(hostname2).syncUninterruptibly();
+                assertInstanceOf(UnknownHostException.class, resolver.resolveAll(hostname2).await().cause());
 
-                observer = lifecycleObserverFactory.observers.poll();
-                assertNotNull(observer);
-                assertTrue(lifecycleObserverFactory.observers.isEmpty());
-                assertEquals(2, observer.events.size());
-                writtenEvent1 = (QueryWrittenEvent) observer.events.poll();
-                assertEquals(expectedDnsName, writtenEvent1.dnsServerAddress.getHostName());
-                assertEquals(dnsServerAuthority.localAddress(), writtenEvent1.dnsServerAddress);
-                succeededEvent = (QuerySucceededEvent) observer.events.poll();
-
-                // Check that it only queried the cache for record.netty.io.
                 assertNull(nsCache.cacheHits.get("io."));
                 assertNull(nsCache.cacheHits.get("netty.io."));
-                assertNotNull(nsCache.cacheHits.get("record.netty.io."));
+                assertNull(nsCache.cacheHits.get("record.netty.io."));
                 assertNull(nsCache.cacheHits.get("some.record.netty.io."));
             }
         } finally {
@@ -1728,19 +1714,8 @@ public class DnsNameResolverTest {
 
             if (authoritativeDnsServerCache != NoopAuthoritativeDnsServerCache.INSTANCE) {
                 DnsServerAddressStream cached = authoritativeDnsServerCache.get(domain + '.');
-                assertEquals(2, cached.size());
-                InetSocketAddress ns1Address = InetSocketAddress.createUnresolved(
-                        ns1Name + '.', DefaultDnsServerAddressStreamProvider.DNS_PORT);
-                InetSocketAddress ns2Address = InetSocketAddress.createUnresolved(
-                        ns2Name + '.', DefaultDnsServerAddressStreamProvider.DNS_PORT);
-
-                if (invalidNsFirst) {
-                    assertEquals(ns2Address, cached.next());
-                    assertEquals(ns1Address, cached.next());
-                } else {
-                    assertEquals(ns1Address, cached.next());
-                    assertEquals(ns2Address, cached.next());
-                }
+                // We should not cache anything because of bailiwick check
+                assertNull(cached);
             }
             if (cache != NoopDnsCache.INSTANCE) {
                 List<? extends DnsCacheEntry> ns1Cached = cache.get(ns1Name + '.', null);
@@ -1884,7 +1859,9 @@ public class DnsNameResolverTest {
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
-            assertEquals(4, cached.size());
+
+            // We should not cache anything because of bailiwick check
+            assertEquals(0, cached.size());
 
             if (reversed) {
                 assertEquals(ns4Address, redirected.next());
@@ -1897,12 +1874,6 @@ public class DnsNameResolverTest {
                 assertEquals(ns3Address, redirected.next());
                 assertEquals(ns4Address, redirected.next());
             }
-
-            // We should always have the same order in the cache.
-            assertEquals(ns1Address, cached.get(0));
-            assertEquals(ns2Address, cached.get(1));
-            assertEquals(ns3Address, cached.get(2));
-            assertEquals(ns4Address, cached.get(3));
         } finally {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
@@ -2021,7 +1992,8 @@ public class DnsNameResolverTest {
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
-            assertEquals(3, cached.size());
+            // We should not cache because of bailiwick check.
+            assertEquals(0, cached.size());
 
             // The redirected addresses should have been retrieven from the DnsCache if not resolved, so these are
             // fully resolved.
@@ -2031,13 +2003,6 @@ public class DnsNameResolverTest {
             assertEquals(ns3Address, redirected.next());
             assertEquals(ns4Address, redirected.next());
             assertEquals(ns5Address, redirected.next());
-
-            // As this address was supplied as ADDITIONAL we should put it resolved into the cache.
-            assertEquals(ns0Address, cached.get(0));
-            assertEquals(ns5Address, cached.get(1));
-
-            // We should have put the unresolved address in the AuthoritativeDnsServerCache (but only 1 time)
-            assertEquals(unresolved(ns1Address), cached.get(2));
         } finally {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
@@ -2392,12 +2357,16 @@ public class DnsNameResolverTest {
     private static class RedirectingTestDnsServer extends TestDnsServer {
 
         private final String dnsAddress;
-        private final String domain;
+        private final Set<String> domains;
+
+        RedirectingTestDnsServer(Set<String> domains, String dnsAddress) {
+            super(domains);
+            this.domains = domains;
+            this.dnsAddress = dnsAddress;
+        }
 
         RedirectingTestDnsServer(String domain, String dnsAddress) {
-            super(Collections.singleton(domain));
-            this.domain = domain;
-            this.dnsAddress = dnsAddress;
+            this(Collections.singleton(domain), dnsAddress);
         }
 
         @Override
@@ -2407,21 +2376,22 @@ public class DnsNameResolverTest {
             message.getAuthorityRecords().clear();
             message.getAdditionalRecords().clear();
 
-            String name = domain;
-            for (int i = 0 ;; i++) {
-                int idx = name.indexOf('.');
-                if (idx <= 0) {
-                    break;
+            for (String domain : domains) {
+                String name = domain;
+                for (int i = 0 ;; i++) {
+                    int idx = name.indexOf('.');
+                    if (idx <= 0) {
+                        break;
+                    }
+                    name = name.substring(idx + 1); // skip the '.' as well.
+                    String dnsName = "dns" + idx + '.' + domain;
+                    message.getAuthorityRecords().add(newNsRecord(name, dnsName));
+                    message.getAdditionalRecords().add(newARecord(dnsName, i == 0 ? dnsAddress : "1.2.3." + idx));
+
+                    // Add an unresolved NS record (with no additionals as well)
+                    message.getAuthorityRecords().add(newNsRecord(name, "unresolved." + dnsName));
                 }
-                name = name.substring(idx + 1); // skip the '.' as well.
-                String dnsName = "dns" + idx + '.' + domain;
-                message.getAuthorityRecords().add(newNsRecord(name, dnsName));
-                message.getAdditionalRecords().add(newARecord(dnsName, i == 0 ? dnsAddress : "1.2.3." + idx));
-
-                // Add an unresolved NS record (with no additionals as well)
-                message.getAuthorityRecords().add(newNsRecord(name, "unresolved." + dnsName));
             }
-
             return message;
         }
     }
