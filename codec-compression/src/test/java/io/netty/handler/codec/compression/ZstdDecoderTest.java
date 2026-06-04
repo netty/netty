@@ -45,7 +45,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testFrameWithWindowLogAboveCapIsRejected() {
+    public void testFrameWithWindowLogAboveCapIsRejected() throws Exception {
         // Incompressible random data so libzstd actually has to use the declared window
         // (highly compressible content lets libzstd shrink the effective window to the
         // content size, making setLongMax ineffective for the test).
@@ -66,7 +66,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testFrameWithWindowLogWithinCapIsAccepted() {
+    public void testFrameWithWindowLogWithinCapIsAccepted() throws Exception {
         byte[] payload = new byte[256 * 1024];
         new Random(12345L).nextBytes(payload);
 
