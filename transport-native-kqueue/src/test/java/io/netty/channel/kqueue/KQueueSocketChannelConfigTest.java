@@ -20,7 +20,6 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -31,7 +30,7 @@ import org.opentest4j.TestAbortedException;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.channel.kqueue.BsdSocket.BSD_SND_LOW_AT_MAX;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,11 +42,9 @@ public class KQueueSocketChannelConfigTest {
 
     private static EventLoopGroup group;
     private static KQueueSocketChannel ch;
-    private static Random rand;
 
     @BeforeAll
     public static void beforeClass() {
-        rand = new Random();
         group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
     }
 
@@ -72,7 +69,7 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testRandomSndLowAt() {
-        final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(rand.nextInt()));
+        final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(ThreadLocalRandom.current().nextInt()));
         final int actual;
         try {
             ch.config().setOption(KQueueChannelOption.SO_SNDLOWAT, expected);
