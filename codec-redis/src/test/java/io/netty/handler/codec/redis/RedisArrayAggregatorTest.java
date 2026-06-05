@@ -12,14 +12,14 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,8 +28,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class RedisArrayAggregatorTest {
 
     @Test
+    public void testLimitNested() throws Exception {
+        byte[] arrayHeader = "*1\r\n".getBytes(CharsetUtil.US_ASCII);
+        int maxNestedDepth = 100;
+        EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder(),
+                new RedisArrayAggregator(RedisConstants.REDIS_MAX_ARRAY_LENGTH, maxNestedDepth));
+        for (int i = 0; i < maxNestedDepth; i++) {
+            assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
+        }
+
+        // Next write should trigger an exception.
+        assertThrows(CodecException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(arrayHeader)));
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     void testDoesNotLeakOnClose() throws Exception {
-        final EmbeddedChannel ch = new EmbeddedChannel(new RedisArrayAggregator());
+        EmbeddedChannel ch = new EmbeddedChannel(new RedisArrayAggregator());
         assertFalse(ch.writeInbound(new ArrayHeaderRedisMessage(2)));
 
         FullBulkStringRedisMessage redisMessage = new FullBulkStringRedisMessage(Unpooled.buffer());
@@ -37,12 +52,7 @@ public class RedisArrayAggregatorTest {
         assertFalse(ch.writeInbound(redisMessage));
         assertEquals(1, redisMessage.refCnt());
 
-        assertThrows(PrematureChannelClosureException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                ch.finish();
-            }
-        });
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
         assertEquals(0, redisMessage.refCnt());
     }
 
