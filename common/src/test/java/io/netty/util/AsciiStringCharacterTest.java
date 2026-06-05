@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
@@ -183,8 +184,9 @@ public class AsciiStringCharacterTest {
         final int upperToLower = (int) 'a' - upperA;
         byte[] lowerCaseBytes = new byte[len];
         StringBuilder upperCaseBuilder = new StringBuilder(len);
+        SplittableRandom rng = new SplittableRandom(r.nextLong());
         for (int i = 0; i < len; ++i) {
-            char upper = (char) (r.nextInt((upperZ - upperA) + 1) + upperA);
+            char upper = (char) (rng.nextInt((upperZ - upperA) + 1) + upperA);
             upperCaseBuilder.append(upper);
             lowerCaseBytes[i] = (byte) (upper + upperToLower);
         }

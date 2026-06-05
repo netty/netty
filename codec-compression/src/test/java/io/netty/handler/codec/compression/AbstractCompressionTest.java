@@ -15,24 +15,24 @@
  */
 package io.netty.handler.codec.compression;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 public abstract class AbstractCompressionTest {
 
-    protected static final Random rand;
+    protected final SplittableRandom rand = new SplittableRandom();
 
     protected static final byte[] BYTES_SMALL = new byte[256];
     protected static final byte[] BYTES_LARGE = new byte[256 * 1024];
 
     static {
-        rand = new Random();
         fillArrayWithCompressibleData(BYTES_SMALL);
         fillArrayWithCompressibleData(BYTES_LARGE);
     }
 
     private static void fillArrayWithCompressibleData(byte[] array) {
+        SplittableRandom rng = new SplittableRandom();
         for (int i = 0; i < array.length; i++) {
-            array[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
+            array[i] = i % 4 != 0 ? 0 : (byte) rng.nextInt();
         }
     }
 }

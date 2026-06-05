@@ -46,7 +46,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,7 +59,7 @@ public class FileRegionThrottleTest {
 
     @BeforeAll
     public static void beforeClass() throws IOException {
-        final Random r = new Random();
+        final SplittableRandom r = new SplittableRandom();
         for (int i = 0; i < BYTES.length; i++) {
             BYTES[i] = (byte) r.nextInt(255);
         }
