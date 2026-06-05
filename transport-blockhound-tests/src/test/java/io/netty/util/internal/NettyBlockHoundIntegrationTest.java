@@ -38,6 +38,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.util.HashedWheelTimer;
@@ -45,6 +46,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -58,6 +60,7 @@ import reactor.blockhound.BlockHound;
 import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +75,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -430,6 +434,47 @@ public class NettyBlockHoundIntegrationTest {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .datagramChannelFactory(NioDatagramChannel::new);
             doTestParseResolverFilesAllowsBlockingCalls(builder::build);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testDnsNameResolverAllowsBlockingCalls() throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        List<Throwable> error = new ArrayList<>();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new DefaultThreadFactory("test").newThread(r);
+                t.setUncaughtExceptionHandler((t1, e) -> {
+                    error.add(e);
+                    latch.countDown();
+                });
+                return t;
+            }
+        };
+        EventLoopGroup group = new NioEventLoopGroup(1, threadFactory);
+        try (DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
+                .datagramChannelFactory(NioDatagramChannel::new)
+                .build()) {
+            resolver.resolve("netty.io").addListener(
+                    new GenericFutureListener<io.netty.util.concurrent.Future<? super InetAddress>>() {
+                @Override
+                public void operationComplete(io.netty.util.concurrent.Future<? super InetAddress> future) {
+                    if (!future.isSuccess()) {
+                        error.add(future.cause());
+                    }
+                    latch.countDown();
+                }
+            });
+            latch.await();
+            for (Throwable t : error) {
+                if (t instanceof BlockingOperationError || t.getCause() instanceof BlockingOperationError) {
+                    fail("BlockingOperationError was thrown: " + t);
+                }
+            }
         } finally {
             group.shutdownGracefully();
         }
