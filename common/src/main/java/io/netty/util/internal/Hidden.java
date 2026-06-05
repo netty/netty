@@ -168,6 +168,14 @@ class Hidden {
                     "parseEtcResolverOptions");
 
             builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.DnsQueryIdSpace",
+                    "nextId");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.resolver.dns.DnsQueryIdSpace$DnsQueryIdRange",
+                    "pushId");
+
+            builder.allowBlockingCallsInside(
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
