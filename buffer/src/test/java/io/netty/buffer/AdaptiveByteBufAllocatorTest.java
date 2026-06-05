@@ -16,19 +16,22 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
+import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
-import java.util.SplittableRandom;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -123,7 +126,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertEquals(0, allocator.usedHeapMemory());
         bufs.add(allocator.heapBuffer(256));
         long usedHeapMemory = allocator.usedHeapMemory();
-        int buffersPerChunk = Math.toIntExact(usedHeapMemory / 256);
+        int buffersPerChunk = (int) (usedHeapMemory / 256);
         for (int i = 0; i < buffersPerChunk; i++) {
             bufs.add(allocator.heapBuffer(256));
         }
@@ -190,7 +193,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                             ByteBuf buffer = null;
                             try {
                                 buffer = alloc.heapBuffer(128);
-                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
+                                Random rng = PlatformDependent.threadLocalRandom();
+                                buffer.ensureWritable(512 + rng.nextInt(32769 - 512));
                             } finally {
                                 if (buffer != null) {
                                     buffer.release();
@@ -213,7 +217,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     @RepeatedTest(100)
     void buddyAllocationConsistency(RepetitionInfo info) {
-        SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
         AdaptiveByteBufAllocator allocator = newAllocator(true);
         int small = 32768;
         int large = 2 * small;
@@ -225,14 +228,14 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 xlarge, xlarge,
         };
 
-        shuffle(rng, allocationSizes);
+        shuffle(allocationSizes);
 
         ByteBuf[] bufs = new ByteBuf[allocationSizes.length];
         for (int i = 0; i < bufs.length; i++) {
             bufs[i] = allocator.buffer(allocationSizes[i], allocationSizes[i]);
         }
 
-        shuffle(rng, bufs);
+        shuffle(bufs);
 
         int[] reallocations = new int[bufs.length / 2];
         for (int i = 0; i < reallocations.length; i++) {
@@ -253,7 +256,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         try {
             for (int i = 0; i < bufs.length; i++) {
                 while (bufs[i].isReadable()) {
-                    int b = Byte.toUnsignedInt(bufs[i].readByte());
+                    int b = bufs[i].readByte() & 0xFF;
                     if (b != i + 1) {
                         fail("Expected byte " + (i + 1) +
                                 " at index " + (bufs[i].readerIndex() - 1) +
@@ -268,10 +271,82 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
-    private static void shuffle(SplittableRandom rng, Object array) {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void purgeScanShouldEvictIdleChunks(boolean threadLocal) throws Exception {
+        // Thread-local magazines require FastThreadLocalThread
+        // (allocate() checks currentThreadWillCleanupFastThreadLocals)
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
+        final long purgePolls = threadLocal ?
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL :
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
+        Runnable test = new Runnable() {
+            @Override
+            public void run() {
+                assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
+            }
+        };
+        if (threadLocal) {
+            FutureTask<Void> task = new FutureTask<Void>(test, null);
+            FastThreadLocalThread thread = new FastThreadLocalThread(task);
+            thread.start();
+            thread.join();
+            task.get();
+        } else {
+            test.run();
+        }
+    }
+
+    private static void assertPurgeScanEvictsIdleChunks(AdaptiveByteBufAllocator allocator, long purgePolls) {
+        ByteBuf probe = allocator.heapBuffer(256);
+        long chunkSize = allocator.usedHeapMemory();
+        int buffersPerChunk = (int) (chunkSize / 256);
+        probe.release();
+
+        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
+        int totalBuffers = totalChunks * buffersPerChunk;
+        List<ByteBuf> bufs = new ArrayList<ByteBuf>(totalBuffers);
+        for (int i = 0; i < totalBuffers; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+        bufs.clear();
+        long memoryAfterRelease = allocator.usedHeapMemory();
+
+        int threshold = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD;
+        // Account for pollChunk calls burned during setup (one per chunk created)
+        // and partition shuffle: with N notEmpty and P polls, each chunk is polled
+        // P/N of the time. Epochs advance at rate 1-P/N per cycle. Need enough cycles
+        // for the slowest chunk to reach threshold.
+        int setupPolls = totalChunks;
+        int notEmpty = totalChunks - AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        double advanceRate = 1.0 - (double) purgePolls / notEmpty;
+        int cyclesNeeded = advanceRate > 0 ? (int) Math.ceil((threshold + 1) / advanceRate) + 2 : threshold + 2;
+        int pollsNeeded = setupPolls + (int) (cyclesNeeded * purgePolls);
+        for (int poll = 0; poll < pollsNeeded; poll++) {
+            for (int i = 0; i < buffersPerChunk; i++) {
+                bufs.add(allocator.heapBuffer(256));
+            }
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            bufs.clear();
+        }
+
+        long memoryAfterPurge = allocator.usedHeapMemory();
+        assertTrue(memoryAfterPurge < memoryAfterRelease,
+                "Memory should decrease after purge scans evict idle chunks. " +
+                "Before purge: " + memoryAfterRelease + ", after purge: " + memoryAfterPurge);
+    }
+
+    private static void shuffle(Object array) {
+        Random rng = PlatformDependent.threadLocalRandom();
         int len = Array.getLength(array);
         for (int i = 0; i < len; i++) {
-            int n = rng.nextInt(i, len);
+            int n = i + rng.nextInt(len - i);
             Object value = Array.get(array, i);
             Array.set(array, i, Array.get(array, n));
             Array.set(array, n, value);
