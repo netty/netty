@@ -30,6 +30,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.invoke.MethodType.methodType;
@@ -53,6 +54,7 @@ final class PlatformDependent0 {
     private static final MethodHandle ABSOLUTE_PUT_BUFFER;
     private static final MethodHandle ABSOLUTE_PUT_ARRAY;
     private static final MethodHandle MEMORY_SEGMENT_ADDRESS_OF_BUFFER;
+    private static final MethodHandle SPLITTABLE_RANDOM_NEXT_BYTES;
     private static final boolean IS_ANDROID = isAndroid0();
     private static final int JAVA_VERSION = javaVersion0();
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
@@ -565,6 +567,23 @@ final class PlatformDependent0 {
             MEMORY_SEGMENT_ADDRESS_OF_BUFFER = null;
         }
 
+        if (javaVersion() >= 10) {
+            SPLITTABLE_RANDOM_NEXT_BYTES = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        MethodType type = methodType(void.class, byte[].class);
+                        Class<SplittableRandom> cls = SplittableRandom.class;
+                        return MethodHandles.publicLookup().findVirtual(cls, "nextBytes", type);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            SPLITTABLE_RANDOM_NEXT_BYTES = null;
+        }
+
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
@@ -681,6 +700,14 @@ final class PlatformDependent0 {
 
     static boolean unalignedAccess() {
         return UNALIGNED;
+    }
+
+    static void splittableRandomNextBytes(SplittableRandom rng, byte[] data) {
+        try {
+            SPLITTABLE_RANDOM_NEXT_BYTES.invokeExact(rng, data);
+        } catch (Throwable e) {
+            throw new LinkageError("Error calling SplittableRandom.nextBytes", e);
+        }
     }
 
     static void throwException(Throwable cause) {

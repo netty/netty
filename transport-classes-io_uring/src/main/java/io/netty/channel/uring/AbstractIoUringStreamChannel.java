@@ -341,7 +341,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     buf = alloc().directBuffer(chunkSize);
                     try {
                         ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
-                        while (buf.writableBytes() > 0) {
+                        // Mirror epoll's writeFileRegion(): stop calling transferTo() once
+                        // the region reports it has been fully transferred. The FileRegion
+                        // contract permits implementations to assume no further invocations
+                        // past transferred() == count().
+                        while (buf.writableBytes() > 0 && region.transferred() < region.count()) {
                             long t = region.transferTo(ch, region.transferred());
                             if (t <= 0) {
                                 break;

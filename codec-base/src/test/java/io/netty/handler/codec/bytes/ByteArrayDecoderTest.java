@@ -20,9 +20,10 @@ import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-import static io.netty.buffer.Unpooled.*;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -38,7 +39,7 @@ public class ByteArrayDecoderTest {
     @Test
     public void testDecode() {
         byte[] b = new byte[2048];
-        new Random().nextBytes(b);
+        ThreadLocalRandom.current().nextBytes(b);
         ch.writeInbound(wrappedBuffer(b));
         assertArrayEquals(b, ch.readInbound());
     }

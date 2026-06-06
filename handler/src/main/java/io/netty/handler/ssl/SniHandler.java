@@ -82,7 +82,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
-        this(mapping, 0, 0L);
+        this(mapping, DEFAULT_MAX_CLIENT_HELLO_LENGTH, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -119,7 +119,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      * @param handshakeTimeoutMillis the handshake timeout in milliseconds
      */
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
-        this(mapping, 0, handshakeTimeoutMillis);
+        this(mapping, DEFAULT_MAX_CLIENT_HELLO_LENGTH, handshakeTimeoutMillis);
     }
 
     /**

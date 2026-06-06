@@ -16,11 +16,14 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,16 +86,26 @@ public class EmptyByteBufTest {
     @Test
     public void testMemoryAddress() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
-        if (empty.hasMemoryAddress()) {
-            assertNotEquals(0L, empty.memoryAddress());
-        } else {
-            try {
-                empty.memoryAddress();
-                fail();
-            } catch (UnsupportedOperationException ignored) {
-                // Ignore.
-            }
-        }
+        assertEmptyBufferMemoryAddress(empty);
+    }
+
+    @Test
+    public void testAllocatorIoBufferMemoryAddress() {
+        ByteBuf empty = ByteBufAllocator.DEFAULT.ioBuffer(0, 0);
+        assertEmptyBufferMemoryAddress(empty);
+    }
+
+    private static void assertEmptyBufferMemoryAddress(ByteBuf empty) {
+        long memoryAddress = directBufferAddress(empty.nioBuffer());
+        assertTrue(empty.hasMemoryAddress());
+        assertEquals(memoryAddress, empty.memoryAddress());
+    }
+
+    private static long directBufferAddress(ByteBuffer buffer) {
+        assumeTrue(PlatformDependent.hasDirectByteBufferAddress(buffer));
+        long memoryAddress = PlatformDependent.directBufferAddress(buffer);
+        assumeTrue(memoryAddress != 0);
+        return memoryAddress;
     }
 
     @Test

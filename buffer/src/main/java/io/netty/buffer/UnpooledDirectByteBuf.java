@@ -230,16 +230,28 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public boolean hasMemoryAddress() {
         CleanableDirectBuffer cleanable = this.cleanable;
-        return cleanable != null && cleanable.hasMemoryAddress();
+        if (cleanable != null) {
+            return cleanable.hasMemoryAddress();
+        }
+        ByteBuffer buffer = this.buffer;
+        return buffer != null && PlatformDependent.hasDirectByteBufferAddress(buffer);
     }
 
     @Override
     public long memoryAddress() {
         ensureAccessible();
-        if (!hasMemoryAddress()) {
-            throw new UnsupportedOperationException();
+        CleanableDirectBuffer cleanable = this.cleanable;
+        if (cleanable != null) {
+            if (cleanable.hasMemoryAddress()) {
+                return cleanable.memoryAddress();
+            }
+        } else {
+            ByteBuffer buffer = this.buffer;
+            if (PlatformDependent.hasDirectByteBufferAddress(buffer)) {
+                return PlatformDependent.directBufferAddress(buffer);
+            }
         }
-        return cleanable.memoryAddress();
+        throw new UnsupportedOperationException();
     }
 
     @Override
