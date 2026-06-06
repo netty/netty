@@ -27,12 +27,14 @@ import io.netty.handler.codec.sctp.SctpInboundByteStreamHandler;
 import io.netty.handler.codec.sctp.SctpMessageCompletionHandler;
 import io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler;
 import io.netty.testsuite.util.TestUtils;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.TestInfo;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +46,7 @@ public class SctpEchoTest extends AbstractSctpTest {
     static final byte[] data = new byte[4096]; //could not test ultra jumbo frames
 
     static {
-        random.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     @Test

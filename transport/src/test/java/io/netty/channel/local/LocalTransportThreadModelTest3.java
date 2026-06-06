@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
@@ -163,7 +163,7 @@ public class LocalTransportThreadModelTest3 {
             Thread pipelineModifier = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    Random random = new Random();
+                    SplittableRandom random = new SplittableRandom();
 
                     while (true) {
                         try {
@@ -253,7 +253,7 @@ public class LocalTransportThreadModelTest3 {
                     EventType.READ, EventType.WRITE, EventType.EXCEPTION_CAUGHT };
         }
 
-        Random random = new Random();
+        SplittableRandom random = new SplittableRandom();
         LinkedList<EventType> expectedEvents = new LinkedList<EventType>();
         for (int i = 0; i < size; i++) {
             expectedEvents.add(events[random.nextInt(events.length)]);

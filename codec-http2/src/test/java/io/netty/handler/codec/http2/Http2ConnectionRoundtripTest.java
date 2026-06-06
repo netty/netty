@@ -49,9 +49,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1351,7 +1351,7 @@ public class Http2ConnectionRoundtripTest {
      */
     private static ByteBuf randomBytes(int length) {
         final byte[] bytes = new byte[length];
-        new Random().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 }

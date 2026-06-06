@@ -31,6 +31,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateExecutor;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -41,6 +42,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,7 +54,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     public static Collection<Object[]> data() {
