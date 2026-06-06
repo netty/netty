@@ -74,6 +74,86 @@ public final class HttpHeaderValidationUtil {
     }
 
     /**
+     * Check if a header value must stay in its own field line instead of being merged into a comma-separated list.
+     * <p>
+     * These are headers whose syntax is singular or uses a non-comma delimiter, so CSV combining would change the
+     * semantics of the field.
+     *
+     * @param name the name of the header to check. The check is case-insensitive.
+     * @return {@code true} if the given header name must not be combined.
+     */
+    @SuppressWarnings("deprecation") // We need to check for deprecated headers as well.
+    public static boolean isNonCombinedHeader(CharSequence name) {
+        int len = name.length();
+        switch (len) {
+            case 3:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.AGE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.DNT);
+            case 4:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.DATE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.ETAG) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.FROM) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.HOST);
+            case 6:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.COOKIE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.ORIGIN) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.SERVER);
+            case 7:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.EXPIRES) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.REFERER);
+            case 8:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.IF_RANGE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.LOCATION);
+            case 10:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.SET_COOKIE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.USER_AGENT);
+            case 11:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_MD5) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.RETRY_AFTER) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.SET_COOKIE2);
+            case 12:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_BASE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_TYPE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.MAX_FORWARDS);
+            case 13:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.AUTHORIZATION) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_RANGE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.LAST_MODIFIED);
+            case 14:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_LENGTH);
+            case 15:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.X_FRAME_OPTIONS);
+            case 16:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_LOCATION) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.WEBSOCKET_ORIGIN) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.X_REQUESTED_WITH);
+            case 17:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.IF_MODIFIED_SINCE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_KEY);
+            case 18:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_KEY1) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_KEY2) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.WEBSOCKET_LOCATION);
+            case 19:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_DISPOSITION) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.IF_UNMODIFIED_SINCE) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.PROXY_AUTHORIZATION);
+            case 20:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_ACCEPT) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_ORIGIN);
+            case 22:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.SEC_WEBSOCKET_LOCATION);
+            case 23:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_SECURITY_POLICY);
+            case 25:
+                return contentEqualsIgnoreCase(name, HttpHeaderNames.CONTENT_TRANSFER_ENCODING) ||
+                        contentEqualsIgnoreCase(name, HttpHeaderNames.UPGRADE_INSECURE_REQUESTS);
+            default:
+                return false;
+        }
+    }
+
+    /**
      * If the given header is {@link HttpHeaderNames#TE} and the given header value is <em>not</em>
      * {@link HttpHeaderValues#TRAILERS}, then return {@code true}. Otherwie, {@code false}.
      * <p>
