@@ -29,8 +29,6 @@ import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +50,6 @@ public class IoUringDatagramConnectedWriteExceptionTest extends DatagramConnecte
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    @DisabledOnOs(OS.WINDOWS)
     public void testWriteOffsetBytebuf(TestInfo testInfo) throws Throwable {
         run(testInfo, (Runner<Bootstrap>) this::testWriteOffsetBytebuf);
     }
@@ -91,10 +88,14 @@ public class IoUringDatagramConnectedWriteExceptionTest extends DatagramConnecte
            assertArrayEquals(EXPECTED, actual);
         } finally {
            if (clientChannel != null) {
-               clientChannel.close();
+               clientChannel.close().sync();
+           }
+           if (serverChannel != null) {
+               serverChannel.close().sync();
            }
        }
      }
+
     private static ByteBuf directReaderIndex(ByteBufAllocator alloc) {
         ByteBuf buf = alloc.directBuffer(BAD_PREFIX.length + EXPECTED.length);
         buf.writeBytes(BAD_PREFIX);
