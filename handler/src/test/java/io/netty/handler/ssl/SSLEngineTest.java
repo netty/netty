@@ -1055,6 +1055,8 @@ public abstract class SSLEngineTest {
                         }
                     }
                 });
+                p.addLast(new SilenceExceptionHandler()
+                        .messageContains("Received fatal alert: internal_error"));
                 serverConnectedChannel = ch;
             }
         });
@@ -1234,6 +1236,8 @@ public abstract class SSLEngineTest {
                         }
                     }
                 });
+                p.addLast(new SilenceExceptionHandler()
+                        .messageContains("Received fatal alert: internal_error"));
                 serverConnectedChannel = ch;
             }
         });
@@ -1276,6 +1280,8 @@ public abstract class SSLEngineTest {
                         }
                     }
                 });
+                p.addLast(new SilenceExceptionHandler()
+                        .messageContains("TLSV1_ALERT_CERTIFICATE_REQUIRED"));
             }
         });
 
@@ -1593,6 +1599,8 @@ public abstract class SSLEngineTest {
                                 ctx.pipeline().get(SslHandler.class).renegotiate();
                             }
                         });
+                        p.addLast(new SilenceExceptionHandler()
+                                .messageContains("no_renegotiation"));
                     }
                 });
 
