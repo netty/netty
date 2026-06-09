@@ -149,7 +149,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             Ip6SubnetFilterRule ip6SubnetFilterRule = (Ip6SubnetFilterRule) filterRule;
             return ip6SubnetFilterRule.networkAddress
                     .compareTo(Ip6SubnetFilterRule.ipToInt((Inet6Address) inetSocketAddress.getAddress())
-                            .and(ip6SubnetFilterRule.networkAddress));
+                            .and(ip6SubnetFilterRule.subnetMask));
         }
     }
 
@@ -245,7 +245,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             byte[] octets = ipAddress.getAddress();
             assert octets.length == 16;
 
-            return new BigInteger(octets);
+            return new BigInteger(1, octets);
         }
 
         private static BigInteger prefixToSubnetMask(int cidrPrefix) {

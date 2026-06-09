@@ -21,7 +21,7 @@ import net.jpountz.xxhash.XXHashFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
@@ -35,7 +35,7 @@ public class ByteBufChecksumTest {
 
     @BeforeAll
     public static void setUp() {
-        new Random().nextBytes(BYTE_ARRAY);
+        ThreadLocalRandom.current().nextBytes(BYTE_ARRAY);
     }
 
     @Test

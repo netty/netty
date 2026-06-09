@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -50,7 +51,7 @@ public class EpollSpliceTest {
     private static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     @Test
@@ -136,8 +137,9 @@ public class EpollSpliceTest {
         cb.handler(ch);
         Channel cc = cb.connect(pc.localAddress()).syncUninterruptibly().channel();
 
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            int length = Math.min(rng.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
             cc.writeAndFlush(buf);
             i += length;
@@ -205,8 +207,9 @@ public class EpollSpliceTest {
         cb.handler(new ChannelInboundHandlerAdapter());
         Channel cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            int length = Math.min(rng.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
             cc.writeAndFlush(buf);
             i += length;

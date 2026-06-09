@@ -224,6 +224,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * <em>Internal use only</em>.
      */
     private enum State {
+        SKIP_INITIAL_LINE_CHARS,
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,
@@ -237,7 +238,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         UPGRADED
     }
 
-    private State currentState = State.SKIP_CONTROL_CHARS;
+    private State currentState = State.SKIP_INITIAL_LINE_CHARS;
 
     /**
      * Creates a new instance with the default
@@ -374,7 +375,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         switch (currentState) {
-        case SKIP_CONTROL_CHARS:
+        case SKIP_INITIAL_LINE_CHARS:
             // Fall-through
         case READ_INITIAL: try {
             ByteBuf line = lineParser.parse(buffer, defaultStrictCRLFCheck);
@@ -618,6 +619,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 resetNow();
                 return;
             case SKIP_CONTROL_CHARS: // fall-trough
+            case SKIP_INITIAL_LINE_CHARS: // fall-trough
             case READ_INITIAL:// fall-trough
             case BAD_MESSAGE: // fall-trough
             case UPGRADED: // fall-trough
@@ -717,7 +719,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         resetRequested.lazySet(false);
-        currentState = State.SKIP_CONTROL_CHARS;
+        currentState = State.SKIP_INITIAL_LINE_CHARS;
     }
 
     private HttpMessage invalidMessage(HttpMessage current, ByteBuf in, Exception cause) {
@@ -1338,26 +1340,33 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (readableBytes == 0) {
                 return null;
             }
-            if (currentState == State.SKIP_CONTROL_CHARS &&
-                    skipControlChars(buffer, readableBytes, buffer.readerIndex())) {
+            if (currentState == State.SKIP_INITIAL_LINE_CHARS &&
+                    skipLineChars(buffer, readableBytes, buffer.readerIndex(), strictCRLFCheck)) {
                 return null;
             }
             return super.parse(buffer, strictCRLFCheck);
         }
 
-        private boolean skipControlChars(ByteBuf buffer, int readableBytes, int readerIndex) {
-            assert currentState == State.SKIP_CONTROL_CHARS;
+        private boolean skipLineChars(ByteBuf buffer, int readableBytes, int readerIndex, Runnable strictCRLFCheck) {
+            assert currentState == State.SKIP_INITIAL_LINE_CHARS;
             final int maxToSkip = Math.min(maxLength, readableBytes);
-            final int firstNonControlIndex = buffer.forEachByte(readerIndex, maxToSkip, SKIP_CONTROL_CHARS_BYTES);
-            if (firstNonControlIndex == -1) {
+            final int firstNonLineIndex = buffer.forEachByte(readerIndex, maxToSkip,
+                    strictCRLFCheck == null ? SKIP_CONTROL_CHARS_BYTES : ByteProcessor.FIND_NON_CRLF);
+            if (firstNonLineIndex == -1) {
                 buffer.skipBytes(maxToSkip);
                 if (readableBytes > maxLength) {
                     throw newException(maxLength);
                 }
                 return true;
             }
+            if (strictCRLFCheck != null) {
+                final int b = buffer.getByte(firstNonLineIndex) & 0xFF;
+                if (Character.isISOControl(b)) {
+                    strictCRLFCheck.run();
+                }
+            }
             // from now on we don't care about control chars
-            buffer.readerIndex(firstNonControlIndex);
+            buffer.readerIndex(firstNonLineIndex);
             currentState = State.READ_INITIAL;
             return false;
         }
@@ -1378,7 +1387,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private static final ByteProcessor SKIP_CONTROL_CHARS_BYTES = new ByteProcessor() {
-
         @Override
         public boolean process(byte value) {
             return ISO_CONTROL_OR_WHITESPACE[128 + value];

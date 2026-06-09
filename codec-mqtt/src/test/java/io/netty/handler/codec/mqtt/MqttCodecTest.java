@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.TooLongFrameException;
@@ -259,7 +260,19 @@ public class MqttCodecTest {
     }
 
     @Test
-    public void testConnectMessageNoPassword() throws Exception {
+    public void testConnectMessagePasswordOnlyForMqtt31() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(
+                MqttVersion.MQTT_3_1,
+                null,
+                PASSWORD,
+                MqttProperties.NO_PROPERTIES,
+                MqttProperties.NO_PROPERTIES);
+
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testConnectMessagePasswordOnlyForMqtt311() throws Exception {
         final MqttConnectMessage message = createConnectMessage(
                 MqttVersion.MQTT_3_1_1,
                 null,
@@ -268,6 +281,31 @@ public class MqttCodecTest {
                 MqttProperties.NO_PROPERTIES);
 
         assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
+    }
+
+    @Test
+    public void testConnectMessagePasswordOnlyForMqtt5() throws Exception {
+        final MqttConnectMessage message = createConnectMessage(
+                MqttVersion.MQTT_5,
+                null,
+                PASSWORD,
+                MqttProperties.NO_PROPERTIES,
+                MqttProperties.NO_PROPERTIES);
+
+        assertFalse(message.variableHeader().hasUserName());
+        assertTrue(message.variableHeader().hasPassword());
+
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        mqttDecoder.channelRead(ctx, byteBuf);
+
+        assertEquals(1, out.size());
+
+        final MqttConnectMessage decodedMessage = (MqttConnectMessage) out.get(0);
+
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateConnectVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
+        validateConnectPayload(message.payload(), decodedMessage.payload());
     }
 
     @Test
@@ -297,6 +335,78 @@ public class MqttCodecTest {
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validatePublishVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
         validatePublishPayload(message.payload(), decodedMessage.payload());
+    }
+
+    @Test
+    public void testPublishMessageIncompleteVariableHeaderDoesNotUseCumulationSizeForTooLongCheck() throws Exception {
+        // The leading PUBLISH is hand-crafted rather than going through MqttEncoder because the
+        // bug under test only triggers when variable-header decoding asks for REPLAY mid-message,
+        // which in turn requires a deliberately malformed packet (topic-name length prefix larger
+        // than the bytes we actually supply). MqttEncoder only produces well-formed messages.
+        final int maxBytesInMessage = 16;
+        // bytes after the fixed header; < 128 so it fits in a 1-byte Variable Byte Integer.
+        final int currentPacketRemainingLength = 10;
+        // > the bytes we write below, so the decoder must REPLAY mid-variable-header.
+        final int claimedTopicNameLength = 32;
+        final int followingPingReqPackets = 3;
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(maxBytesInMessage));
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        // Leading PUBLISH packet (incomplete - missing most of the topic name):
+        // Fixed header byte 1: PUBLISH (type 3), DUP=0, QoS=0, RETAIN=0.
+        byteBuf.writeByte(0x30);
+        // Fixed header remaining-length, encoded as a Variable Byte Integer (single byte for values < 128).
+        byteBuf.writeByte(currentPacketRemainingLength);
+        // Variable header: 2-byte topic-name length prefix.
+        byteBuf.writeShort(claimedTopicNameLength);
+        // ... + only 8 of the 32 topic-name bytes the prefix claims (so the decoder will ask for REPLAY).
+        byteBuf.writeZero(currentPacketRemainingLength - 2);
+        // Trailing PINGREQ packets - the cumulation bytes that the buggy size check used to look at.
+        // Each PINGREQ is just a 2-byte fixed header: 0xC0 (type 12, flags 0) and remaining-length 0.
+        for (int i = 0; i < followingPingReqPackets; i++) {
+            byteBuf.writeByte(0xC0);
+            byteBuf.writeByte(0);
+        }
+
+        try {
+            assertFalse(channel.writeInbound(byteBuf));
+            assertNull(channel.readInbound());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testPublishMessageIncompleteVariableHeaderStillFailsWhenCurrentPacketTooLarge() throws Exception {
+        // Same hand-crafting rationale as the test above: a malformed (incomplete-topic) PUBLISH
+        // is needed so variable-header decoding asks for REPLAY, which is the code path under test.
+        final int maxBytesInMessage = 16;
+        // Declared packet size already exceeds the limit; the in-flight check must still flag it.
+        final int currentPacketRemainingLength = maxBytesInMessage + 1;
+        // > the bytes we write below, so the decoder still asks for REPLAY mid-variable-header.
+        final int claimedTopicNameLength = 32;
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder(maxBytesInMessage));
+        ByteBuf byteBuf = ALLOCATOR.buffer();
+        // Fixed header byte 1: PUBLISH (type 3), all flags 0.
+        byteBuf.writeByte(0x30);
+        // Fixed header remaining-length Variable Byte Integer: 17 (still a single byte since < 128).
+        byteBuf.writeByte(currentPacketRemainingLength);
+        // Variable header: 2-byte topic-name length prefix claiming 32 bytes.
+        byteBuf.writeShort(claimedTopicNameLength);
+        // ... + 14 zero bytes - fewer than the 32 claimed, so the decoder will ask for REPLAY.
+        byteBuf.writeZero(maxBytesInMessage - 2);
+
+        try {
+            assertTrue(channel.writeInbound(byteBuf));
+            MqttMessage decodedMessage = channel.readInbound();
+            try {
+                assertTrue(decodedMessage.decoderResult().isFailure());
+                assertInstanceOf(TooLongFrameException.class, decodedMessage.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(decodedMessage);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     @Test
@@ -405,6 +515,41 @@ public class MqttCodecTest {
     @Test
     public void testDisconnectMessage() throws Exception {
         testMessageWithOnlyFixedHeader(MqttMessage.DISCONNECT);
+    }
+
+    @Test
+    public void testPingReqWithNonZeroRemainingLengthIsRejected() throws Exception {
+        // Regression for https://github.com/netty/netty/issues/16851: PINGREQ is a 2-byte
+        // fixed-header-only packet (0xC0 0x00). The bytes below claim Remaining Length 2,
+        // which makes the trailing 0xD0 0x00 part of the same (malformed) PINGREQ frame
+        // rather than a separate PINGRESP. The decoder must reject this as one invalid
+        // message rather than silently accept two.
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder());
+        ByteBuf byteBuf = channel.alloc().buffer();
+        // Fixed header byte 1: PINGREQ (type 12), all flags 0.
+        byteBuf.writeByte(0xC0);
+        // Remaining Length 2 - invalid per MQTT 3.1.1 / 5.0 spec (PINGREQ has no variable
+        // header or payload, so Remaining Length must be 0).
+        byteBuf.writeByte(0x02);
+        // Two leftover bytes still inside the malformed packet's frame:
+        byteBuf.writeByte(0xD0);
+        byteBuf.writeByte(0x00);
+
+        try {
+            assertTrue(channel.writeInbound(byteBuf));
+            MqttMessage first = channel.readInbound();
+            try {
+                assertTrue(first.decoderResult().isFailure(),
+                        "expected a failed message for the malformed PINGREQ");
+                assertInstanceOf(DecoderException.class, first.decoderResult().cause());
+            } finally {
+                ReferenceCountUtil.release(first);
+            }
+            // No second message: the trailing bytes belong to the malformed frame.
+            assertNull(channel.readInbound());
+        } finally {
+            assertFalse(channel.finishAndReleaseAll());
+        }
     }
 
     //All 0..F message type codes are valid in MQTT 5

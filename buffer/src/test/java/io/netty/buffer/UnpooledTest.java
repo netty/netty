@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
@@ -33,6 +34,7 @@ import java.util.Map.Entry;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.EmptyArrays.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -279,6 +281,22 @@ public class UnpooledTest {
         assertEqualsAndRelease(wrappedBuffer(new byte[] { 1, 2, 3 }),
                 wrappedBuffer(ByteBuffer.wrap(new byte[] { 1 }),
                 ByteBuffer.wrap(new byte[] { 2 }), ByteBuffer.wrap(new byte[] { 3 })));
+    }
+
+    @Test
+    public void testWrappedDirectBufferMemoryAddress() {
+        ByteBuffer nioBuffer = ByteBuffer.allocateDirect(16);
+        nioBuffer.position(4).limit(12);
+        ByteBuffer expectedBuffer = nioBuffer.slice();
+        assumeTrue(PlatformDependent.hasDirectByteBufferAddress(expectedBuffer));
+
+        ByteBuf buffer = wrappedBuffer(nioBuffer);
+        try {
+            assertTrue(buffer.hasMemoryAddress());
+            assertEquals(PlatformDependent.directBufferAddress(expectedBuffer), buffer.memoryAddress());
+        } finally {
+            buffer.release();
+        }
     }
 
     @Test

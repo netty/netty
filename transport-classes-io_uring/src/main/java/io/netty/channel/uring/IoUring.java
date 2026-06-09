@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Limits;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -47,13 +48,16 @@ public final class IoUring {
     private static final boolean IORING_SETUP_NO_SQARRAY_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    private static final boolean IORING_ENTER_NO_IOWAIT_SUPPORTED;
     private static final boolean IORING_ACCEPT_MULTISHOT_ENABLED;
     private static final boolean IORING_RECV_MULTISHOT_ENABLED;
     private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
+    private static final boolean IORING_ENTER_NO_IOWAIT_ENABLED;
     static final int NUM_ELEMENTS_IOVEC;
     static final int DEFAULT_RING_SIZE;
     static final int DEFAULT_CQ_SIZE;
+    static final int DEFAULT_PENDING_OPS_INITIAL_CAPACITY;
     static final int DISABLE_SETUP_CQ_SIZE = -1;
 
     private static final InternalLogger logger;
@@ -79,7 +83,9 @@ public final class IoUring {
         boolean noSqarraySupported = false;
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
+        boolean enterNoIoWaitSupported = false;
         int numElementsIoVec = 10;
+        int pendingOpsInitialCapacity;
 
         String kernelVersion = "[unknown]";
         try {
@@ -106,6 +112,7 @@ public final class IoUring {
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ioUringProbe);
                         spliceSupported = Native.isSpliceSupported(ioUringProbe);
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        enterNoIoWaitSupported = (ringBuffer.features() & Native.IORING_FEAT_NO_IOWAIT) != 0;
                         sendZcSupported = Native.isSendZcSupported(ioUringProbe);
                         sendmsgZcSupported =  Native.isSendmsgZcSupported(ioUringProbe);
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
@@ -163,6 +170,7 @@ public final class IoUring {
         IORING_SETUP_NO_SQARRAY_SUPPORTED = noSqarraySupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
         IORING_REGISTER_BUFFER_RING_INC_SUPPORTED = registerBufferRingIncSupported;
+        IORING_ENTER_NO_IOWAIT_SUPPORTED = enterNoIoWaitSupported;
 
         IORING_ACCEPT_MULTISHOT_ENABLED = IORING_ACCEPT_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                 "io.netty.iouring.acceptMultiShotEnabled", true);
@@ -175,10 +183,25 @@ public final class IoUring {
                 "io.netty.iouring.recvsendBundleEnabled", false);
         IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                "io.netty.iouring.pollAddMultishotEnabled", true);
+        IORING_ENTER_NO_IOWAIT_ENABLED = IORING_ENTER_NO_IOWAIT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.enterNoIoWaitEnabled", false);
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
 
         DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
-
+        pendingOpsInitialCapacity = SystemPropertyUtil.getInt(
+                "io.netty.iouring.pendingOpsInitialCapacity", DEFAULT_RING_SIZE);
+        if (pendingOpsInitialCapacity <= 0) {
+            int configuredCapacity = pendingOpsInitialCapacity;
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(DEFAULT_RING_SIZE);
+            logger.warn("Invalid value {} for -Dio.netty.iouring.pendingOpsInitialCapacity; using {} instead.",
+                    configuredCapacity, pendingOpsInitialCapacity);
+        } else if (Integer.bitCount(pendingOpsInitialCapacity) != 1) {
+            int configuredCapacity = pendingOpsInitialCapacity;
+            pendingOpsInitialCapacity = MathUtil.safeFindNextPositivePowerOfTwo(pendingOpsInitialCapacity);
+            logger.warn("Rounding -Dio.netty.iouring.pendingOpsInitialCapacity from {} up to {}.",
+                    configuredCapacity, pendingOpsInitialCapacity);
+        }
+        DEFAULT_PENDING_OPS_INITIAL_CAPACITY = pendingOpsInitialCapacity;
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {
             DEFAULT_CQ_SIZE = Math.max(DEFAULT_RING_SIZE,
                     SystemPropertyUtil.getInt("io.netty.iouring.cqSize", 4096));
@@ -319,6 +342,21 @@ public final class IoUring {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
     }
 
+    static boolean isIoringEnterNoIoWaitSupported() {
+        return IORING_ENTER_NO_IOWAIT_SUPPORTED;
+    }
+
+    /**
+     * Returns if {@code IORING_ENTER_NO_IOWAIT} is used or not. When enabled (and supported by the kernel),
+     * idle io_uring_enter(2) waits are not accounted as iowait, which makes server-side CPU metrics more
+     * accurate but also suppresses the cpufreq governor's iowait boost.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isIoringEnterNoIoWaitEnabled() {
+        return IORING_ENTER_NO_IOWAIT_ENABLED;
+    }
+
     /**
      * Returns if multi-shot ACCEPT is used or not.
      *
@@ -398,7 +436,8 @@ public final class IoUring {
                 + ", REGISTER_BUFFER_RING_SUPPORTED=" + IORING_REGISTER_BUFFER_RING_SUPPORTED
                 + ", REGISTER_BUFFER_RING_INC_SUPPORTED=" + IORING_REGISTER_BUFFER_RING_INC_SUPPORTED
                 + ", SEND_ZC_SUPPORTED=" + IORING_SEND_ZC_SUPPORTED
-                + ", SENDMSG_ZC_SUPPORTED=" + IORING_SENDMSG_ZC_SUPPORTED;
+                + ", SENDMSG_ZC_SUPPORTED=" + IORING_SENDMSG_ZC_SUPPORTED
+                + ", ENTER_NO_IOWAIT_SUPPORTED=" + IORING_ENTER_NO_IOWAIT_SUPPORTED;
     }
 
     /**

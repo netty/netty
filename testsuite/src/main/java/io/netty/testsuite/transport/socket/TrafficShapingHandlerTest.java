@@ -38,9 +38,9 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -58,7 +58,6 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     static final long stepms = (1000 / bandwidthFactor - 10) / 10 * 10;
     static final long minimalms = Math.max(stepms / 2, 20) / 10 * 10;
     static final long check = 10;
-    private static final Random random = new Random();
     static final byte[] data = new byte[messageSize];
 
     private static final String TRAFFIC = "traffic";
@@ -69,7 +68,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     private static EventExecutorGroup groupForGlobal;
     private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
     static {
-        random.nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
     }
 
     @BeforeAll

@@ -147,8 +147,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 (byte) variableHeader.version());
         setMqttVersion(ctx, mqttVersion);
 
-        // as MQTT 3.1 & 3.1.1 spec, If the User Name Flag is set to 0, the Password Flag MUST be set to 0
-        if (!variableHeader.hasUserName() && variableHeader.hasPassword()) {
+        // MQTT 3.1 and 3.1.1 require the Password Flag to be 0 when the User Name Flag is 0.
+        if ((mqttVersion == MqttVersion.MQTT_3_1 || mqttVersion == MqttVersion.MQTT_3_1_1) &&
+                !variableHeader.hasUserName() && variableHeader.hasPassword()) {
             throw new EncoderException("Without a username, the password MUST be not set");
         }
 

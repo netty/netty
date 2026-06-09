@@ -21,25 +21,27 @@ final class UserData {
 
     /**
      * Encode the given data into a long that can be stored as udata.
-     *
+     * layout
+     *  63             32 31      24 23      16 15       0
+     * [     id        ][ unused ][   op    ][   data    ]
      * @param id        the id.
      * @param op        the operation
      * @param data      the custom data
      * @return          the udata.
      */
     static long encode(int id, byte op, short data) {
-        return ((long) data << 48) | ((op & 0xFFL)  << 32) | id & 0xFFFFFFFFL;
+        return ((long) id << Integer.SIZE) | ((op & 0xFFL) << Short.SIZE) | (data & 0xFFFFL);
     }
 
     static int decodeId(long udata) {
-        return (int) (udata & 0xFFFFFFFFL);
+        return (int) (udata >>> Integer.SIZE);
     }
 
     static byte decodeOp(long udata) {
-        return (byte) ((udata >>> 32) & 0xFFL);
+        return (byte) (udata >>> Short.SIZE);
     }
 
     static short decodeData(long udata) {
-        return (short) (udata >>> 48);
+        return (short) udata;
     }
 }

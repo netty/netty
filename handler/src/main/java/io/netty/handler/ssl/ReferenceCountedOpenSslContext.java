@@ -771,7 +771,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (resumptionController != null) {
                     tm = (X509TrustManager) resumptionController.wrapIfNeeded(tm);
                 }
-                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded(tm);
                 if (useExtendedTrustManager(tm)) {
                     // Wrap the TrustManager to provide a better exception message for users to debug hostname
                     // validation failures.

@@ -26,7 +26,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -447,7 +447,7 @@ public class RecyclerTest {
     @MethodSource("ownerTypeAndUnguarded")
     public void testMaxCapacity(OwnerType ownerType, boolean unguarded) {
         testMaxCapacity(ownerType, unguarded, 300);
-        Random rand = new Random();
+        SplittableRandom rand = new SplittableRandom();
         for (int i = 0; i < 50; i++) {
             testMaxCapacity(ownerType, unguarded, rand.nextInt(1000) + 256); // 256 - 1256
         }

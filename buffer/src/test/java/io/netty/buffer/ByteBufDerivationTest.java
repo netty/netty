@@ -19,7 +19,7 @@ package io.netty.buffer;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteOrder;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -172,7 +172,7 @@ public class ByteBufDerivationTest {
     public void testMixture() throws Exception {
         ByteBuf buf = Unpooled.buffer(10000);
         ByteBuf derived = buf;
-        Random rnd = new Random();
+        SplittableRandom rnd = new SplittableRandom();
         for (int i = 0; i < buf.capacity(); i ++) {
             ByteBuf newDerived;
             int randomNumber = rnd.nextInt(4);

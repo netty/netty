@@ -22,6 +22,11 @@ public enum DnsNameResolverChannelStrategy {
     /**
      * Use the same underlying {@link io.netty.channel.Channel} for all queries produced by a single
      {@link DnsNameResolver} instance.
+     * <p>
+     * As the same {@link io.netty.channel.Channel} is used for all queries we will also use the same source port
+     * for all of these. To minimize the risk of spoofing integrators should ideally use multiple resolvers randomly,
+     * so that there is source port randomization following the recommendations of
+     * <a href="https://www.rfc-editor.org/rfc/rfc5452#section-9.2">RFC5452 Section 9.2</a>.
      */
     ChannelPerResolver,
     /**

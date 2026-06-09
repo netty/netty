@@ -31,11 +31,22 @@ public final class IoUringIoOps implements IoOps {
     private final long union2;
     private final int len;
     private final int union3;
-    private final short data;
+    private final long data;
     private final short personality;
     private final short union4;
     private final int union5;
     private final long union6;
+
+    /**
+     * Create a new instance which represents the {@code io_uring_sqe} struct.
+     * @deprecated use
+     * {@link #IoUringIoOps(byte, byte, short, int, long, long, int, int, long, short, short, int, long)} instead.
+     */
+    @Deprecated
+    public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
+                        short data, short union4, short personality, int union5, long union6) {
+        this(opcode, flags, ioPrio, fd, union1, union2, len, union3, (long) data, union4, personality, union5, union6);
+    }
 
     /**
      * Create a new instance which represents the {@code io_uring_sqe} struct.
@@ -132,7 +143,7 @@ public final class IoUringIoOps implements IoOps {
      * </pre>
      */
     public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
-                        short data, short union4, short personality, int union5, long union6) {
+                        long data, short union4, short personality, int union5, long union6) {
         this.opcode = opcode;
         this.flags = flags;
         this.ioPrio = ioPrio;
@@ -180,7 +191,18 @@ public final class IoUringIoOps implements IoOps {
         return union3;
     }
 
+    /**
+     * Returns the data that is passed as part of this {@link IoUringIoOps}.
+     *
+     * @return  data.
+     * @deprecated use {@link #userData()} instead.
+     */
+    @Deprecated
     short data() {
+        return (short) data;
+    }
+
+    long userData() {
         return data;
     }
 

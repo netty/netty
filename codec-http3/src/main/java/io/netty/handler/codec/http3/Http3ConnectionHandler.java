@@ -72,16 +72,12 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             this.nonStandardSettingsValidator = (id, value) -> false;
         }
         if (localSettings == null) {
-            localSettings = new DefaultHttp3SettingsFrame();
+            localSettings = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
         } else {
             localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
         }
-        Long maxFieldSectionSize = localSettings.get(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
-        if (maxFieldSectionSize == null) {
-             // Default value in rfc is unlimited
-             // but Quic can have max 2^62-1 max value as TWO bits reserved for Variable-Length Integer Encoding
-            maxFieldSectionSize = (1L << 62) - 1;
-        }
+        Long maxFieldSectionSize = localSettings.getOrDefault(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE,
+                Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE);
         this.maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
         int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);

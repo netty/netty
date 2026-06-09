@@ -39,6 +39,7 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -54,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,7 +82,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
 
         try {
             X509Bundle cert = new CertificateBuilder()
@@ -329,9 +331,10 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
         Future<Channel> renegoFuture = null;
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         while (clientSendCounter.get() < data.length) {
             int clientSendCounterVal = clientSendCounter.get();
-            int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
+            int length = Math.min(rng.nextInt(1024 * 64), data.length - clientSendCounterVal);
             ByteBuf buf = randomBufferType(clientChannel.alloc(), data, clientSendCounterVal, length);
             if (useCompositeByteBuf) {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
