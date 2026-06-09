@@ -46,6 +46,7 @@ import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
@@ -139,6 +140,8 @@ final class SniClientJava8TestUtil {
                             }
                         }
                     });
+                    ch.pipeline().addLast(new SilenceExceptionHandler()
+                            .rootCauseInstanceOf(SSLHandshakeException.class));
                 }
             }).bind(address).syncUninterruptibly().channel();
 
@@ -148,7 +151,15 @@ final class SniClientJava8TestUtil {
             SslHandler sslHandler = new SslHandler(
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
             Bootstrap cb = new Bootstrap();
-            cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler)
+            cc = cb.group(group).channel(LocalChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(sslHandler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
+                        }
+                    })
                     .connect(address).syncUninterruptibly().channel();
 
             promise.syncUninterruptibly();
