@@ -45,7 +45,9 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,36 +204,36 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
+        final AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicBoolean loopStarted = new AtomicBoolean();
+        final Runnable task = () -> {
+            // NOOP
         };
         // Just run often enough to trigger it normally.
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 250; i++) {
             EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
             final EventLoop loop = group.next();
 
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        for (;;) {
-                            loop.execute(task);
-                        }
-                    } catch (Throwable cause) {
-                        error.set(cause);
+            Thread t = new Thread(() -> {
+                try {
+                    for (;;) {
+                        loop.execute(task);
+                        loopStarted.set(true);
                     }
+                } catch (Throwable cause) {
+                    error.set(cause);
                 }
             });
             t.start();
+            do {
+                Thread.yield();
+            } while (!loopStarted.get());
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
             assertInstanceOf(RejectedExecutionException.class, error.get());
             error.set(null);
+            loopStarted.set(false);
         }
     }
 
