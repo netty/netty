@@ -119,7 +119,7 @@ public class HttpMethodTest {
 
     @Test
     public void requestDecoderRejectsNulPaddedMethod() {
-        // RFC 7230 forbids any non-token character in the method. NUL-padded methods are
+        // RFC 9112 forbids any non-token character in the method. NUL-padded methods are
         // a known request-smuggling vector if silently stripped, so the decoder must
         // surface a decoder failure rather than producing a valid GET message.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());

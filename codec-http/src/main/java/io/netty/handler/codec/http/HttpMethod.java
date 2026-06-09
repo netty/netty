@@ -125,11 +125,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public HttpMethod(String name) {
         checkNotNull(name, "name");
-        // The name must already be a valid HTTP token. We deliberately do not trim it:
-        // String.trim() would silently strip any character <= 0x20 (including NUL, CR, LF and
-        // the rest of the C0 range), which can mask request smuggling vectors when the parsed
-        // method name is later compared as a valid HTTP token. SP and HT are not token
-        // characters either, so validateToken below rejects them as well.
+        // The name must be non-empty and contain only valid HTTP token characters.
         if (name.isEmpty()) {
             throw new IllegalArgumentException("name cannot be empty");
         }
