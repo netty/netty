@@ -1190,9 +1190,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                                      ByteBuf initialData) throws Exception {
            if (initialData.hasMemoryAddress()) {
                hdr.set(socket, inetSocketAddress,
-                       IoUring.memoryAddress(initialData) + initialData.readerIndex(),
+                       initialData.memoryAddress() + initialData.readerIndex(),
                        initialData.readableBytes(), (short) 0);
            } else {
+               // Use an iovec array for CompositeByteBuf and other buffers without a memory address.
+               // If the shared IovArray has not enough space, the rest is sent after connect.
                IoUringIoHandler handler = registration().attachment();
                IovArray iovArray = handler.iovArray();
                int iovOffset = iovArray.count();
