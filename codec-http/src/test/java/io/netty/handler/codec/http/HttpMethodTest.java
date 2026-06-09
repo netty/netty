@@ -19,7 +19,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 
@@ -48,77 +47,77 @@ public class HttpMethodTest {
     @Test
     public void constructorRejectsLeadingAndTrailingSpaces() {
         // SP is not a valid HTTP token character; the name must already be a clean token.
-        assertThrows(IllegalArgumentException.class, newInstance("  GET  "));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("  GET  "));
     }
 
     @Test
     public void constructorRejectsLeadingAndTrailingTabs() {
         // HT is not a valid HTTP token character; the name must already be a clean token.
-        assertThrows(IllegalArgumentException.class, newInstance("\tGET\t"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("\tGET\t"));
     }
 
     @Test
     public void constructorRejectsEmptyName() {
-        assertThrows(IllegalArgumentException.class, newInstance(""));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod(""));
     }
 
     @Test
     public void constructorRejectsLeadingNul() {
-        assertThrows(IllegalArgumentException.class, newInstance(NUL + "GET"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod(NUL + "GET"));
     }
 
     @Test
     public void constructorRejectsTrailingNul() {
-        assertThrows(IllegalArgumentException.class, newInstance("GET" + NUL));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GET" + NUL));
     }
 
     @Test
     public void constructorRejectsLeadingAndTrailingNul() {
-        assertThrows(IllegalArgumentException.class, newInstance(NUL + "GET" + NUL));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod(NUL + "GET" + NUL));
     }
 
     @Test
     public void constructorRejectsEmbeddedNul() {
-        assertThrows(IllegalArgumentException.class, newInstance("GE" + NUL + "T"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GE" + NUL + "T"));
     }
 
     @Test
     public void constructorRejectsCarriageReturn() {
-        assertThrows(IllegalArgumentException.class, newInstance("GET\r"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GET\r"));
     }
 
     @Test
     public void constructorRejectsLineFeed() {
-        assertThrows(IllegalArgumentException.class, newInstance("GET\n"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GET\n"));
     }
 
     @Test
     public void constructorRejectsVerticalTab() {
-        assertThrows(IllegalArgumentException.class, newInstance("GET" + (char) 0x0B));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GET" + (char) 0x0B));
     }
 
     @Test
     public void constructorRejectsFormFeed() {
-        assertThrows(IllegalArgumentException.class, newInstance("GET\f"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GET\f"));
     }
 
     @Test
     public void constructorRejectsEmbeddedSpace() {
-        assertThrows(IllegalArgumentException.class, newInstance("GE T"));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("GE T"));
     }
 
     @Test
     public void constructorRejectsEmptyString() {
-        assertThrows(IllegalArgumentException.class, newInstance(""));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod(""));
     }
 
     @Test
     public void constructorRejectsBlankString() {
-        assertThrows(IllegalArgumentException.class, newInstance("   "));
+        assertThrows(IllegalArgumentException.class, () -> new HttpMethod("   "));
     }
 
     @Test
-    public void requestDecoderRejectsNulPaddedMethod() {
+    public void requestDecoderRejectsNulPaddedMethod() throws Exception {
         // RFC 9112 forbids any non-token character in the method. NUL-padded methods are
         // a known request-smuggling vector if silently stripped, so the decoder must
         // surface a decoder failure rather than producing a valid GET message.
@@ -141,7 +140,7 @@ public class HttpMethodTest {
     }
 
     @Test
-    public void requestDecoderAcceptsCleanMethod() {
+    public void requestDecoderAcceptsCleanMethod() throws Exception {
         // Regression: ordinary GET requests must still parse normally.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         try {
@@ -157,14 +156,5 @@ public class HttpMethodTest {
         } finally {
             ch.finishAndReleaseAll();
         }
-    }
-
-    private static Executable newInstance(final String name) {
-        return new Executable() {
-            @Override
-            public void execute() {
-                new HttpMethod(name);
-            }
-        };
     }
 }
