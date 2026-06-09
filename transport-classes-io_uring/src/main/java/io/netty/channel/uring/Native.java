@@ -253,6 +253,7 @@ final class Native {
     static final int IORING_FEAT_NODROP = 1 << 1;
     static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
+    static final int IORING_FEAT_NO_IOWAIT = 1 << 17;
 
     static final int IORING_SQ_NEED_WAKEUP = 1 << 0;
     static final int IORING_SQ_CQ_OVERFLOW = 1 << 1;
@@ -316,6 +317,7 @@ final class Native {
 
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IORING_ENTER_REGISTERED_RING = 1 << 4;
+    static final int IORING_ENTER_NO_IOWAIT = 1 << 7;
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
