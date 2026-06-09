@@ -125,32 +125,20 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public HttpMethod(String name) {
         checkNotNull(name, "name");
-        // Strip leading/trailing SP and HT only. String.trim() would silently strip
-        // any character <= 0x20 (including NUL and other control bytes), which can mask
-        // request smuggling vectors when the parsed method name is later compared as a
-        // valid HTTP token.
-        int start = 0;
-        int end = name.length();
-        while (start < end && isSpaceOrHorizontalTab(name.charAt(start))) {
-            start++;
-        }
-        while (end > start && isSpaceOrHorizontalTab(name.charAt(end - 1))) {
-            end--;
-        }
-        if (start == end) {
+        // The name must already be a valid HTTP token. We deliberately do not trim it:
+        // String.trim() would silently strip any character <= 0x20 (including NUL, CR, LF and
+        // the rest of the C0 range), which can mask request smuggling vectors when the parsed
+        // method name is later compared as a valid HTTP token. SP and HT are not token
+        // characters either, so validateToken below rejects them as well.
+        if (name.isEmpty()) {
             throw new IllegalArgumentException("name cannot be empty");
         }
-        String trimmed = start == 0 && end == name.length() ? name : name.substring(start, end);
-        int index = HttpHeaderValidationUtil.validateToken(trimmed);
+        int index = HttpHeaderValidationUtil.validateToken(name);
         if (index != -1) {
             throw new IllegalArgumentException(
-                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(trimmed.charAt(index)));
+                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(name.charAt(index)));
         }
-        this.name = AsciiString.cached(trimmed);
-    }
-
-    private static boolean isSpaceOrHorizontalTab(char c) {
-        return c == ' ' || c == '\t';
+        this.name = AsciiString.cached(name);
     }
 
     /**

@@ -46,15 +46,20 @@ public class HttpMethodTest {
     }
 
     @Test
-    public void constructorTrimsLeadingAndTrailingSpaces() {
-        HttpMethod method = new HttpMethod("  GET  ");
-        assertEquals("GET", method.name());
+    public void constructorRejectsLeadingAndTrailingSpaces() {
+        // SP is not a valid HTTP token character; the name must already be a clean token.
+        assertThrows(IllegalArgumentException.class, newInstance("  GET  "));
     }
 
     @Test
-    public void constructorTrimsLeadingAndTrailingTabs() {
-        HttpMethod method = new HttpMethod("\tGET\t");
-        assertEquals("GET", method.name());
+    public void constructorRejectsLeadingAndTrailingTabs() {
+        // HT is not a valid HTTP token character; the name must already be a clean token.
+        assertThrows(IllegalArgumentException.class, newInstance("\tGET\t"));
+    }
+
+    @Test
+    public void constructorRejectsEmptyName() {
+        assertThrows(IllegalArgumentException.class, newInstance(""));
     }
 
     @Test
