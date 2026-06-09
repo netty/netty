@@ -75,10 +75,24 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         } else {
             localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
         }
-        Long maxFieldSectionSize = localSettings.settings().getOrDefault(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(),
-                Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE);
-        this.maxTableCapacity = localSettings.settings().getOrDefault(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 0L);
-        int maxBlockedStreams = toIntExact(localSettings.settings().getOrDefault(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 0L));
+        Long maxFieldSectionSize = localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(),
+                        Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE
+                );
+        this.maxTableCapacity = localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(),
+                        0L
+                );
+        int maxBlockedStreams = toIntExact(localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(),
+                        0L)
+        );
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);

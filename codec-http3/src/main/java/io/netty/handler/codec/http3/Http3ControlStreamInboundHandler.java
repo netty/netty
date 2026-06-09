@@ -148,8 +148,20 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         }
         quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QPackEncoderStreamInitializer(qpackEncoder, qpackAttributes,
-                        settingsFrame.settings().getOrDefault(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 0L),
-                        settingsFrame.settings().getOrDefault(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 0L)))
+                        settingsFrame
+                                .settings()
+                                .getOrDefault(
+                                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(),
+                                        0L
+                                ),
+                        settingsFrame
+                                .settings()
+                                .getOrDefault(
+                                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(),
+                                        0L
+                                )
+                        )
+                )
                 .addListener(closeOnFailure);
         quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL, new QPackDecoderStreamInitializer(qpackAttributes))
                 .addListener(closeOnFailure);

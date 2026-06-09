@@ -24,7 +24,6 @@ import java.util.Map;
  */
 public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Map.Entry<Long, Long>> {
 
-
     default Http3Settings settings() {
         throw new UnsupportedOperationException(
                 "Http3SettingsFrame.settings() not implemented in this version");

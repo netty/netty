@@ -99,8 +99,10 @@ public class Http3FrameCodecTest {
         Http3.setQpackAttributes(parent, qpackAttributes);
         final Http3SettingsFrame http3SettingsFrame = new DefaultHttp3SettingsFrame();
         maxTableCapacity = 1024L;
-        http3SettingsFrame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), maxTableCapacity);
-        http3SettingsFrame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), (long) maxBlockedStreams);
+        http3SettingsFrame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(),
+                maxTableCapacity);
+        http3SettingsFrame.settings().put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(),
+                (long) maxBlockedStreams);
         decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
@@ -526,9 +528,11 @@ public class Http3FrameCodecTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
         // Write the key and some random value... Both should be only 1 byte long each.
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id());
+        Http3CodecUtils.writeVariableLengthInteger(buffer,
+                Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id());
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id());
+        Http3CodecUtils.writeVariableLengthInteger(buffer,
+                Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id());
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
 
         testDecodeInvalidSettings(delayQpackStreams, buffer);
