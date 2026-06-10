@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -495,8 +496,9 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             for (WrapType type : WrapType.values()) {
                 testWriteOffsetBytebuf0(sb, cb, buf.retain(), EXPECTED, type);
             }
+            assertEquals(1, buf.refCnt());
         } finally {
-            assertTrue(buf.release());
+            buf.release();
         }
     }
 
@@ -513,18 +515,20 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             }
         });
 
-        Channel sc = sb.bind(newSocketAddress()).sync().channel();
-        SocketAddress serverAddress = sc.localAddress();
-
-        cb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
-            @Override
-            protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
-                // no-op
-            }
-        });
-
-        Channel cc = cb.connect(serverAddress).sync().channel();
+        Channel sc = null;
+        Channel cc = null;
         try {
+            sc = sb.bind(newSocketAddress()).sync().channel();
+            SocketAddress serverAddress = sc.localAddress();
+
+            cb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
+                @Override
+                protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
+                    // no-op
+                }
+            });
+
+            cc = cb.connect(serverAddress).sync().channel();
             ChannelFuture wf = write(cc, buf, wrapType);
             cc.flush();
             wf.sync();
@@ -537,7 +541,9 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             if (cc != null) {
                 cc.close().sync();
             }
-            sc.close().sync();
+            if (sc != null) {
+                sc.close().sync();
+            }
         }
     }
 
