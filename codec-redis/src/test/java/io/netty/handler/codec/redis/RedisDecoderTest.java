@@ -19,17 +19,20 @@ package io.netty.handler.codec.redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,7 +50,7 @@ public class RedisDecoderTest {
     private EmbeddedChannel channel;
 
     @BeforeEach
-    public void setup() throws Exception {
+    public void setup() {
         channel = newChannel(false);
     }
 
@@ -55,7 +58,7 @@ public class RedisDecoderTest {
         return new EmbeddedChannel(
                 new RedisDecoder(decodeInlineCommands),
                 new RedisBulkStringAggregator(),
-                new RedisArrayAggregator());
+                new RedisArrayAggregator(100, 1024));
     }
 
     @AfterEach
@@ -69,7 +72,7 @@ public class RedisDecoderTest {
         assertTrue(channel.writeInbound(byteBufOf("\n")));
 
         RedisMessage msg = channel.readInbound();
-        assertTrue(msg instanceof FullBulkStringRedisMessage);
+        assertInstanceOf(FullBulkStringRedisMessage.class, msg);
         ReferenceCountUtil.release(msg);
     }
 
@@ -273,6 +276,16 @@ public class RedisDecoderTest {
     }
 
     @Test
+    public void shouldErrorOnTooLargeArray() {
+        // We defined the max aggregate array size to be 100
+        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("*101\r\n")))
+                .isInstanceOf(DecoderException.class)
+                .rootCause()
+                .isInstanceOf(CodecException.class)
+                .hasMessageContaining("100");
+    }
+
+    @Test
     public void shouldErrorOnDoubleReleaseArrayReferenceCounted() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
@@ -298,12 +311,7 @@ public class RedisDecoderTest {
 
         final List<RedisMessage> children = msg.children();
         ReferenceCountUtil.release(msg);
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                ReferenceCountUtil.release(children.get(1));
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> ReferenceCountUtil.release(children.get(1)));
     }
 
     @Test
@@ -318,12 +326,7 @@ public class RedisDecoderTest {
         List<RedisMessage> children = msg.children();
         final ByteBuf childBuf = ((FullBulkStringRedisMessage) children.get(0)).content();
         ReferenceCountUtil.release(msg);
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                ReferenceCountUtil.release(childBuf);
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> ReferenceCountUtil.release(childBuf));
     }
 
     @Test
@@ -332,5 +335,60 @@ public class RedisDecoderTest {
         // however we need to check that they are not equal between themselves.
         assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
         assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
+    }
+
+    @Test
+    public void shouldLimitIntegerTo64IntSigned() throws Exception {
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i <= RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('0');
+        }
+        assertFalse(channel.writeInbound(buf));
+
+        assertThrows(DecoderException.class, () -> channel.writeInbound(byteBufOf("1")));
+    }
+
+    @Test
+    public void testPositiveLongWithCr() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder());
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i < RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('0');
+        }
+        buf.writeByte('\r');
+
+        // 19 digits + \r = 20 bytes.
+        // It's a valid incomplete RESP number waiting for \n.
+        assertFalse(channel.writeInbound(buf));
+
+        ByteBuf buf2 = Unpooled.buffer();
+        buf2.writeByte('\n');
+        assertFalse(channel.writeInbound(buf2));
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testGiantPayloadEndingWithCrBypassesLengthCheck() throws Exception {
+        final EmbeddedChannel channel = new EmbeddedChannel(new RedisDecoder());
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte('$');
+        for (int i = 0; i < RedisConstants.POSITIVE_LONG_MAX_LENGTH; i++) {
+            buf.writeByte('1');
+        }
+        assertFalse(channel.writeInbound(buf));
+
+        // We expect that sending 1000 more bytes will exceed the maximum valid length capacity,
+        // regardless of whether the final byte is '\r'. It should throw a DecoderException.
+        assertThrows(DecoderException.class, () -> {
+            for (int i = 0; i < 1000; i++) {
+                ByteBuf chunk = Unpooled.buffer();
+                chunk.writeByte('a');
+                chunk.writeByte('\r');
+                channel.writeInbound(chunk);
+            }
+        });
+        assertFalse(channel.finish());
     }
 }

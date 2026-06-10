@@ -21,10 +21,14 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.net.Socket;
 import java.security.KeyStore;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 /**
@@ -41,7 +45,30 @@ public final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory
 
     public static final TrustManagerFactory INSTANCE = new InsecureTrustManagerFactory();
 
-    private static final TrustManager tm = new X509TrustManager() {
+    // This needs to be X509ExtendedTrustManager so hostname verification is skipped as well.
+    // Otherwise the JDK will internally wrap it with AbstractTrustManagerWrapper and add hostname verification
+    // by itself.
+    private static final TrustManager tm = new X509ExtendedTrustManager() {
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {
+            checkClientTrusted(chain, authType);
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
+            checkServerTrusted(chain, authType);
+        }
+
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+            checkClientTrusted(chain, authType);
+        }
+
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
+            checkServerTrusted(chain, authType);
+        }
+
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String s) {
             if (logger.isDebugEnabled()) {

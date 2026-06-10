@@ -25,13 +25,15 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -41,11 +43,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuicChannelDatagramTest extends AbstractQuicTest {
 
-    private static final Random random = new Random();
     static final byte[] data = new byte[512];
 
     static {
-        random.nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
     }
 
     @ParameterizedTest

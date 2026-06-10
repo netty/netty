@@ -28,15 +28,17 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.CompletionException;
 
-import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
-import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
-import static io.netty.util.CharsetUtil.*;
+import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.EMPTY_DEFLATE_BLOCK;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,7 +59,7 @@ public class PerMessageDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -88,7 +90,7 @@ public class PerMessageDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         BinaryWebSocketFrame frame = new BinaryWebSocketFrame(true,
                 WebSocketExtension.RSV3, Unpooled.wrappedBuffer(payload));
@@ -117,7 +119,7 @@ public class PerMessageDeflateDecoderTest {
 
         // initialize
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -167,9 +169,10 @@ public class PerMessageDeflateDecoderTest {
 
         // initialize
         byte[] payload1 = new byte[100];
-        random.nextBytes(payload1);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        PlatformDependent.splittableRandomNextBytes(rng, payload1);
         byte[] payload2 = new byte[100];
-        random.nextBytes(payload2);
+        PlatformDependent.splittableRandomNextBytes(rng, payload2);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload1)));
         ByteBuf compressedPayload1 = encoderChannel.readOutbound();
@@ -208,7 +211,7 @@ public class PerMessageDeflateDecoderTest {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
-        random.nextBytes(payload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), payload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(payload)));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -242,7 +245,7 @@ public class PerMessageDeflateDecoderTest {
 
         String textPayload = "compressed payload";
         byte[] binaryPayload = new byte[300];
-        random.nextBytes(binaryPayload);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), binaryPayload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(textPayload.getBytes(UTF_8))));
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(binaryPayload)));
@@ -287,10 +290,11 @@ public class PerMessageDeflateDecoderTest {
                 new PerMessageDeflateDecoder(false, selectivityDecompressionFilter, 0));
 
         byte[] firstPayload = new byte[200];
-        random.nextBytes(firstPayload);
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
+        PlatformDependent.splittableRandomNextBytes(rng, firstPayload);
 
         byte[] finalPayload = new byte[50];
-        random.nextBytes(finalPayload);
+        PlatformDependent.splittableRandomNextBytes(rng, finalPayload);
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(firstPayload)));
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(finalPayload)));

@@ -67,12 +67,14 @@ import org.junit.jupiter.api.function.Executable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -611,6 +613,8 @@ public class SslHandlerTest {
                               }
                           }
                       });
+                      ch.pipeline().addLast(new SilenceExceptionHandler()
+                              .rootCauseInstanceOf(NotSslRecordException.class));
                   }
                 });
 
@@ -760,6 +764,8 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     });
             sc = sb.bind(address).get();
@@ -778,6 +784,8 @@ public class SslHandlerTest {
                             // This will happen if the channel was closed in the meantime.
                             sslHandlerRef.set(handler);
                             ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SignatureException.class));
                         }
                     });
             cc = b.connect(sc.localAddress()).get();
@@ -1516,6 +1524,8 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(CertificateException.class));
                         }
                     }).connect(sc.localAddress());
             future.syncUninterruptibly();
@@ -1625,6 +1635,8 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(serverSslHandler);
                             ch.pipeline().addLast(new SslEventHandler(serverEvent));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     })
                     .bind(new InetSocketAddress(0)).get();
@@ -1637,6 +1649,8 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientSslHandler);
                             ch.pipeline().addLast(new SslEventHandler(clientEvent));
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SSLHandshakeException.class));
                         }
                     }).connect(sc.localAddress());
             cc = future.get();

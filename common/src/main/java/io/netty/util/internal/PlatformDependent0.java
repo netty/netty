@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.invoke.MethodType.methodType;
@@ -568,6 +569,10 @@ final class PlatformDependent0 {
 
     static boolean unalignedAccess() {
         return UNALIGNED;
+    }
+
+    static void splittableRandomNextBytes(SplittableRandom rng, byte[] data) {
+        rng.nextBytes(data);
     }
 
     static void throwException(Throwable cause) {

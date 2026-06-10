@@ -20,6 +20,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+import java.util.SplittableRandom;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -70,12 +72,13 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
 
         try {
-            int written = 0, length = rand.nextInt(100);
+            SplittableRandom rng = new SplittableRandom(rand.nextLong());
+            int written = 0, length = rng.nextInt(100);
             while (written + length < data.length) {
                 ByteBuf in = Unpooled.wrappedBuffer(data, written, length);
                 encoder.writeOutbound(in);
                 written += length;
-                length = rand.nextInt(100);
+                length = rng.nextInt(100);
             }
             ByteBuf in = Unpooled.wrappedBuffer(data, written, data.length - written);
             encoder.writeOutbound(in);
@@ -89,12 +92,12 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
             final byte[] compressedArray = new byte[compressed.readableBytes()];
             compressed.readBytes(compressedArray);
             written = 0;
-            length = rand.nextInt(100);
+            length = rng.nextInt(100);
             while (written + length < compressedArray.length) {
                 in = Unpooled.wrappedBuffer(compressedArray, written, length);
                 decoder.writeInbound(in);
                 written += length;
-                length = rand.nextInt(100);
+                length = rng.nextInt(100);
             }
             in = Unpooled.wrappedBuffer(compressedArray, written, compressedArray.length - written);
             decoder.writeInbound(in);

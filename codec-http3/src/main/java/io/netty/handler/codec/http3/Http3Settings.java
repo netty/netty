@@ -239,7 +239,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      *   <li>{@code QPACK_MAX_TABLE_CAPACITY} = 0</li>
      *   <li>{@code QPACK_BLOCKED_STREAMS} = 0</li>
      *   <li>{@code ENABLE_CONNECT_PROTOCOL} = false</li>
-     *   <li>{@code MAX_FIELD_SECTION_SIZE} = unlimited</li>
+     *   <li>{@code MAX_FIELD_SECTION_SIZE} = 8192</li>
      *   <li>{@code H3_DATAGRAM} = false </>
      * </ul>
      *
@@ -249,7 +249,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
         return new Http3Settings()
                 .qpackMaxTableCapacity(0)
                 .qpackBlockedStreams(0)
-                .maxFieldSectionSize(16 * 1024 * 1024)
+                .maxFieldSectionSize(Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE)
                 .enableConnectProtocol(false)
                 .enableH3Datagram(false);
     }
