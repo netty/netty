@@ -500,8 +500,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     private void testWriteOffsetBytebuf0(Bootstrap sb, Bootstrap cb, ByteBuf buf, byte[] expected,
-                                         WrapType wrapType)
-            throws Throwable {
+                                         WrapType wrapType) throws Throwable {
         CompletableFuture<byte[]> received = new CompletableFuture<>();
         sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
@@ -531,6 +530,9 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             byte[] actual = received.join();
             assertArrayEquals(expected, actual);
         } finally {
+            // release as we used buf.retain() before
+            buf.release();
+
             if (cc != null) {
                 cc.close().sync();
             }
