@@ -37,6 +37,7 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -1041,8 +1042,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (initialData != null) {
                     msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                     MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
-                            initialData.readableBytes(), (short) 0);
+                    fillTFOInitData(hdr, inetSocketAddress, initialData);
 
                     int fd = fd().intValue();
                     IoRegistration registration = registration();
@@ -1072,6 +1072,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         connectPromise = promise;
         requestedRemoteAddress = remoteAddress;
+    }
+
+    private void fillTFOInitData(MsgHdrMemory hdr, InetSocketAddress inetSocketAddress,
+                                 ByteBuf initialData) throws Exception {
+        if (initialData.hasMemoryAddress()) {
+            hdr.set(socket, inetSocketAddress,
+                    initialData.memoryAddress() + initialData.readerIndex(),
+                    initialData.readableBytes(), (short) 0);
+        } else {
+            // Use an iovec array for CompositeByteBuf and other buffers without a memory address.
+            // If the shared IovArray has not enough space, the rest is sent after connect.
+            IoUringIoHandler handler = registration().attachment();
+            IovArray iovArray = handler.iovArray();
+            int iovOffset = iovArray.count();
+            iovArray.processMessage(initialData);
+            long iovArrayAddress = iovArray.memoryAddress(iovOffset);
+            int iovArrayLength = iovArray.count() - iovOffset;
+            hdr.setWithIovArrayAddress(socket, inetSocketAddress, iovArrayAddress, iovArrayLength, (short) 0);
+        }
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
