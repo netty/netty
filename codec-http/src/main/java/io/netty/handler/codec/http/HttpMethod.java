@@ -91,18 +91,26 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        switch (name) {
-            case "OPTIONS": return HttpMethod.OPTIONS;
-            case "GET":     return HttpMethod.GET;
-            case "HEAD":    return HttpMethod.HEAD;
-            case "POST":    return HttpMethod.POST;
-            case "PUT":     return HttpMethod.PUT;
-            case "PATCH":   return HttpMethod.PATCH;
-            case "DELETE":  return HttpMethod.DELETE;
-            case "TRACE":   return HttpMethod.TRACE;
-            case "CONNECT": return HttpMethod.CONNECT;
-            default:        return new HttpMethod(name);
+        if (name.equals("GET")) {
+            return HttpMethod.GET;
+        } else if (name.equals("POST")) {
+            return HttpMethod.POST;
+        } else if (name.equals("PUT")) {
+            return HttpMethod.PUT;
+        } else if (name.equals("CONNECT")) {
+            return HttpMethod.CONNECT;
+        } else if (name.equals("OPTIONS")) {
+            return HttpMethod.OPTIONS;
+        } else if (name.equals("HEAD")) {
+            return HttpMethod.HEAD;
+        } else if (name.equals("PATCH")) {
+            return HttpMethod.PATCH;
+        } else if (name.equals("DELETE")) {
+            return HttpMethod.DELETE;
+        } else if (name.equals("TRACE")) {
+            return HttpMethod.TRACE;
         }
+        return new HttpMethod(name);
     }
 
     private final AsciiString name;
@@ -181,5 +189,4 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
         return name().compareTo(o.name());
     }
-
 }
