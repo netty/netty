@@ -118,7 +118,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     static final boolean SERVER_ENABLE_SESSION_TICKET =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
 
-     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+    static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
     static final boolean SERVER_ENABLE_SESSION_CACHE =
@@ -574,7 +574,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, executor, resumptionController);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -764,7 +764,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     static X509TrustManager chooseTrustManager(TrustManager[] managers,
-                                                         ResumptionController resumptionController) {
+                                               ResumptionController resumptionController) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
                 X509TrustManager tm = (X509TrustManager) m;
@@ -951,7 +951,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     static void setKeyMaterial(long ctx, X509Certificate[] keyCertChain, PrivateKey key, String keyPassword)
             throws SSLException {
-         /* Load the certificate file and private key. */
+        /* Load the certificate file and private key. */
         long keyBio = 0;
         long keyCertChainBio = 0;
         long keyCertChainBio2 = 0;
@@ -997,7 +997,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 Boolean policy = (Boolean) entry.getValue();
                 allowJdkFallback = policy.booleanValue();
             } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
-                       option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
+                    option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
                 // if the user has set a private key method already we don't want to support
                 // fallback.
                 return false;

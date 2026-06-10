@@ -420,7 +420,7 @@ public final class SslContextBuilder {
      *     password-protected
      */
     public SslContextBuilder keyManager(InputStream keyCertChainInputStream, InputStream keyInputStream,
-            String keyPassword) {
+                                        String keyPassword) {
         X509Certificate[] keyCertChain;
         PrivateKey key;
         try {
@@ -756,15 +756,15 @@ public final class SslContextBuilder {
     public SslContext build() throws SSLException {
         if (forServer) {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
-                trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES),
-                credentials);
+                    trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
+                    ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
+                    enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES),
+                    credentials);
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
-                trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                    sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
+                    trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
+                    ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                    sessionTimeout, startTls, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
                     serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
         }
     }
