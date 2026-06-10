@@ -81,14 +81,14 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          Map.Entry<SslContextOption<?>, Object>[] options,
                                          List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, true,
+              ClientAuth.NONE, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, true,
                 serverNames, resumptionController, options, credentials);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
-                    keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                    sessionCacheSize, sessionTimeout, resumptionController,
-                    isJdkSignatureFallbackEnabled(options));
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               isJdkSignatureFallbackEnabled(options));
             success = true;
         } finally {
             if (!success) {

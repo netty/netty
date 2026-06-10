@@ -764,7 +764,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     static X509TrustManager chooseTrustManager(TrustManager[] managers,
-                                               ResumptionController resumptionController) {
+                                                         ResumptionController resumptionController) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
                 X509TrustManager tm = (X509TrustManager) m;
@@ -951,7 +951,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     static void setKeyMaterial(long ctx, X509Certificate[] keyCertChain, PrivateKey key, String keyPassword)
             throws SSLException {
-        /* Load the certificate file and private key. */
+         /* Load the certificate file and private key. */
         long keyBio = 0;
         long keyCertChainBio = 0;
         long keyCertChainBio2 = 0;
@@ -997,7 +997,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 Boolean policy = (Boolean) entry.getValue();
                 allowJdkFallback = policy.booleanValue();
             } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
-                    option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
+                       option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
                 // if the user has set a private key method already we don't want to support
                 // fallback.
                 return false;

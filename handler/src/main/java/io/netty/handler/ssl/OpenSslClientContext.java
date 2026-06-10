@@ -88,7 +88,7 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
-                IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+             IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -137,7 +137,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+             ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -215,11 +215,11 @@ public final class OpenSslClientContext extends OpenSslContext {
         boolean supportJdkSignatureFallback = isJdkSignatureFallbackEnabled(options);
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword,
-                    supportJdkSignatureFallback);
+                                                                    supportJdkSignatureFallback);
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
-                    keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                    sessionCacheSize, sessionTimeout, resumptionController,
-                    supportJdkSignatureFallback);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               supportJdkSignatureFallback);
             success = true;
         } finally {
             if (!success) {
