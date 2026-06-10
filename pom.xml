@@ -1128,23 +1128,14 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.0</version>
+        <version>3.15.0</version>
         <configuration>
           <fork>true</fork>
           <release>${maven.compiler.release}</release>
           <debug>true</debug>
-          <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
           <compilerArgument>-Xlint:-options</compilerArgument>
-          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
-          <!--
-          <compilerArguments>
-            <Xlint:-options />
-            <Xlint:unchecked />
-            <Xlint:deprecation />
-          </compilerArguments>
-          -->
           <meminitial>256m</meminitial>
           <maxmem>1024m</maxmem>
           <excludes>
