@@ -37,7 +37,7 @@ RUN dnf install -yq \
  zip
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io" | bash
+RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \

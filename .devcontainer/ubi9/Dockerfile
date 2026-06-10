@@ -23,7 +23,7 @@ RUN dnf install -y procps-ng \
  zlib-devel
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io?ci=true" | bash
+RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
 ARG java_version=25-zulu
 ENV JAVA_VERSION=$java_version

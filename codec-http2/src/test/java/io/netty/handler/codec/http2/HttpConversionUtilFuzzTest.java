@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.net.URI;
 
@@ -34,6 +35,7 @@ import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledIfEnvironmentVariable(named = "JAZZER_FUZZ", matches = "1")
 public class HttpConversionUtilFuzzTest {
 
     @FuzzTest(maxDuration = "30s")
