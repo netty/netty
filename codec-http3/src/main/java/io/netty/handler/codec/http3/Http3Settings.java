@@ -123,7 +123,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      * @return the configured value for the specified key, or {@code defaultValue},
      * if the key is not found
      */
-    public Long getOrDefault(long key, long defaultValue) {
+    public long getOrDefault(long key, long defaultValue) {
         return settings.getOrDefault(key, defaultValue);
     }
 
