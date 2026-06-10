@@ -23,6 +23,8 @@ import static io.netty.util.AsciiString.EMPTY_STRING;
  * Internal methods for {@link io.netty.handler.codec.http2.HttpConversionUtil}
  */
 public final class InternalHttpConversionUtil {
+    private InternalHttpConversionUtil() {
+    }
 
     public static int queryOrFragmentStart(String uri, int searchStart) {
         int queryStart = uri.indexOf('?', searchStart);
