@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -502,9 +503,9 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     private void testWriteOffsetBytebuf0(Bootstrap sb, Bootstrap cb, ByteBuf buf, byte[] expected,
                                          WrapType wrapType) throws Throwable {
         CompletableFuture<byte[]> received = new CompletableFuture<>();
-        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+        sb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+            protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder packet) {
                 ByteBuf content = packet.content();
                 byte[] bytes = new byte[content.readableBytes()];
                 content.getBytes(content.readerIndex(), bytes);
@@ -515,9 +516,9 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         Channel sc = sb.bind(newSocketAddress()).sync().channel();
         SocketAddress serverAddress = sc.localAddress();
 
-        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+        cb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
+            protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
                 // no-op
             }
         });
