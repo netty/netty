@@ -33,6 +33,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 import org.opentest4j.TestAbortedException;
 
 import java.net.BindException;
@@ -44,14 +45,17 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,6 +65,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
+    private static final byte[] BAD_PREFIX = "BAD-PREFIX-".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] EXPECTED = "EXPECTED-direct-reader-index".getBytes(StandardCharsets.UTF_8);
     private static final byte[] BYTES = {0, 1, 2, 3};
     protected enum WrapType {
         NONE, DUP, SLICE, READ_ONLY
@@ -465,6 +471,70 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 return cc.write(buf.retain());
             default:
                 throw new Error("Unexpected wrap type: " + wrapType);
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteOffsetBytebuf(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap, Bootstrap>() {
+            @Override
+            public void run(Bootstrap sb, Bootstrap cb) throws Throwable {
+                testWriteOffsetBytebuf(sb, cb);
+            }
+        });
+    }
+
+    private void testWriteOffsetBytebuf(Bootstrap sb, Bootstrap cb) throws Throwable {
+        ByteBuf buf = Unpooled.directBuffer(BAD_PREFIX.length + EXPECTED.length);
+        buf.writeBytes(BAD_PREFIX);
+        buf.writeBytes(EXPECTED);
+        buf.readerIndex(BAD_PREFIX.length);
+        try {
+            for (WrapType type : WrapType.values()) {
+                testWriteOffsetBytebuf0(sb, cb, buf.retain(), EXPECTED, type);
+            }
+        } finally {
+            assertTrue(buf.release());
+        }
+    }
+
+    private void testWriteOffsetBytebuf0(Bootstrap sb, Bootstrap cb, ByteBuf buf, byte[] expected,
+                                         WrapType wrapType)
+            throws Throwable {
+        CompletableFuture<byte[]> received = new CompletableFuture<>();
+        sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) {
+                ByteBuf content = packet.content();
+                byte[] bytes = new byte[content.readableBytes()];
+                content.getBytes(content.readerIndex(), bytes);
+                received.complete(bytes);
+            }
+        });
+
+        Channel sc = sb.bind(newSocketAddress()).sync().channel();
+        SocketAddress serverAddress = sc.localAddress();
+
+        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
+                // no-op
+            }
+        });
+
+        Channel cc = cb.connect(serverAddress).sync().channel();
+        try {
+            ChannelFuture wf = write(cc, buf, wrapType);
+            cc.flush();
+            wf.sync();
+            byte[] actual = received.join();
+            assertArrayEquals(expected, actual);
+        } finally {
+            if (cc != null) {
+                cc.close().sync();
+            }
+            sc.close().sync();
         }
     }
 
