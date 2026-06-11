@@ -244,7 +244,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             throw e;
         }
         SocketAddress sendAddress = address instanceof InetSocketAddress ?
-                sendToAddress((InetSocketAddress) address) : address;
+                convertAnyAddress((InetSocketAddress) address) : address;
         for (int i = 0; i < 100; i++) {
             try {
                 client.send(new java.net.DatagramPacket(EmptyArrays.EMPTY_BYTES, 0, sendAddress));
@@ -285,7 +285,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         Channel cc = cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true).
                 handler(new ChannelInboundHandlerAdapter()).register().sync().channel();
         try {
-            InetSocketAddress goodHost = sendToAddress((InetSocketAddress) sc.localAddress());
+            InetSocketAddress goodHost = convertAnyAddress((InetSocketAddress) sc.localAddress());
             InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());
 
             assertFalse(goodHost.isUnresolved());
@@ -341,7 +341,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
-                    sendToAddress((InetSocketAddress) sc.localAddress()) : localAddr;
+                    convertAnyAddress((InetSocketAddress) sc.localAddress()) : localAddr;
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>(count);
             for (int i = 0; i < count; i++) {
                 futures.add(write(cc, buf, addr, wrapType));
@@ -393,7 +393,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
-                    sendToAddress((InetSocketAddress) sc.localAddress()) : localAddr;
+                    convertAnyAddress((InetSocketAddress) sc.localAddress()) : localAddr;
             cc.connect(addr).syncUninterruptibly();
 
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
@@ -520,7 +520,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         try {
             sc = sb.bind(newSocketAddress()).sync().channel();
             SocketAddress serverAddress = sc.localAddress();
-
+            if (serverAddress instanceof InetSocketAddress) {
+                // Correctly ha
+                serverAddress = convertAnyAddress((InetSocketAddress) serverAddress);
+            }
             cb.handler(new SimpleChannelInboundHandler<ByteBufHolder>() {
                 @Override
                 protected void channelRead0(ChannelHandlerContext ctx, ByteBufHolder msg) {
@@ -570,7 +573,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         }
     }
 
-    protected InetSocketAddress sendToAddress(InetSocketAddress serverAddress) {
+    protected InetSocketAddress convertAnyAddress(InetSocketAddress serverAddress) {
         InetAddress addr = serverAddress.getAddress();
         if (addr.isAnyLocalAddress()) {
             if (addr instanceof Inet6Address) {
