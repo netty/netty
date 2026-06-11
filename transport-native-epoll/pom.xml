@@ -28,7 +28,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <fallbackModuleName>io.netty.transport.epoll</fallbackModuleName>
+    <fallbackModuleName>io.netty5.transport.epoll</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
@@ -616,13 +616,6 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty5-transport</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty5-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -738,7 +731,7 @@
             <phase>process-classes</phase>
             <configuration>
               <moduleName>${fallbackModuleName}</moduleName>
-              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+              <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
             </configuration>
             <goals>
               <goal>generate</goal>

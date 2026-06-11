@@ -694,7 +694,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <fallbackModuleName>io.netty.transport.kqueue</fallbackModuleName>
+    <fallbackModuleName>io.netty5.transport.kqueue</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
@@ -728,13 +728,6 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty5-transport</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty5-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -742,52 +735,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty5-transport-classes-kqueue</artifactId>
       <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-testsuite</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-transport-native-unix-common-tests</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>${tcnative.artifactId}</artifactId>
-      <classifier>${tcnative.classifier}</classifier>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- For SelfSignedCertificate usage on JDK20+ -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -840,13 +787,16 @@
         <executions>
           <execution>
             <id>module-info</id>
+            <configuration>
+              <moduleName>${javaModuleName}</moduleName>
+            </configuration>
           </execution>
           <execution>
             <id>fallback-module-info</id>
             <phase>process-classes</phase>
             <configuration>
               <moduleName>${fallbackModuleName}</moduleName>
-              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+              <outputDirectory>${fallbackOutputDirectory}</outputDirectory>
             </configuration>
             <goals>
               <goal>generate</goal>

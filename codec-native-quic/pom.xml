@@ -29,8 +29,7 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
-    <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
+    <fallbackModuleName>io.netty5.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <fragmentHost>io.netty.codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
@@ -394,26 +393,6 @@
             </executions>
           </plugin>
           <plugin>
-            <groupId>io.github.dmlloyd.module-info</groupId>
-            <artifactId>module-info</artifactId>
-            <executions>
-              <execution>
-                <id>module-info</id>
-              </execution>
-              <execution>
-                <id>fallback-module-info</id>
-                <phase>process-classes</phase>
-                <configuration>
-                  <moduleName>${fallbackModuleName}</moduleName>
-                  <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
-                </configuration>
-                <goals>
-                  <goal>generate</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <execution>
@@ -447,7 +426,7 @@
                     <!-- Add the ant tasks from ant-contrib -->
                     <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
 
-                    <filter token="JAVA_MODULE_NAME" value="${javaModuleNameWithClassifier}" />
+                    <filter token="JAVA_MODULE_NAME" value="${javaModuleName}" />
                     <filter token="MIN_SDK_VERSION" value="${androidMinSdkVersion}" />
 
                     <copy file="src/main/AndroidManifest.xml" todir="${project.build.directory}/android-build/" filtering="true" />
@@ -542,13 +521,6 @@
       </dependencies>
       <build>
         <plugins>
-          <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <source>17</source>
-              <target>17</target>
-            </configuration>
-          </plugin>
           <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
@@ -1145,26 +1117,6 @@
       </plugin>
 
       <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-          <execution>
-            <id>fallback-module-info</id>
-            <phase>process-classes</phase>
-            <configuration>
-              <moduleName>${fallbackModuleName}</moduleName>
-              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
-            </configuration>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
@@ -1240,6 +1192,19 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+            <configuration>
+              <moduleName>${javaModuleName}</moduleName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -1255,47 +1220,6 @@
       <artifactId>netty5-codec-classes-quic</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport-classes-epoll</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- Also include bouncycastle so we can use SelfSignedCertificate even on more recent JDKs during testing -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

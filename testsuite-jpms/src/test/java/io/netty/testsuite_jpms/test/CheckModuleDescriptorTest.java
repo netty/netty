@@ -51,7 +51,7 @@ public class CheckModuleDescriptorTest {
 
     @Test
     public void testTransportChannelInitializerExtensionUseDeclaration() {
-        Optional<Module> opt = ModuleLayer.boot().findModule("io.netty.transport");
+        Optional<Module> opt = ModuleLayer.boot().findModule("io.netty5.transport");
         assertTrue(opt.isPresent());
         Module module = opt.get();
         Set<String> providesSet = module.getDescriptor().uses();

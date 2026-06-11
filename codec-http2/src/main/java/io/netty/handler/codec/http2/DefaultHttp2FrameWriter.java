@@ -19,7 +19,7 @@ import java.io.Closeable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.handler.codec.http2.internal.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.LeakPresenceDetector;
@@ -49,7 +49,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.WINDOW_UPDATE_FRAME_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
-import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeaderInternal;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.CONTINUATION;
@@ -62,6 +61,7 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
 import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
+import static io.netty.handler.codec.http2.internal.Http2InternalCodecUtil.writeFrameHeaderInternal;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -340,7 +340,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public void writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
         try {
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
-            writeFrameHeaderInternal(buf, 0, SETTINGS, new Http2Flags().ack(true), 0);
+            Http2Flags flags = new Http2Flags().ack(true);
+            writeFrameHeaderInternal(buf, 0, SETTINGS, flags, 0);
             ctx.write(buf, promise);
         } catch (Throwable t) {
             promise.setFailure(t);
@@ -478,7 +479,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
             // in the catch block.
-            writeFrameHeaderInternal(buf, payload.readableBytes(), frameType, flags, streamId);
+            int payloadLength = payload.readableBytes();
+            writeFrameHeaderInternal(buf, payloadLength, frameType, flags, streamId);
             ctx.write(buf, promiseAggregator.newPromise());
         } catch (Throwable t) {
             try {

@@ -15,8 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.ThrowableUtil;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -62,13 +60,7 @@ public class Http2Exception extends Exception {
         this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
 
-    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint,
-                                    Class<?> clazz, String method) {
-        final Http2Exception exception = new StacklessHttp2Exception(error, message, shutdownHint, true);
-        return ThrowableUtil.unknownStackTrace(exception, clazz, method);
-    }
-
-    private Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
+    protected Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
         super(message, null, false, true);
         assert shared;
         this.error = checkNotNull(error, "error");
@@ -311,23 +303,4 @@ public class Http2Exception extends Exception {
         }
     }
 
-    private static final class StacklessHttp2Exception extends Http2Exception {
-
-        private static final long serialVersionUID = 1077888485687219443L;
-
-        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint) {
-            super(error, message, shutdownHint);
-        }
-
-        StacklessHttp2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
-            super(error, message, shutdownHint, shared);
-        }
-
-        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
-        // Classloader.
-        @Override
-        public Throwable fillInStackTrace() {
-            return this;
-        }
-    }
 }

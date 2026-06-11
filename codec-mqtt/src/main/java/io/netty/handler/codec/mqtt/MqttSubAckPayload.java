@@ -19,7 +19,6 @@ package io.netty.handler.codec.mqtt;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
-import java.sql.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

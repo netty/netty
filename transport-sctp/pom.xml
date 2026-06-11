@@ -29,7 +29,7 @@
   <name>Netty/Transport/SCTP</name>
 
   <properties>
-    <javaModuleName>io.netty.transport.sctp</javaModuleName>
+    <javaModuleName>io.netty5.transport.sctp</javaModuleName>
   </properties>
 
   <dependencies>
@@ -56,19 +56,10 @@
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport</artifactId>
+      <artifactId>netty5-nativeimage-metadata-gen</artifactId>
       <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

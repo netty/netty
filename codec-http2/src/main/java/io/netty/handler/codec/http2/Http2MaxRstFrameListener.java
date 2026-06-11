@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.internal.StacklessHttp2Exception;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +25,8 @@ import java.util.concurrent.TimeUnit;
 
 final class Http2MaxRstFrameListener extends Http2FrameListenerDecorator {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2MaxRstFrameListener.class);
-    private static final Http2Exception RST_FRAME_RATE_EXCEEDED = Http2Exception.newStatic(Http2Error.ENHANCE_YOUR_CALM,
+    private static final Http2Exception RST_FRAME_RATE_EXCEEDED = StacklessHttp2Exception.newStatic(
+            Http2Error.ENHANCE_YOUR_CALM,
             "Maximum number of RST frames reached",
             Http2Exception.ShutdownHint.HARD_SHUTDOWN, Http2MaxRstFrameListener.class, "onRstStreamRead(..)");
 

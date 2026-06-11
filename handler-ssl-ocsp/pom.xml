@@ -26,10 +26,6 @@
   <artifactId>netty5-handler-ssl-ocsp</artifactId>
   <packaging>jar</packaging>
 
-  <properties>
-    <javaModuleName>io.netty.handler.ssl.ocsp</javaModuleName>
-  </properties>
-
   <name>Netty/Handler/Ssl/Ocsp</name>
 
   <dependencies>
@@ -86,18 +82,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

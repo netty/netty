@@ -119,6 +119,9 @@
     <profile>
       <id>native-image-testsuite</id>
       <activation>
+        <os>
+          <family>linux</family>
+        </os>
         <file>
           <!-- GraalVM 'native-image' should exist when using GraalVM -->
           <exists>${java.home}/bin/native-image</exists>
@@ -148,13 +151,6 @@
       </dependencies>
       <build>
         <plugins>
-          <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <source>17</source>
-              <target>17</target>
-            </configuration>
-          </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>

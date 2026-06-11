@@ -493,10 +493,9 @@
     <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
-    <module>codec-base</module>
+    <module>codec</module>
     <module>codec-compression</module>
     <module>codec-protobuf</module>
-    <module>codec</module>
     <module>codec-dns</module>
     <module>codec-haproxy</module>
     <module>codec-http</module>
@@ -505,6 +504,7 @@
     <module>codec-mqtt</module>
     <module>codec-classes-quic</module>
     <module>codec-native-quic</module>
+    <module>codec-native-quic-tests</module>
     <module>codec-http3</module>
     <module>codec-redis</module>
     <module>codec-smtp</module>
@@ -515,16 +515,21 @@
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
     <module>resolver-dns-native-macos</module>
+    <module>resolver-dns-native-macos-tests</module>
     <module>transport</module>
     <module>transport-native-unix-common-tests</module>
     <module>transport-native-unix-common</module>
     <module>transport-classes-epoll</module>
     <module>transport-native-epoll</module>
+    <module>transport-native-epoll-tests</module>
     <module>transport-classes-io_uring</module>
     <module>transport-native-io_uring</module>
+    <module>transport-native-io_uring-tests</module>
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
+    <module>transport-native-kqueue-tests</module>
     <module>transport-sctp</module>
+    <module>nativeimage-metadata-gen</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>handler-ssl-ocsp</module>
@@ -1123,26 +1128,14 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.0</version>
+        <version>3.15.0</version>
         <configuration>
-          <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
           <release>${maven.compiler.release}</release>
           <debug>true</debug>
-          <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
           <compilerArgument>-Xlint:-options</compilerArgument>
-          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
-          <!--
-          <compilerArguments>
-            <Xlint:-options />
-            <Xlint:unchecked />
-            <Xlint:deprecation />
-          </compilerArguments>
-          -->
           <meminitial>256m</meminitial>
           <maxmem>1024m</maxmem>
           <excludes>
@@ -1715,11 +1708,6 @@
           <version>1.0.0.Final</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.6.1</version>
-        </plugin>
-        <plugin>
           <groupId>io.github.dmlloyd.module-info</groupId>
           <artifactId>module-info</artifactId>
           <version>2.2</version>
@@ -1729,7 +1717,7 @@
               <phase>process-classes</phase>
               <configuration>
                 <moduleName>${javaModuleName}</moduleName>
-                <outputDirectory>${project.build.outputDirectory}/META-INF/versions/11/</outputDirectory>
+                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
                 <detectProvides>false</detectProvides>
               </configuration>
               <goals>

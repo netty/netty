@@ -30,7 +30,6 @@
   <name>Netty/Common</name>
 
   <properties>
-    <javaModuleName>io.netty.common</javaModuleName>
     <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
     <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
     <collection.src.dir>${project.build.directory}/generated-sources/collections/java</collection.src.dir>
@@ -54,7 +53,6 @@
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
-      <!-- Need compile scope to be taken into account by shade plugin -->
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -134,36 +132,6 @@
 
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-shade-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <artifactSet>
-                <includes>
-                  <include>org.jctools</include>
-                </includes>
-              </artifactSet>
-              <relocations>
-                <relocation>
-                  <pattern>org.jctools.</pattern>
-                  <shadedPattern>io.netty.util.internal.shaded.org.jctools.</shadedPattern>
-                </relocation>
-              </relocations>
-              <!-- Disable minimizeJar for now as it breaks with JDK25
-              <minimizeJar>true</minimizeJar>
-              -->
-              <createSourcesJar>true</createSourcesJar>
-              <shadeSourcesContent>true</shadeSourcesContent>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- Add generated collection sources. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -229,8 +197,6 @@
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
                 <Import-Package>
-                  <!-- JCTools is shaded -->
-                  !org.jctools.*,
                   <!-- JFR is available only in JDK9+ and is optional -->
                   jdk.jfr;resolution:=optional,
                   <!-- JVM vendor packages are optional -->
@@ -240,15 +206,6 @@
                 </Import-Package>
               </instructions>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
           </execution>
         </executions>
       </plugin>

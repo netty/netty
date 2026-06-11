@@ -54,6 +54,10 @@ import static io.netty.handler.codec.http.HttpUtil.isOriginForm;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.hasSchemeAndAuthority;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.isValidScheme;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.queryOrFragmentStart;
+import static io.netty.handler.codec.http2.internal.InternalHttpConversionUtil.setHttp2Authority;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.indexOf;
@@ -687,19 +691,6 @@ public final class HttpConversionUtil {
         }
     }
 
-    static int queryOrFragmentStart(String uri, int searchStart) {
-        int queryStart = uri.indexOf('?', searchStart);
-        int fragmentStart = uri.indexOf('#', searchStart);
-        return queryStart == -1 ? fragmentStart :
-                fragmentStart == -1 ? queryStart : Math.min(queryStart, fragmentStart);
-    }
-
-    // Netty addition: detect authority for HTTP/2 :scheme/:authority extraction.
-    static boolean hasSchemeAndAuthority(String requestTarget) {
-        int schemeEnd = requestTarget.indexOf("://");
-        return isValidScheme(requestTarget, schemeEnd);
-    }
-
     private static int schemeEnd(String requestTarget) {
         int schemeEnd = requestTarget.indexOf(':');
         return isValidScheme(requestTarget, schemeEnd) ? schemeEnd : -1;
@@ -720,45 +711,6 @@ public final class HttpConversionUtil {
         }
         return delimiter == authorityStart ? requestTarget.substring(0, delimiter + 1) :
                 requestTarget.substring(0, delimiter);
-    }
-
-    // Netty addition: validate the text before :// as a scheme.
-    static boolean isValidScheme(String uri, int schemeEnd) {
-        if (schemeEnd <= 0) {
-            return false;
-        }
-        char first = uri.charAt(0);
-        if (!isAlpha(first)) {
-            return false;
-        }
-        for (int i = 1; i < schemeEnd; ++i) {
-            char c = uri.charAt(i);
-            if (!isAlpha(c) && (c < '0' || c > '9') && c != '+' && c != '-' && c != '.') {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean isAlpha(char c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-    }
-
-    // package-private for testing only
-    static void setHttp2Authority(String authority, Http2Headers out) {
-        // The authority MUST NOT include the deprecated "userinfo" subcomponent
-        if (authority != null) {
-            if (authority.isEmpty()) {
-                out.authority(EMPTY_STRING);
-            } else {
-                int start = authority.indexOf('@') + 1;
-                int length = authority.length() - start;
-                if (length == 0) {
-                    throw new IllegalArgumentException("authority: " + authority);
-                }
-                out.authority(new AsciiString(authority, start, length));
-            }
-        }
     }
 
     private static void setHttp2Scheme(HttpHeaders in, Http2Headers out) {
@@ -800,9 +752,9 @@ public final class HttpConversionUtil {
          * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
          */
         private static final CharSequenceMap<AsciiString>
-            REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
+            REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<>();
         private static final CharSequenceMap<AsciiString>
-            RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
+            RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap<>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                             HttpHeaderNames.HOST);
