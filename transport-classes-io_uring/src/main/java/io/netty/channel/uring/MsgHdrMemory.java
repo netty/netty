@@ -104,6 +104,24 @@ final class MsgHdrMemory {
     }
 
     void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
+        int addressLength = setSocketAddress(socket, address);
+        Iov.set(iovMemory, bufferAddress, length);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
+                cmsgDataOffset, segmentSize);
+    }
+
+    void set(long iovArray, int length) {
+        MsgHdr.set(msgHdrMemory, iovArray, length);
+    }
+
+    void setWithIovArrayAddress(LinuxSocket socket, InetSocketAddress address,
+                                long iovArrayAddress, int iovArrayLength, short segmentSize) {
+        int addressLength = setSocketAddress(socket, address);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovArrayAddress, iovArrayLength,
+                cmsgDataMemory, cmsgDataOffset, segmentSize);
+    }
+
+    private int setSocketAddress(LinuxSocket socket, InetSocketAddress address) {
         int addressLength;
         if (address == null) {
             addressLength = socket.protocolFamily() == SocketProtocolFamily.INET6 ?
@@ -118,13 +136,7 @@ final class MsgHdrMemory {
             addressLength = SockaddrIn.set(
                     socket.protocolFamily() == SocketProtocolFamily.INET6, socketAddrMemory, address);
         }
-        Iov.set(iovMemory, bufferAddress, length);
-        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
-                cmsgDataOffset, segmentSize);
-    }
-
-    void set(long iovArray, int length) {
-        MsgHdr.set(msgHdrMemory, iovArray, length);
+        return addressLength;
     }
 
     void setScmRightsFd(int fd) {
