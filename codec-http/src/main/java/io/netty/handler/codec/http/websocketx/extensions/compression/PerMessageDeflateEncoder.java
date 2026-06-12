@@ -56,6 +56,20 @@ class PerMessageDeflateEncoder extends DeflateEncoder {
         super(compressionLevel, windowSize, noContext, extensionEncoderFilter);
     }
 
+    /**
+     * Constructor
+     *
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize maximum size of the window compressor buffer.
+     * @param memLevel internal compression state memory level (1..9).
+     * @param noContext true to disable context takeover.
+     * @param extensionEncoderFilter extension filter for per message deflate encoder.
+     */
+    PerMessageDeflateEncoder(int compressionLevel, int windowSize, int memLevel, boolean noContext,
+                             WebSocketExtensionFilter extensionEncoderFilter) {
+        super(compressionLevel, windowSize, memLevel, noContext, extensionEncoderFilter);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         if (!super.acceptOutboundMessage(msg)) {
