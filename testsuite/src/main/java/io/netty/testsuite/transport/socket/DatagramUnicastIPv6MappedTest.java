@@ -32,7 +32,7 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
     }
 
     @Override
-    protected InetSocketAddress sendToAddress(InetSocketAddress serverAddress) {
+    protected InetSocketAddress convertAnyAddress(InetSocketAddress serverAddress) {
         InetAddress addr = serverAddress.getAddress();
         if (addr.isAnyLocalAddress()) {
             return new InetSocketAddress(NetUtil.LOCALHOST4, serverAddress.getPort());
