@@ -233,6 +233,34 @@ public class CoalescingBufferQueueTest {
         assertEquals(0, empty.refCnt());
     }
 
+    // If a queued buffer's readable bytes shrink after enqueue (released or consumed out from under the queue),
+    // the queue must still report 0 readable bytes once drained.
+    // See https://github.com/netty/netty/issues/16946
+    @Test
+    public void testReadableBytesResetWhenQueuedBufferConsumedExternally() {
+        // Not used in this test.
+        cat.release();
+        mouse.release();
+
+        ByteBuf buffer = Unpooled.buffer().writeZero(292);
+        writeQueue.add(buffer);
+        assertEquals(292, writeQueue.readableBytes());
+
+        // Consume the buffer out from under the queue (e.g. a pooled buffer released and reused).
+        buffer.skipBytes(buffer.readableBytes());
+
+        ByteBuf removed = writeQueue.remove(Integer.MAX_VALUE, newPromise());
+        assertFalse(removed.isReadable());
+        removed.release();
+        assertQueueSize(0, true);
+
+        // A subsequent remove must not resurrect phantom readable bytes.
+        ByteBuf removedAgain = writeQueue.remove(Integer.MAX_VALUE, newPromise());
+        assertFalse(removedAgain.isReadable());
+        removedAgain.release();
+        assertQueueSize(0, true);
+    }
+
     @Test
     public void testMerge() {
         writeQueue.add(cat, catPromise);

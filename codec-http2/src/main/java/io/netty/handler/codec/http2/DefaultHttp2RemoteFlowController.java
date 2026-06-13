@@ -347,6 +347,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
                 // Write the remainder of frames that we are allowed to
                 boolean writeOccurred = false;
+                // Head frame from the previous iteration if it made no progress.
+                FlowControlled noProgressFrame = null;
                 while (!cancelled && (frame = peek()) != null) {
                     int maxBytes = min(allocated, writableWindow());
                     if (maxBytes <= 0 && frame.size() > 0) {
@@ -368,6 +370,20 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                     } finally {
                         // Decrement allocated by how much was actually written.
                         allocated -= initialFrameSize - frame.size();
+                    }
+
+                    // Fail a frame that can never make progress: given a positive budget it was neither removed
+                    // nor shrank, so re-writing it spins forever emitting empty DATA frame. Allow one
+                    // no-progress pass (draining empty buffers before padding), fail on the second.
+                    if (maxBytes > 0 && frame == peek() && frame.size() >= initialFrameSize) {
+                        if (frame == noProgressFrame) {
+                            throw streamError(stream.id(), INTERNAL_ERROR,
+                                    "Stream %d stopped making progress; flow-controlled frame stuck at %d bytes",
+                                    stream.id(), frame.size());
+                        }
+                        noProgressFrame = frame;
+                    } else {
+                        noProgressFrame = null;
                     }
                 }
 

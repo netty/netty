@@ -146,7 +146,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {
-            assert readableBytes == 0;
+            reconcileReadableBytes();
             return removeEmptyValue();
         }
         bytes = Math.min(bytes, readableBytes);
@@ -215,6 +215,7 @@ public abstract class AbstractCoalescingBufferQueue {
             throwException(cause);
         }
         decrementReadableBytes(originalBytes - bytes);
+        reconcileReadableBytes();
         return toReturn;
     }
 
@@ -423,6 +424,18 @@ public abstract class AbstractCoalescingBufferQueue {
         assert readableBytes >= 0;
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
+        }
+    }
+
+    /**
+     * Resets readableBytes to 0 when the queue is empty. They can drift apart if a queued buffer is released
+     * or consumed while still referenced by the queue, which would otherwise make remove(...) return empty
+     * buffers forever. See https://github.com/netty/netty/issues/16946
+     */
+    private void reconcileReadableBytes() {
+        if (readableBytes != 0 && bufAndListenerPairs.isEmpty()) {
+            logger.warn("Resetting readableBytes from {} to 0 as the queue is empty", readableBytes);
+            decrementReadableBytes(readableBytes);
         }
     }
 

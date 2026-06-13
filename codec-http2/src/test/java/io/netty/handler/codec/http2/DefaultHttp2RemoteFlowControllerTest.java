@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -39,6 +40,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -152,6 +154,35 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_C));
         assertEquals(DEFAULT_WINDOW_SIZE, window(STREAM_D));
         verifyNoInteractions(listener);
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void stuckFrameShouldFailStreamInsteadOfSpinning() throws Http2Exception {
+        StuckFlowControlled data = new StuckFlowControlled(10);
+        Http2Stream streamA = stream(STREAM_A);
+        controller.addFlowControlled(streamA, data);
+
+        controller.writePendingBytes();
+
+        assertNotNull(data.error);
+        assertEquals(Http2Error.INTERNAL_ERROR, ((Http2Exception) data.error).error());
+        assertTrue(data.writeCount <= 2,
+                "expected the stuck frame to be abandoned quickly, got " + data.writeCount + " write attempts");
+    }
+    
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void singleNoProgressPassShouldNotFailStream() throws Http2Exception {
+        StallOnceFlowControlled data = new StallOnceFlowControlled(10);
+        Http2Stream streamA = stream(STREAM_A);
+        controller.addFlowControlled(streamA, data);
+
+        controller.writePendingBytes();
+
+        assertNull(data.error);
+        assertEquals(0, data.size());
+        assertEquals(2, data.writeCount);
     }
 
     @Test
@@ -1032,6 +1063,81 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         when(channel.isWritable()).thenReturn(isWritable);
         if (controller != null) {
             controller.channelWritabilityChanged();
+        }
+    }
+
+    // A frame that reports a constant positive size and never makes progress on write.
+    private static final class StuckFlowControlled implements Http2RemoteFlowController.FlowControlled {
+        private final int size;
+        private int writeCount;
+        private Throwable error;
+
+        StuckFlowControlled(int size) {
+            this.size = size;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public void error(ChannelHandlerContext ctx, Throwable cause) {
+            error = cause;
+        }
+
+        @Override
+        public void writeComplete() {
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, int allowedBytes) {
+            // Never reduce size, so the frame can never be removed.
+            writeCount++;
+        }
+
+        @Override
+        public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
+            return false;
+        }
+    }
+
+    // A frame that makes no progress on its first write, like draining empty buffers before padding,
+    // and completes on the second
+    private static final class StallOnceFlowControlled implements Http2RemoteFlowController.FlowControlled {
+        private int size;
+        private int writeCount;
+        private Throwable error;
+
+        StallOnceFlowControlled(int size) {
+            this.size = size;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public void error(ChannelHandlerContext ctx, Throwable cause) {
+            error = cause;
+        }
+
+        @Override
+        public void writeComplete() {
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, int allowedBytes) {
+            // first pass makes no progress; second pass drains the frame
+            if (++writeCount >= 2) {
+                size = 0;
+            }
+        }
+
+        @Override
+        public boolean merge(ChannelHandlerContext ctx, Http2RemoteFlowController.FlowControlled next) {
+            return false;
         }
     }
 
