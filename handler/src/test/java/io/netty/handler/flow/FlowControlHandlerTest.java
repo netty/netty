@@ -43,6 +43,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -666,10 +668,12 @@ public class FlowControlHandlerTest {
 
     @Test
     public void testCompletingReadWithNonEmptyQueue() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
         final AtomicInteger reads = new AtomicInteger();
         final AtomicInteger readCompletes = new AtomicInteger();
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
+                upstream,
                 new FlowControlHandler(),
                 new ChannelInboundHandlerAdapter() {
                     @Override
@@ -697,6 +701,9 @@ public class FlowControlHandlerTest {
         channel.read();
         assertEquals(2, reads.get());
         assertEquals(2, readCompletes.get());
+
+        // Every read() was satisfied straight from the queue, so none was forwarded upstream.
+        assertEquals(0, upstream.reads.get());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -754,10 +761,12 @@ public class FlowControlHandlerTest {
 
     @Test
     public void testEmptyRead() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
         final AtomicInteger reads = new AtomicInteger();
         final AtomicInteger readCompletes = new AtomicInteger();
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
+                upstream,
                 new FlowControlHandler(),
                 new ChannelInboundHandlerAdapter() {
                     @Override
@@ -781,6 +790,9 @@ public class FlowControlHandlerTest {
 
         assertEquals(0, reads.get());
         assertEquals(1, readCompletes.get());
+
+        // The empty read() could not be satisfied from the queue, so it was forwarded upstream exactly once.
+        assertEquals(1, upstream.reads.get());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -963,6 +975,222 @@ public class FlowControlHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
+    @Test
+    public void testAutoReadDisabledDuringDequeueStopsDelivery() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                        ctx.channel().config().setAutoRead(false);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        // Begin with auto-read on while the queue is empty: that forwards a single read upstream and delivers
+        // nothing.
+        channel.config().setAutoRead(true);
+        assertEquals(0, reads.get());
+        assertEquals(1, upstream.reads.get());
+
+        // Messages now arrive with auto-read on. The handler disables auto-read while processing the first, so
+        // messages 2..5 stay queued: delivery stops after one and the cycle completes once (from channelRead).
+        channel.writeInbound("1", "2", "3", "4", "5");
+        assertEquals(1, reads.get());
+        assertEquals(1, readCompletes.get());
+        assertEquals(1, upstream.reads.get());
+
+        // A trailing upstream channelReadComplete (auto-read off, no read outstanding) is dropped.
+        channel.flushInbound();
+        assertEquals(1, readCompletes.get());
+
+        // Resume: re-enabling auto-read starts draining the four queued messages, but the handler disables it
+        // again while processing the first. The dequeue must observe the renewed setAutoRead(false), release
+        // exactly one more, and complete once (from read()). The message was served from the queue, so nothing
+        // is read further upstream.
+        channel.config().setAutoRead(true);
+        assertEquals(2, reads.get());
+        assertEquals(2, readCompletes.get());
+        assertEquals(1, upstream.reads.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testReentrantReadIsSatisfiedFromQueue() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final AtomicInteger reads = new AtomicInteger();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (reads.incrementAndGet() == 1) {
+                            ctx.read();
+                        }
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+        channel.writeInbound("1", "2");
+
+        channel.read();
+
+        assertEquals(2, reads.get());
+        assertEquals(0, upstream.reads.get());
+        assertEquals(1, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testAutoReadEnabledDuringDequeueDrainsRemaining() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final AtomicInteger reads = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        reads.incrementAndGet();
+                        // Resume the connection while "processing" each released message.
+                        ctx.channel().config().setAutoRead(true);
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        // Auto-read off: all five messages are held in the queue, nothing read upstream.
+        channel.writeInbound("1", "2", "3", "4", "5");
+        assertEquals(0, reads.get());
+        assertEquals(0, upstream.reads.get());
+
+        // A single read() delivers the first message; the handler re-enables auto-read from inside channelRead,
+        // which drains the whole remaining queue. With the queue empty and auto-read on, FlowControlHandler
+        // then reads further upstream twice: once for the transparent resume, once for the read() that
+        // consumed the queued message.
+        channel.read();
+        assertEquals(5, reads.get());
+        assertEquals(2, upstream.reads.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testHandlerRemovedFlushesQueuedMessages() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final List<Object> received = new ArrayList<Object>();
+        final AtomicInteger readCompletes = new AtomicInteger();
+        final FlowControlHandler flow = new FlowControlHandler();
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream,
+                flow,
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        received.add(msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        readCompletes.incrementAndGet();
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        // With auto-read off and no read(), all five messages stay queued in the handler.
+        channel.writeInbound("1", "2", "3", "4", "5");
+        assertEquals(0, received.size());
+        assertEquals(0, readCompletes.get());
+
+        // Removing the handler flushes the whole queue downstream, in order, then completes the batch once.
+        channel.pipeline().remove(flow);
+        assertEquals(Arrays.asList("1", "2", "3", "4", "5"), received);
+        assertEquals(1, readCompletes.get());
+        assertTrue(flow.isQueueEmpty());
+
+        // The flush happens locally on removal; nothing is read upstream.
+        assertEquals(0, upstream.reads.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testChannelInactiveReleasesQueuedMessages() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final FlowControlHandler flow = new FlowControlHandler();
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream, flow, new ChannelInboundHandlerAdapter());
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        ByteBuf msg1 = Unpooled.buffer().writeByte(1);
+        ByteBuf msg2 = Unpooled.buffer().writeByte(2);
+
+        // Auto-read off: the buffers are held in the handler's queue, not delivered downstream.
+        channel.writeInbound(msg1, msg2);
+        assertFalse(flow.isQueueEmpty());
+        assertEquals(1, msg1.refCnt());
+        assertEquals(1, msg2.refCnt());
+
+        // Closing fires channelInactive, which destroys the queue and releases the held buffers.
+        channel.close().syncUninterruptibly();
+        assertEquals(0, msg1.refCnt());
+        assertEquals(0, msg2.refCnt());
+        assertTrue(flow.isQueueEmpty());
+
+        // Nothing was ever read upstream.
+        assertEquals(0, upstream.reads.get());
+    }
+
+    @Test
+    public void testReleaseMessagesFalseDoesNotReleaseQueuedMessages() throws Exception {
+        final UpstreamReadCounter upstream = new UpstreamReadCounter();
+        final FlowControlHandler flow = new FlowControlHandler(false);
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false,
+                upstream, flow, new ChannelInboundHandlerAdapter());
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        ByteBuf msg1 = Unpooled.buffer().writeByte(1);
+        ByteBuf msg2 = Unpooled.buffer().writeByte(2);
+
+        channel.writeInbound(msg1, msg2);
+        assertFalse(flow.isQueueEmpty());
+
+        // releaseMessages == false: destroy() discards the queue but must not release the buffers.
+        channel.close().syncUninterruptibly();
+        assertEquals(1, msg1.refCnt());
+        assertEquals(1, msg2.refCnt());
+        assertTrue(flow.isQueueEmpty());
+
+        // Nothing was ever read upstream.
+        assertEquals(0, upstream.reads.get());
+
+        msg1.release();
+        msg2.release();
+    }
+
     /**
      * This is a fictional message decoder. It decodes each {@code byte}
      * into three strings.
@@ -976,6 +1204,20 @@ public class FlowControlHandlerTest {
                 out.add("3");
             }
             in.readerIndex(in.readableBytes());
+        }
+    }
+
+    /**
+     * Counts the {@code read()} events {@link FlowControlHandler} forwards upstream. Placed at the head side
+     * of the handler.
+     */
+    private static final class UpstreamReadCounter extends ChannelDuplexHandler {
+        final AtomicInteger reads = new AtomicInteger();
+
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            reads.incrementAndGet();
+            super.read(ctx);
         }
     }
 }
