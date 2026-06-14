@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static io.netty.handler.codec.http.HttpHeaderValidationUtil.isNonCombinedHeader;
 import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateToken;
 import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateValidHeaderValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,67 +133,11 @@ public class HttpHeaderValidationUtilTest {
         return list;
     }
 
-    public static List<Arguments> nonCombinedHeaders() {
-        List<Arguments> list = new ArrayList<Arguments>();
-
-        list.add(nonCombinedHeader(HttpHeaderNames.AGE));
-        list.add(nonCombinedHeader(HttpHeaderNames.AUTHORIZATION));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_BASE));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_DISPOSITION));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_LENGTH));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_LOCATION));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_MD5));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_SECURITY_POLICY));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_TRANSFER_ENCODING));
-        list.add(nonCombinedHeader(HttpHeaderNames.CONTENT_TYPE));
-        list.add(nonCombinedHeader(HttpHeaderNames.COOKIE));
-        list.add(nonCombinedHeader(HttpHeaderNames.DATE));
-        list.add(nonCombinedHeader(HttpHeaderNames.DNT));
-        list.add(nonCombinedHeader(HttpHeaderNames.ETAG));
-        list.add(nonCombinedHeader(HttpHeaderNames.EXPIRES));
-        list.add(nonCombinedHeader(HttpHeaderNames.FROM));
-        list.add(nonCombinedHeader(HttpHeaderNames.HOST));
-        list.add(nonCombinedHeader(HttpHeaderNames.IF_MODIFIED_SINCE));
-        list.add(nonCombinedHeader(HttpHeaderNames.IF_RANGE));
-        list.add(nonCombinedHeader(HttpHeaderNames.IF_UNMODIFIED_SINCE));
-        list.add(nonCombinedHeader(HttpHeaderNames.LAST_MODIFIED));
-        list.add(nonCombinedHeader(HttpHeaderNames.LOCATION));
-        list.add(nonCombinedHeader(HttpHeaderNames.MAX_FORWARDS));
-        list.add(nonCombinedHeader(HttpHeaderNames.ORIGIN));
-        list.add(nonCombinedHeader(HttpHeaderNames.PROXY_AUTHORIZATION));
-        list.add(nonCombinedHeader(HttpHeaderNames.REFERER));
-        list.add(nonCombinedHeader(HttpHeaderNames.RETRY_AFTER));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_KEY));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_KEY1));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_KEY2));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_LOCATION));
-        list.add(nonCombinedHeader(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN));
-        list.add(nonCombinedHeader(HttpHeaderNames.SET_COOKIE));
-        list.add(nonCombinedHeader(HttpHeaderNames.SET_COOKIE2));
-        list.add(nonCombinedHeader(HttpHeaderNames.SERVER));
-        list.add(nonCombinedHeader(HttpHeaderNames.UPGRADE_INSECURE_REQUESTS));
-        list.add(nonCombinedHeader(HttpHeaderNames.USER_AGENT));
-        list.add(nonCombinedHeader(HttpHeaderNames.X_FRAME_OPTIONS));
-        list.add(nonCombinedHeader(HttpHeaderNames.X_REQUESTED_WITH));
-
-        return list;
-    }
-
     private static Arguments header(final boolean isConnectionRelated, final AsciiString headerName) {
         return new Arguments() {
             @Override
             public Object[] get() {
                 return new Object[]{headerName, isConnectionRelated};
-            }
-        };
-    }
-
-    private static Arguments nonCombinedHeader(final AsciiString headerName) {
-        return new Arguments() {
-            @Override
-            public Object[] get() {
-                return new Object[]{headerName};
             }
         };
     }
@@ -219,29 +162,6 @@ public class HttpHeaderValidationUtilTest {
     @Test
     void teHeaderIsNotConnectionRelatedWhenIgnoredString() {
         assertFalse(HttpHeaderValidationUtil.isConnectionHeader(HttpHeaderNames.TE.toString(), true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("nonCombinedHeaders")
-    void mustIdentifyNonCombinedHeadersAsciiString(AsciiString headerName) {
-        assertTrue(isNonCombinedHeader(headerName));
-    }
-
-    @ParameterizedTest
-    @MethodSource("nonCombinedHeaders")
-    void mustIdentifyNonCombinedHeadersString(AsciiString headerName) {
-        assertTrue(isNonCombinedHeader(headerName.toString()));
-    }
-
-    @Test
-    void listBasedHeadersRemainCombinable() {
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.ACCEPT));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.CACHE_CONTROL));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.CONNECTION));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.TRANSFER_ENCODING));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.VARY));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.WARNING));
-        assertFalse(isNonCombinedHeader(HttpHeaderNames.WWW_AUTHENTICATE));
     }
 
     public static List<Arguments> teIsTrailersTruthTable() {

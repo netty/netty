@@ -29,6 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_MODIFIED_SINCE;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_UNMODIFIED_SINCE;
+import static io.netty.handler.codec.http.HttpHeaderNames.LAST_MODIFIED;
+import static io.netty.handler.codec.http.HttpHeaderNames.RETRY_AFTER;
+import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.COMMA;
@@ -75,10 +82,32 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
     @Override
     public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
         CharSequence trimmed = StringUtil.trimOws(value);
-        if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+        if (cannotBeCombined(name)) {
             return contains(name, trimmed, ignoreCase);
         }
         return super.containsValue(name, trimmed, ignoreCase);
+    }
+
+    private static boolean cannotBeCombined(CharSequence name) {
+        int len = name.length();
+        switch (len) {
+            case 4:
+                return DATE.contentEqualsIgnoreCase(name);
+            case 7:
+                return EXPIRES.contentEqualsIgnoreCase(name);
+            case 10:
+                return SET_COOKIE.contentEqualsIgnoreCase(name);
+            case 11:
+                return RETRY_AFTER.contentEqualsIgnoreCase(name);
+            case 13:
+                return LAST_MODIFIED.contentEqualsIgnoreCase(name);
+            case 17:
+                return IF_MODIFIED_SINCE.contentEqualsIgnoreCase(name);
+            case 19:
+                return IF_UNMODIFIED_SINCE.contentEqualsIgnoreCase(name);
+            default:
+                return false;
+        }
     }
 
     private static final class CombinedHttpHeadersImpl
@@ -139,7 +168,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         @Override
         public Iterator<CharSequence> valueIterator(CharSequence name) {
             Iterator<CharSequence> itr = super.valueIterator(name);
-            if (!itr.hasNext() || HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (!itr.hasNext() || cannotBeCombined(name)) {
                 return itr;
             }
             Iterator<CharSequence> unescapedItr = unescapeCsvFields(itr.next()).iterator();
@@ -164,7 +193,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         @Override
         public List<CharSequence> getAll(CharSequence name) {
             List<CharSequence> values = super.getAll(name);
-            if (values.isEmpty() || HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (values.isEmpty() || cannotBeCombined(name)) {
                 return values;
             }
             if (values.size() != 1) {
@@ -219,7 +248,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence value) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.add(name, value);
             }
             return addEscapedValue(name, charSequenceEscaper().escape(name, value));
@@ -227,7 +256,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence... values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.add(name, values);
             }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
@@ -235,7 +264,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, Iterable<? extends CharSequence> values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.add(name, values);
             }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
@@ -243,7 +272,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object value) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.addObject(name, value);
             }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), value));
@@ -251,7 +280,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Iterable<?> values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.addObject(name, values);
             }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
@@ -259,7 +288,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object... values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.addObject(name, values);
             }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
@@ -267,7 +296,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, CharSequence... values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.set(name, values);
             }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
@@ -276,7 +305,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, Iterable<? extends CharSequence> values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.set(name, values);
             }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
@@ -285,7 +314,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object value) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.setObject(name, value);
             }
             set(name, commaSeparate(name, objectEscaper(), value));
@@ -294,7 +323,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object... values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.setObject(name, values);
             }
             set(name, commaSeparate(name, objectEscaper(), values));
@@ -303,7 +332,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Iterable<?> values) {
-            if (HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (cannotBeCombined(name)) {
                 return super.setObject(name, values);
             }
             set(name, commaSeparate(name, objectEscaper(), values));
@@ -312,7 +341,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         private CombinedHttpHeadersImpl addEscapedValue(CharSequence name, CharSequence escapedValue) {
             CharSequence currentValue = get(name);
-            if (currentValue == null || HttpHeaderValidationUtil.isNonCombinedHeader(name)) {
+            if (currentValue == null || cannotBeCombined(name)) {
                 super.add(name, escapedValue);
             } else {
                 set(name, commaSeparateEscapedValues(currentValue, escapedValue));

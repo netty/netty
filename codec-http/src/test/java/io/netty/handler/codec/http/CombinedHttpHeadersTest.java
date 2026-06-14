@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Iterator;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
@@ -179,6 +180,16 @@ public class CombinedHttpHeadersTest {
 
         assertEquals("text/plain,text/html", headers.get(ACCEPT));
         assertEquals(Arrays.asList("text/plain", "text/html"), headers.getAll(ACCEPT));
+    }
+
+    @Test
+    public void nonHttpDateHeadersStillCombine() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(CONTENT_TYPE, "text/plain");
+        headers.add(CONTENT_TYPE, "text/html");
+
+        assertEquals("text/plain,text/html", headers.get(CONTENT_TYPE));
+        assertEquals(Arrays.asList("text/plain", "text/html"), headers.getAll(CONTENT_TYPE));
     }
 
     @Test
