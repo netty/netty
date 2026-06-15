@@ -44,11 +44,20 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
     static final String CLIENT_NO_CONTEXT = "client_no_context_takeover";
     static final String SERVER_NO_CONTEXT = "server_no_context_takeover";
 
+    /**
+     * Default memory level used for deflate compression (zlib MAX_MEM_LEVEL).
+     */
+    public static final int DEFAULT_MEM_LEVEL = 8;
+    public static final int MIN_MEM_LEVEL = 1;
+    public static final int MAX_MEM_LEVEL = 9;
+
     private final int compressionLevel;
     private final boolean allowServerWindowSize;
     private final int preferredClientWindowSize;
     private final boolean allowServerNoContext;
     private final boolean preferredClientNoContext;
+    private final int serverWindowSize;
+    private final int memLevel;
     private final WebSocketExtensionFilterProvider extensionFilterProvider;
     private final int maxAllocation;
 
@@ -71,7 +80,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
      *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
     public PerMessageDeflateServerExtensionHandshaker(int maxAllocation) {
-        this(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(), MAX_WINDOW_SIZE, false, false, maxAllocation);
+        this(6, ZlibCodecFactory.isSupportingWindowSizeAndMemLevel(), MAX_WINDOW_SIZE, false, false,
+                MAX_WINDOW_SIZE, DEFAULT_MEM_LEVEL, maxAllocation);
     }
 
     /**
@@ -99,7 +109,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                                                       int preferredClientWindowSize,
                                                       boolean allowServerNoContext, boolean preferredClientNoContext) {
         this(compressionLevel, allowServerWindowSize, preferredClientWindowSize, allowServerNoContext,
-                preferredClientNoContext, 0);
+                preferredClientNoContext, MAX_WINDOW_SIZE, DEFAULT_MEM_LEVEL, 0);
     }
 
     /**
@@ -125,7 +135,42 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
             int preferredClientWindowSize,
             boolean allowServerNoContext, boolean preferredClientNoContext, int maxAllocation) {
         this(compressionLevel, allowServerWindowSize, preferredClientWindowSize, allowServerNoContext,
-             preferredClientNoContext, WebSocketExtensionFilterProvider.DEFAULT, maxAllocation);
+             preferredClientNoContext, MAX_WINDOW_SIZE, DEFAULT_MEM_LEVEL, maxAllocation);
+    }
+
+    /**
+     * Constructor with custom configuration including server-side compressor memory limits.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param allowServerWindowSize
+     *            allows WebSocket client to customize the server inflater window size
+     *            (default is false).
+     * @param preferredClientWindowSize
+     *            indicates the preferred client window size to use if client inflater is customizable.
+     * @param allowServerNoContext
+     *            allows WebSocket client to activate server_no_context_takeover
+     *            (default is false).
+     * @param preferredClientNoContext
+     *            indicates if server prefers to activate client_no_context_takeover
+     *            if client is compatible with (default is false).
+     * @param serverWindowSize
+     *            upper bound (in bits, 8-15) on the server-side deflate window. If the client offers
+     *            {@code server_max_window_bits=N}, the negotiated value is {@code min(N, serverWindowSize)}.
+     *            Set lower than {@link #MAX_WINDOW_SIZE} to reduce per-connection memory.
+     * @param memLevel
+     *            zlib memory level for the server-side deflater (1-9). Lower values reduce per-connection
+     *            memory at the cost of compression ratio.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public PerMessageDeflateServerExtensionHandshaker(int compressionLevel, boolean allowServerWindowSize,
+            int preferredClientWindowSize,
+            boolean allowServerNoContext, boolean preferredClientNoContext,
+            int serverWindowSize, int memLevel, int maxAllocation) {
+        this(compressionLevel, allowServerWindowSize, preferredClientWindowSize, allowServerNoContext,
+             preferredClientNoContext, serverWindowSize, memLevel,
+             WebSocketExtensionFilterProvider.DEFAULT, maxAllocation);
     }
 
     /**
@@ -156,7 +201,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
                                                       boolean allowServerNoContext, boolean preferredClientNoContext,
                                                       WebSocketExtensionFilterProvider extensionFilterProvider) {
         this(compressionLevel, allowServerWindowSize, preferredClientWindowSize, allowServerNoContext,
-                preferredClientNoContext, extensionFilterProvider, 0);
+                preferredClientNoContext, MAX_WINDOW_SIZE, DEFAULT_MEM_LEVEL, extensionFilterProvider, 0);
     }
 
     /**
@@ -179,10 +224,55 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
      *            provides server extension filters for per message deflate encoder and decoder.
      * @param maxAllocation
      *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     * @deprecated
+     *            Use {@link PerMessageDeflateServerExtensionHandshaker#PerMessageDeflateServerExtensionHandshaker(
+     *            int, boolean, int, boolean, boolean, int, int, WebSocketExtensionFilterProvider, int)}.
+     */
+    @Deprecated
+    public PerMessageDeflateServerExtensionHandshaker(int compressionLevel, boolean allowServerWindowSize,
+            int preferredClientWindowSize,
+            boolean allowServerNoContext, boolean preferredClientNoContext,
+            WebSocketExtensionFilterProvider extensionFilterProvider,
+            int maxAllocation) {
+        this(compressionLevel, allowServerWindowSize, preferredClientWindowSize, allowServerNoContext,
+                preferredClientNoContext, MAX_WINDOW_SIZE, DEFAULT_MEM_LEVEL, extensionFilterProvider, maxAllocation);
+    }
+
+    /**
+     * Constructor with full custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param allowServerWindowSize
+     *            allows WebSocket client to customize the server inflater window size
+     *            (default is false).
+     * @param preferredClientWindowSize
+     *            indicates the preferred client window size to use if client inflater is customizable.
+     * @param allowServerNoContext
+     *            allows WebSocket client to activate server_no_context_takeover
+     *            (default is false).
+     * @param preferredClientNoContext
+     *            indicates if server prefers to activate client_no_context_takeover
+     *            if client is compatible with (default is false).
+     * @param serverWindowSize
+     *            upper bound (in bits, 8-15) on the server-side deflate window. If the client offers
+     *            {@code server_max_window_bits=N}, the negotiated value is {@code min(N, serverWindowSize)}.
+     *            Per <a href="https://tools.ietf.org/html/rfc7692#section-7.1.2.1">RFC 7692 §7.1.2.1</a>
+     *            the server may include {@code server_max_window_bits} with the same or smaller value than the
+     *            offer; this handshaker also advertises it unilaterally when {@code serverWindowSize} is less
+     *            than {@link #MAX_WINDOW_SIZE}.
+     * @param memLevel
+     *            zlib memory level for the server-side deflater (1-9). Lower values reduce per-connection
+     *            memory at the cost of compression ratio.
+     * @param extensionFilterProvider
+     *            provides server extension filters for per message deflate encoder and decoder.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
     public PerMessageDeflateServerExtensionHandshaker(int compressionLevel, boolean allowServerWindowSize,
             int preferredClientWindowSize,
             boolean allowServerNoContext, boolean preferredClientNoContext,
+            int serverWindowSize, int memLevel,
             WebSocketExtensionFilterProvider extensionFilterProvider,
             int maxAllocation) {
         if (preferredClientWindowSize > MAX_WINDOW_SIZE || preferredClientWindowSize < MIN_WINDOW_SIZE) {
@@ -198,6 +288,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         this.preferredClientWindowSize = preferredClientWindowSize;
         this.allowServerNoContext = allowServerNoContext;
         this.preferredClientNoContext = preferredClientNoContext;
+        this.serverWindowSize = checkInRange(serverWindowSize, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, "serverWindowSize");
+        this.memLevel = checkInRange(memLevel, MIN_MEM_LEVEL, MAX_MEM_LEVEL, "memLevel");
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
         this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
@@ -210,7 +302,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
 
         boolean deflateEnabled = true;
         int clientWindowSize = MAX_WINDOW_SIZE;
-        int serverWindowSize = MAX_WINDOW_SIZE;
+        int negotiatedServerWindowSize = this.serverWindowSize;
         boolean serverNoContext = false;
         boolean clientNoContext = false;
 
@@ -235,9 +327,14 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
             } else if (SERVER_MAX_WINDOW.equalsIgnoreCase(parameter.getKey())) {
                 // use provided windowSize if it is allowed
                 if (allowServerWindowSize) {
-                    serverWindowSize = Integer.parseInt(parameter.getValue());
-                    if (serverWindowSize > MAX_WINDOW_SIZE || serverWindowSize < MIN_WINDOW_SIZE) {
+                    int clientOfferedServerWindowSize = Integer.parseInt(parameter.getValue());
+                    if (clientOfferedServerWindowSize > MAX_WINDOW_SIZE
+                            || clientOfferedServerWindowSize < MIN_WINDOW_SIZE) {
                         deflateEnabled = false;
+                    } else {
+                        // RFC 7692 §7.1.2.1: server accepts with the same or smaller value than the offer.
+                        // Cap at the configured serverWindowSize so the server's memory bound is respected.
+                        negotiatedServerWindowSize = Math.min(clientOfferedServerWindowSize, this.serverWindowSize);
                     }
                 } else {
                     deflateEnabled = false;
@@ -260,7 +357,8 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
 
         if (deflateEnabled) {
             return new PermessageDeflateExtension(compressionLevel, serverNoContext,
-                    serverWindowSize, clientNoContext, clientWindowSize, extensionFilterProvider, maxAllocation);
+                    negotiatedServerWindowSize, memLevel, clientNoContext, clientWindowSize,
+                    extensionFilterProvider, maxAllocation);
         } else {
             return null;
         }
@@ -271,17 +369,19 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         private final int compressionLevel;
         private final boolean serverNoContext;
         private final int serverWindowSize;
+        private final int memLevel;
         private final boolean clientNoContext;
         private final int clientWindowSize;
         private final WebSocketExtensionFilterProvider extensionFilterProvider;
         private final int maxAllocation;
 
         PermessageDeflateExtension(int compressionLevel, boolean serverNoContext,
-                int serverWindowSize, boolean clientNoContext, int clientWindowSize,
+                int serverWindowSize, int memLevel, boolean clientNoContext, int clientWindowSize,
                 WebSocketExtensionFilterProvider extensionFilterProvider, int maxAllocation) {
             this.compressionLevel = compressionLevel;
             this.serverNoContext = serverNoContext;
             this.serverWindowSize = serverWindowSize;
+            this.memLevel = memLevel;
             this.clientNoContext = clientNoContext;
             this.clientWindowSize = clientWindowSize;
             this.extensionFilterProvider = extensionFilterProvider;
@@ -295,7 +395,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
 
         @Override
         public WebSocketExtensionEncoder newExtensionEncoder() {
-            return new PerMessageDeflateEncoder(compressionLevel, serverWindowSize, serverNoContext,
+            return new PerMessageDeflateEncoder(compressionLevel, serverWindowSize, memLevel, serverNoContext,
                                                 extensionFilterProvider.encoderFilter());
         }
 

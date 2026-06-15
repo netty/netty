@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,8 +64,9 @@ public class BrotliDecoderTest {
             Unpooled.wrappedBuffer(BYTES_LARGE)).asReadOnly();
 
     private static void fillArrayWithCompressibleData(byte[] array) {
+        SplittableRandom rng = new SplittableRandom(RANDOM.nextLong());
         for (int i = 0; i < array.length; i++) {
-            array[i] = i % 4 != 0 ? 0 : (byte) RANDOM.nextInt();
+            array[i] = i % 4 != 0 ? 0 : (byte) rng.nextInt();
         }
     }
 
@@ -134,12 +136,13 @@ public class BrotliDecoderTest {
 
     private void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
         final int compressedLength = data.readableBytes();
-        int written = 0, length = RANDOM.nextInt(100);
+        SplittableRandom rng = new SplittableRandom(RANDOM.nextLong());
+        int written = 0, length = rng.nextInt(100);
         while (written + length < compressedLength) {
             ByteBuf compressedBuf = data.retainedSlice(written, length);
             channel.writeInbound(compressedBuf);
             written += length;
-            length = RANDOM.nextInt(100);
+            length = rng.nextInt(100);
         }
         ByteBuf compressedBuf = data.slice(written, compressedLength - written);
         assertTrue(channel.writeInbound(compressedBuf.retain()));

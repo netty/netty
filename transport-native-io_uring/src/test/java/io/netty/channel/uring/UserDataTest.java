@@ -18,16 +18,18 @@ package io.netty.channel.uring;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UserDataTest {
     @Test
     public void testUserData() {
-        // Ensure userdata works with negative and positive values
-        for (int fd : new int[] { -10, -1, 0, 1, 10, Short.MAX_VALUE, Integer.MAX_VALUE }) {
+        // Packed userdata uses positive registration ids so bit 63 stays clear.
+        for (int fd : new int[] { 1, 10, Short.MAX_VALUE, Integer.MAX_VALUE }) {
             for (byte op = 0; op < 20; op++) {
                 for (int data = Short.MIN_VALUE; data <= Short.MAX_VALUE; data++) {
                     final short expectedData = (short) data;
                     long udata = UserData.encode(fd, op, expectedData);
+                    assertTrue(udata >= 0);
                     assertEquals(fd, UserData.decodeId(udata));
                     assertEquals(op, UserData.decodeOp(udata));
                     assertEquals(expectedData, UserData.decodeData(udata));

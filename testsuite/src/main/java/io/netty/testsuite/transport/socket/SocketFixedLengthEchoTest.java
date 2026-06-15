@@ -24,11 +24,13 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.FixedLengthFrameDecoder;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
@@ -40,7 +42,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576];
 
     static {
-        random.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(random.nextLong()), data);
     }
 
     @Test
@@ -95,8 +97,9 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        SplittableRandom rng = new SplittableRandom(random.nextLong());
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 3), data.length - i);
+            int length = Math.min(rng.nextInt(1024 * 3), data.length - i);
             cc.writeAndFlush(randomBufferType(cc.alloc(), data, i, length));
             i += length;
         }

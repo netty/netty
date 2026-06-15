@@ -367,9 +367,23 @@ public class OpenSslPrivateKeyMethodTest {
                 LocalAddress address = new LocalAddress("test-" + SslProvider.OPENSSL
                         + '-' + SslProvider.JDK + '-' + RFC_CIPHER_NAME + '-' + delegate);
 
-                Channel server = server(address, serverSslHandler);
+                Channel server = server(address, new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(serverSslHandler);
+                        ch.pipeline().addLast(new SilenceExceptionHandler()
+                                .rootCauseInstanceOf(SignatureException.class));
+                    }
+                });
                 try {
-                    Channel client = client(server, clientSslHandler);
+                    Channel client = client(server, new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SignatureException.class));
+                        }
+                    });
                     try {
                         Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
                         Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();

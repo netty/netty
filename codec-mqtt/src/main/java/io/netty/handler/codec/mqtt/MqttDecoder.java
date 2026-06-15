@@ -124,19 +124,18 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             case READ_VARIABLE_HEADER:  try {
                 int bytesRemainingBeforeVariableHeader = bytesRemainingInVariablePart;
-                int initialAvailableBytes = buffer.readableBytes();
                 boolean bailOut = false;
                 try {
                     variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
                 } catch (Signal signal) {
-                    if (initialAvailableBytes < maxBytesInMessage) {
-                        // Ask for REPLAY if the buffer was less than maxBytesInMessage
-                        throw signal;
-                    } else {
+                    if (bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
                         // We couldn't parse the complete message, and it's already too large.
                         // Swallow the Signal (we don't need more data) and instead bail out
                         // and throw the TooLongFrameException below.
                         bailOut = true;
+                    } else {
+                        // Ask for REPLAY if the current message is within maxBytesInMessage.
+                        throw signal;
                     }
                 }
                 if (bailOut || bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
@@ -541,7 +540,11 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 return decodePublishPayload(buffer);
 
             default:
-                // unknown payload , no byte consumed
+                // No payload for this message type. If the fixed header's Remaining Length
+                // claimed bytes beyond what the variable header consumed (e.g. a PINGREQ
+                // with non-zero Remaining Length), the frame is malformed.
+                // See https://github.com/netty/netty/issues/16851
+                validateNoBytesRemain(0);
                 return null;
         }
     }
@@ -777,9 +780,14 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final long propertiesLength = decodeVariableByteInteger(buffer);
         int totalPropertiesLength = unpackA(propertiesLength);
         int numberOfBytesConsumed = unpackB(propertiesLength);
-        if (buffer.readableBytes() < totalPropertiesLength) {
-            // Force an early REPLAY to avoid repeatedly parsing the properties.
-            buffer.readSlice(totalPropertiesLength);
+        if (totalPropertiesLength > 0) {
+            // Force an early REPLAY when the buffer does not yet have the full properties block,
+            // so we don't repeatedly parse partial properties as data arrives. A direct
+            // buffer.readableBytes() check is unusable here because ReplayingDecoderByteBuf
+            // returns Integer.MAX_VALUE - readerIndex; touching the last byte via getByte()
+            // routes through ReplayingDecoderByteBuf.checkIndex(), which throws REPLAY if the
+            // buffer's writerIndex hasn't reached that position yet.
+            buffer.getByte(buffer.readerIndex() + totalPropertiesLength - 1);
         }
 
         MqttProperties decodedProperties = new MqttProperties();

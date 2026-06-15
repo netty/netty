@@ -16,68 +16,129 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.IllegalReferenceCountException;
 
 import javax.net.ssl.X509KeyManager;
-import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * {@link OpenSslKeyMaterialProvider} that will cache the {@link OpenSslKeyMaterial} to reduce the overhead
  * of parsing the chain and the key for generation of the material.
+ * <p>
+ * Cache reads are lock-free ({@link ConcurrentHashMap#get} + {@code retain()});
+ * if a concurrent eviction releases the material in between, {@code retain()}
+ * detects the dead reference count and the read falls back to a cache miss.
+ * Mutations (insert, evict, destroy) use {@link ConcurrentHashMap#compute} /
+ * {@link ConcurrentHashMap#computeIfPresent} for atomicity.
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
     private final int maxCachedEntries;
-    private volatile boolean full;
-    private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+    private final ConcurrentHashMap<String, OpenSslKeyMaterial> cache =
+            new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+    private volatile boolean destroyed;
 
-    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxCachedEntries) {
+    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxEntries) {
         super(keyManager, password);
-        this.maxCachedEntries = maxCachedEntries;
+        maxCachedEntries = maxEntries;
+    }
+
+    /**
+     * Lock-free cache lookup. If a concurrent eviction releases the material between
+     * {@code get} and {@code retain}, the dead reference count is detected and treated
+     * as a cache miss.
+     */
+    private OpenSslKeyMaterial getAndRetain(String alias) {
+        OpenSslKeyMaterial m = cache.get(alias);
+        if (m != null) {
+            try {
+                return m.retain();
+            } catch (IllegalReferenceCountException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Atomically inserts material if absent, or retains the existing entry.
+     */
+    private OpenSslKeyMaterial putIfAbsentAndRetain(String alias, OpenSslKeyMaterial material) {
+        return cache.compute(alias, (k, existing) -> {
+            if (existing != null) {
+                existing.retain();
+                return existing;
+            }
+            material.retain();
+            return material;
+        });
+    }
+
+    /**
+     * Atomically removes and releases the entry for the given alias.
+     */
+    private void removeAndRelease(String alias) {
+        cache.computeIfPresent(alias, (k, v) -> {
+            v.release();
+            return null;
+        });
+    }
+
+    private void evictStaleEntries() {
+        for (String alias : cache.keySet()) {
+            if (keyManager().getCertificateChain(alias) == null) {
+                removeAndRelease(alias);
+            }
+        }
     }
 
     @Override
     OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
-        OpenSslKeyMaterial material = cache.get(alias);
+        OpenSslKeyMaterial material = getAndRetain(alias);
         if (material == null) {
             material = super.chooseKeyMaterial(allocator, alias);
             if (material == null) {
-                // No keymaterial should be used.
                 return null;
             }
 
-            if (full) {
-                return material;
+            if (cache.size() >= maxCachedEntries) {
+                evictStaleEntries();
+                if (cache.size() >= maxCachedEntries) {
+                    return material;
+                }
             }
-            if (cache.size() > maxCachedEntries) {
-                full = true;
-                // Do not cache...
-                return material;
-            }
-            OpenSslKeyMaterial old = cache.putIfAbsent(alias, material);
-            if (old != null) {
+            // Returns the newly created material, or an existing entry if another thread inserted first.
+            OpenSslKeyMaterial old = putIfAbsentAndRetain(alias, material);
+            if (old != material) {
                 material.release();
                 material = old;
+            } else if (destroyed) {
+                // We may have inserted an entry after the provider has been destroyed. Help with the cleanup.
+                removeAndReleaseAllEntries();
             }
         }
-        // We need to call retain() as we want to always have at least a refCnt() of 1 before destroy() was called.
-        return material.retain();
+        return material;
+    }
+
+    int cacheSize() {
+        return cache.size();
     }
 
     @Override
     void destroy() {
+        destroyed = true;
         try {
-            // Remove and release all entries.
-            do  {
-                Iterator<OpenSslKeyMaterial> iterator = cache.values().iterator();
-                while (iterator.hasNext()) {
-                    iterator.next().release();
-                    iterator.remove();
-                }
-            } while (!cache.isEmpty());
+            removeAndReleaseAllEntries();
         } finally {
             super.destroy();
         }
+    }
+
+    private void removeAndReleaseAllEntries() {
+        do  {
+            for (String alias : cache.keySet()) {
+                removeAndRelease(alias);
+            }
+        } while (!cache.isEmpty());
     }
 }

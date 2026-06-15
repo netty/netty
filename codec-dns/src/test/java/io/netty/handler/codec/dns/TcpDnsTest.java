@@ -21,7 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,7 +36,7 @@ public class TcpDnsTest {
     public void testQueryDecode() {
         EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsQueryDecoder());
 
-        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        int randomID = new SplittableRandom().nextInt(60000 - 1000) + 1000;
         DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                 .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
         assertTrue(channel.writeInbound(query));
@@ -52,7 +52,7 @@ public class TcpDnsTest {
     public void testDecoderLeak() {
         EmbeddedChannel decoder = new EmbeddedChannel(new TcpDnsQueryDecoder());
         EmbeddedChannel encoder = new EmbeddedChannel(new TcpDnsQueryEncoder());
-        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        int randomID = new SplittableRandom().nextInt(60000 - 1000) + 1000;
         DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                 .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
         assertTrue(encoder.writeOutbound(query));
@@ -74,7 +74,7 @@ public class TcpDnsTest {
     public void testResponseEncode() {
         EmbeddedChannel channel = new EmbeddedChannel(new TcpDnsResponseEncoder());
 
-        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        int randomID = new SplittableRandom().nextInt(60000 - 1000) + 1000;
         DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                 .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
 

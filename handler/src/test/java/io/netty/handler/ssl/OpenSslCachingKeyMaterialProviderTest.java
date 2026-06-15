@@ -19,6 +19,11 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.X509KeyManager;
+import java.net.Socket;
+import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialProviderTest {
 
@@ -81,5 +87,65 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
                 super.newKeyManagerFactory("PKIX"));
         OpenSslKeyMaterialProvider provider = factory.newProvider(PASSWORD);
         assertThat(provider).isNotInstanceOf(OpenSslCachingKeyMaterialProvider.class);
+    }
+
+    @Test
+    public void testStaleEntriesEvictedWhenCacheFull() throws Exception {
+        final X509KeyManager delegate = ReferenceCountedOpenSslContext.chooseX509KeyManager(
+                newKeyManagerFactory().getKeyManagers());
+
+        class RotatableKeyManager implements X509KeyManager {
+            private String currentAlias = "old-key";
+
+            void rotate() {
+                currentAlias = "new-key";
+            }
+
+            @Override
+            public X509Certificate[] getCertificateChain(String alias) {
+                return currentAlias.equals(alias) ? delegate.getCertificateChain(EXISTING_ALIAS) : null;
+            }
+            @Override
+            public PrivateKey getPrivateKey(String alias) {
+                return currentAlias.equals(alias) ? delegate.getPrivateKey(EXISTING_ALIAS) : null;
+            }
+            @Override
+            public String[] getClientAliases(String keyType, Principal[] issuers) {
+                return delegate.getClientAliases(keyType, issuers);
+            }
+            @Override
+            public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                return delegate.chooseClientAlias(keyType, issuers, socket);
+            }
+            @Override
+            public String[] getServerAliases(String keyType, Principal[] issuers) {
+                return delegate.getServerAliases(keyType, issuers);
+            }
+            @Override
+            public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                return delegate.chooseServerAlias(keyType, issuers, socket);
+            }
+        }
+
+        RotatableKeyManager rotatableKeyManager = new RotatableKeyManager();
+        OpenSslCachingKeyMaterialProvider provider =
+                new OpenSslCachingKeyMaterialProvider(rotatableKeyManager, PASSWORD, 1);
+
+        // Populate the cache with the old alias.
+        OpenSslKeyMaterial material = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, "old-key");
+        assertNotNull(material);
+        assertEquals(1, provider.cacheSize());
+        material.release();
+
+        // Simulate cert rotation: old alias is gone, new alias takes over.
+        rotatableKeyManager.rotate();
+
+        // Cache is full; loading "new-key" triggers evictStaleEntries(), which removes "old-key".
+        OpenSslKeyMaterial newMaterial = provider.chooseKeyMaterial(UnpooledByteBufAllocator.DEFAULT, "new-key");
+        assertNotNull(newMaterial);
+        assertEquals(1, provider.cacheSize()); // old evicted, new-key inserted
+        newMaterial.release();
+
+        provider.destroy();
     }
 }

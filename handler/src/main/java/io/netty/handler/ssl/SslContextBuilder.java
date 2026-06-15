@@ -764,7 +764,7 @@ public final class SslContextBuilder {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                    sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
+                sessionTimeout, startTls, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
                     serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
         }
     }

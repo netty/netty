@@ -485,18 +485,18 @@ public class EpollIoHandler implements IoHandler {
                 default:
             }
             if (strategy > 0) {
-                handled = strategy;
+                int packed;
                 if (context.shouldReportActiveIoTime()) {
                     long activeIoStartTimeNanos = System.nanoTime();
-                    if (processReady(events, strategy)) {
-                        prevDeadlineNanos = NONE;
-                    }
+                    packed = processReady(events, strategy);
                     long activeIoEndTimeNanos = System.nanoTime();
                     context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
                 } else {
-                    if (processReady(events, strategy)) {
-                        prevDeadlineNanos = NONE;
-                    }
+                    packed = processReady(events, strategy);
+                }
+                handled = packed >>> 1;
+                if ((packed & 1) != 0) {
+                    prevDeadlineNanos = NONE;
                 }
             } else if (context.shouldReportActiveIoTime()) {
                 context.reportActiveIoTime(0);
@@ -529,16 +529,18 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    // Returns true if a timerFd event was encountered
-    private boolean processReady(EpollEventArray events, int ready) {
-        boolean timerFired = false;
+    // Returns packed int: each real I/O event adds 2, timer fired adds 1.
+    // Unpack: real events = result >>> 1, timer fired = (result & 1) != 0.
+    private int processReady(EpollEventArray events, int ready) {
+        int result = 0;
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
                 pendingWakeup = false;
             } else if (fd == timerFd.intValue()) {
-                timerFired = true;
+                result |= 1;
             } else {
+                result += 2;
                 final long ev = events.events(i);
 
                 DefaultEpollIoRegistration registration = registrations.get(fd);
@@ -557,7 +559,7 @@ public class EpollIoHandler implements IoHandler {
                 }
             }
         }
-        return timerFired;
+        return result;
     }
 
     /**

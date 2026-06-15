@@ -29,22 +29,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
-import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SocketObjectEchoTest extends AbstractSocketTest {
 
-    static final Random random = new Random();
     static final String[] data = new String[1024];
 
     static {
+        SplittableRandom rng = new SplittableRandom();
         for (int i = 0; i < data.length; i ++) {
-            int eLen = random.nextInt(512);
+            int eLen = rng.nextInt(512);
             char[] e = new char[eLen];
             for (int j = 0; j < eLen; j ++) {
-                e[j] = (char) ('a' + random.nextInt(26));
+                e[j] = (char) ('a' + rng.nextInt(26));
             }
 
             data[i] = new String(e);

@@ -20,9 +20,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
+import java.util.SplittableRandom;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -108,7 +110,7 @@ public class HttpInvalidMessageTest {
     private void ensureInboundTrafficDiscarded(EmbeddedChannel ch) {
         // Generate a lot of random traffic to ensure that it's discarded silently.
         byte[] data = new byte[1048576];
-        rnd.nextBytes(data);
+        PlatformDependent.splittableRandomNextBytes(new SplittableRandom(rnd.nextLong()), data);
 
         ByteBuf buf = Unpooled.wrappedBuffer(data);
         for (int i = 0; i < 4096; i ++) {

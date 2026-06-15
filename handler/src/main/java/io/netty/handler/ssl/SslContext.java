@@ -872,6 +872,23 @@ public abstract class SslContext {
             List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>[] options,
             List<OpenSslCredential> credentials) throws SSLException {
+        return newClientContextInternal(provider, sslContextProvider, trustCert, trustManagerFactory, keyCertChain, key,
+                keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
+                false, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm, serverNames, options,
+                credentials);
+    }
+
+    static SslContext newClientContextInternal(
+            SslProvider provider,
+            Provider sslContextProvider,
+            X509Certificate[] trustCert, TrustManagerFactory trustManagerFactory,
+            X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+            long sessionCacheSize, long sessionTimeout, boolean startTls, boolean enableOcsp,
+            SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
+            List<SNIServerName> serverNames,
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -899,16 +916,16 @@ public abstract class SslContext {
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options, credentials);
+                        startTls, enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames,
+                        resumptionController, options, credentials);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options, credentials);
+                        startTls, enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames,
+                        resumptionController, options, credentials);
             default:
                 throw new Error("Unexpected provider: " + provider);
         }

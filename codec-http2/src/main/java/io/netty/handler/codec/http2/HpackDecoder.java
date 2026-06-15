@@ -335,7 +335,7 @@ final class HpackDecoder {
     void setMaxHeaderListSize(long maxHeaderListSize) throws Http2Exception {
         if (maxHeaderListSize < MIN_HEADER_LIST_SIZE || maxHeaderListSize > MAX_HEADER_LIST_SIZE) {
             throw connectionError(PROTOCOL_ERROR, "Header List Size must be >= %d and <= %d but was %d",
-                    MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderListSize);
+                    MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE, maxHeaderListSize);
         }
         this.maxHeaderListSize = maxHeaderListSize;
     }

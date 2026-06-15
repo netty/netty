@@ -73,22 +73,9 @@ public class EpollSocketChannelConfigTest {
         ch.close().syncUninterruptibly();
     }
 
-    private static long randLong(long min, long max) {
-        return min + nextLong(max - min + 1);
-    }
-
-    private static long nextLong(long n) {
-        long bits, val;
-        do {
-           bits = (rand.nextLong() << 1) >>> 1;
-           val = bits % n;
-        } while (bits - val + (n - 1) < 0L);
-        return val;
-     }
-
     @Test
     public void testRandomTcpNotSentLowAt() {
-        final long expected = randLong(0, 0xFFFFFFFFL);
+        final long expected = rand.nextLong() & 0xFFFFFFFFL;
         final long actual;
         try {
             ch.config().setTcpNotSentLowAt(expected);

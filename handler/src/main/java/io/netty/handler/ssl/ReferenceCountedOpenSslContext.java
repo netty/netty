@@ -118,7 +118,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     static final boolean SERVER_ENABLE_SESSION_TICKET =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
 
-     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+    static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
     static final boolean SERVER_ENABLE_SESSION_CACHE =
@@ -574,7 +574,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, executor, resumptionController);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -771,7 +771,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (resumptionController != null) {
                     tm = (X509TrustManager) resumptionController.wrapIfNeeded(tm);
                 }
-                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded(tm);
                 if (useExtendedTrustManager(tm)) {
                     // Wrap the TrustManager to provide a better exception message for users to debug hostname
                     // validation failures.
