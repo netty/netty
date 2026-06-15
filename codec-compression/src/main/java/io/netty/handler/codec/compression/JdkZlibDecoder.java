@@ -324,6 +324,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (!finished) {
                 inflater.reset();
                 crc.reset();
+                xlen = -1;
                 gzipState = GzipState.HEADER_START;
                 return true;
             }

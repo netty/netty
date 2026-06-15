@@ -144,28 +144,8 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     public void testGZIPDecodeWithExtraField() throws Exception {
         byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
-
-        // GZIPOutputStream never emits an FEXTRA field, so build a standard gzip stream first ...
-        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-        GZIPOutputStream gzipOut = new GZIPOutputStream(bytesOut);
-        gzipOut.write(data);
-        gzipOut.close();
-        byte[] standard = bytesOut.toByteArray();
-
-        // ... then splice in an FEXTRA field by hand: set the FEXTRA flag in FLG and insert
-        // XLEN (2 bytes, little-endian per RFC 1952) followed by the extra subfield, right after
-        // the fixed 10-byte gzip header.
         byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 }; // 6 arbitrary bytes
-        ByteArrayOutputStream withExtra = new ByteArrayOutputStream();
-        byte[] header = Arrays.copyOfRange(standard, 0, 10);
-        header[3] |= 0x04; // FLG.FEXTRA
-        withExtra.write(header);
-        withExtra.write(extra.length & 0xff);          // XLEN low byte (little-endian)
-        withExtra.write((extra.length >>> 8) & 0xff);  // XLEN high byte
-        withExtra.write(extra);
-        withExtra.write(standard, 10, standard.length - 10);
-        byte[] gzipWithExtra = withExtra.toByteArray();
-        withExtra.close();
+        byte[] gzipWithExtra = gzipWithExtraField(data, extra);
 
         // Sanity-check the crafted stream is a valid gzip by decoding it with the JDK itself.
         assertArrayEquals(data, jdkGunzip(gzipWithExtra));
@@ -181,6 +161,70 @@ public class JdkZlibTest extends ZlibTest {
         } finally {
             assertFalse(ch.finish());
             ch.close();
+        }
+    }
+
+    @Test
+    public void testConcatenatedGzipFirstStreamHasExtraField() throws Exception {
+        // Regression guard: with concatenated streams, an FEXTRA field on the first stream must not
+        // leak its XLEN into the second stream's header parsing. The xlen state has to be reset
+        // between streams; otherwise the second stream (which has no extra field) would skip
+        // xlen bytes that are actually deflate data and fail to decode.
+        byte[] first = "first stream".getBytes(CharsetUtil.UTF_8);
+        byte[] second = "second stream".getBytes(CharsetUtil.UTF_8);
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 };
+
+        byte[] firstGz = gzipWithExtraField(first, extra); // first stream HAS an extra field
+        byte[] secondGz = gzip(second);                    // second stream has none
+        byte[] both = new byte[firstGz.length + secondGz.length];
+        System.arraycopy(firstGz, 0, both, 0, firstGz.length);
+        System.arraycopy(secondGz, 0, both, firstGz.length, secondGz.length);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(both)));
+            ByteArrayOutputStream decoded = new ByteArrayOutputStream();
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                msg.readBytes(decoded, msg.readableBytes());
+                msg.release();
+            }
+            assertArrayEquals("first streamsecond stream".getBytes(CharsetUtil.UTF_8),
+                    decoded.toByteArray());
+            decoded.close();
+        } finally {
+            assertFalse(ch.finish());
+            ch.close();
+        }
+    }
+
+    private static byte[] gzip(byte[] data) throws IOException {
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(bytesOut);
+        gzipOut.write(data);
+        gzipOut.close();
+        return bytesOut.toByteArray();
+    }
+
+    private static byte[] gzipWithExtraField(byte[] data, byte[] extra) throws IOException {
+        // GZIPOutputStream never emits an FEXTRA field, so build a standard gzip stream first ...
+        byte[] standard = gzip(data);
+
+        // ... then splice in an FEXTRA field by hand: set the FEXTRA flag in FLG and insert
+        // XLEN (2 bytes, little-endian per RFC 1952) followed by the extra subfield, right after
+        // the fixed 10-byte gzip header.
+        ByteArrayOutputStream withExtra = new ByteArrayOutputStream();
+        try {
+            byte[] header = Arrays.copyOfRange(standard, 0, 10);
+            header[3] |= 0x04; // FLG.FEXTRA
+            withExtra.write(header);
+            withExtra.write(extra.length & 0xff);          // XLEN low byte (little-endian)
+            withExtra.write((extra.length >>> 8) & 0xff);  // XLEN high byte
+            withExtra.write(extra);
+            withExtra.write(standard, 10, standard.length - 10);
+            return withExtra.toByteArray();
+        } finally {
+            withExtra.close();
         }
     }
 
