@@ -36,6 +36,7 @@ import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -138,6 +139,64 @@ public class JdkZlibTest extends ZlibTest {
             assertFalse(chDecoderGZip.finish());
             chDecoderGZip.close();
         }
+    }
+
+    @Test
+    public void testGZIPDecodeWithExtraField() throws Exception {
+        byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
+
+        // GZIPOutputStream never emits an FEXTRA field, so build a standard gzip stream first ...
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(bytesOut);
+        gzipOut.write(data);
+        gzipOut.close();
+        byte[] standard = bytesOut.toByteArray();
+
+        // ... then splice in an FEXTRA field by hand: set the FEXTRA flag in FLG and insert
+        // XLEN (2 bytes, little-endian per RFC 1952) followed by the extra subfield, right after
+        // the fixed 10-byte gzip header.
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 }; // 6 arbitrary bytes
+        ByteArrayOutputStream withExtra = new ByteArrayOutputStream();
+        byte[] header = Arrays.copyOfRange(standard, 0, 10);
+        header[3] |= 0x04; // FLG.FEXTRA
+        withExtra.write(header);
+        withExtra.write(extra.length & 0xff);          // XLEN low byte (little-endian)
+        withExtra.write((extra.length >>> 8) & 0xff);  // XLEN high byte
+        withExtra.write(extra);
+        withExtra.write(standard, 10, standard.length - 10);
+        byte[] gzipWithExtra = withExtra.toByteArray();
+
+        // Sanity-check the crafted stream is a valid gzip by decoding it with the JDK itself.
+        assertArrayEquals(data, jdkGunzip(gzipWithExtra));
+
+        // netty must decode it identically; before the FEXTRA fix the extra bytes were never
+        // skipped, corrupting the deflate stream and throwing DecompressionException.
+        EmbeddedChannel ch = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(gzipWithExtra)));
+            ByteBuf out = ch.readInbound();
+            assertEquals(new String(data, CharsetUtil.UTF_8), out.toString(CharsetUtil.UTF_8));
+            out.release();
+        } finally {
+            assertFalse(ch.finish());
+            ch.close();
+        }
+    }
+
+    private static byte[] jdkGunzip(byte[] gz) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        java.util.zip.GZIPInputStream in =
+                new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz));
+        try {
+            byte[] buf = new byte[256];
+            int n;
+            while ((n = in.read(buf)) != -1) {
+                out.write(buf, 0, n);
+            }
+        } finally {
+            in.close();
+        }
+        return out.toByteArray();
     }
 
     @Test
