@@ -165,6 +165,7 @@ public class JdkZlibTest extends ZlibTest {
         withExtra.write(extra);
         withExtra.write(standard, 10, standard.length - 10);
         byte[] gzipWithExtra = withExtra.toByteArray();
+        withExtra.close();
 
         // Sanity-check the crafted stream is a valid gzip by decoding it with the JDK itself.
         assertArrayEquals(data, jdkGunzip(gzipWithExtra));
@@ -185,18 +186,22 @@ public class JdkZlibTest extends ZlibTest {
 
     private static byte[] jdkGunzip(byte[] gz) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        java.util.zip.GZIPInputStream in =
-                new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz));
         try {
-            byte[] buf = new byte[256];
-            int n;
-            while ((n = in.read(buf)) != -1) {
-                out.write(buf, 0, n);
+            java.util.zip.GZIPInputStream in =
+                    new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz));
+            try {
+                byte[] buf = new byte[256];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            } finally {
+                in.close();
             }
+            return out.toByteArray();
         } finally {
-            in.close();
+            out.close();
         }
-        return out.toByteArray();
     }
 
     @Test
