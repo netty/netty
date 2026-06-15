@@ -170,8 +170,10 @@ public class JdkZlibTest extends ZlibTest {
         // leak its XLEN into the second stream's header parsing. The xlen state has to be reset
         // between streams; otherwise the second stream (which has no extra field) would skip
         // xlen bytes that are actually deflate data and fail to decode.
-        byte[] first = "first stream".getBytes(CharsetUtil.UTF_8);
-        byte[] second = "second stream".getBytes(CharsetUtil.UTF_8);
+        String firstText = "first stream";
+        String secondText = "second stream";
+        byte[] first = firstText.getBytes(CharsetUtil.UTF_8);
+        byte[] second = secondText.getBytes(CharsetUtil.UTF_8);
         byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 };
 
         byte[] firstGz = gzipWithExtraField(first, extra); // first stream HAS an extra field
@@ -189,7 +191,7 @@ public class JdkZlibTest extends ZlibTest {
                 msg.readBytes(decoded, msg.readableBytes());
                 msg.release();
             }
-            assertArrayEquals("first streamsecond stream".getBytes(CharsetUtil.UTF_8),
+            assertArrayEquals((firstText + secondText).getBytes(CharsetUtil.UTF_8),
                     decoded.toByteArray());
             decoded.close();
         } finally {
