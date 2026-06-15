@@ -78,7 +78,7 @@ public class DnsQueryContextTest {
             // We create the dummy with a separate promise so that it is never
             // written and does not interfere with the context-under-test.
             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> dummyPromise =
-                    channel.eventLoop().newPromise();
+                    channel.executor().newPromise();
             DatagramDnsQueryContext dummyCtx = new DatagramDnsQueryContext(
                     channel,
                     nameServerAddr,
@@ -111,7 +111,7 @@ public class DnsQueryContextTest {
 
             // Build the context-under-test that will be subjected to writeQuery.
             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> testPromise =
-                    channel.eventLoop().newPromise();
+                    channel.executor().newPromise();
             DatagramDnsQueryContext ctx = new DatagramDnsQueryContext(
                     channel,
                     nameServerAddr,
