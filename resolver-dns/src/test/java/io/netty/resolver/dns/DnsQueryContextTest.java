@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,14 +99,15 @@ public class DnsQueryContextTest {
 
             for (int i = 0; i < maxIds; i++) {
                 int assignedId = manager.add(nameServerAddr, dummyCtx);
-                assertTrue(assignedId >= 0,
-                        "Expected a valid id during exhaustion, got -1 at iteration " + i);
+                assertThat(assignedId)
+                        .as("Expected a valid id during exhaustion, got -1 at iteration %d", i)
+                        .isGreaterThanOrEqualTo(0);
             }
 
             // The next add must return -1 — the space is now full.
             int overflowId = manager.add(nameServerAddr, dummyCtx);
-            assertTrue(overflowId == -1,
-                    "Expected -1 when ID space is exhausted, but got " + overflowId);
+            assertEquals(-1, overflowId,
+                    "Expected -1 when ID space is exhausted");
 
             // Build the context-under-test that will be subjected to writeQuery.
             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> testPromise =
