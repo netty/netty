@@ -194,7 +194,6 @@ public class JdkZlibTest extends ZlibTest {
             decoded.close();
         } finally {
             assertFalse(ch.finish());
-            ch.close();
         }
     }
 
