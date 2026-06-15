@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -132,8 +133,11 @@ public class DnsQueryContextTest {
             //    before and after the fix).
             assertTrue(testPromise.isDone(),
                     "Promise should be done after writeQuery with exhausted ID space");
-            assertTrue(testPromise.cause() != null,
-                    "Promise should be failed when ID space is exhausted");
+            Throwable cause = testPromise.cause();
+            assertInstanceOf(DnsNameResolverException.class, cause,
+                    "Promise should be failed with a DnsNameResolverException when ID space is exhausted");
+            assertInstanceOf(IllegalStateException.class, cause.getCause(),
+                    "The root cause should be the IllegalStateException reporting the exhausted ID space");
 
             // 2. No outbound message should have been written to the channel.
             //    With the bug present the fall-through reaches sendQuery(), which
