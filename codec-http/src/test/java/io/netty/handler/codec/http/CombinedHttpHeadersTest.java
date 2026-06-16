@@ -30,6 +30,8 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.AsciiString.contentEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -122,6 +124,18 @@ public class CombinedHttpHeadersTest {
         assertEquals(Collections.singletonList(formatted), headers.getAll(EXPIRES));
         assertTrue(headers.containsValue(EXPIRES, formatted, true));
         assertFalse(headers.containsValue(EXPIRES, "Sun", true));
+    }
+
+    @Test
+    public void fullHttpResponseWithSingleFieldHeadersPreservesDateHeader() {
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, true, true);
+        final String formatted = "Tue, 17 Sep 2019 17:52:01 GMT";
+
+        response.headers().add(DATE, formatted);
+
+        final String responseString = response.toString();
+        assertTrue(responseString.contains(DATE + ": " + formatted), responseString);
+        assertFalse(responseString.contains(DATE + ": \"" + formatted + '"'));
     }
 
     @Test

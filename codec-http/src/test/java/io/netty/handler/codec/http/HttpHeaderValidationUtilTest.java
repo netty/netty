@@ -37,7 +37,6 @@ import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateValid
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Execution(ExecutionMode.CONCURRENT) // We have a couple of fairly slow tests here. Better to run them in parallel.
 public class HttpHeaderValidationUtilTest {
