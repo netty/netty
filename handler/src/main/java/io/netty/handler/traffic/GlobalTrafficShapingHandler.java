@@ -15,7 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -279,10 +278,9 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        if (toSend.toSend instanceof ByteBuf) {
-                            ((ByteBuf) toSend.toSend).release();
-                        }
+                        releaseAndFailQueuedWrite(toSend.toSend, toSend.promise);
                     }
+                    perChannel.queueSize = 0;
                 }
                 perChannel.messagesQueue.clear();
             }

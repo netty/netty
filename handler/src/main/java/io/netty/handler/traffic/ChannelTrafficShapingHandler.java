@@ -15,7 +15,6 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
@@ -150,10 +149,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                 }
             } else {
                 for (ToSend toSend : messagesQueue) {
-                    if (toSend.toSend instanceof ByteBuf) {
-                        ((ByteBuf) toSend.toSend).release();
-                    }
+                    releaseAndFailQueuedWrite(toSend.toSend, toSend.promise);
                 }
+                queueSize = 0;
             }
             messagesQueue.clear();
         }

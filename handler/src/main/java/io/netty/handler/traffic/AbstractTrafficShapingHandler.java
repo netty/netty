@@ -28,9 +28,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -578,6 +580,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     abstract void submitWrite(
             ChannelHandlerContext ctx, Object msg, long size, long delay, long now, ChannelPromise promise);
+
+    static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise) {
+        ReferenceCountUtil.safeRelease(msg);
+        promise.tryFailure(new ClosedChannelException());
+    }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
