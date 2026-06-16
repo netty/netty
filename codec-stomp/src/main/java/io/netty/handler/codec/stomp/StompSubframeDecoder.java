@@ -373,7 +373,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             }
 
             numHeaders++;
-            if (maxNumHeaders <= numHeaders) {
+            if (maxNumHeaders < numHeaders) {
                 throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
             }
             if (valid) {
