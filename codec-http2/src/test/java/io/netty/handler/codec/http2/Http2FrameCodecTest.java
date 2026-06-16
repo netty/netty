@@ -336,6 +336,7 @@ public class Http2FrameCodecTest {
         Object msg;
         while ((msg = inboundHandler.readInboundMessageOrUserEvent()) != null) {
             assertFalse(msg instanceof Http2HeadersFrame);
+            ReferenceCountUtil.release(msg);
         }
     }
 
