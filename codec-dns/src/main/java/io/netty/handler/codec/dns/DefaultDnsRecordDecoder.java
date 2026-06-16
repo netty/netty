@@ -99,7 +99,17 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         if (type == DnsRecordType.CNAME || type == DnsRecordType.NS) {
             return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive,
                                            DnsCodecUtil.decompressDomainName(
-                                                   in.duplicate().setIndex(offset, offset + length)));
+            ByteBuf decompressed = DnsCodecUtil.decompressDomainName(
+                    in.duplicate().setIndex(offset, offset + length));
+            try {
+                DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, decompressed);
+                decompressed = null;
+                return record;
+            } finally {
+                if (decompressed != null) {
+                    decompressed.release();
+                }
+            }
         }
         if (type ==  DnsRecordType.MX) {
             // MX RDATA: 16-bit preference + exchange (domain name, possibly compressed)
