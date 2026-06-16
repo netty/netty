@@ -388,8 +388,10 @@ public final class DateFormatter {
             }
         }
 
-        // terminate trailing token
-        return tokenStart != -1 && parseToken(txt, tokenStart, txt.length());
+        // terminate trailing token at end (the parse bound), not txt.length(): when parsing a
+        // substring (end < txt.length(), e.g. a cookie Expires value followed by more attributes)
+        // the trailing token must not run past end.
+        return tokenStart != -1 && parseToken(txt, tokenStart, end);
     }
 
     private boolean normalizeAndValidate() {
