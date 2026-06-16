@@ -811,6 +811,24 @@ public class Http3FrameCodecTest {
         assertFalse(codecChannel.writeInbound(buffer));
     }
 
+    @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
+    @MethodSource("dataNoFragment")
+    public void testSkipFragmentedUnknown(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+        setUp(maxBlockedStreams, delayQpackStreams);
+        ByteBuf first = Unpooled.buffer();
+        writeVariableLengthInteger(first, 0xa);
+        writeVariableLengthInteger(first, 10);
+        first.writeZero(3);
+
+        assertFalse(codecChannel.writeInbound(first));
+
+        ByteBuf second = Unpooled.buffer();
+        second.writeZero(7);
+
+        assertFalse(codecChannel.writeInbound(second));
+        assertFalse(codecChannel.finish());
+    }
+
     private void testInvalidHttp3Frame0(boolean delayQpackStreams, int type, int length, Http3ErrorCode code) {
         ByteBuf buffer = Unpooled.buffer();
         writeVariableLengthInteger(buffer, type);
