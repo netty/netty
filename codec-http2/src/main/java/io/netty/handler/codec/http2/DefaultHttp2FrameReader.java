@@ -343,6 +343,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     private void verifyPushPromiseFrame() throws Http2Exception {
+        verifyAssociatedWithAStream();
         verifyNotProcessingHeaders();
 
         // Subtract the length of the promised stream ID field, to determine the length of the
