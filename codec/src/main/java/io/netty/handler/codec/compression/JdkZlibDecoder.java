@@ -324,6 +324,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (!finished) {
                 inflater.reset();
                 crc.reset();
+                xlen = -1;
                 gzipState = GzipState.HEADER_START;
                 return true;
             }
@@ -394,7 +395,11 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     crc.update(xlen1);
                     crc.update(xlen2);
 
-                    xlen |= xlen1 << 8 | xlen2;
+                    // XLEN is a little-endian unsigned 16-bit value (RFC 1952), so xlen1 is the
+                    // low byte and xlen2 the high byte. This must be an assignment, not |=: xlen
+                    // starts at the -1 "no extra field" sentinel, and OR-ing into -1 (0xFFFFFFFF)
+                    // would leave it -1, so the extra field was never skipped.
+                    xlen = xlen2 << 8 | xlen1;
                 }
                 gzipState = GzipState.XLEN_READ;
                 // fall through
