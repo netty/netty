@@ -636,12 +636,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(290)
-                .append("TrafficShaping with Write Limit: ").append(writeLimit)
-                .append(" Read Limit: ").append(readLimit)
-                .append(" CheckInterval: ").append(checkInterval)
-                .append(" maxDelay: ").append(maxWriteDelay)
-                .append(" maxSize: ").append(maxWriteSize)
-                .append(" and Counter: ");
+            .append("TrafficShaping with Write Limit: ").append(writeLimit)
+            .append(" Read Limit: ").append(readLimit)
+            .append(" CheckInterval: ").append(checkInterval)
+            .append(" maxDelay: ").append(maxWriteDelay)
+            .append(" maxSize: ").append(maxWriteSize)
+            .append(" and Counter: ");
         if (trafficCounter != null) {
             builder.append(trafficCounter);
         } else {
