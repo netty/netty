@@ -518,7 +518,7 @@ public class MqttCodecTest {
 
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validateConnectVariableHeader(message.variableHeader(),
-                (MqttConnectVariableHeader) decodedMessage.variableHeader());
+            (MqttConnectVariableHeader) decodedMessage.variableHeader());
         validateDecoderExceptionTooLargeMessage(decodedMessage);
     }
 
@@ -537,7 +537,7 @@ public class MqttCodecTest {
 
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validateConnectVariableHeader(message.variableHeader(),
-                (MqttConnectVariableHeader) decodedMessage.variableHeader());
+            (MqttConnectVariableHeader) decodedMessage.variableHeader());
         validateDecoderExceptionTooLargeMessage(decodedMessage);
     }
 
@@ -572,7 +572,7 @@ public class MqttCodecTest {
 
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validatePublishVariableHeader(message.variableHeader(),
-                (MqttPublishVariableHeader) decodedMessage.variableHeader());
+            (MqttPublishVariableHeader) decodedMessage.variableHeader());
         validateDecoderExceptionTooLargeMessage(decodedMessage);
     }
 
