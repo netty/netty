@@ -1265,4 +1265,76 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isFailure());
         assertFalse(channel.finish());
     }
+
+    // Regression tests for #16970: a control byte at the version-token boundary used to be silently
+    // removed by HttpVersion.valueOf()'s String.trim() (which strips every char <= 0x20), so the
+    // decoder accepted a malformed request as a clean HTTP/1.1 one. The method token was already
+    // protected by #16723. NUL bytes are written directly to the buffer so the source stays ASCII.
+
+    @Test
+    public void testNulInVersionTokenIsRejected() {
+        // "GET / \x00HTTP/1.1\r\nHost: example.com\r\n\r\n" - NUL right before the version token.
+        ByteBuf singleSp = Unpooled.buffer();
+        singleSp.writeCharSequence("GET / ", CharsetUtil.US_ASCII);
+        singleSp.writeByte(0x00);
+        singleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        channel.writeInbound(singleSp);
+        HttpRequest req = channel.readInbound();
+        assertTrue(req.decoderResult().isFailure());
+        channel.finishAndReleaseAll();
+
+        // Same, but with two spaces between the URI and the version token.
+        ByteBuf doubleSp = Unpooled.buffer();
+        doubleSp.writeCharSequence("GET /  ", CharsetUtil.US_ASCII);
+        doubleSp.writeByte(0x00);
+        doubleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
+
+        EmbeddedChannel channel2 = new EmbeddedChannel(new HttpRequestDecoder());
+        channel2.writeInbound(doubleSp);
+        HttpRequest req2 = channel2.readInbound();
+        assertTrue(req2.decoderResult().isFailure());
+        channel2.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testTrailingNulInVersionTokenIsRejected() {
+        // "GET / HTTP/1.1\x00\r\nHost: example.com\r\n\r\n" - NUL right after the version token.
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeCharSequence("GET / HTTP/1.1", CharsetUtil.US_ASCII);
+        buf.writeByte(0x00);
+        buf.writeCharSequence("\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        channel.writeInbound(buf);
+        HttpRequest req = channel.readInbound();
+        assertTrue(req.decoderResult().isFailure());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testNormalRequestStillDecodes() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII));
+        HttpRequest req = channel.readInbound();
+        assertTrue(req.decoderResult().isSuccess());
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testNulInMethodTokenIsRejected() {
+        // Control case for contrast: NUL before the method is already rejected since #16723.
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte(0x00);
+        buf.writeCharSequence("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        channel.writeInbound(buf);
+        HttpRequest req = channel.readInbound();
+        assertTrue(req.decoderResult().isFailure());
+        channel.finishAndReleaseAll();
+    }
 }
