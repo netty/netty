@@ -32,7 +32,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -581,10 +580,17 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     abstract void submitWrite(
             ChannelHandlerContext ctx, Object msg, long size, long delay, long now, ChannelPromise promise);
 
-    static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise) {
+    /**
+     * Releases the given {@code msg} and fails the given {@code promise} with the supplied {@code cause}.
+     * <p>
+     * The {@code cause} is intentionally passed in (instead of being created here) so that callers draining a queue
+     * of pending writes can allocate a single exception instance once and reuse it for every promise, avoiding the
+     * cost of {@link Throwable#fillInStackTrace()} per element.
+     */
+    static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise, Throwable cause) {
         ReferenceCountUtil.safeRelease(msg);
         if (!promise.isDone()) {
-            promise.tryFailure(new ClosedChannelException());
+            promise.tryFailure(cause);
         }
     }
 
@@ -630,12 +636,12 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(290)
-            .append("TrafficShaping with Write Limit: ").append(writeLimit)
-            .append(" Read Limit: ").append(readLimit)
-            .append(" CheckInterval: ").append(checkInterval)
-            .append(" maxDelay: ").append(maxWriteDelay)
-            .append(" maxSize: ").append(maxWriteSize)
-            .append(" and Counter: ");
+                .append("TrafficShaping with Write Limit: ").append(writeLimit)
+                .append(" Read Limit: ").append(readLimit)
+                .append(" CheckInterval: ").append(checkInterval)
+                .append(" maxDelay: ").append(maxWriteDelay)
+                .append(" maxSize: ").append(maxWriteSize)
+                .append(" and Counter: ");
         if (trafficCounter != null) {
             builder.append(trafficCounter);
         } else {

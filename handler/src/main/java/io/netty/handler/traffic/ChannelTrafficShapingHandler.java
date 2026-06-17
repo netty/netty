@@ -18,6 +18,7 @@ package io.netty.handler.traffic;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -148,8 +149,9 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     ctx.write(toSend.toSend, toSend.promise);
                 }
             } else {
+                ClosedChannelException cause = new ClosedChannelException();
                 for (ToSend toSend : messagesQueue) {
-                    releaseAndFailQueuedWrite(toSend.toSend, toSend.promise);
+                    releaseAndFailQueuedWrite(toSend.toSend, toSend.promise, cause);
                 }
                 queueSize = 0;
             }

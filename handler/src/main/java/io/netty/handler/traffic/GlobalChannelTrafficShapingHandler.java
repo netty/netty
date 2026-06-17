@@ -29,6 +29,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.AbstractCollection;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -496,8 +497,9 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
                     }
                 } else {
                     queuesSize.addAndGet(-perChannel.queueSize);
+                    ClosedChannelException cause = new ClosedChannelException();
                     for (ToSend toSend : perChannel.messagesQueue) {
-                        releaseAndFailQueuedWrite(toSend.toSend, toSend.promise);
+                        releaseAndFailQueuedWrite(toSend.toSend, toSend.promise, cause);
                     }
                     perChannel.queueSize = 0;
                 }
