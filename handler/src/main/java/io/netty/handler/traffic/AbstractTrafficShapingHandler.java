@@ -582,10 +582,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
     /**
      * Releases the given {@code msg} and fails the given {@code promise} with the supplied {@code cause}.
-     * <p>
-     * The {@code cause} is intentionally passed in (instead of being created here) so that callers draining a queue
-     * of pending writes can allocate a single exception instance once and reuse it for every promise, avoiding the
-     * cost of {@link Throwable#fillInStackTrace()} per element.
      */
     static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise, Throwable cause) {
         ReferenceCountUtil.safeRelease(msg);
