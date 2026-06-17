@@ -202,8 +202,9 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     return;
                 }
 
+                FullHttpRequest httpRequestWithEntity = null;
                 try {
-                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdySynStreamFrame, ctx.alloc());
+                    httpRequestWithEntity = createHttpRequest(spdySynStreamFrame, ctx.alloc());
 
                     // Set the Stream-ID, Associated-To-Stream-ID, and Priority as headers
                     httpRequestWithEntity.headers().setInt(Names.STREAM_ID, streamId);
@@ -211,8 +212,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     httpRequestWithEntity.headers().setInt(Names.PRIORITY, spdySynStreamFrame.priority());
 
                     out.add(httpRequestWithEntity);
-
+                    httpRequestWithEntity = null;
                 } catch (Throwable ignored) {
+                    if (httpRequestWithEntity != null) {
+                        httpRequestWithEntity.release();
+                    }
                     SpdyRstStreamFrame spdyRstStreamFrame =
                         new DefaultSpdyRstStreamFrame(streamId, SpdyStreamStatus.PROTOCOL_ERROR);
                     ctx.writeAndFlush(spdyRstStreamFrame);
@@ -232,19 +236,27 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     return;
                 }
 
+                FullHttpRequest httpRequestWithEntity = null;
                 try {
-                    FullHttpRequest httpRequestWithEntity = createHttpRequest(spdySynStreamFrame, ctx.alloc());
+                    httpRequestWithEntity = createHttpRequest(spdySynStreamFrame, ctx.alloc());
 
                     // Set the Stream-ID as a header
                     httpRequestWithEntity.headers().setInt(Names.STREAM_ID, streamId);
 
                     if (spdySynStreamFrame.isLast()) {
                         out.add(httpRequestWithEntity);
+                        httpRequestWithEntity = null;
                     } else {
                         // Request body will follow in a series of Data Frames
-                        putMessage(streamId, httpRequestWithEntity);
+                        FullHttpMessage old = putMessage(streamId, httpRequestWithEntity);
+                        if (old != null) {
+                            old.release();
+                        }
                     }
                 } catch (Throwable t) {
+                    if (httpRequestWithEntity != null) {
+                        httpRequestWithEntity.release();
+                    }
                     // If a client sends a SYN_STREAM without all of the getMethod, url (host and path),
                     // scheme, and version headers the server must reply with an HTTP 400 BAD REQUEST reply.
                     // Also sends HTTP 400 BAD REQUEST reply if header name/value pairs are invalid
@@ -284,8 +296,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     httpResponseWithEntity = null;
                 } else {
                     // Response body will follow in a series of Data Frames
-                    putMessage(streamId, httpResponseWithEntity);
+                    FullHttpMessage old = putMessage(streamId, httpResponseWithEntity);
                     httpResponseWithEntity = null;
+                    if (old != null) {
+                        old.release();
+                    }
                 }
             } catch (Throwable t) {
                 if (httpResponseWithEntity != null) {
@@ -329,8 +344,11 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                             fullHttpMessage = null;
                         } else {
                             // Response body will follow in a series of Data Frames
-                            putMessage(streamId, fullHttpMessage);
+                            FullHttpMessage old = putMessage(streamId, fullHttpMessage);
                             fullHttpMessage = null;
+                            if (old != null) {
+                                old.release();
+                            }
                         }
                     } catch (Throwable t) {
                         if (fullHttpMessage != null) {
