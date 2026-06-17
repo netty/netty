@@ -388,9 +388,7 @@ public final class DateFormatter {
             }
         }
 
-        // terminate trailing token at end (the parse bound), not txt.length(): when parsing a
-        // substring (end < txt.length(), e.g. a cookie Expires value followed by more attributes)
-        // the trailing token must not run past end.
+        // terminate trailing token at end, not txt.length(), so a substring parse doesn't overrun
         return tokenStart != -1 && parseToken(txt, tokenStart, end);
     }
 

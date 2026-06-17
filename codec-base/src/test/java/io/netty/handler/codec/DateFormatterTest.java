@@ -39,10 +39,7 @@ public class DateFormatterTest {
 
     @Test
     public void testParseHttpDateSubstringDoesNotOverrunEnd() {
-        // RFC 6265 cookie-date tokens are order-independent; here the completing token (the year)
-        // is last. When the date is parsed as a substring (end < length, e.g. an Expires value
-        // followed by another cookie attribute), the trailing token must stop at end, not run to
-        // the end of the whole string.
+        // Set-Cookie header format with the date anywhere but last (RFC 6265 tokens are unordered).
         String dateText = "Sun 08:49:37 06 Nov 1994";
         assertEquals(DATE, parseHttpDate(dateText));
         assertEquals(DATE, parseHttpDate(dateText + "; Path=/", 0, dateText.length()));
