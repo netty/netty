@@ -249,6 +249,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     } else {
                         // Request body will follow in a series of Data Frames
                         FullHttpMessage old = putMessage(streamId, httpRequestWithEntity);
+                        httpRequestWithEntity = null;
                         if (old != null) {
                             old.release();
                         }
