@@ -15,10 +15,10 @@
  */
 package io.netty.handler.traffic;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.CompletionHandler;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -148,12 +148,12 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     queueSize -= size;
                     ctx.write(toSend.toSend, toSend.handler);
                 }
-            } else {
+            } else if (!messagesQueue.isEmpty()) {
+                ClosedChannelException cause = new ClosedChannelException();
                 for (ToSend toSend : messagesQueue) {
-                    if (toSend.toSend instanceof ByteBuf) {
-                        ((ByteBuf) toSend.toSend).release();
-                    }
+                    releaseAndFailQueuedWrite(toSend.toSend, toSend.handler, cause);
                 }
+                queueSize = 0;
             }
             messagesQueue.clear();
         }

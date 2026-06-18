@@ -28,7 +28,7 @@ import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.CompletionHandler;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -577,6 +577,14 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
 
     abstract void submitWrite(
             ChannelHandlerContext ctx, Object msg, long size, long delay, long now, CompletionHandler<Void> handler);
+
+    /**
+     * Releases the given {@code msg} and fails the given {@code promise} with the supplied {@code cause}.
+     */
+    static void releaseAndFailQueuedWrite(Object msg, CompletionHandler<Void> handler, Throwable cause) {
+        ReferenceCountUtil.safeRelease(msg);
+        handler.failure(cause);
+    }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
