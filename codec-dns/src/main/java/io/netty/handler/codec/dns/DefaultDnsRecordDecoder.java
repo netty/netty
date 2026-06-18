@@ -138,8 +138,9 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
         }
 
-        ByteBuf content = in.retainedDuplicate().setIndex(offset, offset + length);
+        ByteBuf content = in.retainedDuplicate();
         try {
+            content.setIndex(offset, offset + length);
             DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, content);
             content = null;
             return record;
