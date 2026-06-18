@@ -37,6 +37,7 @@ public class HttpMethodTest {
     public void valueOfReturnsCachedInstanceForKnownMethods() {
         assertSame(HttpMethod.GET, HttpMethod.valueOf("GET"));
         assertSame(HttpMethod.POST, HttpMethod.valueOf("POST"));
+        assertSame(HttpMethod.QUERY, HttpMethod.valueOf("QUERY"));
     }
 
     @Test

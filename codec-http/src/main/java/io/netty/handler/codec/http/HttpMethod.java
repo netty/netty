@@ -86,6 +86,12 @@ public class HttpMethod implements Comparable<HttpMethod> {
     public static final HttpMethod CONNECT = new HttpMethod(AsciiString.cached("CONNECT"));
 
     /**
+     * The QUERY method requests that the request target process the enclosed content in a safe and
+     * idempotent manner and then respond with the result of that processing.
+     */
+    public static final HttpMethod QUERY = new HttpMethod(AsciiString.cached("QUERY"));
+
+    /**
      * Returns the {@link HttpMethod} represented by the specified name.
      * If the specified name is a standard HTTP method name, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
@@ -109,6 +115,8 @@ public class HttpMethod implements Comparable<HttpMethod> {
             return HttpMethod.DELETE;
         } else if (name.equals("TRACE")) {
             return HttpMethod.TRACE;
+        } else if (name.equals("QUERY")) {
+            return HttpMethod.QUERY;
         }
         return new HttpMethod(name);
     }
