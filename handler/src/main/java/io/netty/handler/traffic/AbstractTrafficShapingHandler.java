@@ -585,9 +585,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      */
     static void releaseAndFailQueuedWrite(Object msg, ChannelPromise promise, Throwable cause) {
         ReferenceCountUtil.safeRelease(msg);
-        if (!promise.isDone()) {
-            promise.tryFailure(cause);
-        }
+        promise.tryFailure(cause);
     }
 
     @Override

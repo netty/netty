@@ -148,7 +148,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
                     queueSize -= size;
                     ctx.write(toSend.toSend, toSend.promise);
                 }
-            } else {
+            } else if (!messagesQueue.isEmpty()) {
                 ClosedChannelException cause = new ClosedChannelException();
                 for (ToSend toSend : messagesQueue) {
                     releaseAndFailQueuedWrite(toSend.toSend, toSend.promise, cause);

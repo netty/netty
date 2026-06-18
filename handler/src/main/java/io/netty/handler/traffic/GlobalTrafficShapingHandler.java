@@ -276,7 +276,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
                         queuesSize.addAndGet(-size);
                         ctx.write(toSend.toSend, toSend.promise);
                     }
-                } else {
+                } else if (!perChannel.messagesQueue.isEmpty()) {
                     queuesSize.addAndGet(-perChannel.queueSize);
                     ClosedChannelException cause = new ClosedChannelException();
                     for (ToSend toSend : perChannel.messagesQueue) {
