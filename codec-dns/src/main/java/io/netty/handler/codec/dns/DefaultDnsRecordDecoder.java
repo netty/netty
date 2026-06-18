@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 
 /**
@@ -97,8 +96,6 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
         if (type == DnsRecordType.CNAME || type == DnsRecordType.NS) {
-            return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive,
-                                           DnsCodecUtil.decompressDomainName(
             ByteBuf decompressed = DnsCodecUtil.decompressDomainName(
                     in.duplicate().setIndex(offset, offset + length));
             try {
@@ -141,7 +138,6 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             }
         }
 
-        return new DefaultDnsRawRecord(
         ByteBuf content = in.retainedDuplicate().setIndex(offset, offset + length);
         try {
             DnsRecord record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, content);
