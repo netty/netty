@@ -17,9 +17,11 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
+import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -63,6 +65,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
     private final boolean validateHeaders;
+    private final boolean validateRequiredPseudoHeaders;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -129,7 +132,39 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                          boolean autoAckSettings,
                                          boolean autoAckPing,
                                          boolean validateHeaders) {
+        this(connection, encoder, frameReader, requestVerifier, autoAckSettings, autoAckPing, validateHeaders, false);
+    }
+
+    /**
+     * Create a new instance.
+     * @param connection The {@link Http2Connection} associated with this decoder.
+     * @param encoder The {@link Http2ConnectionEncoder} associated with this decoder.
+     * @param frameReader Responsible for reading/parsing the raw frames. As opposed to this object which applies
+     *                    h2 semantics on top of the frames.
+     * @param requestVerifier Determines if push promised streams are valid.
+     * @param autoAckSettings {@code false} to disable automatically applying and sending settings acknowledge frame.
+     *                        The {@code Http2ConnectionEncoder} is expected to be an instance of
+     *                        {@link Http2SettingsReceivedConsumer} and will apply the earliest received but not yet
+     *                        ACKed SETTINGS when writing the SETTINGS ACKs. {@code true} to enable automatically
+     *                        applying and sending settings acknowledge frame.
+     * @param autoAckPing {@code false} to disable automatically sending ping acknowledge frame. {@code true} to enable
+     *                    automatically sending ping ack frame.
+     * @param validateHeaders {@code true} to validate headers according to
+     *                        <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
+     * @param validateRequiredPseudoHeaders {@code true} to reject request/response HEADERS that omit a mandatory
+     *        pseudo-header field, according to
+     *        <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
+     */
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection,
+                                         Http2ConnectionEncoder encoder,
+                                         Http2FrameReader frameReader,
+                                         Http2PromisedRequestVerifier requestVerifier,
+                                         boolean autoAckSettings,
+                                         boolean autoAckPing,
+                                         boolean validateHeaders,
+                                         boolean validateRequiredPseudoHeaders) {
         this.validateHeaders = validateHeaders;
+        this.validateRequiredPseudoHeaders = validateRequiredPseudoHeaders;
         this.autoAckPing = autoAckPing;
         if (autoAckSettings) {
             settingsReceivedConsumer = null;
@@ -240,6 +275,48 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 if (isEnd) {
                     stream.removeProperty(contentLengthKey);
                 }
+            }
+        }
+    }
+
+    /**
+     * Validates that an initial request or response HEADERS frame carries the mandatory pseudo-header fields,
+     * as required by <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
+     * Trailers and informational (1xx) responses are handled by the caller and do not reach this method.
+     */
+    private static void validateRequiredPseudoHeaders(boolean server, int streamId, Http2Headers headers)
+            throws Http2Exception {
+        if (server) {
+            // Request pseudo-header fields (RFC 9113, 8.3.1).
+            CharSequence method = headers.method();
+            if (method == null) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Request is missing mandatory :method pseudo-header field.");
+            }
+            // CONNECT (RFC 9113, 8.5) omits :scheme/:path and carries :authority; extended CONNECT (RFC 8441),
+            // identified by :protocol, follows the regular :scheme/:path rules.
+            if (HttpMethod.CONNECT.asciiName().contentEquals(method) &&
+                    !headers.contains(PseudoHeaderName.PROTOCOL.value())) {
+                if (headers.authority() == null) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "CONNECT request is missing mandatory :authority pseudo-header field.");
+                }
+            } else {
+                if (headers.scheme() == null) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "Request is missing mandatory :scheme pseudo-header field.");
+                }
+                CharSequence path = headers.path();
+                if (path == null || path.length() == 0) {
+                    throw streamError(streamId, PROTOCOL_ERROR,
+                            "Request is missing mandatory :path pseudo-header field.");
+                }
+            }
+        } else {
+            // Response pseudo-header fields (RFC 9113, 8.3.2).
+            if (headers.status() == null) {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Response is missing mandatory :status pseudo-header field.");
             }
         }
     }
@@ -388,6 +465,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             if (!isTrailers) {
+                if (validateRequiredPseudoHeaders && !isInformational) {
+                    // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
+                    validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
+                }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
                 if (contentLength != null && !contentLength.isEmpty()) {

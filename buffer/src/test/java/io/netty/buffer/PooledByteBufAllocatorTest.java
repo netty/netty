@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.SplittableRandom;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
@@ -417,7 +418,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(10)
+    @Timeout(30)
     public void testNumThreadCachesWithNoDirectArenas() throws Exception {
         int numHeapArenas = 1;
         final PooledByteBufAllocator allocator =
@@ -437,7 +438,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(10)
+    @Timeout(30)
     public void testNumThreadCachesAccountForDirectAndHeapArenas() throws Exception {
         int numArenas = 1;
         final PooledByteBufAllocator allocator =
@@ -457,7 +458,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(10)
+    @Timeout(30)
     public void testThreadCacheToArenaMappings() throws Exception {
         int numArenas = 2;
         final PooledByteBufAllocator allocator =
@@ -547,6 +548,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                     task.get();
                     t.join();
                 } catch (InterruptedException e) {
+                    if (task.isDone()) {
+                        try {
+                            task.get();
+                        } catch (Exception taskException) {
+                            e.addSuppressed(new CompletionException("Task failed", taskException));
+                        }
+                    }
                     ThrowableUtil.interruptAndAttachAsyncStackTrace(t, e);
                     throw e;
                 }

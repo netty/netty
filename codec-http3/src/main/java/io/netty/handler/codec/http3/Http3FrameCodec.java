@@ -213,8 +213,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     private static int skipBytes(ByteBuf in, int payLoadLength) {
-        in.skipBytes(payLoadLength);
-        return payLoadLength;
+        int length = Math.min(in.readableBytes(), payLoadLength);
+        in.skipBytes(length);
+        return length;
     }
 
     private int decodeFrame(ChannelHandlerContext ctx, long longType, int payLoadLength, ByteBuf in, List<Object> out) {

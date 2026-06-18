@@ -161,7 +161,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
             if (sc instanceof EpollDatagramChannel) {
                 assertEquals(gro, sc.config().getOption(EpollChannelOption.UDP_GRO));
             }
-            InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
+            InetSocketAddress addr = convertAnyAddress((InetSocketAddress) sc.localAddress());
             final ByteBuf buffer;
             if (composite) {
                 CompositeByteBuf compositeBuffer = Unpooled.compositeBuffer();

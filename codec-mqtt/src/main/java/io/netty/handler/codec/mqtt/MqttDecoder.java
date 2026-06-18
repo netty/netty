@@ -27,6 +27,10 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.Signal;
 import io.netty.util.internal.ObjectUtil;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,19 +98,42 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
     private final int maxBytesInMessage;
     private final int maxClientIdLength;
+    private final boolean strictUtf8Validation;
+    // Lazily-initialised UTF-8 decoder reused across calls in the same channel/decoder
+    // instance. ReplayingDecoder is invoked from a single thread per channel, so a non
+    // thread-safe CharsetDecoder is safe to cache here.
+    private CharsetDecoder utf8Decoder;
 
     public MqttDecoder() {
-      this(DEFAULT_MAX_BYTES_IN_MESSAGE, DEFAULT_MAX_CLIENT_ID_LENGTH);
+      this(DEFAULT_MAX_BYTES_IN_MESSAGE, DEFAULT_MAX_CLIENT_ID_LENGTH, true);
     }
 
     public MqttDecoder(int maxBytesInMessage) {
-        this(maxBytesInMessage, DEFAULT_MAX_CLIENT_ID_LENGTH);
+        this(maxBytesInMessage, DEFAULT_MAX_CLIENT_ID_LENGTH, true);
     }
 
     public MqttDecoder(int maxBytesInMessage, int maxClientIdLength) {
+        this(maxBytesInMessage, maxClientIdLength, true);
+    }
+
+    /**
+     * Creates a new {@link MqttDecoder}.
+     *
+     * @param maxBytesInMessage     the maximum number of bytes a decoded message may consume.
+     * @param maxClientIdLength     the maximum length of the Client Identifier (CONNECT payload).
+     * @param strictUtf8Validation  if {@code true} (default), every UTF-8 Encoded String is
+     *                              validated according to MQTT 3.1.1 and MQTT 5.0
+     *                              malformed UTF-8 sequences (including
+     *                              surrogates and overlong forms) and an embedded U+0000 are
+     *                              rejected as a Malformed Packet. If {@code false}, the legacy
+     *                              behaviour is preserved, malformed bytes are silently replaced
+     *                              with {@code U+FFFD} and U+0000 is accepted.
+     */
+    public MqttDecoder(int maxBytesInMessage, int maxClientIdLength, boolean strictUtf8Validation) {
         super(DecoderState.READ_FIXED_HEADER);
         this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
         this.maxClientIdLength = ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
+        this.strictUtf8Validation = strictUtf8Validation;
     }
 
     @Override
@@ -684,11 +711,11 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         }
     }
 
-    private static Result<String> decodeString(ByteBuf buffer) {
+    private Result<String> decodeString(ByteBuf buffer) {
         return decodeString(buffer, 0, Integer.MAX_VALUE);
     }
 
-    private static Result<String> decodeString(ByteBuf buffer, int minBytes, int maxBytes) {
+    private Result<String> decodeString(ByteBuf buffer, int minBytes, int maxBytes) {
         int size = decodeMsbLsb(buffer);
         int numberOfBytesConsumed = 2;
         if (size < minBytes || size > maxBytes) {
@@ -696,9 +723,56 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             numberOfBytesConsumed += size;
             return new Result<String>(null, numberOfBytesConsumed);
         }
-        String s = buffer.readString(size, CharsetUtil.UTF_8);
+        final String s;
+        if (strictUtf8Validation) {
+            s = readStrictUtf8(buffer, size);
+        } else {
+            s = buffer.readString(size, CharsetUtil.UTF_8);
+        }
         numberOfBytesConsumed += size;
         return new Result<String>(s, numberOfBytesConsumed);
+    }
+
+    /**
+     * Reads {@code length} bytes from {@code buffer} and decodes them as a strictly validated
+     * UTF-8 Encoded String per MQTT 3.1.1 and MQTT 5.0.
+     * Throws a {@link DecoderException} if the sequence is malformed or contains U+0000.
+     */
+    private String readStrictUtf8(ByteBuf buffer, int length) {
+        if (length == 0) {
+            return "";
+        }
+        final int readerIndex = buffer.readerIndex();
+        final ByteBuffer nioBuf;
+        if (buffer.nioBufferCount() == 1) {
+            nioBuf = buffer.nioBuffer(readerIndex, length);
+        } else {
+            // Composite/multi-component buffer: copy out to ensure a contiguous view for the
+            // CharsetDecoder. Strict UTF-8 validation requires examining all bytes anyway.
+            byte[] tmp = new byte[length];
+            buffer.getBytes(readerIndex, tmp);
+            nioBuf = ByteBuffer.wrap(tmp);
+        }
+        if (utf8Decoder == null) {
+            utf8Decoder = CharsetUtil.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
+        }
+        utf8Decoder.reset();
+        final String s;
+        try {
+            s = utf8Decoder.decode(nioBuf).toString();
+        } catch (CharacterCodingException e) {
+            buffer.skipBytes(length);
+            throw new DecoderException("invalid UTF-8 string in MQTT packet", e);
+        }
+        buffer.skipBytes(length);
+        // The UTF-8 Encoded String MUST NOT include an encoding
+        // of the null character U+0000. If received, this is a Malformed Packet.
+        if (s.indexOf('\u0000') >= 0) {
+            throw new DecoderException("MQTT UTF-8 Encoded String must not contain U+0000");
+        }
+        return s;
     }
 
     /**
@@ -776,7 +850,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         }
     }
 
-    private static Result<MqttProperties> decodeProperties(ByteBuf buffer) {
+    private Result<MqttProperties> decodeProperties(ByteBuf buffer) {
         final long propertiesLength = decodeVariableByteInteger(buffer);
         int totalPropertiesLength = unpackA(propertiesLength);
         int numberOfBytesConsumed = unpackB(propertiesLength);

@@ -27,14 +27,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.LongFunction;
 
 import static io.netty.handler.codec.http3.Http3RequestStreamCodecState.NO_STATE;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static java.lang.Math.toIntExact;
 
 /**
- * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
+ * Handler that handles <a href="https://datatracker.ietf.org/doc/html/rfc9114">HTTP3</a> connections.
  */
 public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
+
     final Http3FrameCodecFactory codecFactory;
     final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
     final boolean disableQpackDynamicTable;
@@ -76,10 +75,24 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         } else {
             localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
         }
-        Long maxFieldSectionSize = localSettings.getOrDefault(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE,
-                Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE);
-        this.maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
-        int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
+        Long maxFieldSectionSize = localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(),
+                        Http3CodecUtils.DEFAULT_MAX_FIELD_SECTION_SIZE
+                );
+        this.maxTableCapacity = localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(),
+                        0L
+                );
+        int maxBlockedStreams = toIntExact(localSettings
+                .settings()
+                .getOrDefault(
+                        Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(),
+                        0L)
+        );
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
@@ -94,9 +107,9 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         if (!controlStreamCreationInProgress && Http3.getLocalControlStream(ctx.channel()) == null) {
             controlStreamCreationInProgress = true;
             QuicChannel channel = (QuicChannel) ctx.channel();
-            // Once the channel became active we need to create an unidirectional stream and write the
+            // Once the channel became active we need to create a unidirectional stream and write the
             // Http3SettingsFrame to it. This needs to be the first frame on this stream.
-            // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1.
+            // https://datatracker.ietf.org/doc/html/rfc9114#name-control-streams
             channel.createStream(QuicStreamType.UNIDIRECTIONAL, remoteControlStreamHandler)
                     .addListener(f -> {
                         if (!f.isSuccess()) {
