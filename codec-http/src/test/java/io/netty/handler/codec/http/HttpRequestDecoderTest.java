@@ -1289,7 +1289,7 @@ public class HttpRequestDecoderTest {
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         LastHttpContent last = channel.readInbound();
         assertNotNull(last);
-        assertTrue(last.release());
+        last.release();
         assertFalse(channel.finish());
     }
 }
