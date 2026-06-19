@@ -51,6 +51,7 @@ import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.OCSPReqBuilder;
 import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.operator.ContentVerifierProvider;
+import org.bouncycastle.operator.DigestCalculatorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
@@ -102,7 +103,7 @@ final class OcspClient {
      * @param issuer                {@link X509Certificate} issuer of client certificate
      * @param validateResponseNonce Set to {@code true} to enable OCSP response validation
      * @param ioTransport           {@link IoTransport} to use
-     * @return {@link Promise} of {@link BasicOCSPResp}
+     * @return                      {@link Promise} of {@link BasicOCSPResp}
      */
     static Promise<BasicOCSPResp> query(final X509Certificate x509Certificate,
                                         final X509Certificate issuer, final boolean validateResponseNonce,
@@ -113,8 +114,11 @@ final class OcspClient {
             @Override
             public void run() {
                 try {
-                    CertificateID certificateID = new CertificateID(new JcaDigestCalculatorProviderBuilder()
-                            .build().get(HASH_SHA1), new JcaX509CertificateHolder(issuer),
+                    DigestCalculatorProvider digestCalculatorProvider = new JcaDigestCalculatorProviderBuilder()
+                            .build();
+
+                    CertificateID certificateID = new CertificateID(digestCalculatorProvider.get(HASH_SHA1),
+                            new JcaX509CertificateHolder(issuer),
                             x509Certificate.getSerialNumber());
 
                     // Initialize OCSP Request Builder and add CertificateID into it.
@@ -160,17 +164,13 @@ final class OcspClient {
                         // If Future was successful then we have received OCSP response
                         // We will now validate it.
                         if (future.isSuccess()) {
-                            try {
-                                BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
-                                validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
-                            } catch (Throwable t) {
-                                responsePromise.tryFailure(t);
-                            }
+                            BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
+                            validateResponse(x509Certificate, digestCalculatorProvider, responsePromise,
+                                    resp, derNonce, issuer, validateResponseNonce);
                         } else {
                             responsePromise.tryFailure(future.cause());
                         }
                     });
-
                 } catch (Exception ex) {
                     responsePromise.tryFailure(ex);
                 }
@@ -240,14 +240,26 @@ final class OcspClient {
         return responsePromise;
     }
 
-    private static void validateResponse(Promise<BasicOCSPResp> responsePromise, BasicOCSPResp basicResponse,
-                                         DEROctetString derNonce, X509Certificate issuer, boolean validateNonce) {
+    private static void validateResponse(
+            X509Certificate x509Certificate, DigestCalculatorProvider digestCalculatorProvider,
+            Promise<BasicOCSPResp> responsePromise, BasicOCSPResp basicResponse,
+            DEROctetString derNonce, X509Certificate issuer, boolean validateNonce) {
         try {
             // Validate number of responses. We only requested for 1 certificate
             // so number of responses must be 1. If not, we will throw an error.
             int responses = basicResponse.getResponses().length;
             if (responses != 1) {
-                throw new IllegalArgumentException("Expected number of responses was 1 but got: " + responses);
+                responsePromise.tryFailure(
+                        new IllegalArgumentException("Expected number of responses was 1 but got: " + responses));
+                return;
+            }
+
+            CertificateID respCertId = basicResponse.getResponses()[0].getCertID();
+            if (!respCertId.matchesIssuer(new JcaX509CertificateHolder(issuer), digestCalculatorProvider)
+                    || !respCertId.getSerialNumber().equals(x509Certificate.getSerialNumber())) {
+                responsePromise.tryFailure(
+                        new CertificateException("OCSP response CertID does not match queried certificate"));
+                return;
             }
 
             if (validateNonce) {
