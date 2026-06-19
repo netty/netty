@@ -109,28 +109,23 @@ public class HttpVersionParsingTest {
         );
     }
 
-    // Regression tests for #16970: a boundary control byte on the version token used to be silently
-    // removed by String.trim() (which strips every char <= 0x20), so a malformed version was accepted
-    // as a clean one. This is the same request-smuggling class #16723 closed for the method token.
-    // Control bytes are built with (char) casts so the source stays ASCII-only.
-
     @Test
     void testLeadingNulInStrictValueOfIsRejected() {
         String text = (char) 0x00 + "HTTP/1.1";
         assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
-                "leading NUL must not be trimmed away");
+                "leading NUL must be rejected");
     }
 
     @Test
     void testTrailingNulInStrictValueOfIsRejected() {
         String text = "HTTP/1.1" + (char) 0x00;
         assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
-                "trailing NUL must not be trimmed away");
+                "trailing NUL must be rejected");
     }
 
     @Test
     void testLeadingControlCharInStrictValueOfIsRejected() {
-        // CR, LF, VT and FF were all silently removed by the previous String.trim().
+        // CR, LF, VT and FF must all be rejected in the version token.
         for (int control : new int[] {0x0D, 0x0A, 0x0B, 0x0C}) {
             String text = (char) control + "HTTP/1.1";
             assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
@@ -140,9 +135,9 @@ public class HttpVersionParsingTest {
 
     @Test
     void testLeadingSpaceInStrictValueOfIsRejected() {
-        // Previously trim() removed the leading space and "HTTP/1.1" was accepted.
+        // A leading space must be rejected, not silently accepted as "HTTP/1.1".
         assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(" HTTP/1.1", true),
-                "leading space must not be trimmed away");
+                "leading space must be rejected");
     }
 
     @Test

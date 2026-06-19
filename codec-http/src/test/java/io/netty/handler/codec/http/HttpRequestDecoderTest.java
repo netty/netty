@@ -1266,11 +1266,6 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
-    // Regression tests for #16970: a control byte at the version-token boundary used to be silently
-    // removed by HttpVersion.valueOf()'s String.trim() (which strips every char <= 0x20), so the
-    // decoder accepted a malformed request as a clean HTTP/1.1 one. The method token was already
-    // protected by #16723. NUL bytes are written directly to the buffer so the source stays ASCII.
-
     @Test
     public void testNulInVersionTokenIsRejected() {
         // "GET / \x00HTTP/1.1\r\nHost: example.com\r\n\r\n" - NUL right before the version token.
@@ -1280,9 +1275,11 @@ public class HttpRequestDecoderTest {
         singleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        channel.writeInbound(singleSp);
+        assertTrue(channel.writeInbound(singleSp));
         HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
         channel.finishAndReleaseAll();
 
         // Same, but with two spaces between the URI and the version token.
@@ -1292,9 +1289,11 @@ public class HttpRequestDecoderTest {
         doubleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
 
         EmbeddedChannel channel2 = new EmbeddedChannel(new HttpRequestDecoder());
-        channel2.writeInbound(doubleSp);
+        assertTrue(channel2.writeInbound(doubleSp));
         HttpRequest req2 = channel2.readInbound();
+        assertNotNull(req2);
         assertTrue(req2.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, req2.decoderResult().cause());
         channel2.finishAndReleaseAll();
     }
 
@@ -1307,18 +1306,21 @@ public class HttpRequestDecoderTest {
         buf.writeCharSequence("\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        channel.writeInbound(buf);
+        assertTrue(channel.writeInbound(buf));
         HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
         channel.finishAndReleaseAll();
     }
 
     @Test
     public void testNormalRequestStillDecodes() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
-                CharsetUtil.US_ASCII));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII)));
         HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         assertTrue(req.decoderResult().isSuccess());
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         channel.finishAndReleaseAll();
@@ -1326,15 +1328,18 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testNulInMethodTokenIsRejected() {
-        // Control case for contrast: NUL before the method is already rejected since #16723.
+        // Control case: a NUL inside the method token is rejected the same way as in the version token.
         ByteBuf buf = Unpooled.buffer();
+        buf.writeCharSequence("GET", CharsetUtil.US_ASCII);
         buf.writeByte(0x00);
-        buf.writeCharSequence("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
+        buf.writeCharSequence(" / HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
 
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        channel.writeInbound(buf);
+        assertTrue(channel.writeInbound(buf));
         HttpRequest req = channel.readInbound();
+        assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
         channel.finishAndReleaseAll();
     }
 }

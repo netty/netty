@@ -44,7 +44,7 @@ public final class RtspVersions {
         }
         // toUpperCase() must specify Locale.US so the comparison against "RTSP/1.0" is not
         // affected by the JVM default locale (e.g. Turkish, where 'i' uppercases to 'İ').
-        // trim() is intentionally absent: control characters must not be silently discarded.
+        // Control characters in the version token must be rejected.
         String upper = text.toUpperCase(Locale.US);
         if ("RTSP/1.0".equals(upper)) {
             return RTSP_1_0;

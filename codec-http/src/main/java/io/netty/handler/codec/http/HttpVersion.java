@@ -121,8 +121,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         // toUpperCase() without an explicit Locale uses the JVM default. In Turkish locale
         // (tr_TR) 'i' uppercases to 'İ' (U+0130), which would corrupt protocol strings such
         // as "icap/1.0" or any custom HTTP-derived scheme that contains a lowercase 'i'.
-        // trim() is intentionally absent: control characters at the token boundary must not
-        // be silently discarded — they should cause the strict format check to fail instead.
+        // Control characters or whitespace at the token boundary must fail the checks below.
         ObjectUtil.checkNotNull(text, "text");
         if (text.isEmpty()) {
             throw new IllegalArgumentException("text must not be empty");
