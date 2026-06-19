@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec;
 
+import org.jetbrains.annotations.VisibleForTesting;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
@@ -85,62 +87,30 @@ public class AdaptiveCumulator implements Cumulator {
       return in;
     }
     CompositeByteBuf composite = null;
-    boolean success = false;
     try {
       if (isOwnedCompositeBuf(cumulation)) {
         composite = (CompositeByteBuf) cumulation;
+        // Writer index must equal capacity if we are going to "write"
+        // new components to the end
         if (composite.writerIndex() != composite.capacity()) {
           composite.capacity(composite.writerIndex());
         }
       } else {
-        composite = alloc.compositeBuffer(Integer.MAX_VALUE);
-        cumulation.retain(); // Ref count = 2
-        int cumulationRefCntBefore = cumulation.refCnt();
-        int componentsBefore = composite.numComponents();
-        try {
-          composite.addFlattenedComponents(true, cumulation);
-        } catch (Throwable t) {
-          if (composite.numComponents() == componentsBefore && cumulation.refCnt() == cumulationRefCntBefore) {
-            cumulation.release();
-          }
-          throw t;
-        }
+        composite = alloc.compositeBuffer(Integer.MAX_VALUE)
+            .addFlattenedComponents(true, cumulation);
       }
-
-      boolean compose = shouldCompose(composite, in, composeMinSize);
-      int inRefCntBefore = in.refCnt();
-      int componentsBefore = composite.numComponents();
-      try {
-        if (compose) {
-          composite.addFlattenedComponents(true, in);
-        } else {
-          mergeWithCompositeTail(alloc, composite, in);
-        }
-        in = null; // Ownership of 'in' transferred successfully.
-      } catch (Throwable t) {
-        if (in.refCnt() == inRefCntBefore && composite.numComponents() == componentsBefore) {
-          // Ownership was not transferred, and it was not released.
-        } else {
-          in = null;
-        }
-        throw t;
-      }
-
-      // If we promoted to a new composite, we must undo the defensive retain.
-      if (cumulation != composite) {
-        cumulation.release();
-      }
-      success = true;
+      addInput(alloc, composite, in);
+      in = null;
       return composite;
     } finally {
       if (in != null) {
+        // We must release if the ownership was not transferred as otherwise it may
+        // produce a leak
         in.release();
-      }
-      // If we created a new composite but failed before returning,
-      // releasing 'composite' will drop 'cumulation' to ref count 1.
-      // This is safe because ByteToMessageDecoder still owns that 1 reference.
-      if (!success && composite != null && composite != cumulation) {
-        composite.release();
+        // Also release any new buffer allocated if we're not returning it
+        if (composite != null && composite != cumulation) {
+          composite.release();
+        }
       }
     }
   }
@@ -149,7 +119,19 @@ public class AdaptiveCumulator implements Cumulator {
     return buf instanceof CompositeByteBuf && buf.refCnt() == 1;
   }
 
-  private static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
+  @VisibleForTesting
+  void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
+    if (shouldCompose(composite, in, composeMinSize)) {
+      composite.addFlattenedComponents(true, in);
+    } else {
+      // The total size of the new data and the last component are below the
+      // threshold. Merge them.
+      mergeWithCompositeTail(alloc, composite, in);
+    }
+  }
+
+  @VisibleForTesting
+  static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
     int componentCount = composite.numComponents();
     if (composite.numComponents() == 0) {
       return true;
@@ -185,7 +167,8 @@ public class AdaptiveCumulator implements Cumulator {
    * This assumption
    * is verified in unit tests for this method.
    */
-  private static void mergeWithCompositeTail(
+  @VisibleForTesting
+  static void mergeWithCompositeTail(
       ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
     int inputSize = in.readableBytes();
     int tailComponentIndex = composite.numComponents() - 1;
