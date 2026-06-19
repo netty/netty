@@ -164,9 +164,14 @@ final class OcspClient {
                         // If Future was successful then we have received OCSP response
                         // We will now validate it.
                         if (future.isSuccess()) {
-                            BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
-                            validateResponse(x509Certificate, digestCalculatorProvider, responsePromise,
-                                    resp, derNonce, issuer, validateResponseNonce);
+                            Object responseObject = future.getNow().getResponseObject();
+                            if (responseObject instanceof BasicOCSPResp) {
+                                validateResponse(x509Certificate, digestCalculatorProvider, responsePromise,
+                                        (BasicOCSPResp) responseObject, derNonce, issuer, validateResponseNonce);
+                            } else {
+                                responsePromise.tryFailure(new OCSPException("Unsupported OCSP response type: "
+                                        + responseObject.getClass()));
+                            }
                         } else {
                             responsePromise.tryFailure(future.cause());
                         }

@@ -32,6 +32,11 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.Promise;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.ocsp.OCSPResponse;
+import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
+import org.bouncycastle.asn1.ocsp.ResponseBytes;
 import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.GeneralName;
@@ -168,8 +173,9 @@ class OcspClientTest extends AbstractOcspTest {
         );
     }
 
-    @Test
-    void testCertIdBypass() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"unrelated-certificate", "non-basic-response-type"})
+    void testCertIdBypass(String scenario) throws Exception {
         X509Bundle caRoot = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.rsa2048)
                 .subject("CN=TrustedRootCA")
@@ -185,11 +191,7 @@ class OcspClientTest extends AbstractOcspTest {
                 .addExtensionOctetString("1.3.6.1.5.5.7.1.1", false, aia.getEncoded())
                 .buildIssuedBy(caRoot);
 
-        X509CertificateHolder caHolder = new JcaX509CertificateHolder(caRoot.getCertificate());
-        BasicOCSPResp forgedBasicResp = createBasicOcspResponse(caRoot, new X509CertificateHolder[]{caHolder});
-        OCSPResp forgedResponse = new OCSPRespBuilder().build(OCSPRespBuilder.SUCCESSFUL, forgedBasicResp);
-        byte[] forgedResponseEncoded = forgedResponse.getEncoded();
-
+        byte[] forgedResponseEncoded = forgedResponse(scenario, caRoot);
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             IoTransport transport = IoTransport.create(group.next(), () -> {
@@ -226,6 +228,19 @@ class OcspClientTest extends AbstractOcspTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    private static byte[] forgedResponse(String scenario, X509Bundle caRoot) throws Exception {
+        if ("non-basic-response-type".equals(scenario)) {
+            ResponseBytes responseBytes = new ResponseBytes(
+                                       new ASN1ObjectIdentifier("1.2.3.4.5"),
+                    new DEROctetString(new byte[]{ 0x30, 0x00 }));
+                        return new OCSPResponse(new OCSPResponseStatus(OCSPResponseStatus.SUCCESSFUL), responseBytes)
+                                        .getEncoded();
+        }
+        X509CertificateHolder caHolder = new JcaX509CertificateHolder(caRoot.getCertificate());
+        BasicOCSPResp forgedBasicResp = createBasicOcspResponse(caRoot, new X509CertificateHolder[]{caHolder});
+        return new OCSPRespBuilder().build(OCSPRespBuilder.SUCCESSFUL, forgedBasicResp).getEncoded();
     }
 
     private static BasicOCSPResp createBasicOcspResponse(X509Bundle responderBundle,
