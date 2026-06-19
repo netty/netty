@@ -1268,50 +1268,14 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testNulInVersionTokenIsRejected() {
-        // "GET / \x00HTTP/1.1\r\nHost: example.com\r\n\r\n" - NUL right before the version token.
-        ByteBuf singleSp = Unpooled.buffer();
-        singleSp.writeCharSequence("GET / ", CharsetUtil.US_ASCII);
-        singleSp.writeByte(0x00);
-        singleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
-
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(singleSp));
-        HttpRequest req = channel.readInbound();
-        assertNotNull(req);
-        assertTrue(req.decoderResult().isFailure());
-        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        assertFalse(channel.finishAndReleaseAll());
-
-        // Same, but with two spaces between the URI and the version token.
-        ByteBuf doubleSp = Unpooled.buffer();
-        doubleSp.writeCharSequence("GET /  ", CharsetUtil.US_ASCII);
-        doubleSp.writeByte(0x00);
-        doubleSp.writeCharSequence("HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
-
-        EmbeddedChannel channel2 = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel2.writeInbound(doubleSp));
-        HttpRequest req2 = channel2.readInbound();
-        assertNotNull(req2);
-        assertTrue(req2.decoderResult().isFailure());
-        assertInstanceOf(IllegalArgumentException.class, req2.decoderResult().cause());
-        assertFalse(channel2.finishAndReleaseAll());
+        // A NUL right before the version token must be rejected, not trimmed away.
+        testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
-    public void testTrailingNulInVersionTokenIsRejected() {
-        // "GET / HTTP/1.1\x00\r\nHost: example.com\r\n\r\n" - NUL right after the version token.
-        ByteBuf buf = Unpooled.buffer();
-        buf.writeCharSequence("GET / HTTP/1.1", CharsetUtil.US_ASCII);
-        buf.writeByte(0x00);
-        buf.writeCharSequence("\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
-
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(buf));
-        HttpRequest req = channel.readInbound();
-        assertNotNull(req);
-        assertTrue(req.decoderResult().isFailure());
-        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        assertFalse(channel.finishAndReleaseAll());
+    public void testNulInMethodTokenIsRejected() {
+        // Control case: a NUL inside the method token is rejected the same way as in the version token.
+        testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
@@ -1325,24 +1289,7 @@ public class HttpRequestDecoderTest {
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
         LastHttpContent last = channel.readInbound();
         assertNotNull(last);
-        last.release();
-        assertFalse(channel.finishAndReleaseAll());
-    }
-
-    @Test
-    public void testNulInMethodTokenIsRejected() {
-        // Control case: a NUL inside the method token is rejected the same way as in the version token.
-        ByteBuf buf = Unpooled.buffer();
-        buf.writeCharSequence("GET", CharsetUtil.US_ASCII);
-        buf.writeByte(0x00);
-        buf.writeCharSequence(" / HTTP/1.1\r\nHost: example.com\r\n\r\n", CharsetUtil.US_ASCII);
-
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(buf));
-        HttpRequest req = channel.readInbound();
-        assertNotNull(req);
-        assertTrue(req.decoderResult().isFailure());
-        assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        assertFalse(channel.finishAndReleaseAll());
+        assertTrue(last.release());
+        assertFalse(channel.finish());
     }
 }
