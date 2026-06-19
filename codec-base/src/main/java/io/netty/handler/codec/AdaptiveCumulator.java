@@ -119,8 +119,7 @@ public class AdaptiveCumulator implements Cumulator {
     return buf instanceof CompositeByteBuf && buf.refCnt() == 1;
   }
 
-  @VisibleForTesting
-  void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
+  private void addInput(ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
     if (shouldCompose(composite, in, composeMinSize)) {
       composite.addFlattenedComponents(true, in);
     } else {
@@ -130,8 +129,7 @@ public class AdaptiveCumulator implements Cumulator {
     }
   }
 
-  @VisibleForTesting
-  static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
+  private static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
     int componentCount = composite.numComponents();
     if (composite.numComponents() == 0) {
       return true;
@@ -167,8 +165,7 @@ public class AdaptiveCumulator implements Cumulator {
    * This assumption
    * is verified in unit tests for this method.
    */
-  @VisibleForTesting
-  static void mergeWithCompositeTail(
+  private static void mergeWithCompositeTail(
       ByteBufAllocator alloc, CompositeByteBuf composite, ByteBuf in) {
     int inputSize = in.readableBytes();
     int tailComponentIndex = composite.numComponents() - 1;
