@@ -1280,7 +1280,7 @@ public class HttpRequestDecoderTest {
         assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
         assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        channel.finishAndReleaseAll();
+        assertFalse(channel.finishAndReleaseAll());
 
         // Same, but with two spaces between the URI and the version token.
         ByteBuf doubleSp = Unpooled.buffer();
@@ -1294,7 +1294,7 @@ public class HttpRequestDecoderTest {
         assertNotNull(req2);
         assertTrue(req2.decoderResult().isFailure());
         assertInstanceOf(IllegalArgumentException.class, req2.decoderResult().cause());
-        channel2.finishAndReleaseAll();
+        assertFalse(channel2.finishAndReleaseAll());
     }
 
     @Test
@@ -1311,7 +1311,7 @@ public class HttpRequestDecoderTest {
         assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
         assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        channel.finishAndReleaseAll();
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
@@ -1323,7 +1323,10 @@ public class HttpRequestDecoderTest {
         assertNotNull(req);
         assertTrue(req.decoderResult().isSuccess());
         assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
-        channel.finishAndReleaseAll();
+        LastHttpContent last = channel.readInbound();
+        assertNotNull(last);
+        last.release();
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
@@ -1340,6 +1343,6 @@ public class HttpRequestDecoderTest {
         assertNotNull(req);
         assertTrue(req.decoderResult().isFailure());
         assertInstanceOf(IllegalArgumentException.class, req.decoderResult().cause());
-        channel.finishAndReleaseAll();
+        assertFalse(channel.finishAndReleaseAll());
     }
 }
