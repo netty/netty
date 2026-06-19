@@ -428,13 +428,17 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * Resets readableBytes to 0 when the queue is empty. They can drift apart if a queued buffer is released
-     * or consumed while still referenced by the queue, which would otherwise make remove(...) return empty
-     * buffers forever. See https://github.com/netty/netty/issues/16946
+     * Resets readableBytes to 0 when the queue is empty. They can only diverge if a queued buffer was released
+     * or consumed while still referenced by the queue (similar to a reference-counting bug) after it was added,
+     * which would otherwise make remove(...) return empty buffers forever. Logged at error level because it
+     * always indicates a bug that needs to be found.
+     * See https://github.com/netty/netty/issues/16946
      */
     private void reconcileReadableBytes() {
         if (readableBytes != 0 && bufAndListenerPairs.isEmpty()) {
-            logger.warn("Resetting readableBytes from {} to 0 as the queue is empty", readableBytes);
+            logger.error("readableBytes is {} but the queue is empty: a queued buffer was released or consumed " +
+                    "while still referenced by the queue. This indicates a bug in the code that produced the " +
+                    "buffer. Resetting readableBytes to 0.", readableBytes);
             decrementReadableBytes(readableBytes);
         }
     }

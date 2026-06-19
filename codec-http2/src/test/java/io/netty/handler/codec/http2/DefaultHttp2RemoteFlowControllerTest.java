@@ -170,6 +170,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertTrue(data.writeCount <= 2,
                 "expected the stuck frame to be abandoned quickly, got " + data.writeCount + " write attempts");
     }
+
     @Test
     @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void singleNoProgressPassShouldNotFailStream() throws Http2Exception {
