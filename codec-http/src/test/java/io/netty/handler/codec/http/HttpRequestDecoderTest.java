@@ -1268,13 +1268,13 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testNulInVersionTokenIsRejected() {
-        // A NUL right before the version token must be rejected, not trimmed away.
+        // A NUL right before the version token must be rejected.
         testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
     public void testNulInMethodTokenIsRejected() {
-        // Control case: a NUL inside the method token is rejected the same way as in the version token.
+        // Control case: a NUL inside the method token is also rejected.
         testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 

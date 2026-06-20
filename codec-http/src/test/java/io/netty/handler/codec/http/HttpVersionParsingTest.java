@@ -135,7 +135,7 @@ public class HttpVersionParsingTest {
 
     @Test
     void testLeadingSpaceInStrictValueOfIsRejected() {
-        // A leading space must be rejected, not silently accepted as "HTTP/1.1".
+        // A leading space in the version token must be rejected.
         assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(" HTTP/1.1", true),
                 "leading space must be rejected");
     }
