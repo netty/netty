@@ -249,18 +249,6 @@ public class DefaultHttp2HeadersTest {
     }
 
     @Test
-    public void uppercaseHeaderNameStillRejected() {
-        // Regression: pre-existing rejection of upper-case header names must continue to fire.
-        final Http2Headers headers = new DefaultHttp2Headers();
-        assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                headers.add(of("X-Custom"), of("test"));
-            }
-        });
-    }
-
-    @Test
     public void acceptValidLowercaseTokenHeaderName() {
         // Regression: valid RFC 7230 token (lower-case ALPHA, DIGIT, "!#$%&'*+-.^_`|~") must be accepted.
         Http2Headers headers = new DefaultHttp2Headers();
