@@ -262,6 +262,48 @@ public class CoalescingBufferQueueTest {
     }
 
     @Test
+    public void testReadableBytesResetWhenReleaseAndFailAllSeesConsumedBuffer() {
+        cat.release();
+        mouse.release();
+
+        ByteBuf buffer = Unpooled.buffer().writeZero(292);
+        writeQueue.add(buffer);
+        assertEquals(292, writeQueue.readableBytes());
+
+        buffer.skipBytes(buffer.readableBytes());
+        writeQueue.releaseAndFailAll(new RuntimeException());
+
+        assertQueueSize(0, true);
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testReadableBytesResetWhenWriteAndRemoveAllSeesConsumedBuffer() {
+        cat.release();
+        mouse.release();
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ReferenceCountUtil.release(msg);
+                promise.setSuccess();
+            }
+        }, new ChannelHandlerAdapter() { });
+        CoalescingBufferQueue queue = new CoalescingBufferQueue(ch);
+
+        ByteBuf buffer = Unpooled.buffer().writeZero(292);
+        queue.add(buffer);
+        assertEquals(292, queue.readableBytes());
+
+        buffer.skipBytes(buffer.readableBytes());
+        queue.writeAndRemoveAll(ch.pipeline().lastContext());
+
+        assertTrue(queue.isEmpty());
+        assertEquals(0, queue.readableBytes());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testMerge() {
         writeQueue.add(cat, catPromise);
         CoalescingBufferQueue otherQueue = new CoalescingBufferQueue(channel);

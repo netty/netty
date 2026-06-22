@@ -290,6 +290,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
             }
         }
+        reconcileReadableBytes();
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
@@ -403,6 +404,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
             }
         }
+        reconcileReadableBytes();
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
