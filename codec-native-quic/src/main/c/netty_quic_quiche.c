@@ -707,11 +707,14 @@ static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, j
 static jbyteArray netty_quiche_conn_retired_scid_next(JNIEnv* env, jclass clazz, jlong conn) {
     const uint8_t *id = NULL;
     size_t len = 0;
+    jbyteArray array = NULL;
 
-    if (quiche_conn_retired_scid_next((quiche_conn *) conn, &id, &len)) {
-        return to_byte_array(env, id, len);
+    quiche_connection_id_iter* itr = quiche_conn_retired_scid_iter((quiche_conn *) conn);
+    if (quiche_connection_id_iter_next(itr, &id, &len)) {
+        array = to_byte_array(env, id, len);
     }
-    return NULL;
+    quiche_connection_id_iter_free(itr);
+    return array;
 }
 
 static jlong netty_quiche_conn_path_event_next(JNIEnv* env, jclass clazz, jlong conn) {
