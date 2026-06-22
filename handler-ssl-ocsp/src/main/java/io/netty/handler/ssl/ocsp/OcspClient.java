@@ -170,7 +170,7 @@ final class OcspClient {
                                         (BasicOCSPResp) responseObject, derNonce, issuer, validateResponseNonce);
                             } else {
                                 responsePromise.tryFailure(new OCSPException("Unsupported OCSP response type: "
-                                        + responseObject.getClass()));
+                                        + (responseObject == null ? null : responseObject.getClass())));
                             }
                         } else {
                             responsePromise.tryFailure(future.cause());

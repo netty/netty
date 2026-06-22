@@ -174,7 +174,7 @@ class OcspClientTest extends AbstractOcspTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"unrelated-certificate", "non-basic-response-type"})
+    @ValueSource(strings = {"unrelated-certificate", "non-basic-response-type", "null-response-bytes"})
     void testCertIdBypass(String scenario) throws Exception {
         X509Bundle caRoot = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.rsa2048)
@@ -237,6 +237,9 @@ class OcspClientTest extends AbstractOcspTest {
                     new DEROctetString(new byte[]{ 0x30, 0x00 }));
                         return new OCSPResponse(new OCSPResponseStatus(OCSPResponseStatus.SUCCESSFUL), responseBytes)
                                         .getEncoded();
+        }
+        if ("null-response-bytes".equals(scenario)) {
+            return new OCSPResponse(new OCSPResponseStatus(OCSPResponseStatus.UNAUTHORIZED), null).getEncoded();
         }
         X509CertificateHolder caHolder = new JcaX509CertificateHolder(caRoot.getCertificate());
         BasicOCSPResp forgedBasicResp = createBasicOcspResponse(caRoot, new X509CertificateHolder[]{caHolder});
