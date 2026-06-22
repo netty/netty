@@ -82,6 +82,15 @@ public class AdaptiveCumulatorTest {
     }
 
     @Test
+    public void cumulate_sameBuffer_identityHandled() {
+      in.retain(); // simulate double retention when the same buffer is passed twice
+      ByteBuf result = cumulator.cumulate(alloc, in, in);
+      assertSame(in, result);
+      assertEquals(1, in.refCnt(), "The cumulator should release the doubly-retained buffer once");
+      in.release();
+    }
+
+    @Test
     public void cumulate_contiguousCumulation_newCompositeFromContiguousAndInput() {
       CompositeByteBuf cumulation = (CompositeByteBuf) cumulator.cumulate(alloc, contiguous, in);
       assertEquals(DATA_INITIAL, cumulation.component(0).toString(US_ASCII));
@@ -492,6 +501,7 @@ public class AdaptiveCumulatorTest {
         assertEquals(0, tail.refCnt());
         assertEquals(1, compositeThrows.refCnt());
         assertEquals(0, compositeThrows.numComponents());
+        assertEquals(0, in.refCnt());
       } finally {
         compositeThrows.release();
         tearDown();
@@ -524,6 +534,8 @@ public class AdaptiveCumulatorTest {
         assertSame(expectedError, actualError);
         assertEquals(1, compositeRo.refCnt());
         assertEquals(0, compositeRo.numComponents());
+        assertEquals(0, newTail.refCnt());
+        assertEquals(0, in.refCnt());
       } finally {
         compositeRo.release();
         if (newTail.refCnt() > 0) {

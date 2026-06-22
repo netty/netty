@@ -82,6 +82,10 @@ public class AdaptiveCumulator implements Cumulator {
   @Override
   @SuppressWarnings("ReferenceEquality")
   public final ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+    if (cumulation == in) {
+      in.release();
+      return cumulation;
+    }
     if (!cumulation.isReadable()) {
       cumulation.release();
       return in;
@@ -131,7 +135,7 @@ public class AdaptiveCumulator implements Cumulator {
 
   private static boolean shouldCompose(CompositeByteBuf composite, ByteBuf in, int composeMinSize) {
     int componentCount = composite.numComponents();
-    if (composite.numComponents() == 0) {
+    if (componentCount == 0) {
       return true;
     }
     int inputSize = in.readableBytes();
@@ -226,14 +230,14 @@ public class AdaptiveCumulator implements Cumulator {
       composite.removeComponent(tailComponentIndex).setIndex(0, tailStart);
       composite.addFlattenedComponents(true, newTail);
 
-      // Ownership successfully transferred to the composite buffer.
+      // newTail ownership successfully transferred to the composite buffer.
       newTail = null;
-      in.release();
-      in = null;
-      // Restore the reader. In case it fails we restore the reader after
-      // releasing/forgetting the input and the new tail so that finally block can
-      // handles them properly.
+
+      // Restore the reader. We do this before releasing 'in' so that if it fails,
+      // the caller's finally block will handle releasing 'in' without a double-free.
       composite.readerIndex(prevReader);
+
+      in.release();
     } finally {
       // If new tail's ownership isn't transferred to the composite buf.
       // Release it to prevent a leak.
