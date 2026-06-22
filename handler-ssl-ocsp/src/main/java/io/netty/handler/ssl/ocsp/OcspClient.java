@@ -34,6 +34,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -201,7 +202,7 @@ final class OcspClient {
                     .option(ChannelOption.TCP_NODELAY, true)
                     .channelFactory(ioTransport.socketChannel())
                     .attr(OcspServerCertificateValidator.OCSP_PIPELINE_ATTRIBUTE, Boolean.TRUE)
-                    .handler(new Initializer(responsePromise));
+                    .handler(new Initializer(responsePromise, 10 * 1000));
             dnsNameResolver.resolve(host).addListener((FutureListener<InetAddress>) future -> {
 
                 // If Future was successful then we have successfully resolved OCSP server address.
@@ -390,9 +391,11 @@ final class OcspClient {
     static final class Initializer extends ChannelInitializer<SocketChannel> {
 
         private final Promise<OCSPResp> responsePromise;
+        private final long timeoutMillis;
 
-        Initializer(Promise<OCSPResp> responsePromise) {
-            this.responsePromise = checkNotNull(responsePromise, "ResponsePromise");
+        Initializer(Promise<OCSPResp> responsePromise, long timeoutMillis) {
+            this.responsePromise = checkNotNull(responsePromise, "responsePromise");
+            this.timeoutMillis = ObjectUtil.checkPositive(timeoutMillis, "timeoutMillis");
         }
 
         @Override
@@ -400,7 +403,7 @@ final class OcspClient {
             ChannelPipeline pipeline = socketChannel.pipeline();
             pipeline.addLast(new HttpClientCodec());
             pipeline.addLast(new HttpObjectAggregator(OCSP_RESPONSE_MAX_SIZE));
-            pipeline.addLast(new OcspHttpHandler(responsePromise));
+            pipeline.addLast(new OcspHttpHandler(responsePromise, timeoutMillis));
         }
     }
 
