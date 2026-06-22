@@ -47,7 +47,6 @@ import org.bouncycastle.cert.ocsp.BasicOCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.CertificateID;
 import org.bouncycastle.cert.ocsp.CertificateStatus;
 import org.bouncycastle.cert.ocsp.OCSPException;
-import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPRespBuilder;
 import org.bouncycastle.cert.ocsp.RespID;
 import org.bouncycastle.operator.ContentSigner;
