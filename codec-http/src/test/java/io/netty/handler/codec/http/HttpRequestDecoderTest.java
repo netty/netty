@@ -1265,4 +1265,31 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isFailure());
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testNulInVersionTokenIsRejected() {
+        // A NUL right before the version token must be rejected.
+        testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNulInMethodTokenIsRejected() {
+        // Control case: a NUL inside the method token is also rejected.
+        testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNormalRequestStillDecodes() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertNotNull(req);
+        assertTrue(req.decoderResult().isSuccess());
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        LastHttpContent last = channel.readInbound();
+        assertNotNull(last);
+        last.release();
+        assertFalse(channel.finish());
+    }
 }
