@@ -148,7 +148,7 @@ public class HttpVersionParsingTest {
     }
 
     @Test
-    void testStandardVersionsStillResolveAfterFix() {
+    void testValidVersionsResolveCorrectly() {
         assertSame(HttpVersion.HTTP_1_1, HttpVersion.valueOf("HTTP/1.1", true));
         assertSame(HttpVersion.HTTP_1_0, HttpVersion.valueOf("HTTP/1.0"));
         assertEquals("ICAP", HttpVersion.valueOf("icap/1.0").protocolName());
