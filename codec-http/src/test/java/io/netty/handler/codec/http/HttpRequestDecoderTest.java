@@ -1267,19 +1267,19 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    public void testNulInVersionTokenIsRejected() {
+    public void testNulInVersionTokenIsRejected() throws Exception {
         // A NUL right before the version token must be rejected.
         testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
-    public void testNulInMethodTokenIsRejected() {
+    public void testNulInMethodTokenIsRejected() throws Exception {
         // Control case: a NUL inside the method token is also rejected.
         testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
-    public void testNormalRequestStillDecodes() {
+    public void testNormalRequestStillDecodes() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
                 CharsetUtil.US_ASCII)));
