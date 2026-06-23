@@ -49,7 +49,7 @@ public final class RtspVersions {
             return RTSP_1_0;
         }
 
-        return new HttpVersion(text, true);
+        return new HttpVersion(upper, true);
     }
 
     private RtspVersions() {
