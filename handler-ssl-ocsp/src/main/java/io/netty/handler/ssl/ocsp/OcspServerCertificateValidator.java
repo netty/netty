@@ -196,6 +196,9 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             }
                         } else {
                             ctx.fireExceptionCaught(future.cause());
+                            if (closeAndThrowIfNotValid) {
+                                ctx.close();
+                            }
                         }
                     } finally {
                         ctx.fireUserEventTriggered(evt);

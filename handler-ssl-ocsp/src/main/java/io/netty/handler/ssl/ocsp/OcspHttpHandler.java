@@ -54,7 +54,9 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
         this.responseFuture = checkNotNull(responsePromise, "ResponsePromise");
         this.timeoutMillis = ObjectUtil.checkPositive(timeoutMillis, "timeoutMillis");
         this.responseFuture.addListener(f -> {
-            timeoutFuture.cancel(true);
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(true);
+            }
         });
     }
 
