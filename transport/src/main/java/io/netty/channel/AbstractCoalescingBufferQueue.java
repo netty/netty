@@ -126,6 +126,7 @@ public abstract class AbstractCoalescingBufferQueue {
             aggregatePromise.addListener((ChannelFutureListener) entry);
             bufAndListenerPairs.poll();
         }
+        reconcileReadableBytes();
         return result;
     }
 

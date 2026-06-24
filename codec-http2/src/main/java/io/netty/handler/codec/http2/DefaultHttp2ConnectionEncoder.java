@@ -508,6 +508,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             int producedBytes = toWrite.readableBytes();
             if (producedBytes < writableData) {
                 ReferenceCountUtil.safeRelease(toWrite);
+                // Set dataSize and padding to 0 to signal that the whole frame was consumed, so it is removed and
+                // its bytes are returned to flow control (matching the error path above).
+                padding = dataSize = 0;
                 writePromise.tryFailure(streamError(stream.id(), INTERNAL_ERROR,
                         "Stream %d flow-controlled queue produced %d bytes but reported %d",
                         stream.id(), producedBytes, writableData));

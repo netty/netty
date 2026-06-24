@@ -304,6 +304,23 @@ public class CoalescingBufferQueueTest {
     }
 
     @Test
+    public void testReadableBytesResetWhenRemoveFirstSeesConsumedBuffer() {
+        cat.release();
+        mouse.release();
+
+        ByteBuf buffer = Unpooled.buffer().writeZero(292);
+        writeQueue.add(buffer);
+        assertEquals(292, writeQueue.readableBytes());
+
+        buffer.skipBytes(buffer.readableBytes());
+        ByteBuf removed = writeQueue.removeFirst(newPromise());
+        assertSame(buffer, removed);
+        removed.release();
+
+        assertQueueSize(0, true);
+    }
+
+    @Test
     public void testMerge() {
         writeQueue.add(cat, catPromise);
         CoalescingBufferQueue otherQueue = new CoalescingBufferQueue(channel);
