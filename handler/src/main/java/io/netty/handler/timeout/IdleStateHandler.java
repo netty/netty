@@ -314,6 +314,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastReadTime = ticker.nanoTime();
             reading = false;
+            firstReaderIdleEvent = firstAllIdleEvent = true;
         }
     }
 
@@ -323,6 +324,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     public void resetWriteTimeout() {
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastWriteTime = ticker.nanoTime();
+            firstWriterIdleEvent = firstAllIdleEvent = true;
         }
     }
 
