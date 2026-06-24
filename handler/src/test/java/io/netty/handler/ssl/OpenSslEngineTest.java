@@ -27,12 +27,14 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.test.LeakPresenceExtension;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -85,6 +87,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@ExtendWith(LeakPresenceExtension.class)
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
@@ -1880,6 +1883,37 @@ public class OpenSslEngineTest extends SSLEngineTest {
         } finally {
             ReferenceCountUtil.safeRelease(rsaCredential);
             ReferenceCountUtil.safeRelease(ecdsaCredential);
+        }
+    }
+
+    @Test
+    public void addCredentialRetainsAndShutdownReleases() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
+        OpenSslCredential credential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+
+        SslContext serverContext = SslContextBuilder
+                .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .build();
+
+        try {
+            ReferenceCountedOpenSslEngine engine =
+                    (ReferenceCountedOpenSslEngine) serverContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                assertThat(credential.refCnt()).isEqualTo(1);
+                engine.addCredential(credential);
+                assertThat(credential.refCnt()).isEqualTo(2);
+                engine.shutdown();
+                assertThat(credential.refCnt()).isEqualTo(1);
+            } finally {
+                ReferenceCountUtil.release(engine);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(credential);
+            ReferenceCountUtil.release(serverContext);
         }
     }
 }
