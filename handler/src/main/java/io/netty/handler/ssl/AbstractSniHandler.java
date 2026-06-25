@@ -134,7 +134,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     }
 
     /**
-     * @paramm maxClientHelloLength     the maximum length of the client hello message.
+     * @param maxClientHelloLength     the maximum length of the client hello message.
      * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
      */
     protected AbstractSniHandler(int maxClientHelloLength, long handshakeTimeoutMillis) {
