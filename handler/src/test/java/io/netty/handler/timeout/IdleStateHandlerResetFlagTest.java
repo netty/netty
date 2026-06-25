@@ -17,9 +17,12 @@ package io.netty.handler.timeout;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.internal.ReflectionUtil;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +40,21 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * The writeListener path doesn't have this problem because it resets both.
  */
 public class IdleStateHandlerResetFlagTest {
+    static class TimeableEmbeddedChannel extends EmbeddedChannel {
+        long getCurrentEventLoopTimeNanos() {
+            EventLoop eventLoop = eventLoop();
+            try {
+                Method getCurrentTimeNanos = eventLoop.getClass().getDeclaredMethod("getCurrentTimeNanos");
+                Throwable throwable = ReflectionUtil.trySetAccessible(getCurrentTimeNanos, false);
+                if (throwable != null) {
+                    throw new RuntimeException(throwable);
+                }
+                return (Long) getCurrentTimeNanos.invoke(eventLoop);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     /**
      * If a WRITER_IDLE event has already fired as non-first and then
@@ -45,11 +63,17 @@ public class IdleStateHandlerResetFlagTest {
      */
     @Test
     public void testResetWriteTimeoutResetsFirstEventFlag() throws Exception {
+        final TimeableEmbeddedChannel channel = new TimeableEmbeddedChannel();
         final IdleStateHandler idleStateHandler = new IdleStateHandler(
-                false, 0L, 1L, 0L, TimeUnit.SECONDS);
+                false, 0L, 1L, 0L, TimeUnit.SECONDS) {
+            @Override
+            long ticksInNanos() {
+                return channel.getCurrentEventLoopTimeNanos();
+            }
+        };
 
         final List<IdleStateEvent> events = new ArrayList<IdleStateEvent>();
-        EmbeddedChannel channel = new EmbeddedChannel(idleStateHandler,
+        channel.pipeline().addLast(idleStateHandler,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -97,11 +121,17 @@ public class IdleStateHandlerResetFlagTest {
      */
     @Test
     public void testResetReadTimeoutResetsFirstEventFlag() throws Exception {
+        final TimeableEmbeddedChannel channel = new TimeableEmbeddedChannel();
         final IdleStateHandler idleStateHandler = new IdleStateHandler(
-                false, 1L, 0L, 0L, TimeUnit.SECONDS);
+                false, 1L, 0L, 0L, TimeUnit.SECONDS) {
+            @Override
+            long ticksInNanos() {
+                return channel.getCurrentEventLoopTimeNanos();
+            }
+        };
 
         final List<IdleStateEvent> events = new ArrayList<IdleStateEvent>();
-        EmbeddedChannel channel = new EmbeddedChannel(idleStateHandler,
+        channel.pipeline().addLast(idleStateHandler,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
