@@ -30,6 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.OCSPResp;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -108,5 +109,13 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
                         + timeoutMillis + "ms"));
             }
         }, timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (!responseFuture.isDone()) {
+            responseFuture.tryFailure(new ClosedChannelException());
+        }
+        super.channelInactive(ctx);
     }
 }
