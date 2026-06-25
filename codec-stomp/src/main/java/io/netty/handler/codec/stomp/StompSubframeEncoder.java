@@ -183,6 +183,9 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
             CharSequence headerKey = entry.getKey();
             CharSequence headerValue = entry.getValue();
             try {
+                if (headerKey.length() == 0) {
+                    throw new IllegalArgumentException("STOMP " + command + " contains empty header name");
+                }
                 if (shouldEscape) {
                     CharSequence cachedHeaderKey = cache.get(headerKey);
                     if (cachedHeaderKey == null) {
@@ -192,7 +195,7 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
                     headerKey = cachedHeaderKey;
                     headerValue = escape(command, "header value", headerValue);
                 } else {
-                    // For CONNECT/CONNECTED: don't escape but REJECT newlines
+                    // For CONNECT/CONNECTED: don't escape but REJECT illegal characters
                     validateNoIllegalCharacters(command, headerKey, "header name");
                     validateNoIllegalCharacters(command, headerValue, "header value");
                 }
