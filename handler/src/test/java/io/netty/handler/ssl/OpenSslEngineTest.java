@@ -1916,4 +1916,68 @@ public class OpenSslEngineTest extends SSLEngineTest {
             ReferenceCountUtil.release(serverContext);
         }
     }
+
+    @Test
+    public void testServerSelectsAddedCredentialWithOpenSslProvider() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
+        // The base/legacy certificate is RSA; the ECDSA certificate is supplied ONLY via
+        // addCredentials(). A client that offers only an ECDSA-auth cipher therefore forces the
+        // server to select the added ECDSA credential. This must work for the default OPENSSL
+        // provider (not just OPENSSL_REFCNT): newServerContextInternal must forward the credentials
+        // to OpenSslServerContext, otherwise they are silently dropped and the handshake fails with
+        // NO_SHARED_CIPHER.
+        OpenSslCredential rsaCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+
+        SslContext serverSslContext = null;
+        SslContext clientSslContext = null;
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            serverSslContext = SslContextBuilder
+                    .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .addCredentials(rsaCredential, ecdsaCredential)
+                    .protocols("TLSv1.2")
+                    .ciphers(Arrays.asList("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"))
+                    .build();
+
+            clientSslContext = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols("TLSv1.2")
+                    .ciphers(Arrays.asList("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"))
+                    .build();
+
+            clientEngine = clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+            handshake(BufferType.Direct, false, clientEngine, serverEngine);
+
+            X509Certificate served =
+                    (X509Certificate) clientEngine.getSession().getPeerCertificates()[0];
+            assertEquals("EC", served.getPublicKey().getAlgorithm());
+        } finally {
+            if (clientEngine != null) {
+                cleanupClientSslEngine(clientEngine);
+            }
+            if (serverEngine != null) {
+                cleanupServerSslEngine(serverEngine);
+            }
+            if (clientSslContext != null) {
+                cleanupClientSslContext(clientSslContext);
+            }
+            if (serverSslContext != null) {
+                cleanupServerSslContext(serverSslContext);
+            }
+            ReferenceCountUtil.safeRelease(rsaCredential);
+            ReferenceCountUtil.safeRelease(ecdsaCredential);
+        }
+    }
 }
