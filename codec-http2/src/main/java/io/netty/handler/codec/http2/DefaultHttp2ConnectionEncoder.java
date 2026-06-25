@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -30,6 +31,7 @@ import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
@@ -500,6 +502,20 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             ChannelPromise writePromise = ctx.newPromise().addListener(this);
             ByteBuf toWrite = queue.remove(writableData, writePromise);
             dataSize = queue.readableBytes();
+
+            // The queue reported writableData readable bytes but produced fewer: a queued buffer was released or
+            // consumed while still referenced by the queue, so the stream's data is corrupted. Fail the stream.
+            int producedBytes = toWrite.readableBytes();
+            if (producedBytes < writableData) {
+                ReferenceCountUtil.safeRelease(toWrite);
+                // Set dataSize and padding to 0 to signal that the whole frame was consumed, so it is removed and
+                // its bytes are returned to flow control (matching the error path above).
+                padding = dataSize = 0;
+                writePromise.tryFailure(streamError(stream.id(), INTERNAL_ERROR,
+                        "Stream %d flow-controlled queue produced %d bytes but reported %d",
+                        stream.id(), producedBytes, writableData));
+                return;
+            }
 
             // Determine how much padding to write.
             int writablePadding = min(allowedBytes - writableData, padding);
