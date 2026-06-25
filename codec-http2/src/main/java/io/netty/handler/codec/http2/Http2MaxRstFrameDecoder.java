@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.util.concurrent.Ticker;
+
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 
@@ -25,17 +27,25 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 final class Http2MaxRstFrameDecoder extends DecoratingHttp2ConnectionDecoder {
     private final int maxRstFramesPerWindow;
     private final int secondsPerWindow;
+    private final Ticker ticker;
 
     Http2MaxRstFrameDecoder(Http2ConnectionDecoder delegate, int maxRstFramesPerWindow, int secondsPerWindow) {
+        this(delegate, maxRstFramesPerWindow, secondsPerWindow, Ticker.systemTicker());
+    }
+
+    Http2MaxRstFrameDecoder(Http2ConnectionDecoder delegate, int maxRstFramesPerWindow, int secondsPerWindow,
+                            Ticker ticker) {
         super(delegate);
         this.maxRstFramesPerWindow = checkPositive(maxRstFramesPerWindow, "maxRstFramesPerWindow");
         this.secondsPerWindow = checkPositive(secondsPerWindow, "secondsPerWindow");
+        this.ticker = ticker;
     }
 
     @Override
     public void frameListener(Http2FrameListener listener) {
         if (listener != null) {
-            super.frameListener(new Http2MaxRstFrameListener(listener, maxRstFramesPerWindow, secondsPerWindow));
+            super.frameListener(new Http2MaxRstFrameListener(
+                    listener, maxRstFramesPerWindow, secondsPerWindow, ticker));
         } else {
             super.frameListener(null);
         }

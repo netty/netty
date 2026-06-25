@@ -15,10 +15,13 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.MockTicker;
+import io.netty.util.concurrent.Ticker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,6 +38,8 @@ public class Http2MaxRstFrameListenerTest {
     @Mock
     private ChannelHandlerContext ctx;
 
+    private final MockTicker ticker = Ticker.newMockTicker();
+
     private Http2MaxRstFrameListener listener;
 
     @BeforeEach
@@ -44,25 +49,43 @@ public class Http2MaxRstFrameListenerTest {
 
     @Test
     public void testMaxRstFramesReached() throws Http2Exception {
-        listener = new Http2MaxRstFrameListener(frameListener, 1, 10);
+        listener = new Http2MaxRstFrameListener(frameListener, 1, 10, ticker);
         listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
 
-        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                listener.onRstStreamRead(ctx, 2, Http2Error.STREAM_CLOSED.code());
-            }
-        });
+        Http2Exception ex = assertThrows(Http2Exception.class,
+                () -> listener.onRstStreamRead(ctx, 2, Http2Error.STREAM_CLOSED.code()));
         assertEquals(Http2Error.ENHANCE_YOUR_CALM, ex.error());
         verify(frameListener, times(1)).onRstStreamRead(eq(ctx), anyInt(), eq(Http2Error.STREAM_CLOSED.code()));
     }
 
     @Test
-    public void testRstFrames() throws Exception {
-        listener = new Http2MaxRstFrameListener(frameListener, 1, 1);
+    public void testRstFramesWindowReset() throws Exception {
+        listener = new Http2MaxRstFrameListener(frameListener, 1, 1, ticker);
         listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
-        Thread.sleep(1100);
+        // Advance past the window so the counter resets.
+        ticker.advance(1, TimeUnit.SECONDS);
         listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
+        verify(frameListener, times(2)).onRstStreamRead(eq(ctx), anyInt(), eq(Http2Error.STREAM_CLOSED.code()));
+    }
+
+    @Test
+    public void testWindowOnFirstFrameNotOnConstruction() throws Http2Exception {
+        // max = 2 RST per 10s window.
+        listener = new Http2MaxRstFrameListener(frameListener, 2, 10, ticker);
+
+        // Stay idle for nearly the full configured window before the first frame arrives.
+        ticker.advance(9, TimeUnit.SECONDS);
+
+        // 1st and 2nd frame at t=9s: fit within budget. Window is set here.
+        listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
+        listener.onRstStreamRead(ctx, 2, Http2Error.STREAM_CLOSED.code());
+
+        // 3rd frame just past the original construction window, but still well within
+        // the first-frame window. With the bug this would silently reset; with the fix it trips.
+        ticker.advance(2, TimeUnit.SECONDS); // t = 11s, only 2s since the first frame
+        Http2Exception ex = assertThrows(Http2Exception.class,
+                () -> listener.onRstStreamRead(ctx, 3, Http2Error.STREAM_CLOSED.code()));
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM, ex.error());
         verify(frameListener, times(2)).onRstStreamRead(eq(ctx), anyInt(), eq(Http2Error.STREAM_CLOSED.code()));
     }
 }
