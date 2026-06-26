@@ -288,6 +288,8 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         @Override
         public boolean process(byte nextByte) throws Exception {
             if (nextByte == StompConstants.CR) {
+                interim = 0;
+                nextRead = false;
                 ++lineLength;
                 return true;
             }
