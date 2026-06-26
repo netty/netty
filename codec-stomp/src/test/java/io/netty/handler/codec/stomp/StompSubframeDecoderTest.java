@@ -445,7 +445,7 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
-    public void testCRResetsUtf8DecodeState() {
+    public void testCRResetsUtf8DecodeState() throws Exception {
         // When a CR byte appears during a multi-byte UTF-8 sequence, the parser's interim state
         // should be cleared so that subsequent bytes are decoded correctly.
         // Bug: CR is skipped without resetting interim/nextRead, so the next byte gets
