@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.internal.ObjectUtil;
 
 final class FileUploadUtil {
 
@@ -38,9 +39,10 @@ final class FileUploadUtil {
      * depending on which {@code multipart/form-data} specification you read.
      * This method conservatively rejects all of them, and is used for <em>outbound</em> (encoding) filenames.
      * @param filename The filename to check.
+     * @return The validated filename, unchanged.
      */
-    static void validateFileNameForMultiPart(String filename) {
-        int length = filename.length();
+    static String validateFileNameForMultiPart(String filename) {
+        int length = ObjectUtil.checkNotNull(filename, "filename").length();
         for (int i = 0; i < length; i++) {
             char c = filename.charAt(i);
             if (c < HttpConstants.SP /*control character block*/ || c == HttpConstants.DEL ||
@@ -49,5 +51,6 @@ final class FileUploadUtil {
                         String.format("Illegal filename character 0x%02x at index %d", (int) c, i));
             }
         }
+        return filename;
     }
 }

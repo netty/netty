@@ -57,9 +57,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public void setFilename(String filename) {
-        ObjectUtil.checkNotNull(filename, "filename");
-        FileUploadUtil.validateFileNameForMultiPart(filename);
-        this.filename = filename;
+        this.filename = FileUploadUtil.validateFileNameForMultiPart(filename);
     }
 
     @Override
