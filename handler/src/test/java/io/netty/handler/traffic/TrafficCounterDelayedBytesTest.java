@@ -203,7 +203,7 @@ public class TrafficCounterDelayedBytesTest {
                     "Expected lastDelayedReadBytes == 0 when only write is throttled");
         } finally {
             if (clientChannel != null) {
-                clientChannel.close().sync();   
+                clientChannel.close().sync();
             }
             if (serverChannel != null) {
                 serverChannel.close().sync();
