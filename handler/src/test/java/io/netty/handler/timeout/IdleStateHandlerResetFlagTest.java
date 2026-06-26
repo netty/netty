@@ -16,7 +16,7 @@
 package io.netty.handler.timeout;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -45,12 +45,11 @@ public class IdleStateHandlerResetFlagTest {
      */
     @Test
     public void testResetWriteTimeoutResetsFirstEventFlag() throws Exception {
-        final IdleStateHandler idleStateHandler = new IdleStateHandler(
-                false, 0L, 1L, 0L, TimeUnit.SECONDS);
+        final IdleStateHandler idleStateHandler = new IdleStateHandler(0L, 1L, 0L, TimeUnit.SECONDS);
 
         final List<IdleStateEvent> events = new ArrayList<IdleStateEvent>();
         EmbeddedChannel channel = new EmbeddedChannel(idleStateHandler,
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof IdleStateEvent) {
@@ -97,12 +96,11 @@ public class IdleStateHandlerResetFlagTest {
      */
     @Test
     public void testResetReadTimeoutResetsFirstEventFlag() throws Exception {
-        final IdleStateHandler idleStateHandler = new IdleStateHandler(
-                false, 1L, 0L, 0L, TimeUnit.SECONDS);
+        final IdleStateHandler idleStateHandler = new IdleStateHandler(1L, 0L, 0L, TimeUnit.SECONDS);
 
         final List<IdleStateEvent> events = new ArrayList<IdleStateEvent>();
         EmbeddedChannel channel = new EmbeddedChannel(idleStateHandler,
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof IdleStateEvent) {
