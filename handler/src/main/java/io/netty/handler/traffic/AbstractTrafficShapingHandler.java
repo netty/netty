@@ -485,6 +485,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                             + isHandlerActive(ctx));
                 }
                 if (config.isAutoRead() && isHandlerActive(ctx)) {
+                    trafficCounter.addDelayedReadBytes(size);
                     config.setAutoRead(false);
                     channel.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
@@ -562,6 +563,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     logger.debug("Write suspend: " + wait + ':' + ctx.channel().config().isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
+                trafficCounter.addDelayedWriteBytes(size);
                 submitWrite(ctx, msg, size, wait, now, promise);
                 return;
             }
