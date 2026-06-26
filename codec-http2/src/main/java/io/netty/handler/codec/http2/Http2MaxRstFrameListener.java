@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,18 +31,22 @@ final class Http2MaxRstFrameListener extends Http2FrameListenerDecorator {
 
     private final long nanosPerWindow;
     private final int maxRstFramesPerWindow;
-    private long lastRstFrameNano = System.nanoTime();
+    private final Ticker ticker;
+    private long lastRstFrameNano;
     private int receivedRstInWindow;
 
-    Http2MaxRstFrameListener(Http2FrameListener listener, int maxRstFramesPerWindow, int secondsPerWindow) {
+    Http2MaxRstFrameListener(Http2FrameListener listener, int maxRstFramesPerWindow, int secondsPerWindow,
+                             Ticker ticker) {
         super(listener);
         this.maxRstFramesPerWindow = maxRstFramesPerWindow;
         this.nanosPerWindow = TimeUnit.SECONDS.toNanos(secondsPerWindow);
+        this.ticker = ticker;
+        this.lastRstFrameNano = ticker.nanoTime() - nanosPerWindow;
     }
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        long currentNano = System.nanoTime();
+        long currentNano = ticker.nanoTime();
         if (currentNano - lastRstFrameNano >= nanosPerWindow) {
             lastRstFrameNano = currentNano;
             receivedRstInWindow = 1;
