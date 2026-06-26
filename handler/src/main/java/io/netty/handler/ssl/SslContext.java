@@ -526,7 +526,8 @@ public abstract class SslContext {
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
+                    credentials);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
