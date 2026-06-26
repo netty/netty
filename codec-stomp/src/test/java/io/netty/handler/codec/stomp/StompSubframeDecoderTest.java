@@ -443,4 +443,57 @@ public class StompSubframeDecoderTest {
         assertEquals("received an invalid escape header sequence 'custom_invalid\\t'",
                      headersSubFrame.decoderResult().cause().getMessage());
     }
+
+    @Test
+    public void testCRResetsUtf8DecodeState() {
+        // When a CR byte appears during a multi-byte UTF-8 sequence, the parser's interim state
+        // should be cleared so that subsequent bytes are decoded correctly.
+        // Bug: CR is skipped without resetting interim/nextRead, so the next byte gets
+        // incorrectly combined with dirty UTF-8 state, producing garbage characters.
+        //
+        // Craft a header value where:
+        // - 0xC3 starts a 2-byte UTF-8 sequence (sets interim)
+        // - 0x0D (CR) is skipped but should clear interim state
+        // - 0x41 ('A') should be decoded as plain ASCII 'A', not combined with dirty interim
+        channel = new EmbeddedChannel(new StompSubframeDecoder());
+
+        ByteBuf incoming = Unpooled.buffer();
+        // CONNECT command line
+        incoming.writeBytes("CONNECT\r\n".getBytes(UTF_8));
+        // header with multi-byte UTF-8 start byte (0xC3), then CR, then ASCII 'A'
+        incoming.writeByte((byte) 'h');
+        incoming.writeByte((byte) 'e');
+        incoming.writeByte((byte) 'a');
+        incoming.writeByte((byte) 'd');
+        incoming.writeByte((byte) 'e');
+        incoming.writeByte((byte) 'r');
+        incoming.writeByte((byte) ':');
+        // 0xC3 starts a 2-byte UTF-8 sequence - sets interim state
+        incoming.writeByte((byte) 0xC3);
+        // CR (0x0D) - should be skipped AND clear the interim UTF-8 state
+        incoming.writeByte((byte) 0x0D);
+        // 'A' - should be decoded as plain 'A' since CR should have reset state
+        incoming.writeByte((byte) 'A');
+        // end of header line
+        incoming.writeByte((byte) '\n');
+        // empty line to end headers
+        incoming.writeByte((byte) '\n');
+        // null byte to end frame
+        incoming.writeByte((byte) '\0');
+
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.CONNECT, frame.command());
+        // The header value should be just "A" (CR is skipped, UTF-8 state reset)
+        // With the bug, it would contain corrupted UTF-8 combining 0xC3 with 'A'
+        assertEquals("A", frame.headers().get("header"));
+
+        StompContentSubframe content = channel.readInbound();
+        assertSame(LastStompContentSubframe.EMPTY_LAST_CONTENT, content);
+        content.release();
+
+        assertNull(channel.readInbound());
+    }
 }
