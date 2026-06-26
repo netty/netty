@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class FastLzFrameDecoderTest {
 
     @Test
-    public void testCompressedBlockWithEmptyPayload() {
+    public void testCompressedBlockWithEmptyPayload() throws Exception {
         assertDecompressionException(new byte[] {
                 'F', 'L', 'Z',
                 0x01,
@@ -34,7 +34,7 @@ public class FastLzFrameDecoderTest {
     }
 
     @Test
-    public void testCompressedBlockWithTruncatedMatch() {
+    public void testCompressedBlockWithTruncatedMatch() throws Exception {
         assertDecompressionException(new byte[] {
                 'F', 'L', 'Z',
                 0x01,
@@ -44,7 +44,7 @@ public class FastLzFrameDecoderTest {
         });
     }
 
-    private static void assertDecompressionException(byte[] input) {
+    private static void assertDecompressionException(byte[] input) throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new FastLzFrameDecoder());
         try {
             assertThrows(DecompressionException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(input)));
