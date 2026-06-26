@@ -130,8 +130,12 @@ public class TrafficCounterDelayedBytesTest {
             assertEquals(0, capturedDelayedWrite.get(),
                     "Expected lastDelayedWriteBytes == 0 when only read is throttled");
         } finally {
-            if (clientChannel != null) clientChannel.close().sync();
-            if (serverChannel != null) serverChannel.close().sync();
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
         }
     }
 
@@ -198,8 +202,12 @@ public class TrafficCounterDelayedBytesTest {
             assertEquals(0, capturedDelayedRead.get(),
                     "Expected lastDelayedReadBytes == 0 when only write is throttled");
         } finally {
-            if (clientChannel != null) clientChannel.close().sync();
-            if (serverChannel != null) serverChannel.close().sync();
+            if (clientChannel != null) {
+                clientChannel.close().sync();   
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
         }
     }
 
@@ -263,8 +271,12 @@ public class TrafficCounterDelayedBytesTest {
             assertEquals(0, capturedDelayedWrite.get(),
                     "Expected lastDelayedWriteBytes == 0 when no write limit configured");
         } finally {
-            if (clientChannel != null) clientChannel.close().sync();
-            if (serverChannel != null) serverChannel.close().sync();
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
         }
     }
 
@@ -341,8 +353,12 @@ public class TrafficCounterDelayedBytesTest {
                     "Expected lastDelayedReadBytes to reset to zero in a quiet interval — " +
                     "counters must not accumulate across intervals");
         } finally {
-            if (clientChannel != null) clientChannel.close().sync();
-            if (serverChannel != null) serverChannel.close().sync();
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
         }
     }
 }
