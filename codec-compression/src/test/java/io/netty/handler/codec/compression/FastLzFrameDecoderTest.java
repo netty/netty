@@ -25,30 +25,29 @@ public class FastLzFrameDecoderTest {
 
     @Test
     public void testCompressedBlockWithEmptyPayload() {
-        EmbeddedChannel channel = new EmbeddedChannel(new FastLzFrameDecoder());
-        try {
-            assertThrows(DecompressionException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
-                    'F', 'L', 'Z',
-                    0x01,
-                    0x00, 0x00,
-                    0x00, 0x01
-            })));
-        } finally {
-            channel.finishAndReleaseAll();
-        }
+        assertDecompressionException(new byte[] {
+                'F', 'L', 'Z',
+                0x01,
+                0x00, 0x00,
+                0x00, 0x01
+        });
     }
 
     @Test
     public void testCompressedBlockWithTruncatedMatch() {
+        assertDecompressionException(new byte[] {
+                'F', 'L', 'Z',
+                0x01,
+                0x00, 0x03,
+                0x00, 0x04,
+                0x00, 'A', 0x20
+        });
+    }
+
+    private static void assertDecompressionException(byte[] input) {
         EmbeddedChannel channel = new EmbeddedChannel(new FastLzFrameDecoder());
         try {
-            assertThrows(DecompressionException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
-                    'F', 'L', 'Z',
-                    0x01,
-                    0x00, 0x03,
-                    0x00, 0x04,
-                    0x00, 'A', 0x20
-            })));
+            assertThrows(DecompressionException.class, () -> channel.writeInbound(Unpooled.wrappedBuffer(input)));
         } finally {
             channel.finishAndReleaseAll();
         }
