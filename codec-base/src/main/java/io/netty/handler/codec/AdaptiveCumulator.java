@@ -103,7 +103,7 @@ public class AdaptiveCumulator implements Cumulator {
             ByteBuf b = in;
             in = null;
             addInput(alloc, composite, b);
-            
+
             CompositeByteBuf result = composite;
             composite = null;
             return result;
@@ -228,7 +228,7 @@ public class AdaptiveCumulator implements Cumulator {
 
             // Remove the old tail and add the new one.
             composite.removeComponent(tailComponentIndex).setIndex(0, tailStart);
-            
+
             // newTail ownership successfully transferred to the composite buffer.
             // We null out newTail before adding it to avoid a double-release if addFlattenedComponents throws.
             ByteBuf b = newTail;
@@ -238,7 +238,6 @@ public class AdaptiveCumulator implements Cumulator {
             // Restore the reader. We do this before releasing 'in' so that if it fails,
             // the caller's finally block will handle releasing 'in' without a double-free.
             composite.readerIndex(prevReader);
-
         } finally {
             in.release();
             // If new tail's ownership isn't transferred to the composite buf.

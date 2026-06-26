@@ -176,7 +176,9 @@ public class AdaptiveCumulatorTest {
             List<String> inDatas = Arrays.asList("", DATA_INCOMING);
 
             return composeMinSizes.stream()
-                    .flatMap(cms -> tailDatas.stream().flatMap(td -> inDatas.stream().map(id -> Arguments.of(cms, td, id))));
+                    .flatMap(cms -> tailDatas.stream()
+                            .flatMap(td -> inDatas.stream()
+                                    .map(id -> Arguments.of(cms, td, id))));
         }
 
         private CompositeByteBuf composite;
