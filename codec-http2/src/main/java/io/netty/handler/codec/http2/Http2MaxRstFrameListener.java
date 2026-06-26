@@ -35,25 +35,19 @@ final class Http2MaxRstFrameListener extends Http2FrameListenerDecorator {
     private long lastRstFrameNano;
     private int receivedRstInWindow;
 
-    Http2MaxRstFrameListener(Http2FrameListener listener, int maxRstFramesPerWindow, int secondsPerWindow) {
-        this(listener, maxRstFramesPerWindow, secondsPerWindow, Ticker.systemTicker());
-    }
-
     Http2MaxRstFrameListener(Http2FrameListener listener, int maxRstFramesPerWindow, int secondsPerWindow,
                              Ticker ticker) {
         super(listener);
         this.maxRstFramesPerWindow = maxRstFramesPerWindow;
         this.nanosPerWindow = TimeUnit.SECONDS.toNanos(secondsPerWindow);
         this.ticker = ticker;
+        this.lastRstFrameNano = ticker.nanoTime() - nanosPerWindow;
     }
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         long currentNano = ticker.nanoTime();
-        // receivedRstInWindow == 0 means this is the very first RST observed by this listener, so we set
-        // the window to now rather than to construction time. This branch also handles the regular window
-        // reset since both cases initialize the counter to 1.
-        if (receivedRstInWindow == 0 || currentNano - lastRstFrameNano >= nanosPerWindow) {
+        if (currentNano - lastRstFrameNano >= nanosPerWindow) {
             lastRstFrameNano = currentNano;
             receivedRstInWindow = 1;
         } else {

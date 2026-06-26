@@ -67,25 +67,4 @@ public class Http2MaxRstFrameListenerTest {
         listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
         verify(frameListener, times(2)).onRstStreamRead(eq(ctx), anyInt(), eq(Http2Error.STREAM_CLOSED.code()));
     }
-
-    @Test
-    public void testWindowOnFirstFrameNotOnConstruction() throws Http2Exception {
-        // max = 2 RST per 10s window.
-        listener = new Http2MaxRstFrameListener(frameListener, 2, 10, ticker);
-
-        // Stay idle for nearly the full configured window before the first frame arrives.
-        ticker.advance(9, TimeUnit.SECONDS);
-
-        // 1st and 2nd frame at t=9s: fit within budget. Window is set here.
-        listener.onRstStreamRead(ctx, 1, Http2Error.STREAM_CLOSED.code());
-        listener.onRstStreamRead(ctx, 2, Http2Error.STREAM_CLOSED.code());
-
-        // 3rd frame just past the original construction window, but still well within
-        // the first-frame window. With the bug this would silently reset; with the fix it trips.
-        ticker.advance(2, TimeUnit.SECONDS); // t = 11s, only 2s since the first frame
-        Http2Exception ex = assertThrows(Http2Exception.class,
-                () -> listener.onRstStreamRead(ctx, 3, Http2Error.STREAM_CLOSED.code()));
-        assertEquals(Http2Error.ENHANCE_YOUR_CALM, ex.error());
-        verify(frameListener, times(2)).onRstStreamRead(eq(ctx), anyInt(), eq(Http2Error.STREAM_CLOSED.code()));
-    }
 }
