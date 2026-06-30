@@ -66,8 +66,22 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          boolean enableOcsp, String keyStore, String endpointIdentificationAlgorithm,
                                          ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
+                cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, false, enableOcsp, keyStore,
+                endpointIdentificationAlgorithm, resumptionController, options);
+    }
+
+    ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout,
+                                         boolean startTls, boolean enableOcsp, String keyStore,
+                                         String endpointIdentificationAlgorithm,
+                                         ResumptionController resumptionController,
+                                         Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
+              ClientAuth.NONE, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, true,
                 resumptionController, options);
         boolean success = false;
         try {
