@@ -15,11 +15,10 @@
  */
 package io.netty.transport.selector;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import java.util.function.IntFunction;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollIoHandler;
@@ -42,7 +41,6 @@ import io.netty.channel.uring.IoUringDatagramChannel;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -58,17 +56,14 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * this class is updated so that all consumers of this API automatically gain support
  * for it.
  * <p>
- * The {@code -Dio.netty.transport.noNative=true} system property can be used
- * to disable native transport selection and always use NIO.
- * <p>
  * <strong>Example usage:</strong>
  * <pre>{@code
  * // Create an EventLoopGroup with the best available transport
  * EventLoopGroup group = Transports.newEventLoopGroup();
  *
- * // Configure a bootstrap with the selected transport
+ * // Configure a bootstrap with the selected transport's channel class
  * ServerBootstrap sb = new ServerBootstrap();
- * Transports.selection().configure(sb);
+ * sb.channel(Transports.selection().serverSocketChannelClass());
  *
  * // Get the specific channel classes for the selected transport
  * Class<? extends SocketChannel> channelClass = Transports.selection().socketChannelClass();
@@ -123,18 +118,11 @@ public final class Transports {
         }
 
         private static TransportSelection computeSelection() {
-            if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
-                logger.debug("Native transport explicitly disabled via " +
-                        "-Dio.netty.transport.noNative=true, using NIO");
-                return NioTransport.INSTANCE;
-            }
-
             // Check native transports in priority order
 
             if (IoUring.isAvailable()) {
                 logger.debug("Using IoUring transport");
                 return new TransportSelection(
-                        MultiThreadIoEventLoopGroup.class,
                         IoUringSocketChannel.class,
                         IoUringServerSocketChannel.class,
                         IoUringDatagramChannel.class,
@@ -145,7 +133,6 @@ public final class Transports {
             if (Epoll.isAvailable()) {
                 logger.debug("Using Epoll transport");
                 return new TransportSelection(
-                        MultiThreadIoEventLoopGroup.class,
                         EpollSocketChannel.class,
                         EpollServerSocketChannel.class,
                         EpollDatagramChannel.class,
@@ -156,7 +143,6 @@ public final class Transports {
             if (KQueue.isAvailable()) {
                 logger.debug("Using KQueue transport");
                 return new TransportSelection(
-                        MultiThreadIoEventLoopGroup.class,
                         KQueueSocketChannel.class,
                         KQueueServerSocketChannel.class,
                         KQueueDatagramChannel.class,
@@ -165,7 +151,12 @@ public final class Transports {
             }
 
             logger.debug("No native transport available, using NIO");
-            return NioTransport.INSTANCE;
+            return new TransportSelection(
+                    NioSocketChannel.class,
+                    NioServerSocketChannel.class,
+                    NioDatagramChannel.class,
+                    nThreads -> new MultiThreadIoEventLoopGroup(nThreads, NioIoHandler.newFactory())
+            );
         }
     }
 
@@ -175,32 +166,20 @@ public final class Transports {
      */
     public static final class TransportSelection {
 
-        private final Class<? extends EventLoopGroup> eventLoopGroupClass;
         private final Class<? extends SocketChannel> socketChannelClass;
         private final Class<? extends ServerSocketChannel> serverSocketChannelClass;
         private final Class<? extends DatagramChannel> datagramChannelClass;
-        private final GroupFactory groupFactory;
+        private final IntFunction<EventLoopGroup> groupFactory;
 
         private TransportSelection(
-                Class<? extends EventLoopGroup> eventLoopGroupClass,
                 Class<? extends SocketChannel> socketChannelClass,
                 Class<? extends ServerSocketChannel> serverSocketChannelClass,
                 Class<? extends DatagramChannel> datagramChannelClass,
-                GroupFactory groupFactory) {
-            this.eventLoopGroupClass = eventLoopGroupClass;
+                IntFunction<EventLoopGroup> groupFactory) {
             this.socketChannelClass = socketChannelClass;
             this.serverSocketChannelClass = serverSocketChannelClass;
             this.datagramChannelClass = datagramChannelClass;
             this.groupFactory = groupFactory;
-        }
-
-        /**
-         * Returns the {@link EventLoopGroup} class for the selected transport.
-         *
-         * @return the {@link EventLoopGroup} implementation class
-         */
-        public Class<? extends EventLoopGroup> eventLoopGroupClass() {
-            return eventLoopGroupClass;
         }
 
         /**
@@ -231,26 +210,6 @@ public final class Transports {
         }
 
         /**
-         * Configures the given {@link Bootstrap} with the selected transport's
-         * {@link SocketChannel} class.
-         *
-         * @param b the bootstrap to configure
-         */
-        public void configure(Bootstrap b) {
-            b.channel(socketChannelClass);
-        }
-
-        /**
-         * Configures the given {@link ServerBootstrap} with the selected transport's
-         * {@link ServerSocketChannel} class.
-         *
-         * @param b the server bootstrap to configure
-         */
-        public void configure(ServerBootstrap b) {
-            b.channel(serverSocketChannelClass);
-        }
-
-        /**
          * Creates a new {@link EventLoopGroup} with the selected transport,
          * using the default number of threads.
          *
@@ -268,39 +227,16 @@ public final class Transports {
          * @return a new {@link EventLoopGroup} instance
          */
         public EventLoopGroup newEventLoopGroup(int nThreads) {
-            return groupFactory.newGroup(nThreads);
+            return groupFactory.apply(nThreads);
         }
 
         @Override
         public String toString() {
             return "TransportSelection[" +
-                    "eventLoopGroup=" + eventLoopGroupClass.getSimpleName() +
-                    ", socketChannel=" + socketChannelClass.getSimpleName() +
+                    "socketChannel=" + socketChannelClass.getSimpleName() +
                     ", serverSocketChannel=" + serverSocketChannelClass.getSimpleName() +
                     ", datagramChannel=" + datagramChannelClass.getSimpleName() +
                     ']';
-        }
-
-        @FunctionalInterface
-        private interface GroupFactory {
-            EventLoopGroup newGroup(int nThreads);
-        }
-    }
-
-    /**
-     * NIO transport selection. NIO is always available via the {@code netty-transport} module
-     * and is used as the fallback when no native transport is available.
-     */
-    private static final class NioTransport {
-        static final TransportSelection INSTANCE = new TransportSelection(
-                MultiThreadIoEventLoopGroup.class,
-                NioSocketChannel.class,
-                NioServerSocketChannel.class,
-                NioDatagramChannel.class,
-                nThreads -> new MultiThreadIoEventLoopGroup(nThreads, NioIoHandler.newFactory())
-        );
-
-        private NioTransport() {
         }
     }
 }
