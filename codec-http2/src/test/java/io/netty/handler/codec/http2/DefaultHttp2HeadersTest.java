@@ -23,7 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -209,39 +212,39 @@ public class DefaultHttp2HeadersTest {
         });
     }
 
-    static Stream<Arguments> nonTokenBytesInHeaderName() {
-        return Stream.of(
+    static List<Integer> nonTokenBytesInHeaderName() {
+        return Arrays.asList(
                 // Control characters: every byte in the C0 range that the previous validator silently let through.
-                Arguments.of(0x00), // NUL
-                Arguments.of(0x01), // SOH
-                Arguments.of(0x07), // BEL
-                Arguments.of(0x08), // BS
-                Arguments.of(0x09), // HTAB
-                Arguments.of(0x0A), // LF
-                Arguments.of(0x0B), // VT
-                Arguments.of(0x0C), // FF
-                Arguments.of(0x0D), // CR
-                Arguments.of(0x1F), // US
-                Arguments.of(0x7F), // DEL
+                0x00, // NUL
+                0x01, // SOH
+                0x07, // BEL
+                0x08, // BS
+                0x09, // HTAB
+                0x0A, // LF
+                0x0B, // VT
+                0x0C, // FF
+                0x0D, // CR
+                0x1F, // US
+                0x7F, // DEL
                 // Whitespace and RFC 7230 separators that are not valid token characters.
-                Arguments.of(0x20), // SP
-                Arguments.of((int) ','),
-                Arguments.of((int) ';'),
-                Arguments.of((int) ':'),
-                Arguments.of((int) '/'),
-                Arguments.of((int) '='),
-                Arguments.of((int) '?'),
-                Arguments.of((int) '@'),
-                Arguments.of((int) '('),
-                Arguments.of((int) ')'),
-                Arguments.of((int) '['),
-                Arguments.of((int) ']'),
-                Arguments.of((int) '{'),
-                Arguments.of((int) '}'),
-                Arguments.of((int) '<'),
-                Arguments.of((int) '>'),
-                Arguments.of((int) '\\'),
-                Arguments.of((int) '"')
+                0x20, // SP
+                (int) ',',
+                (int) ';',
+                (int) ':',
+                (int) '/',
+                (int) '=',
+                (int) '?',
+                (int) '@',
+                (int) '(',
+                (int) ')',
+                (int) '[',
+                (int) ']',
+                (int) '{',
+                (int) '}',
+                (int) '<',
+                (int) '>',
+                (int) '\\',
+                (int) '"'
         );
     }
 
