@@ -261,8 +261,14 @@ public class SniHandlerTest {
                     .add("chat4.leancloud.cn", leanContext2)
                     .build();
 
+            final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
             SniHandler handler = new SniHandler(mapping);
-            final EmbeddedChannel ch = new EmbeddedChannel(handler);
+            final EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    exceptionRef.compareAndSet(null, cause);
+                }
+            });
 
             try {
                 // hex dump of a client hello packet, which contains an invalid hostname "CHAT4。LEANCLOUD。CN"
@@ -279,9 +285,11 @@ public class SniHandlerTest {
                 // Decode should fail because of the badly encoded "HostName" string in the SNI extension
                 // that isn't ASCII as per RFC 6066 - https://tools.ietf.org/html/rfc6066#page-6
                 ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex1)));
+                ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex)));
 
-                assertThrows(DecoderException.class, () -> ch.writeInbound(
-                        Unpooled.wrappedBuffer(StringUtil.decodeHexDump(tlsHandshakeMessageHex))));
+                Throwable cause = exceptionRef.get();
+                assertNotNull(cause);
+                assertInstanceOf(DecoderException.class, cause);
             } finally {
                 ch.finishAndReleaseAll();
             }
