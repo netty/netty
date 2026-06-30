@@ -19,8 +19,17 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.epoll.EpollServerSocketChannel;
+import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
+import io.netty.channel.kqueue.KQueueIoHandler;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -28,29 +37,29 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.uring.IoUring;
+import io.netty.channel.uring.IoUringDatagramChannel;
+import io.netty.channel.uring.IoUringIoHandler;
+import io.netty.channel.uring.IoUringServerSocketChannel;
+import io.netty.channel.uring.IoUringSocketChannel;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.lang.reflect.Method;
 
 /**
  * Provides a simple, opinionated API for automatically selecting the optimal transport
  * (IoUring, Epoll, KQueue, or NIO) for the current platform.
  * <p>
- * The selection logic checks for available native transports in priority order
- * (IoUring, Epoll, KQueue) and falls back to NIO if none are available.
+ * The selection logic checks each native transport via its {@code isAvailable()} method
+ * in priority order (IoUring, Epoll, KQueue) and falls back to NIO if none are available.
  * <p>
  * This eliminates the need for each library or application to implement its own
  * transport detection logic. When new native transport is added to Netty,
- * all consumers of this API automatically gain support for it.
+ * this class is updated so that all consumers of this API automatically gain support
+ * for it.
  * <p>
  * The {@code -Dio.netty.transport.noNative=true} system property can be used
  * to disable native transport selection and always use NIO.
- * <p>
- * Native transport classes are accessed via reflection, so the class can be
- * loaded without the native transport dependencies on the classpath.
- * If native transport is not available, the selection logic simply skips it.
  * <p>
  * <strong>Example usage:</strong>
  * <pre>{@code
@@ -120,75 +129,43 @@ public final class Transports {
                 return NioTransport.INSTANCE;
             }
 
-            // Check native transports in priority order using reflection
-            TransportSelection selection;
-            selection = tryLoadNative("io.netty.channel.uring.IoUring");
-            if (selection != null) {
-                return selection;
+            // Check native transports in priority order
+
+            if (IoUring.isAvailable()) {
+                logger.debug("Using IoUring transport");
+                return new TransportSelection(
+                        MultiThreadIoEventLoopGroup.class,
+                        IoUringSocketChannel.class,
+                        IoUringServerSocketChannel.class,
+                        IoUringDatagramChannel.class,
+                        nThreads -> new MultiThreadIoEventLoopGroup(nThreads, IoUringIoHandler.newFactory())
+                );
             }
-            selection = tryLoadNative("io.netty.channel.epoll.Epoll");
-            if (selection != null) {
-                return selection;
+
+            if (Epoll.isAvailable()) {
+                logger.debug("Using Epoll transport");
+                return new TransportSelection(
+                        MultiThreadIoEventLoopGroup.class,
+                        EpollSocketChannel.class,
+                        EpollServerSocketChannel.class,
+                        EpollDatagramChannel.class,
+                        nThreads -> new MultiThreadIoEventLoopGroup(nThreads, EpollIoHandler.newFactory())
+                );
             }
-            selection = tryLoadNative("io.netty.channel.kqueue.KQueue");
-            if (selection != null) {
-                return selection;
+
+            if (KQueue.isAvailable()) {
+                logger.debug("Using KQueue transport");
+                return new TransportSelection(
+                        MultiThreadIoEventLoopGroup.class,
+                        KQueueSocketChannel.class,
+                        KQueueServerSocketChannel.class,
+                        KQueueDatagramChannel.class,
+                        nThreads -> new MultiThreadIoEventLoopGroup(nThreads, KQueueIoHandler.newFactory())
+                );
             }
 
             logger.debug("No native transport available, using NIO");
             return NioTransport.INSTANCE;
-        }
-    }
-
-    /**
-     * Attempts to load native transport by its fully-qualified check class name
-     * (e.g. {@code "io.netty.channel.epoll.Epoll"}).
-     * <p>
-     * Uses reflection so that missing native transport jars do not cause
-     * {@link NoClassDefFoundError} at class loading time.
-     *
-     * @param checkClassName fully qualified class name of the transport marker class
-     * @return a {@link TransportSelection} if the transport is available, or {@code null}
-     */
-    private static TransportSelection tryLoadNative(String checkClassName) {
-        try {
-            Class<?> checkClass = Class.forName(checkClassName);
-            Method isAvailable = checkClass.getMethod("isAvailable");
-            if (!(boolean) isAvailable.invoke(null)) {
-                return null;
-            }
-
-            String simpleName = checkClass.getSimpleName();
-            String pkg = checkClassName.substring(0, checkClassName.lastIndexOf('.'));
-
-            // Load channel classes
-            @SuppressWarnings("unchecked")
-            Class<? extends SocketChannel> socketChannelClass =
-                    (Class<? extends SocketChannel>) Class.forName(pkg + "." + simpleName + "SocketChannel");
-            @SuppressWarnings("unchecked")
-            Class<? extends ServerSocketChannel> serverSocketChannelClass =
-                    (Class<? extends ServerSocketChannel>) Class.forName(pkg + "." + simpleName + "ServerSocketChannel");
-            @SuppressWarnings("unchecked")
-            Class<? extends DatagramChannel> datagramChannelClass =
-                    (Class<? extends DatagramChannel>) Class.forName(pkg + "." + simpleName + "DatagramChannel");
-
-            // Create IoHandlerFactory via reflection
-            Class<?> handlerClass = Class.forName(pkg + "." + simpleName + "IoHandler");
-            Method newFactoryMethod = handlerClass.getMethod("newFactory");
-            IoHandlerFactory factory = (IoHandlerFactory) newFactoryMethod.invoke(null);
-
-            logger.debug("Using {} transport (reflective)", simpleName);
-
-            return new TransportSelection(
-                    MultiThreadIoEventLoopGroup.class,
-                    socketChannelClass,
-                    serverSocketChannelClass,
-                    datagramChannelClass,
-                    nThreads -> new MultiThreadIoEventLoopGroup(nThreads, factory)
-            );
-        } catch (Exception e) {
-            logger.debug("Native transport {} not available: {}", checkClassName, e.getMessage());
-            return null;
         }
     }
 
