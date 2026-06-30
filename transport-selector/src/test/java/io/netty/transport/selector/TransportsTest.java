@@ -208,8 +208,8 @@ class TransportsTest {
     }
 
     @Test
-    void reflectivelyCreatedEventLoopGroupFunctions() {
-        // The reflectively loaded IoHandlerFactory should create a working group
+    void eventLoopGroupCreatedFromSelectionFunctions() {
+        // The selected transport's IoHandlerFactory should create a working group
         EventLoopGroup group = Transports.newEventLoopGroup(2);
         assertNotNull(group);
         assertFalse(group.isShutdown());

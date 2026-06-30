@@ -40,19 +40,16 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-classes-kqueue</artifactId>
       <version>${project.version}</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport-classes-io_uring</artifactId>
       <version>${project.version}</version>
-      <optional>true</optional>
     </dependency>
 
     <dependency>
