@@ -78,7 +78,7 @@ public final class AdaptiveCumulator implements Cumulator {
      */
     @Override
     @SuppressWarnings("ReferenceEquality")
-    public final ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+    public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
         if (cumulation == in) {
             in.release();
             return cumulation;
@@ -111,11 +111,11 @@ public final class AdaptiveCumulator implements Cumulator {
             composite = null;
             return result;
         } catch (Throwable t) {
-            // If an exception was thrown AFTER cumulation was successfully wrapped, 
+            // If an exception was thrown AFTER cumulation was successfully wrapped,
             // calling composite.release() in 'finally' will drop its refCount to 0.
             // We prevent this by calling retain() here on the exception path to keep it alive.
             if (cumulationTransferred && composite != null && composite != cumulation) {
-                cumulation.retain(); 
+                cumulation.retain();
             }
             throw t;
         } finally {
