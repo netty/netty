@@ -19,6 +19,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import java.util.function.IntFunction;
+import java.util.function.Function;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollIoHandler;
@@ -126,6 +129,7 @@ public final class Transports {
                         IoUringSocketChannel.class,
                         IoUringServerSocketChannel.class,
                         IoUringDatagramChannel.class,
+                        IoUringDatagramChannel::new,
                         nThreads -> new MultiThreadIoEventLoopGroup(nThreads, IoUringIoHandler.newFactory())
                 );
             }
@@ -136,6 +140,7 @@ public final class Transports {
                         EpollSocketChannel.class,
                         EpollServerSocketChannel.class,
                         EpollDatagramChannel.class,
+                        EpollDatagramChannel::new,
                         nThreads -> new MultiThreadIoEventLoopGroup(nThreads, EpollIoHandler.newFactory())
                 );
             }
@@ -146,6 +151,7 @@ public final class Transports {
                         KQueueSocketChannel.class,
                         KQueueServerSocketChannel.class,
                         KQueueDatagramChannel.class,
+                        KQueueDatagramChannel::new,
                         nThreads -> new MultiThreadIoEventLoopGroup(nThreads, KQueueIoHandler.newFactory())
                 );
             }
@@ -155,6 +161,7 @@ public final class Transports {
                     NioSocketChannel.class,
                     NioServerSocketChannel.class,
                     NioDatagramChannel.class,
+                    NioDatagramChannel::new,
                     nThreads -> new MultiThreadIoEventLoopGroup(nThreads, NioIoHandler.newFactory())
             );
         }
@@ -169,16 +176,19 @@ public final class Transports {
         private final Class<? extends SocketChannel> socketChannelClass;
         private final Class<? extends ServerSocketChannel> serverSocketChannelClass;
         private final Class<? extends DatagramChannel> datagramChannelClass;
+        private final Function<SocketProtocolFamily, DatagramChannel> datagramChannelFactory;
         private final IntFunction<EventLoopGroup> groupFactory;
 
         private TransportSelection(
                 Class<? extends SocketChannel> socketChannelClass,
                 Class<? extends ServerSocketChannel> serverSocketChannelClass,
                 Class<? extends DatagramChannel> datagramChannelClass,
+                Function<SocketProtocolFamily, DatagramChannel> datagramChannelFactory,
                 IntFunction<EventLoopGroup> groupFactory) {
             this.socketChannelClass = socketChannelClass;
             this.serverSocketChannelClass = serverSocketChannelClass;
             this.datagramChannelClass = datagramChannelClass;
+            this.datagramChannelFactory = datagramChannelFactory;
             this.groupFactory = groupFactory;
         }
 
@@ -207,6 +217,17 @@ public final class Transports {
          */
         public Class<? extends DatagramChannel> datagramChannelClass() {
             return datagramChannelClass;
+        }
+
+        /**
+         * Returns a {@link ChannelFactory} for creating {@link DatagramChannel} instances
+         * using the selected transport and the given {@link SocketProtocolFamily}.
+         *
+         * @param family the protocol family to use, or {@code null} for the OS default
+         * @return a new {@link ChannelFactory} for {@link DatagramChannel}
+         */
+        public ChannelFactory<? extends DatagramChannel> datagramChannelFactory(SocketProtocolFamily family) {
+            return () -> datagramChannelFactory.apply(family);
         }
 
         /**
