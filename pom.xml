@@ -1308,7 +1308,6 @@
                   <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initBidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
                   <justification>Allow applications to customize initialization of bidirectional streams by subclassing.</justification>
                 </item>
-
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>
