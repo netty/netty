@@ -15,7 +15,13 @@
  */
 package io.netty.handler.codec.http3;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.quic.QuicStreamChannel;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
 
@@ -31,5 +37,25 @@ public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHand
     @Override
     protected void assertBidirectionalStreamHandled(EmbeddedQuicChannel channel, QuicStreamChannel streamChannel) {
         Http3TestUtils.verifyClose(Http3ErrorCode.H3_STREAM_CREATION_ERROR, channel);
+    }
+
+    @Test
+    public void customSensitivityDetectorIsForwardedToQpackEncoder() {
+        Http3ClientConnectionHandler handler = new Http3ClientConnectionHandler(
+                null, null, null, null,
+                true, null, QpackSensitivityDetector.ALWAYS_SENSITIVE);
+
+        Http3Headers headers = new DefaultHttp3Headers(false);
+        headers.add("x-custom", "value");
+        ByteBuf out = Unpooled.buffer();
+        try {
+            handler.qpackEncoder.encodeHeaders(new QpackAttributes(null, true), out,
+                    UnpooledByteBufAllocator.DEFAULT, 1L, headers);
+            byte first = out.getByte(2);
+            assertEquals(1, (first & 0b0001_0000) >>> 4,
+                    "N bit must be set when ALWAYS_SENSITIVE is configured");
+        } finally {
+            out.release();
+        }
     }
 }
