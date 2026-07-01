@@ -833,12 +833,16 @@ public final class HttpConversionUtil {
         void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http2Exception {
             // lazily created as needed
             StringBuilder cookies = null;
+            boolean hostHeaderFound = false;
 
             for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
                 final CharSequence name = entry.getKey();
                 final CharSequence value = entry.getValue();
                 AsciiString translatedName = translations.get(name);
                 if (translatedName != null) {
+                    if (translatedName.contentEqualsIgnoreCase(HttpHeaderNames.HOST)) {
+                        hostHeaderFound = true;
+                    }
                     output.add(translatedName, AsciiString.of(value));
                 } else if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
@@ -856,6 +860,20 @@ public final class HttpConversionUtil {
                             cookies.append("; ");
                         }
                         cookies.append(value);
+                    } else if (contentEqualsIgnoreCase(HttpHeaderNames.HOST, name)) {
+                        // https://www.rfc-editor.org/rfc/rfc9113#section-8.3.1 requires that intermediaries
+                        // translating to HTTP/1.x treat a literal 'host' header that conflicts with ':authority'
+                        // as malformed, and RFC 9110 section 7.2 requires 'Host' be sent as a single field-value.
+                        // Reject the request rather than emitting an HTTP/1.x message with duplicate Host headers.
+                        if (hostHeaderFound) {
+                            if (!contentEqualsIgnoreCase(output.get(HttpHeaderNames.HOST), value)) {
+                                throw streamError(streamId, PROTOCOL_ERROR,
+                                        "Conflicting ':authority' and 'host' headers found");
+                            }
+                        } else {
+                            hostHeaderFound = true;
+                            output.add(name, value);
+                        }
                     } else {
                         output.add(name, value);
                     }
