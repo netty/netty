@@ -22,6 +22,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.internal.ObjectUtil;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map;
@@ -48,22 +49,15 @@ final class QpackEncoder {
     private int blockedStreams;
     private LongObjectHashMap<Queue<Indices>> streamSectionTrackers;
 
-    QpackEncoder() {
-        this(new QpackEncoderDynamicTable(), QpackSensitivityDetector.NEVER_SENSITIVE);
-    }
-
-    QpackEncoder(QpackSensitivityDetector sensitivityDetector) {
+    QpackEncoder(@Nullable QpackSensitivityDetector sensitivityDetector) {
         this(new QpackEncoderDynamicTable(), sensitivityDetector);
     }
 
-    QpackEncoder(QpackEncoderDynamicTable dynamicTable) {
-        this(dynamicTable, QpackSensitivityDetector.NEVER_SENSITIVE);
-    }
-
-    QpackEncoder(QpackEncoderDynamicTable dynamicTable, QpackSensitivityDetector sensitivityDetector) {
+    QpackEncoder(QpackEncoderDynamicTable dynamicTable, @Nullable QpackSensitivityDetector sensitivityDetector) {
         huffmanEncoder = new QpackHuffmanEncoder();
         this.dynamicTable = ObjectUtil.checkNotNull(dynamicTable, "dynamicTable");
-        this.sensitivityDetector = ObjectUtil.checkNotNull(sensitivityDetector, "sensitivityDetector");
+        this.sensitivityDetector = sensitivityDetector == null ?
+                QpackSensitivityDetector.NEVER_SENSITIVE : sensitivityDetector;
     }
 
     /**

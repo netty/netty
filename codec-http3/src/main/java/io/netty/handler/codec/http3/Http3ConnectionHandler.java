@@ -103,7 +103,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                         0L)
         );
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
-        qpackEncoder = sensitivityDetector == null ? new QpackEncoder() : new QpackEncoder(sensitivityDetector);
+        qpackEncoder = new QpackEncoder(sensitivityDetector);
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
                 codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE,
