@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;
 
-public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
+public class Http3ClientConnectionHandler extends Http3ConnectionHandler {
 
     private final LongFunction<ChannelHandler> pushStreamHandlerFactory;
 
@@ -121,7 +121,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel channel) {
+    protected void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel channel) {
         // See https://datatracker.ietf.org/doc/html/rfc9114#name-bidirectional-streams
         // https://datatracker.ietf.org/doc/html/rfc9114#section-6.1-3
         Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
@@ -129,7 +129,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
+    protected void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
                 new Http3UnidirectionalStreamInboundClientHandler(codecFactory, nonStandardSettingsValidator,
