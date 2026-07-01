@@ -26,7 +26,7 @@ import io.netty.util.internal.ObjectUtil;
  * "Adaptive" cumulator: cumulate {@link ByteBuf}s by dynamically switching
  * between merge and compose strategies.
  */
-public class AdaptiveCumulator implements Cumulator {
+public final class AdaptiveCumulator implements Cumulator {
     private final int composeMinSize;
 
     /**
@@ -88,17 +88,20 @@ public class AdaptiveCumulator implements Cumulator {
             return in;
         }
         CompositeByteBuf composite = null;
+        boolean cumulationTransferred = false;
         try {
             if (isOwnedCompositeBuf(cumulation)) {
                 composite = (CompositeByteBuf) cumulation;
+                cumulationTransferred = true;
                 // Writer index must equal capacity if we are going to "write"
                 // new components to the end
                 if (composite.writerIndex() != composite.capacity()) {
                     composite.capacity(composite.writerIndex());
                 }
             } else {
-                composite = alloc.compositeBuffer(Integer.MAX_VALUE)
-                        .addFlattenedComponents(true, cumulation);
+                composite = alloc.compositeBuffer(Integer.MAX_VALUE);
+                composite.addFlattenedComponents(true, cumulation);
+                cumulationTransferred = true;
             }
             ByteBuf b = in;
             in = null;
@@ -107,6 +110,14 @@ public class AdaptiveCumulator implements Cumulator {
             CompositeByteBuf result = composite;
             composite = null;
             return result;
+        } catch (Throwable t) {
+            // If an exception was thrown AFTER cumulation was successfully wrapped, 
+            // calling composite.release() in 'finally' will drop its refCount to 0.
+            // We prevent this by calling retain() here on the exception path to keep it alive.
+            if (cumulationTransferred && composite != null && composite != cumulation) {
+                cumulation.retain(); 
+            }
+            throw t;
         } finally {
             if (in != null) {
                 // We must release if the ownership was not transferred as otherwise it may

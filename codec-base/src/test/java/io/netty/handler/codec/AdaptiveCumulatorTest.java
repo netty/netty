@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -35,6 +36,8 @@ import java.util.stream.Stream;
 
 import static io.netty.util.CharsetUtil.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.in;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -159,7 +162,44 @@ public class AdaptiveCumulatorTest {
                 assertSame(throwingCumulatorError, actualError);
                 assertEquals(0, in.refCnt());
                 assertEquals(0, newComposite.refCnt());
-                assertEquals(0, contiguous.refCnt());
+                assertEquals(1, contiguous.refCnt());
+            }
+        }
+
+        @Test
+        public void mustNotReleaseNonOwnedCumulationIfAddInputFails() {
+            final UnsupportedOperationException expectedError = new UnsupportedOperationException();
+            ByteBufAllocator throwingAlloc = new AbstractByteBufAllocator(false) {
+                @Override
+                protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+                    throw expectedError;
+                }
+
+                @Override
+                protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+                    throw expectedError;
+                }
+
+                @Override
+                public boolean isDirectBufferPooled() {
+                    return false;
+                }
+            };
+
+            AdaptiveCumulator cumulator = new AdaptiveCumulator(1024);
+            ByteBufAllocator bufAlloc = new UnpooledByteBufAllocator(false);
+            ByteBuf cumulation = bufAlloc.buffer(4, 4).writeBytes("0123".getBytes(US_ASCII));
+            ByteBuf in = bufAlloc.buffer().writeBytes("456".getBytes(US_ASCII));
+
+            try {
+                assertThatThrownBy(() -> cumulator.cumulate(throwingAlloc, cumulation, in)).isSameAs(expectedError);
+                assertEquals(0, in.refCnt(), "Incoming buffer must be released on failure");
+                assertEquals(1, cumulation.refCnt(),
+                        "Caller-owned cumulation must NOT be released when the merge fails");
+            } finally {
+                if (cumulation.refCnt() > 0) {
+                    cumulation.release();
+                }
             }
         }
     }
