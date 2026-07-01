@@ -58,4 +58,3 @@ public interface QpackSensitivityDetector {
      */
     boolean isSensitive(CharSequence name, CharSequence value);
 }
-
