@@ -31,6 +31,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.uring.IoUringDatagramChannel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
 import io.netty.transport.selector.Transports.TransportSelection;
@@ -139,5 +140,25 @@ class TransportsTest {
         // Just verify it picked SOMETHING valid - the priority is tested by integration
         assertNotNull(sc);
         assertTrue(Channel.class.isAssignableFrom(sc));
+    }
+
+    @Test
+    void socketChannelFactoryCreatesChannel() throws Exception {
+        TransportSelection selection = Transports.selection();
+        ChannelFactory<? extends SocketChannel> factory = selection.socketChannelFactory();
+        assertNotNull(factory);
+        SocketChannel ch = factory.newChannel();
+        assertNotNull(ch);
+        assertSame(selection.socketChannelClass(), ch.getClass());
+    }
+
+    @Test
+    void serverSocketChannelFactoryCreatesChannel() throws Exception {
+        TransportSelection selection = Transports.selection();
+        ChannelFactory<? extends ServerSocketChannel> factory = selection.serverSocketChannelFactory();
+        assertNotNull(factory);
+        ServerSocketChannel ch = factory.newChannel();
+        assertNotNull(ch);
+        assertSame(selection.serverSocketChannelClass(), ch.getClass());
     }
 }
