@@ -108,7 +108,7 @@ public class Http3FrameCodecTest {
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new ChannelOutboundHandlerAdapter()).get();
-        encoder = new QpackEncoder();
+        encoder = new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE);
         qpackDecoderHandler = new QpackDecoderHandler(encoder);
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new ChannelOutboundHandlerAdapter()).get();
