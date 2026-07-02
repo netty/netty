@@ -143,6 +143,7 @@ public class XmlFrameDecoderTest {
                 ch.writeInbound(Unpooled.copiedBuffer("<a></</a>", CharsetUtil.UTF_8));
             }
         });
+        ch.finishAndReleaseAll();
     }
 
     @Test
@@ -156,6 +157,7 @@ public class XmlFrameDecoderTest {
                 ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
             }
         });
+        ch.finishAndReleaseAll();
     }
 
     @Test
