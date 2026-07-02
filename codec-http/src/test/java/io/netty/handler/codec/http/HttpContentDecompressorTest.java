@@ -39,7 +39,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -231,7 +231,7 @@ public class HttpContentDecompressorTest {
             response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             assertTrue(channel.writeInbound(response));
             assertTrue(channel.writeInbound(new DefaultHttpContent(Unpooled.wrappedBuffer(compressed))));
-            channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT);
+            assertTrue(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
 
             // Drain and concatenate every decompressed HttpContent chunk.
             byte[] decompressed = new byte[0];
@@ -253,10 +253,9 @@ public class HttpContentDecompressorTest {
                 }
             }
 
-            assertEquals(payload.length, decompressed.length,
-                    "decompressed length must match original payload");
-            assertArrayEquals(payload, decompressed,
-                    "decompressed bytes must match original payload");
+            assertThat(decompressed)
+                    .as("decompressed bytes must match original payload")
+                    .isEqualTo(payload);
 
             // Regression signal: with maxAllocation=64 correctly routed to
             // BrotliDecoder.outputBufferSize, a 128KB payload must be forwarded
@@ -264,9 +263,9 @@ public class HttpContentDecompressorTest {
             // maxAllocation would be applied to inputBufferSize while
             // outputBufferSize stayed at BrotliDecoder's 64KB default, so only
             // a handful of large chunks would be emitted.
-            assertTrue(contentChunks > 100,
-                    "expected many small chunks when maxAllocation=64 caps output size; got " +
-                            contentChunks);
+            assertThat(contentChunks)
+                    .as("expected many small chunks when maxAllocation=64 caps output size")
+                    .isGreaterThan(100);
         } finally {
             channel.finishAndReleaseAll();
         }
