@@ -206,13 +206,25 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
         super.write(ctx, response, promise);
     }
 
+    /**
+     * Returns {@code true} if WebSocket extensions negotiated from the request should be acknowledged for this
+     * response.
+     * <p>
+     * This method can be overridden to make the final extension negotiation decision when the handshake response is
+     * written.
+     */
+    protected boolean isExtensionNegotiationEnabled(ChannelHandlerContext ctx, HttpResponse response) {
+        return true;
+    }
+
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
                                         ChannelPromise promise, HttpResponse httpResponse,
                                         final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 
         if (WebSocketExtensionUtil.isWebsocketUpgrade(headers)) {
-            if (validExtensionsList != null && !validExtensionsList.isEmpty()) {
+            if (isExtensionNegotiationEnabled(ctx, httpResponse)
+                    && validExtensionsList != null && !validExtensionsList.isEmpty()) {
                 String headerValue = headers.getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
                 List<WebSocketExtensionData> extraExtensions =
                   new ArrayList<>(extensionHandshakers.size());
