@@ -134,6 +134,31 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeInvalidNestedClosingTag() {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("<a></</a>", CharsetUtil.UTF_8));
+            }
+        });
+    }
+
+    @Test
+    public void testDecodeInvalidRepeatedClosingTags() {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+            }
+        });
+    }
+
+    @Test
     public void testDecodeWithCDATABlock() {
         final String xml = "<book>" +
                 "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
@@ -171,6 +196,11 @@ public class XmlFrameDecoderTest {
     @Test
     public void testFraming() {
         testDecodeWithXml(Arrays.asList("<abc", ">123</a", "bc>"), "<abc>123</abc>");
+    }
+
+    @Test
+    public void testFramingWithSplitClosingTag() {
+        testDecodeWithXml(Arrays.asList("<abc>", "123</", "abc>"), "<abc>123</abc>");
     }
 
     @Test

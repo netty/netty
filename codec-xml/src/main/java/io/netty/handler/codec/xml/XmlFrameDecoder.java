@@ -88,6 +88,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         boolean openingBracketFound = false;
         boolean atLeastOneXmlElementFound = false;
         boolean inCDATASection = false;
+        boolean inClosingTag = false;
         long openBracketsCount = 0;
         int length = 0;
         int leadingWhiteSpaceCount = 0;
@@ -110,6 +111,10 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                 fail(ctx);
                 in.skipBytes(in.readableBytes());
                 return;
+            } else if (inClosingTag && readByte == '<') {
+                fail(ctx);
+                in.skipBytes(in.readableBytes());
+                return;
             } else if (!inCDATASection && readByte == '<') {
                 openingBracketFound = true;
 
@@ -117,15 +122,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                     final byte peekAheadByte = in.getByte(i + 1);
                     if (peekAheadByte == '/') {
                         // found </, we must check if it is enclosed
-                        int peekFurtherAheadIndex = i + 2;
-                        while (peekFurtherAheadIndex <= bufferLength - 1) {
-                            //if we have </ and enclosing > we can decrement openBracketsCount
-                            if (in.getByte(peekFurtherAheadIndex) == '>') {
-                                openBracketsCount--;
-                                break;
-                            }
-                            peekFurtherAheadIndex++;
-                        }
+                        inClosingTag = true;
                     } else if (isValidStartCharForXmlElement(peekAheadByte)) {
                         atLeastOneXmlElementFound = true;
                         // char after < is a valid xml element start char,
@@ -156,7 +153,10 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                 if (i - 1 > -1) {
                     final byte peekBehindByte = in.getByte(i - 1);
 
-                    if (!inCDATASection) {
+                    if (inClosingTag) {
+                        openBracketsCount--;
+                        inClosingTag = false;
+                    } else if (!inCDATASection) {
                         if (peekBehindByte == '?') {
                             // an <?xml ?> tag was closed
                             openBracketsCount--;
