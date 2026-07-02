@@ -153,7 +153,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             return null;
         }
 
-        final int offset;
+        final QuicTokenHandler.TokenValidationResult validationResult;
         boolean noToken = false;
         if (!token.isReadable()) {
             // Clear buffers so we can reuse these.
@@ -181,14 +181,14 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                 writePacket(ctx, written, out, sender);
                 return null;
             }
-            offset = 0;
+            validationResult = null;
             noToken = true;
         } else {
             // Slice the token before pass it ot the QuicTokenHandler as the implementation might modify
             // the readerIndex.
             // See https://github.com/netty/netty-incubator-codec-quic/issues/742
-            offset = tokenHandler.validateToken(token.slice(), sender);
-            if (offset == -1) {
+            validationResult = tokenHandler.validateToken(token.slice(), sender, dcid);
+            if (!validationResult.isValid()) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));
                 }
@@ -221,8 +221,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         } else {
             scidAddr = Quiche.readerMemoryAddress(dcid);
             scidLen = localConnIdLength;
-            ocidLen = token.readableBytes() - offset;
-            ocidAddr = Quiche.memoryAddress(token, offset, ocidLen);
+            ByteBuf odcid = validationResult.originalDestinationConnectionId(token, dcid);
+            ocidLen = odcid.readableBytes();
+            ocidAddr = Quiche.memoryAddress(odcid, odcid.readerIndex(), ocidLen);
             // Now create the key to store the channel in the map.
             byte[] bytes = new byte[localConnIdLength];
             dcid.getBytes(dcid.readerIndex(), bytes);
