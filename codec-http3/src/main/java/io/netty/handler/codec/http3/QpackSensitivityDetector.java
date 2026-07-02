@@ -33,6 +33,7 @@ package io.netty.handler.codec.http3;
  * compression-based side channels (RFC 9204 7.1) for credentials such as
  * {@code Authorization}, {@code Cookie}, {@code Set-Cookie} and
  * {@code Proxy-Authorization}.</p>
+ * If the object can be dynamically modified and shared across multiple connections it may need to be thread safe.
  */
 public interface QpackSensitivityDetector {
 
