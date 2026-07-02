@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.internal.ObjectUtil;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map;
@@ -42,23 +44,29 @@ final class QpackEncoder {
 
     private final QpackHuffmanEncoder huffmanEncoder;
     private final QpackEncoderDynamicTable dynamicTable;
+    private final QpackSensitivityDetector sensitivityDetector;
     private int maxBlockedStreams;
     private int blockedStreams;
     private LongObjectHashMap<Queue<Indices>> streamSectionTrackers;
 
-    QpackEncoder() {
-        this(new QpackEncoderDynamicTable());
+    QpackEncoder(@Nullable QpackSensitivityDetector sensitivityDetector) {
+        this(new QpackEncoderDynamicTable(), sensitivityDetector);
     }
 
-    QpackEncoder(QpackEncoderDynamicTable dynamicTable) {
+    QpackEncoder(QpackEncoderDynamicTable dynamicTable, @Nullable QpackSensitivityDetector sensitivityDetector) {
         huffmanEncoder = new QpackHuffmanEncoder();
-        this.dynamicTable = dynamicTable;
+        this.dynamicTable = ObjectUtil.checkNotNull(dynamicTable, "dynamicTable");
+        this.sensitivityDetector = sensitivityDetector == null ?
+                QpackSensitivityDetector.NEVER_SENSITIVE : sensitivityDetector;
     }
 
     /**
      * Encode the header field into the header block.
      *
-     * TODO: do we need to support sensitivity detector?
+     * <p>Fields for which {@link QpackSensitivityDetector#isSensitive(CharSequence, CharSequence)}
+     * returns {@code true} are encoded as literals with the
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.4">"Never Indexed"</a>
+     * ({@code N=1}) flag set, and are never inserted into the dynamic table.</p>
      */
     void encodeHeaders(QpackAttributes qpackAttributes, ByteBuf out, ByteBufAllocator allocator, long streamId,
                        Http3Headers headers) {
@@ -73,7 +81,13 @@ final class QpackEncoder {
             for (Map.Entry<CharSequence, CharSequence> header : headers) {
                 CharSequence name = header.getKey();
                 CharSequence value = header.getValue();
-                int dynamicTblIdx = encodeHeader(qpackAttributes, tmp, base, name, value);
+                int dynamicTblIdx;
+                if (sensitivityDetector.isSensitive(name, value)) {
+                    encodeSensitiveHeader(tmp, name, value);
+                    dynamicTblIdx = DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
+                } else {
+                    dynamicTblIdx = encodeHeader(qpackAttributes, tmp, base, name, value);
+                }
                 if (dynamicTblIdx >= 0) {
                     int req = dynamicTable.addReferenceToEntry(name, value, dynamicTblIdx);
                     if (dynamicTblIdx > maxDynamicTblIdx) {
@@ -195,6 +209,31 @@ final class QpackEncoder {
     }
 
     /**
+     * Encode a header field that the {@link QpackSensitivityDetector} flagged as sensitive.
+     *
+     * <p>Sensitive fields are never inserted into the dynamic table and are encoded
+     * with the {@code "Never Indexed"} flag ({@code N=1}) so that intermediaries
+     * also avoid indexing them — see
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-7.1">RFC 9204 7.1</a>.
+     * </p>
+     */
+    private void encodeSensitiveHeader(ByteBuf out, CharSequence name, CharSequence value) {
+        final int index = QpackStaticTable.findFieldIndex(name, value);
+        if (index == QpackStaticTable.NOT_FOUND) {
+            encodeLiteral(out, name, value, true);
+        } else if ((index & QpackStaticTable.MASK_NAME_REF) == QpackStaticTable.MASK_NAME_REF) {
+            // Name-only match, reuse the cached lookup instead of calling getIndex(name) again.
+            encodeLiteralWithNameRefStaticTable(out, index ^ QpackStaticTable.MASK_NAME_REF, value, true);
+        } else {
+            // Exact (name, value) match in the static table, an indexed static reference
+            // does not leak more information than what is already public, and the
+            // intermediary cannot gain any compression benefit by inserting a copy into
+            // its own dynamic table (the entry is already there as part of the static table).
+            encodeIndexedStaticTable(out, index);
+        }
+    }
+
+    /**
      * Encode the header field into the header block.
      * @param qpackAttributes {@link QpackAttributes} for the channel.
      * @param out {@link ByteBuf} to which encoded header field is to be written.
@@ -209,7 +248,7 @@ final class QpackEncoder {
         int index = QpackStaticTable.findFieldIndex(name, value);
         if (index == QpackStaticTable.NOT_FOUND) {
             if (qpackAttributes.dynamicTableDisabled()) {
-                encodeLiteral(out, name, value);
+                encodeLiteral(out, name, value, false);
                 return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
             }
             return encodeWithDynamicTable(qpackAttributes, out, base, name, value);
@@ -228,7 +267,7 @@ final class QpackEncoder {
                 }
                 return dynamicTblIdx;
             }
-            encodeLiteralWithNameRefStaticTable(out, nameIdx, value);
+            encodeLiteralWithNameRefStaticTable(out, nameIdx, value, false);
         } else {
             encodeIndexedStaticTable(out, index);
         }
@@ -265,7 +304,7 @@ final class QpackEncoder {
                 return idx;
             }
         }
-        encodeLiteral(out, name, value);
+        encodeLiteral(out, name, value, false);
         return idx;
     }
 
@@ -376,7 +415,11 @@ final class QpackEncoder {
                     //   +---+---+---+-------------------+
                     //   |  Name String (Length bytes)   |
                     //   +---+---------------------------+
-                    // TODO: Force H = 1 till we support sensitivity detector
+                    // Names are always Huffman-encoded (H = 1). RFC 9204 makes
+                    // Huffman a pure size/CPU tradeoff and does not tie it to the
+                    // sensitivity of the field; whether intermediaries may index
+                    // the field is controlled separately by the N bit on the
+                    // matching literal field line.
                     encodeLengthPrefixedHuffmanEncodedLiteral(insert, (byte) 0b0110_0000, 5, name);
                 }
                 //    0   1   2   3   4   5   6   7
@@ -427,7 +470,8 @@ final class QpackEncoder {
         encodePrefixedInteger(out, (byte) 0b0001_0000, 4, index - base);
     }
 
-    private void encodeLiteralWithNameRefStaticTable(ByteBuf out, int nameIndex, CharSequence value) {
+    private void encodeLiteralWithNameRefStaticTable(ByteBuf out, int nameIndex, CharSequence value,
+                                                     boolean neverIndex) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //     0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
@@ -437,8 +481,10 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, nameIndex);
+        //
+        // T = 1 (static table). N is driven by the sensitivity detector.
+        final byte prefix = (byte) (0b0101_0000 | (neverIndex ? 0b0010_0000 : 0));
+        encodePrefixedInteger(out, prefix, 4, nameIndex);
         encodeStringLiteral(out, value);
     }
 
@@ -452,8 +498,11 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, base - nameIndex - 1);
+        //
+        // T = 0 (dynamic table). Sensitive headers are routed through
+        // encodeSensitiveHeader() which bypasses the dynamic table entirely, so
+        // anything reaching this method is non-sensitive and N is always 0.
+        encodePrefixedInteger(out, (byte) 0b0100_0000, 4, base - nameIndex - 1);
         encodeStringLiteral(out, value);
     }
 
@@ -467,12 +516,15 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0000_0000, 4, nameIndex - base);
+        //
+        // Same as above post-base references only exist for entries in the
+        // encoder's dynamic table, so sensitive headers never reach here and
+        // N is always 0.
+        encodePrefixedInteger(out, (byte) 0, 3, nameIndex - base);
         encodeStringLiteral(out, value);
     }
 
-    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value) {
+    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, boolean neverIndex) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
         //   0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
@@ -484,8 +536,10 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 & H = 1 till we support sensitivity detector
-        encodeLengthPrefixedHuffmanEncodedLiteral(out, (byte) 0b0010_1000, 3, name);
+        //
+        // H = 1 (Huffman) is always set for the name length prefix.
+        final byte prefix = (byte) (0b0010_1000 | (neverIndex ? 0b0001_0000 : 0));
+        encodeLengthPrefixedHuffmanEncodedLiteral(out, prefix, 3, name);
         encodeStringLiteral(out, value);
     }
 
@@ -500,7 +554,9 @@ final class QpackEncoder {
         // +---+---------------------------+
         // |  String Data (Length octets)  |
         // +-------------------------------+
-        // TODO: Force H = 1 till we support sensitivity detector
+        // String values are always Huffman-encoded (H = 1). RFC 9204 treats the
+        // H bit as a pure size/CPU choice; whether intermediaries may index the
+        // field is controlled separately by the N bit on the literal field line.
         encodeLengthPrefixedHuffmanEncodedLiteral(out, (byte) 0b1000_0000, 7, value);
     }
 
