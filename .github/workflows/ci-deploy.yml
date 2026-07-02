@@ -210,7 +210,9 @@ jobs:
     # Wait until we have staged everything
     needs: [ stage-snapshot-linux, stage-snapshot-windows-x86_64, stage-snapshot-macos ]
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v4.3.0
+      - name: Cache local Maven repository
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
 
       # Pinned to v4.8.0
       - name: Set up JDK 11
