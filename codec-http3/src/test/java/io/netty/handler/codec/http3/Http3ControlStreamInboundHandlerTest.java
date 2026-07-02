@@ -61,7 +61,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     @Override
     protected void setUp(boolean server) {
         super.setUp(server);
-        qpackEncoder = new QpackEncoder();
+        qpackEncoder = new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE);
         remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                 new ChannelInboundHandler() { });
     }
