@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
@@ -209,6 +210,45 @@ public class WebSocketServerExtensionHandlerTest {
 
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown"));
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("unknown2"));
+    }
+
+    @Test
+    public void testExtensionNegotiationDisabledForResponse() throws Exception {
+        // initialize
+        when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main"))).
+                thenReturn(mainExtensionMock);
+
+        when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
+
+        // execute
+        WebSocketServerExtensionHandler extensionHandler =
+                new WebSocketServerExtensionHandler(mainHandshakerMock) {
+                    @Override
+                    protected boolean isExtensionNegotiationEnabled(ChannelHandlerContext ctx, HttpResponse response) {
+                        return false;
+                    }
+                };
+        EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
+
+        HttpRequest req = newUpgradeRequest("main");
+        ch.writeInbound(req);
+
+        HttpResponse res = newUpgradeResponse(null);
+        ch.writeOutbound(res);
+
+        HttpResponse res2 = ch.readOutbound();
+
+        // test
+        assertNull(ch.pipeline().context(extensionHandler));
+        assertFalse(res2.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+        assertNull(ch.pipeline().get(DummyDecoder.class));
+        assertNull(ch.pipeline().get(DummyEncoder.class));
+
+        verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("main"));
+        verify(mainExtensionMock, times(2)).rsv();
+        verify(mainExtensionMock, never()).newReponseData();
+        verify(mainExtensionMock, never()).newExtensionEncoder();
+        verify(mainExtensionMock, never()).newExtensionDecoder();
     }
 
     @Test
