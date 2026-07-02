@@ -452,6 +452,8 @@ public class HttpContentEncoderTest {
 
         assertThrows(DecoderException.class, () -> ch.writeInbound(
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+
+        ch.finishAndReleaseAll();
     }
 
     private static void assertEmptyResponse(EmbeddedChannel ch) {
