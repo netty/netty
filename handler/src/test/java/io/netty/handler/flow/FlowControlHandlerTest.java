@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -53,8 +54,11 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
-import static java.util.concurrent.TimeUnit.*;
+import static io.netty.handler.flow.FlowControlHandler.DEFAUT_RELEASE_MESSAGES;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -545,7 +549,7 @@ public class FlowControlHandlerTest {
         final long delayMillis = 100;
         final Queue<IdleStateEvent> userEvents = new LinkedBlockingQueue<IdleStateEvent>();
         final EmbeddedChannel channel = new EmbeddedChannel(false, false,
-            new FlowControlHandler(),
+            new FlowControlHandler(DEFAUT_RELEASE_MESSAGES, true),
             new IdleStateHandler(delayMillis, 0, 0, MILLISECONDS),
             new ChannelInboundHandlerAdapter() {
                 @Override
@@ -754,7 +758,7 @@ public class FlowControlHandlerTest {
         channel.flushInbound();
 
         assertEquals(1, reads.get());
-        assertEquals(2, readCompletes.get());
+        assertEquals(1, readCompletes.get());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -786,35 +790,44 @@ public class FlowControlHandlerTest {
         // Downstream issues a read() but upstream has no data and only fires channelReadComplete.
         // FlowControlHandler must forward that channelReadComplete to satisfy the outstanding read.
         channel.read();
-        channel.flushInbound();
 
         assertEquals(0, reads.get());
-        assertEquals(1, readCompletes.get());
+        assertEquals(0, readCompletes.get());
 
         // The empty read() could not be satisfied from the queue, so it was forwarded upstream exactly once.
         assertEquals(1, upstream.reads.get());
+
+        channel.flushInbound();
+        assertEquals(2, upstream.reads.get());
 
         assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
     public void testMultipleReadsOnEmptyQueue() throws Exception {
-        final AtomicInteger reads = new AtomicInteger();
-        final AtomicInteger readCompletes = new AtomicInteger();
+        final List<String> events = new ArrayList<>();
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void read(ChannelHandlerContext ctx) throws Exception {
+                        events.add("#r");
+                        super.read(ctx);
+                    }
+                },
                 new FlowControlHandler(),
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        reads.incrementAndGet();
+                        events.add((String) msg);
                     }
 
                     @Override
                     public void channelReadComplete(ChannelHandlerContext ctx) {
-                        readCompletes.incrementAndGet();
+                        events.add("#rc");
                     }
                 });
+
         channel.config().setAutoRead(false);
         channel.register();
 
@@ -822,37 +835,30 @@ public class FlowControlHandlerTest {
         channel.read();
         channel.read();
 
-        channel.writeOneInbound("msg1");
+        assertEquals(Collections.singletonList("#r"), events);
 
-        assertEquals(1, reads.get());
-        assertEquals(0, readCompletes.get());
+        channel.writeOneInbound("1");
+        assertEquals(Arrays.asList("#r", "1"), events);
 
-        channel.flushInbound();
-
-        assertEquals(1, reads.get());
-        assertEquals(1, readCompletes.get());
+        channel.flushInbound(); // Trigger readComplete event
+        assertEquals(Arrays.asList("#r", "1", "#r"), events);
 
         channel.read();
         channel.read();
         channel.read();
 
-        // empty read
-        channel.flushInbound();
 
-        assertEquals(1, reads.get());
-        assertEquals(2, readCompletes.get());
+        channel.flushInbound(); // Trigger readComplete event
+        assertEquals(Arrays.asList("#r", "1", "#r", "#r"), events);
 
-        // quick check that internal state is not broken
-        channel.writeOneInbound("msg2");
-        channel.flushInbound();
+        channel.writeInbound("2", "3", "4");
+        assertEquals(Arrays.asList("#r", "1", "#r", "#r", "2", "3", "4", "#r"), events);
 
-        assertEquals(1, reads.get());
-        assertEquals(2, readCompletes.get());
+        channel.flushInbound(); // Trigger readComplete event
+        assertEquals(Arrays.asList("#r", "1", "#r", "#r", "2", "3", "4", "#r", "#r"), events);
 
-        channel.read();
-
-        assertEquals(2, reads.get());
-        assertEquals(3, readCompletes.get());
+        channel.writeInbound("5", "6", "7");
+        assertEquals(Arrays.asList("#r", "1", "#r", "#r", "2", "3", "4", "#r", "#r", "5", "6", "#rc"), events);
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -904,7 +910,7 @@ public class FlowControlHandlerTest {
         final AtomicInteger readCompletes = new AtomicInteger();
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
-                new FlowControlHandler(),
+                new FlowControlHandler(DEFAUT_RELEASE_MESSAGES, true),
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -945,20 +951,20 @@ public class FlowControlHandlerTest {
         channel.writeOneInbound("msg2").syncUninterruptibly();
 
         assertEquals(2, reads.get());
-        assertEquals(1, readCompletes.get());
+        assertEquals(0, readCompletes.get());
 
         // The third message is queued but not delivered as autoRead is off, and we have no unsatisfied reads anymore.
         channel.writeOneInbound("msg3").syncUninterruptibly();
 
-        assertEquals(2, reads.get());
-        assertEquals(1, readCompletes.get());
+        assertEquals(3, reads.get());
+        assertEquals(0, readCompletes.get());
 
         // Upstream fires channelReadComplete.
         channel.flushInbound();
 
         // As autoRead is off, FlowControlHandler is the one determining the end of the read cycle, not upstream.
         // It ignores the channelReadComplete.
-        assertEquals(2, reads.get());
+        assertEquals(3, reads.get());
         assertEquals(1, readCompletes.get());
 
         channel.config().setAutoRead(true);
@@ -1090,7 +1096,7 @@ public class FlowControlHandlerTest {
         // consumed the queued message.
         channel.read();
         assertEquals(5, reads.get());
-        assertEquals(2, upstream.reads.get());
+        assertEquals(1, upstream.reads.get());
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -1131,6 +1137,62 @@ public class FlowControlHandlerTest {
 
         // The flush happens locally on removal; nothing is read upstream.
         assertEquals(0, upstream.reads.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testHandlerRemovedFlushesQueuedSplitMessages() throws Exception {
+        final List<String> events = new ArrayList<>();
+        final AtomicInteger readMore = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void read(ChannelHandlerContext ctx) throws Exception {
+                        events.add("#r");
+                        super.read(ctx);
+                    }
+                },
+                new SplitDecoder(), // Decode (split) one chunk into several messages
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        events.add((String) msg);
+                        IntStream.range(0, readMore.getAndSet(0)).forEach(i -> ctx.read());
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        events.add("#rc");
+                    }
+                });
+
+
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        // With auto-read off and no read(), all six messages stay queued in the handler.
+        assertFalse(channel.writeInbound("abcdef"));
+        assertEquals(Collections.emptyList(), events);
+
+        channel.read();
+        assertEquals(Arrays.asList("a", "#rc"), events);
+
+        readMore.set(3); // Repeat read() +3 times from within channelRead()
+        channel.read();
+        assertEquals(Arrays.asList("a", "#rc", "b", "c", "d", "e", "#rc"), events);
+
+        // Removing the handler flushes the whole queue downstream, in order, then completes the batch once.
+        channel.pipeline().remove(FlowControlHandler.class);
+        assertEquals(Arrays.asList("a", "#rc", "b", "c", "d", "e", "#rc", "f", "#rc"), events);
+
+        channel.read();
+        assertEquals(Arrays.asList("a", "#rc", "b", "c", "d", "e", "#rc", "f", "#rc", "#r"), events);
+
+        assertFalse(channel.writeInbound("gh"));
+        assertEquals(Arrays.asList("a", "#rc", "b", "c", "d", "e", "#rc", "f", "#rc", "#r", "g", "h", "#rc"), events);
 
         assertFalse(channel.finishAndReleaseAll());
     }
@@ -1218,6 +1280,23 @@ public class FlowControlHandlerTest {
         public void read(ChannelHandlerContext ctx) throws Exception {
             reads.incrementAndGet();
             super.read(ctx);
+        }
+    }
+
+    private static class SplitDecoder extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            if (!(msg instanceof String)) {
+                ctx.fireChannelRead(msg);
+                return;
+            }
+            String text = (String) msg;
+            for (char c : text.toCharArray()) {
+                ctx.fireChannelRead(String.valueOf(c));
+            }
+            if (text.isEmpty()) {
+                ctx.fireChannelRead("");
+            }
         }
     }
 }

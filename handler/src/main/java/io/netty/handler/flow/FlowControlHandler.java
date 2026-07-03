@@ -67,7 +67,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class FlowControlHandler extends ChannelDuplexHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
 
+    public static final boolean DEFAUT_RELEASE_MESSAGES = true;
+    public static final boolean DEFAUT_PROPAGATE_READ_COMPLETE = false;
+
     private final boolean releaseMessages;
+    private final boolean propagateReadComplete;
 
     private RecyclableArrayDeque queue;
 
@@ -96,16 +100,43 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int unsatisfiedReads;
 
     /**
+     * {@code true} if a {@code read()} is currently in progress.
+     */
+    private boolean reading;
+
+    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
 
     public FlowControlHandler() {
-        this(true);
+        this(DEFAUT_RELEASE_MESSAGES);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param releaseMessages
+     *        Release all queued messages when channel becomes inactive,
+     *        {@link #DEFAUT_RELEASE_MESSAGES} by default.
+     */
     public FlowControlHandler(boolean releaseMessages) {
+        this(releaseMessages, DEFAUT_PROPAGATE_READ_COMPLETE);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param releaseMessages
+     *        Release all queued messages when channel becomes inactive,
+     *        {@link #DEFAUT_RELEASE_MESSAGES} by default.
+     * @param propagateReadComplete
+     *        Propagate upstream {@link #channelReadComplete(ChannelHandlerContext) read-complete} events to downstream,
+     *        {@link #DEFAUT_PROPAGATE_READ_COMPLETE} by default.
+     */
+    public FlowControlHandler(boolean releaseMessages, boolean propagateReadComplete) {
         this.releaseMessages = releaseMessages;
+        this.propagateReadComplete = propagateReadComplete;
     }
 
     /**
@@ -162,25 +193,23 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
-        if (!config.isAutoRead()) {
-            unsatisfiedReads++;
-        }
+        unsatisfiedReads++;
 
         boolean didSatisfyARead = dequeue(ctx);
-        boolean isAutoRead = config.isAutoRead();
-        if (!didSatisfyARead || isAutoRead) {
-            assert unsatisfiedReads > 0 || isAutoRead;
-            // We either could not satisfy the read or auto-read is on.
-            // In both cases we need to delegate the read upstream.
-            ctx.read();
+        if (config.isAutoRead()) {
+            readIfNeeded(ctx);
         } else if (unsatisfiedReads == 0 && !dequeuing) {
             // Auto-read is off, and we have satisfied all reads.
             // As such, we can complete the current read cycle. && !dequeueing makes sure we are completing the
             // read cycle only once in the top-most read() call.
             ctx.fireChannelReadComplete();
-        } else {
+        } else if (didSatisfyARead) {
             // Auto-read is off, and either reads are still unsatisfied or we are nested in a dequeue.
             // Wait for the outermost call, an upstream channelRead() or a channelReadComplete().
+        } else {
+            // We need to delegate the read upstream.
+            assert unsatisfiedReads > 0;
+            readIfNeeded(ctx);
         }
     }
 
@@ -201,11 +230,21 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped.
-        if (config.isAutoRead() || unsatisfiedReads > 0) {
-            unsatisfiedReads = 0;
+        reading = false;
+        if (propagateReadComplete || config.isAutoRead()) {
+            // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
+            // channelReadComplete; spurious upstream completions with no pending read are dropped.
             ctx.fireChannelReadComplete();
+        } else if (unsatisfiedReads > 0) {
+            // Upstream closed the read cycle, initiating the next one.
+            readIfNeeded(ctx);
+        }
+    }
+
+    private void readIfNeeded(ChannelHandlerContext ctx) {
+        if (!reading) {
+            reading = true;
+            ctx.read();
         }
     }
 
