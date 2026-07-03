@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Nullable;
@@ -184,10 +185,11 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             validationResult = null;
             noToken = true;
         } else {
-            // Slice the token before pass it ot the QuicTokenHandler as the implementation might modify
+            // Slice the token and dcid before pass it to the QuicTokenHandler as the implementation might modify
             // the readerIndex.
             // See https://github.com/netty/netty-incubator-codec-quic/issues/742
-            validationResult = tokenHandler.validateToken(token.slice(), sender, dcid);
+            validationResult = ObjectUtil.checkNotNull(
+                    tokenHandler.validateToken(token.slice(), sender, dcid.slice()), "validationResult");
             if (!validationResult.isValid()) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));

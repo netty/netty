@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 
 import java.net.InetSocketAddress;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 /**
  * Handle token related operations.
  */
@@ -57,10 +59,7 @@ public interface QuicTokenHandler {
          * @return          the validation result.
          */
         public static TokenValidationResult odcidFromToken(int offset) {
-            if (offset < 0) {
-                throw new IllegalArgumentException("offset must be >= 0");
-            }
-            return new TokenValidationResult(offset, false);
+            return new TokenValidationResult(checkPositiveOrZero(offset, "offset"), false);
         }
 
         /**
@@ -133,7 +132,7 @@ public interface QuicTokenHandler {
      *
      * @param token     the {@link ByteBuf} that contains the token. The ownership is not transferred.
      * @param address   the {@link InetSocketAddress} of the sender.
-     * @param dcid      the destination connection id of the current Initial packet.
+     * @param dcid      the destination connection id of the current Initial packet. The ownership is not transferred.
      * @return          the validation result.
      */
     default TokenValidationResult validateToken(ByteBuf token, InetSocketAddress address, ByteBuf dcid) {
