@@ -25,6 +25,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -33,12 +34,12 @@ final class InflightNameResolver<T> implements NameResolver<T> {
 
     private final EventExecutor executor;
     private final NameResolver<T> delegate;
-    private final ConcurrentMap<String, Promise<T>> resolvesInProgress;
-    private final ConcurrentMap<String, Promise<List<T>>> resolveAllsInProgress;
+    private final ConcurrentMap<String, InflightEntry<T>> resolvesInProgress;
+    private final ConcurrentMap<String, InflightEntry<List<T>>> resolveAllsInProgress;
 
     InflightNameResolver(EventExecutor executor, NameResolver<T> delegate,
-                         ConcurrentMap<String, Promise<T>> resolvesInProgress,
-                         ConcurrentMap<String, Promise<List<T>>> resolveAllsInProgress) {
+                         ConcurrentMap<String, InflightEntry<T>> resolvesInProgress,
+                         ConcurrentMap<String, InflightEntry<List<T>>> resolveAllsInProgress) {
 
         this.executor = checkNotNull(executor, "executor");
         this.delegate = checkNotNull(delegate, "delegate");
@@ -71,39 +72,105 @@ final class InflightNameResolver<T> implements NameResolver<T> {
         return resolve(resolveAllsInProgress, inetHost, promise, true);
     }
 
+    @SuppressWarnings("unchecked")
     private <U> Promise<U> resolve(
-            final ConcurrentMap<String, Promise<U>> resolveMap,
-            final String inetHost, final Promise<U> promise, boolean resolveAll) {
+            final ConcurrentMap<String, InflightEntry<U>> resolveMap,
+            final String inetHost, final Promise<U> promise, final boolean resolveAll) {
 
-        final Promise<U> earlyPromise = resolveMap.putIfAbsent(inetHost, promise);
-        if (earlyPromise != null) {
-            // Name resolution for the specified inetHost is in progress already.
-            if (earlyPromise.isDone()) {
-                transferResult(earlyPromise, promise);
-            } else {
-                earlyPromise.addListener((FutureListener<U>) f -> transferResult(f, promise));
-            }
-        } else {
-            try {
-                if (resolveAll) {
-                    @SuppressWarnings("unchecked")
-                    final Promise<List<T>> castPromise = (Promise<List<T>>) promise; // U is List<T>
-                    delegate.resolveAll(inetHost, castPromise);
-                } else {
-                    @SuppressWarnings("unchecked")
-                    final Promise<T> castPromise = (Promise<T>) promise; // U is T
-                    delegate.resolve(inetHost, castPromise);
+        // Loop to recover from a "zombie" entry: a stale entry whose delegate promise never
+        // completed (e.g. the original caller's underlying channel was closed without
+        // cancelling the promise) and that has already been released but not yet swept from
+        // the map. See https://github.com/netty/netty/issues/17039.
+        for (;;) {
+            final InflightEntry<U> newEntry = new InflightEntry<U>(promise, inetHost);
+            final InflightEntry<U> existing = resolveMap.putIfAbsent(inetHost, newEntry);
+
+            if (existing == null) {
+                // We are the first caller — drive the actual resolution through the delegate.
+                try {
+                    if (resolveAll) {
+                        final Promise<List<T>> castPromise = (Promise<List<T>>) promise; // U is List<T>
+                        delegate.resolveAll(inetHost, castPromise);
+                    } else {
+                        final Promise<T> castPromise = (Promise<T>) promise; // U is T
+                        delegate.resolve(inetHost, castPromise);
+                    }
+                } catch (Throwable cause) {
+                    // case 7: delegate threw synchronously — fail the promise so that our
+                    // completion listener below can release the entry and clean the map.
+                    promise.tryFailure(cause);
                 }
-            } finally {
+
                 if (promise.isDone()) {
-                    resolveMap.remove(inetHost);
+                    // Synchronous completion — release our initial refCount and, if no other
+                    // caller attached in the meantime, remove the entry from the map.
+                    if (newEntry.release()) {
+                        resolveMap.remove(inetHost, newEntry);
+                    }
                 } else {
-                    promise.addListener((FutureListener<U>) f -> resolveMap.remove(inetHost));
+                    // Asynchronous in flight. The first caller's refCount is released when the
+                    // delegate's promise completes; if it drops to zero we know no subsequent
+                    // caller ever attached and we must remove the map entry.
+                    //
+                    // Safety net (case 2 in the design): if the executor terminates while the
+                    // promise is still in flight, the delegate will not be able to complete it
+                    // and any listeners on the in-flight promise (e.g. the
+                    // FirstCallerCleanupListener below) will never fire because they are
+                    // scheduled on the now-terminated executor. Release the entry here so that
+                    // the map slot is dropped even when the executor is gone. We do this
+                    // unconditionally: if FirstCallerCleanupListener has already run, release()
+                    // is a no-op (refCount is already zero) and remove(...) is a no-op. If the
+                    // delegate promise was completed but the listener never fired (the common
+                    // case on shutdown), this is the path that actually cleans up the slot.
+                    executor.terminationFuture().addListener(f -> {
+                        if (f.isSuccess()) {
+                            if (newEntry.release()) {
+                                resolveMap.remove(inetHost, newEntry);
+                            }
+                            if (!newEntry.promise.isDone()) {
+                                // Delegate can no longer complete the promise — abort it so
+                                // any waiters on the first caller's promise are unblocked.
+                                newEntry.promise.tryFailure(
+                                        new AbortedInflightResolveException(newEntry.hostname));
+                            }
+                        }
+                    });
+                    promise.addListener(new FirstCallerCleanupListener<U>(newEntry, resolveMap));
                 }
+                return promise;
             }
-        }
 
-        return promise;
+            // Another resolution is already in progress for this hostname.
+            if (existing.promise.isDone()) {
+                // Already completed — transfer the result directly to the caller's promise.
+                transferResult(existing.promise, promise);
+                return promise;
+            }
+
+            if (existing.tryAcquire()) {
+                // Re-check isDone after acquire: the delegate may have completed in the window
+                // between our putIfAbsent and tryAcquire.
+                if (existing.promise.isDone()) {
+                    transferResult(existing.promise, promise);
+                    existing.release();
+                    return promise;
+                }
+                // Attach a transfer listener so this caller's promise completes with the same
+                // outcome as the in-flight delegate promise.
+                existing.promise.addListener(new TransferListener<U>(existing, promise));
+                // Release our slot if/when the caller's promise completes (success, failure, or
+                // explicit cancel). If we are the last one out, the entry is removed from the
+                // map and the delegate promise is aborted if it has not yet completed.
+                promise.addListener(new ReleaseListener<U>(existing, resolveMap));
+                return promise;
+            }
+
+            // The inflight entry is released / aborted but not yet swept from the map.
+            // Treat it as a zombie: remove it and retry. The next iteration will either find
+            // a clean map (and we become the new first caller) or attach to a freshly-inserted
+            // entry.
+            resolveMap.remove(inetHost, existing);
+        }
     }
 
     private static <T> void transferResult(Future<T> src, Promise<T> dst) {
@@ -117,5 +184,162 @@ final class InflightNameResolver<T> implements NameResolver<T> {
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + '(' + delegate + ')';
+    }
+
+    /**
+     * Holds an in-flight {@link Promise} together with the set of callers that have attached
+     * to it. Each caller (including the original first caller) implicitly owns one reference on
+     * the entry and must {@link #release()} it when its own promise completes; the
+     * {@code released} flag guards against a caller attaching to an entry that is on the verge
+     * of being aborted.
+     * <p>
+     * The reference count is independent of the DNS query-consolidation bookkeeping in
+     * {@link DnsNameResolver} (the {@code inflightLookups} map keyed by {@code DnsQuestion}),
+     * which only deduplicates questions that share the same outgoing UDP datagram.
+     * <p>
+     * Package-private so that {@link DnsAddressResolverGroup} can declare the in-flight maps
+     * with the correct value type. Not exposed outside {@code io.netty.resolver.dns}.
+     */
+    static final class InflightEntry<T> {
+        final Promise<T> promise; // visible for testing
+        final String hostname; // visible for testing
+        final AtomicInteger refCount = new AtomicInteger(1); // visible for testing
+        volatile boolean released; // visible for testing
+
+        InflightEntry(Promise<T> promise, String hostname) {
+            this.promise = promise;
+            this.hostname = hostname;
+        }
+
+        /**
+         * Attempt to reserve a slot for a subsequent caller.
+         *
+         * @return {@code true} if the caller has been registered; {@code false} if the entry has
+         *         already been released (or is at zero references) and the caller must either
+         *         retry the resolve or start a new resolution.
+         */
+        boolean tryAcquire() {
+            for (;;) {
+                if (released) {
+                    return false;
+                }
+                int current = refCount.get();
+                if (current == 0) {
+                    return false;
+                }
+                if (refCount.compareAndSet(current, current + 1)) {
+                    return true;
+                }
+            }
+        }
+
+        /**
+         * Release one slot. Returns {@code true} if this call dropped the count to zero, in
+         * which case the caller is responsible for cleaning the map and (if necessary)
+         * aborting the {@link #promise}.
+         */
+        boolean release() {
+            for (;;) {
+                int current = refCount.get();
+                if (current == 0) {
+                    // Already at zero — idempotent.
+                    return true;
+                }
+                if (refCount.compareAndSet(current, current - 1)) {
+                    if (current - 1 == 0) {
+                        released = true;
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        }
+    }
+
+    /**
+     * Cleans up the map when the first caller's underlying delegate promise completes and no
+     * other caller is still attached. The first caller's reference is released here.
+     */
+    private static final class FirstCallerCleanupListener<U> implements FutureListener<U> {
+        private final InflightEntry<U> entry;
+        private final ConcurrentMap<String, InflightEntry<U>> map;
+
+        FirstCallerCleanupListener(InflightEntry<U> entry, ConcurrentMap<String, InflightEntry<U>> map) {
+            this.entry = entry;
+            this.map = map;
+        }
+
+        @Override
+        public void operationComplete(Future<U> f) {
+            // Release the first caller's refCount. If no subsequent caller attached, this
+            // drops the count to zero and we must remove the map entry. The delegate promise
+            // is already done at this point, so no abort is needed.
+            if (entry.release()) {
+                map.remove(entry.hostname, entry);
+            }
+        }
+    }
+
+    /**
+     * Transfers the outcome of the in-flight delegate promise to a subsequent caller's promise
+     * once the delegate completes. Successful, failed, and cancelled outcomes are all
+     * forwarded transparently.
+     */
+    private static final class TransferListener<U> implements FutureListener<U> {
+        private final InflightEntry<U> entry; // visible for testing
+        private final Promise<U> callerPromise;
+
+        TransferListener(InflightEntry<U> entry, Promise<U> callerPromise) {
+            this.entry = entry;
+            this.callerPromise = callerPromise;
+        }
+
+        @Override
+        public void operationComplete(Future<U> f) {
+            transferResult(f, callerPromise);
+        }
+    }
+
+    /**
+     * Releases a subsequent caller's slot in the inflight entry when the caller's own promise
+     * completes. If the release drops the count to zero (no other caller is still attached),
+     * the entry is removed from the map and the underlying delegate promise is aborted (if it
+     * has not yet completed) so that the inflight resolve does not leak.
+     */
+    private static final class ReleaseListener<U> implements FutureListener<U> {
+        private final InflightEntry<U> entry; // visible for testing
+        private final ConcurrentMap<String, InflightEntry<U>> map;
+
+        ReleaseListener(InflightEntry<U> entry, ConcurrentMap<String, InflightEntry<U>> map) {
+            this.entry = entry;
+            this.map = map;
+        }
+
+        @Override
+        public void operationComplete(Future<U> f) {
+            if (entry.release()) {
+                map.remove(entry.hostname, entry);
+                if (!entry.promise.isDone()) {
+                    // Last caller out and the delegate is still pending — abort it so that
+                    // future callers for the same hostname can start a fresh resolution
+                    // instead of attaching to a stuck entry. See issue #17039.
+                    entry.promise.tryFailure(new AbortedInflightResolveException(entry.hostname));
+                }
+            }
+        }
+    }
+
+    /**
+     * Signals that an inflight resolve was abandoned by all of its callers before the
+     * underlying delegate could complete. Thrown only inside this package to drive the
+     * cleanup path; never escapes to user code (it is delivered as the cause of the
+     * delegate's promise, which is also internal to this class).
+     */
+    private static final class AbortedInflightResolveException extends RuntimeException {
+        private static final long serialVersionUID = -1840684398074488192L;
+
+        AbortedInflightResolveException(String hostname) {
+            super("Inflight resolve of '" + hostname + "' was cancelled by the last listener before completion");
+        }
     }
 }
