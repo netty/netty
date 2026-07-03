@@ -145,11 +145,11 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         HttpHeaders reqHeaders = req.headers();
         if (!reqHeaders.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
             throw new WebSocketServerHandshakeException(
-                    "not a WebSocket request: a |Connection| header must includes a token 'Upgrade'", req);
+                    "not a WebSocket request: a |Connection| header must include a token 'Upgrade'", req);
         }
         if (!reqHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true)) {
             throw new WebSocketServerHandshakeException(
-                    "not a WebSocket request: a |Upgrade| header must containing the value 'websocket'", req);
+                    "not a WebSocket request: an |Upgrade| header must containing the value 'websocket'", req);
         }
         CharSequence key = reqHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {

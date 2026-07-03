@@ -199,7 +199,7 @@ public abstract class WebSocketServerHandshakerTest {
             }
         });
 
-        assertEquals("not a WebSocket request: a |Connection| header must includes a token 'Upgrade'",
+        assertEquals("not a WebSocket request: a |Connection| header must include a token 'Upgrade'",
                 exception.getMessage());
         assertTrue(request.release());
     }
@@ -225,7 +225,7 @@ public abstract class WebSocketServerHandshakerTest {
             }
         });
 
-        assertEquals("not a WebSocket request: a |Connection| header must includes a token 'Upgrade'",
+        assertEquals("not a WebSocket request: a |Connection| header must include a token 'Upgrade'",
                 exception.getMessage());
         assertTrue(request.release());
     }
@@ -251,7 +251,7 @@ public abstract class WebSocketServerHandshakerTest {
             }
         });
 
-        assertEquals("not a WebSocket request: a |Upgrade| header must containing the value 'websocket'",
+        assertEquals("not a WebSocket request: an |Upgrade| header must containing the value 'websocket'",
                 exception.getMessage());
         assertTrue(request.release());
     }
