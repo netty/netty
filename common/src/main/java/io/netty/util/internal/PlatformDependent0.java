@@ -1274,6 +1274,29 @@ final class PlatformDependent0 {
         }
     }
 
+    /**
+     * Checks if the specified {@code index} is within bounds [{@code 0}, {@code capacity}).
+     * <p>
+     * This is a manual bounds check that inlines unconditionally in C1 and C2,
+     * producing the same generated code as the intrinsified {@code Objects.checkIndex}.
+     *
+     * @param index    the index to check
+     * @param capacity the capacity (exclusive upper bound)
+     * @return the index if it is within bounds
+     * @throws IndexOutOfBoundsException if the index is negative or not less than {@code capacity}
+     */
+    static int checkIndex(int index, int capacity) {
+        if (index < 0 || index >= capacity) {
+            throw checkIndexError(index, capacity);
+        }
+        return index;
+    }
+
+    private static IndexOutOfBoundsException checkIndexError(int index, int capacity) {
+        return new IndexOutOfBoundsException(
+                String.format("index: %d, capacity: %d (expected: range(0, %d))", index, capacity, capacity));
+    }
+
     private PlatformDependent0() {
     }
 }

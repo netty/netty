@@ -325,9 +325,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     public byte byteAt(int index) {
         // We must do a range check here to enforce the access does not go outside our sub region of the array.
         // We rely on the array access itself to pick up the array out of bounds conditions
-        if (index < 0 || index >= length) {
-            throw new IndexOutOfBoundsException("index: " + index + " must be in the range [0," + length + ")");
-        }
+        PlatformDependent.checkIndex(index, length);
         // Try to use unsafe to avoid double checking the index bounds
         if (PlatformDependent.hasUnsafe()) {
             return PlatformDependent.getByte(value, index + offset);

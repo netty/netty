@@ -1383,7 +1383,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     protected final void checkIndex(int index) {
-        checkIndex(index, 1);
+        ensureAccessible();
+        if (checkBounds) {
+            PlatformDependent.checkIndex(index, capacity());
+        }
     }
 
     protected final void checkIndex(int index, int fieldLength) {

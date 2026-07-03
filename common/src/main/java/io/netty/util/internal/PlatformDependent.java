@@ -1932,6 +1932,20 @@ public final class PlatformDependent {
     }
 
     /**
+     * Checks if the specified {@code index} is within bounds [{@code 0}, {@code capacity}).
+     * <p>
+     * Delegates to a manual bounds check that inlines unconditionally.
+     *
+     * @param index    the index to check
+     * @param capacity the capacity (exclusive upper bound)
+     * @return the index if it is within bounds
+     * @throws IndexOutOfBoundsException if the index is negative or not less than {@code capacity}
+     */
+    public static int checkIndex(int index, int capacity) {
+        return PlatformDependent0.checkIndex(index, capacity);
+    }
+
+    /**
      * Check if JFR events are supported on this platform.
      */
     public static boolean isJfrEnabled() {
