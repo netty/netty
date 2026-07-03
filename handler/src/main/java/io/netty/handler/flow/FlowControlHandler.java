@@ -255,6 +255,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             ctx.read();
         }
     }
+
     private void fireChannelReadCompleteIfNeeded(ChannelHandlerContext ctx) {
         if (awaitingReadComplete) {
             awaitingReadComplete = false;
