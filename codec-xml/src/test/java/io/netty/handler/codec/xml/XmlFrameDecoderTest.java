@@ -178,6 +178,46 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeWithCDATABlockContainingClosingTagThenOpeningBracket() {
+        final String xml = "<root>" +
+                "<![CDATA[close </a then open <b]]>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTagThenOpeningBracket() {
+        final String xml = "<root>" +
+                "<!-- close </a then open <b -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTag() {
+        final String xml = "<root>" +
+                "<!-- close </a -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTagThenOpeningBracket() {
+        final String xml = "<root>" +
+                "<?pi close </a then open <b ?>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTag() {
+        final String xml = "<root>" +
+                "<?pi close </a ?>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
     public void testDecodeWithMultipleMessages() {
         final String input = "<root xmlns=\"http://www.acme.com/acme\" status=\"loginok\" " +
                 "timestamp=\"1362410583776\"/>\n\n" +
@@ -203,6 +243,18 @@ public class XmlFrameDecoderTest {
     @Test
     public void testFramingWithSplitClosingTag() {
         testDecodeWithXml(Arrays.asList("<abc>", "123</", "abc>"), "<abc>123</abc>");
+    }
+
+    @Test
+    public void testFramingWithCommentContainingClosingTagThenOpeningBracket() {
+        final String frame = "<root><!-- close </a then open <b --></root>";
+        testDecodeWithXml(Arrays.asList("<root><!-- close </", "a then open <b --></root>"), frame);
+    }
+
+    @Test
+    public void testFramingWithProcessingInstructionContainingClosingTagThenOpeningBracket() {
+        final String frame = "<root><?pi close </a then open <b ?></root>";
+        testDecodeWithXml(Arrays.asList("<root><?pi close </", "a then open <b ?></root>"), frame);
     }
 
     @Test
