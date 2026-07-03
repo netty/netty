@@ -847,7 +847,6 @@ public class FlowControlHandlerTest {
         channel.read();
         channel.read();
 
-
         channel.flushInbound(); // Trigger readComplete event
         assertEquals(Arrays.asList("#r", "1", "#r", "#r"), events);
 
@@ -1168,7 +1167,6 @@ public class FlowControlHandlerTest {
                         events.add("#rc");
                     }
                 });
-
 
         channel.config().setAutoRead(false);
         channel.register();
