@@ -682,7 +682,7 @@ public class CorsHandlerTest {
         assertEquals("null", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertTrue(ReferenceCountUtil.release(response));
     }
-g
+
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
         return simpleRequest(config, origin, null);
     }
