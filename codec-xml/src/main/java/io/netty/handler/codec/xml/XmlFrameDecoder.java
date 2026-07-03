@@ -172,6 +172,14 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                     } else if (inClosingTag) {
                         openBracketsCount--;
                         inClosingTag = false;
+                    } else if (!inCDATASection) {
+                        if (peekBehindByte == '?') {
+                            // an <?xml ?> tag was closed
+                            openBracketsCount--;
+                        } else if (peekBehindByte == '-' && i - 2 > -1 && in.getByte(i - 2) == '-') {
+                            // a <!-- comment --> was closed
+                            openBracketsCount--;
+                        }
                     } else if (inCDATASection && peekBehindByte == ']' && i - 2 > -1 && in.getByte(i - 2) == ']') {
                         // a <![CDATA[...]]> block was closed
                         openBracketsCount--;
