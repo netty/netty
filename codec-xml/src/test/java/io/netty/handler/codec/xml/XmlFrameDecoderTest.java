@@ -18,7 +18,9 @@ package io.netty.handler.codec.xml;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
@@ -258,6 +260,20 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDifferentialFuzzAgainstLegacyDecoder() {
+        for (List<String> xmlFrames : differentialFuzzInputs()) {
+            DecodeResult legacyResult = decodeWith(new LegacyXmlFrameDecoder(1048576), xmlFrames);
+            DecodeResult currentResult = decodeWith(new XmlFrameDecoder(1048576), xmlFrames);
+            if (!legacyResult.equals(currentResult)) {
+                String xml = join(xmlFrames);
+                if (!isExpectedDifference(xml, legacyResult, currentResult)) {
+                    assertEquals(legacyResult, currentResult, "Unexpected differential result for " + xmlFrames);
+                }
+            }
+        }
+    }
+
+    @Test
     public void testDecodeWithSampleXml() {
         for (final String xmlSample : xmlSamples) {
             testDecodeWithXml(xmlSample, xmlSample);
@@ -299,6 +315,285 @@ public class XmlFrameDecoderTest {
 
     private static void testDecodeWithXml(String xml, Object... expected) {
         testDecodeWithXml(Collections.singletonList(xml), expected);
+    }
+
+    private static List<List<String>> differentialFuzzInputs() {
+        List<String> inputs = Arrays.asList(
+                "<root/>",
+                "<root></root>",
+                "<root><child/></root>",
+                "<root><child>text</child></root>",
+                "<root><child><grandchild/></child></root>",
+                "<root><?xml-stylesheet href=\"x\" ?></root>",
+                "<root><!-- comment --></root>",
+                "<root><![CDATA[<child></child>]]></root>",
+                "<root><!-- close </a --></root>",
+                "<root><!-- close </a then open <b --></root>",
+                "<root><?pi close </a ?></root>",
+                "<root><?pi close </a then open <b ?></root>",
+                "<root><![CDATA[close </a then open <b]]></root>",
+                "<root><a></a><b/></root>",
+                "<root><a/></root><root><b/></root>",
+                "<root><a></</a></root>",
+                "<root></</root>",
+                "</</",
+                "<a></</a>"
+        );
+        List<List<String>> fuzzInputs = new ArrayList<List<String>>();
+        for (String input : inputs) {
+            fuzzInputs.add(Collections.singletonList(input));
+            for (int i = 1; i < input.length(); i++) {
+                fuzzInputs.add(Arrays.asList(input.substring(0, i), input.substring(i)));
+            }
+        }
+        return fuzzInputs;
+    }
+
+    private static boolean isExpectedDifference(String xml, DecodeResult legacyResult, DecodeResult currentResult) {
+        if (containsTagLikeContentInComment(xml) || containsTagLikeContentInProcessingInstruction(xml)) {
+            return currentResult.failure == null;
+        }
+        return xml.contains("</<") && CorruptedFrameException.class.getName().equals(currentResult.failure)
+                && !currentResult.failure.equals(legacyResult.failure);
+    }
+
+    private static boolean containsTagLikeContentInComment(String xml) {
+        int start = xml.indexOf("<!--");
+        while (start >= 0) {
+            int end = xml.indexOf("-->", start + 4);
+            if (end < 0) {
+                return false;
+            }
+            if (xml.indexOf('<', start + 4) >= 0 && xml.indexOf('<', start + 4) < end) {
+                return true;
+            }
+            start = xml.indexOf("<!--", end + 3);
+        }
+        return false;
+    }
+
+    private static boolean containsTagLikeContentInProcessingInstruction(String xml) {
+        int start = xml.indexOf("<?");
+        while (start >= 0) {
+            int end = xml.indexOf("?>", start + 2);
+            if (end < 0) {
+                return false;
+            }
+            if (xml.indexOf('<', start + 2) >= 0 && xml.indexOf('<', start + 2) < end) {
+                return true;
+            }
+            start = xml.indexOf("<?", end + 2);
+        }
+        return false;
+    }
+
+    private static DecodeResult decodeWith(ByteToMessageDecoder decoder, List<String> xmlFrames) {
+        EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        List<String> frames = new ArrayList<String>();
+        String failure = null;
+        try {
+            for (String xmlFrame : xmlFrames) {
+                ch.writeInbound(Unpooled.copiedBuffer(xmlFrame, CharsetUtil.UTF_8));
+            }
+        } catch (Exception e) {
+            failure = e.getClass().getName();
+        }
+        try {
+            for (;;) {
+                ByteBuf buf = ch.readInbound();
+                if (buf == null) {
+                    break;
+                }
+                frames.add(buf.toString(CharsetUtil.UTF_8));
+                buf.release();
+            }
+            return new DecodeResult(frames, failure);
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
+    private static String join(List<String> xmlFrames) {
+        StringBuilder builder = new StringBuilder();
+        for (String xmlFrame : xmlFrames) {
+            builder.append(xmlFrame);
+        }
+        return builder.toString();
+    }
+
+    private static final class DecodeResult {
+        final List<String> frames;
+        final String failure;
+
+        DecodeResult(List<String> frames, String failure) {
+            this.frames = frames;
+            this.failure = failure;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof DecodeResult)) {
+                return false;
+            }
+            DecodeResult that = (DecodeResult) o;
+            return frames.equals(that.frames)
+                    && (failure == null ? that.failure == null : failure.equals(that.failure));
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * frames.hashCode() + (failure == null ? 0 : failure.hashCode());
+        }
+
+        @Override
+        public String toString() {
+            return "DecodeResult{frames=" + frames + ", failure=" + failure + '}';
+        }
+    }
+
+    private static final class LegacyXmlFrameDecoder extends ByteToMessageDecoder {
+
+        private final int maxFrameLength;
+
+        LegacyXmlFrameDecoder(int maxFrameLength) {
+            if (maxFrameLength <= 0) {
+                throw new IllegalArgumentException("maxFrameLength: " + maxFrameLength + " (expected: > 0)");
+            }
+            this.maxFrameLength = maxFrameLength;
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            boolean openingBracketFound = false;
+            boolean atLeastOneXmlElementFound = false;
+            boolean inCDATASection = false;
+            long openBracketsCount = 0;
+            int length = 0;
+            int leadingWhiteSpaceCount = 0;
+            final int bufferLength = in.writerIndex();
+
+            if (bufferLength > maxFrameLength) {
+                in.skipBytes(in.readableBytes());
+                fail(bufferLength);
+                return;
+            }
+
+            for (int i = in.readerIndex(); i < bufferLength; i++) {
+                final byte readByte = in.getByte(i);
+                if (!openingBracketFound && Character.isWhitespace(readByte)) {
+                    leadingWhiteSpaceCount++;
+                } else if (!openingBracketFound && readByte != '<') {
+                    fail(ctx);
+                    in.skipBytes(in.readableBytes());
+                    return;
+                } else if (!inCDATASection && readByte == '<') {
+                    openingBracketFound = true;
+
+                    if (i < bufferLength - 1) {
+                        final byte peekAheadByte = in.getByte(i + 1);
+                        if (peekAheadByte == '/') {
+                            int peekFurtherAheadIndex = i + 2;
+                            while (peekFurtherAheadIndex <= bufferLength - 1) {
+                                if (in.getByte(peekFurtherAheadIndex) == '>') {
+                                    openBracketsCount--;
+                                    break;
+                                }
+                                peekFurtherAheadIndex++;
+                            }
+                        } else if (isValidStartCharForXmlElement(peekAheadByte)) {
+                            atLeastOneXmlElementFound = true;
+                            openBracketsCount++;
+                        } else if (peekAheadByte == '!') {
+                            if (isCommentBlockStart(in, i)) {
+                                openBracketsCount++;
+                            } else if (isCDATABlockStart(in, i)) {
+                                openBracketsCount++;
+                                inCDATASection = true;
+                            }
+                        } else if (peekAheadByte == '?') {
+                            openBracketsCount++;
+                        }
+                    }
+                } else if (!inCDATASection && readByte == '/') {
+                    if (i < bufferLength - 1 && in.getByte(i + 1) == '>') {
+                        openBracketsCount--;
+                    }
+                } else if (readByte == '>') {
+                    length = i + 1;
+
+                    if (i - 1 > -1) {
+                        final byte peekBehindByte = in.getByte(i - 1);
+
+                        if (!inCDATASection) {
+                            if (peekBehindByte == '?') {
+                                openBracketsCount--;
+                            } else if (peekBehindByte == '-' && i - 2 > -1 && in.getByte(i - 2) == '-') {
+                                openBracketsCount--;
+                            }
+                        } else if (peekBehindByte == ']' && i - 2 > -1 && in.getByte(i - 2) == ']') {
+                            openBracketsCount--;
+                            inCDATASection = false;
+                        }
+                    }
+
+                    if (atLeastOneXmlElementFound && openBracketsCount == 0) {
+                        break;
+                    }
+                }
+            }
+
+            final int readerIndex = in.readerIndex();
+            int xmlElementLength = length - readerIndex;
+
+            if (openBracketsCount == 0 && xmlElementLength > 0) {
+                if (readerIndex + xmlElementLength >= bufferLength) {
+                    xmlElementLength = in.readableBytes();
+                }
+                final ByteBuf frame = extractFrame(in, readerIndex + leadingWhiteSpaceCount,
+                        xmlElementLength - leadingWhiteSpaceCount);
+                in.skipBytes(xmlElementLength);
+                out.add(frame);
+            }
+        }
+
+        private void fail(long frameLength) {
+            if (frameLength > 0) {
+                throw new TooLongFrameException(
+                        "frame length exceeds " + maxFrameLength + ": " + frameLength + " - discarded");
+            } else {
+                throw new TooLongFrameException(
+                        "frame length exceeds " + maxFrameLength + " - discarding");
+            }
+        }
+
+        private static void fail(ChannelHandlerContext ctx) {
+            ctx.fireExceptionCaught(new CorruptedFrameException("frame contains content before the xml starts"));
+        }
+
+        private static ByteBuf extractFrame(ByteBuf buffer, int index, int length) {
+            return buffer.copy(index, length);
+        }
+
+        private static boolean isValidStartCharForXmlElement(final byte b) {
+            return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b == ':' || b == '_';
+        }
+
+        private static boolean isCommentBlockStart(final ByteBuf in, final int i) {
+            return i < in.writerIndex() - 3
+                    && in.getByte(i + 2) == '-'
+                    && in.getByte(i + 3) == '-';
+        }
+
+        private static boolean isCDATABlockStart(final ByteBuf in, final int i) {
+            return i < in.writerIndex() - 8
+                    && in.getByte(i + 2) == '['
+                    && in.getByte(i + 3) == 'C'
+                    && in.getByte(i + 4) == 'D'
+                    && in.getByte(i + 5) == 'A'
+                    && in.getByte(i + 6) == 'T'
+                    && in.getByte(i + 7) == 'A'
+                    && in.getByte(i + 8) == '[';
+        }
     }
 
     private String sample(String number) throws IOException, URISyntaxException {
