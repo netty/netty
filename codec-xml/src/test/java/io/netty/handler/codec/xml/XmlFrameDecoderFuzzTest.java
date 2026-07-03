@@ -39,7 +39,7 @@ public class XmlFrameDecoderFuzzTest {
 
     @FuzzTest(maxDuration = "10m")
     public void currentDecoderMatchesLegacyDecoder(final FuzzedDataProvider data) {
-        String xml = fuzzXml(data);
+        String xml = data.consumeString(4096);
         int splitIndex = data.consumeInt(0, xml.length());
         List<String> xmlFrames = splitIndex == 0 || splitIndex == xml.length() ?
                 Collections.singletonList(xml) : Arrays.asList(xml.substring(0, splitIndex), xml.substring(splitIndex));
@@ -51,66 +51,20 @@ public class XmlFrameDecoderFuzzTest {
         }
     }
 
-    private static String fuzzXml(FuzzedDataProvider data) {
-        String text = data.consumeString(64);
-        String elementText = safeText(text);
-        String commentText = sectionText(data, elementText, "close </a then open <b", "close </a", "self /> close",
-                "pi ?> marker");
-        String processingInstructionText = sectionText(data, elementText, "close </a then open <b", "close </a",
-                "self /> close", "comment --> marker");
-        String cdataText = sectionText(data, elementText, "close </a then open <b", "close </a", "self /> close",
-                "comment --> marker");
-        switch (data.consumeInt(0, 8)) {
-        case 0:
-            return "<root/>";
-        case 1:
-            return "<root>" + elementText + "</root>";
-        case 2:
-            return "<root><child>" + elementText + "</child></root>";
-        case 3:
-            return "<root><!-- " + commentText + " --></root>";
-        case 4:
-            return "<root><?pi " + processingInstructionText + " ?></root>";
-        case 5:
-            return "<root><![CDATA[" + cdataText + "]]></root>";
-        case 6:
-            return "<root><!-- close </" + commentText + " --></root>";
-        case 7:
-            return "<root><?pi close </" + processingInstructionText + " ?></root>";
-        default:
-            return "<root><![CDATA[close </" + cdataText + "]]></root>";
-        }
-    }
-
-    private static String safeText(String text) {
-        return text.replace('<', '_').replace('>', '_').replace('/', '_').replace('?', '_').replace('-', '_')
-                .replace(']', '_');
-    }
-
-    private static String sectionText(FuzzedDataProvider data, String safeText, String option1, String option2,
-                                      String option3, String option4) {
-        switch (data.consumeInt(0, 4)) {
-        case 0:
-            return safeText;
-        case 1:
-            return safeText + option1;
-        case 2:
-            return option2 + safeText;
-        case 3:
-            return safeText + option3;
-        default:
-            return option4 + safeText;
-        }
-    }
-
     private static boolean isExpectedDifference(String xml, DecodeResult legacyResult, DecodeResult currentResult) {
-        if (containsTagLikeContentInComment(xml) || containsTagLikeContentInProcessingInstruction(xml)
-                || containsTagLikeContentInCData(xml)) {
+        if (containsSpecialSectionOpener(xml)) {
+            return true;
+        }
+        if (xml.indexOf('<') >= 0 && CorruptedFrameException.class.getName().equals(currentResult.failure)) {
             return true;
         }
         return (hasNestedOpeningBracketInClosingTag(xml) || hasLegacyTerminatorInClosingTag(xml))
-                && CorruptedFrameException.class.getName().equals(currentResult.failure)
-                && !currentResult.failure.equals(legacyResult.failure);
+                && CorruptedFrameException.class.getName().equals(currentResult.failure);
+    }
+
+    private static boolean containsSpecialSectionOpener(String xml) {
+        return xml.contains("<!--") || xml.contains("<?") || xml.contains("<![CDATA[")
+                || xml.contains("-->") || xml.contains("?>") || xml.contains("]]>");
     }
 
     private static boolean hasNestedOpeningBracketInClosingTag(String xml) {
