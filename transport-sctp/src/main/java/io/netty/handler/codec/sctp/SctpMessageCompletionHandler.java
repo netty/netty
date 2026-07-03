@@ -133,7 +133,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
     }
 
     private void removeBufferedBytes(List<ByteBuf> buffers) {
-        for (ByteBuf buffer: buffers) {
+        for (ByteBuf buffer : buffers) {
             bufferedBytes -= buffer.readableBytes();
         }
     }
