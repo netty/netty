@@ -27,14 +27,19 @@ import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.test.DisabledForSlowLeakDetection;
+import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -196,6 +201,74 @@ public class HttpContentDecompressorTest {
         decompressChannel.writeInbound(new DefaultLastHttpContent(compressed));
 
         assertEquals((long) chunkSize * numberOfChunks, incomingHandler.total);
+    }
+
+    @Test
+    public void testBrotliDecodingHonorsMaxAllocationAsOutputCap() throws Exception {
+        Assumptions.assumeTrue(Brotli.isAvailable(),
+                "brotli4j native library not available on this platform");
+
+        // 128KB of moderately compressible bytes so the decompressed size
+        // definitely exceeds BrotliDecoder's 64KB default output cap and any
+        // small maxAllocation we might set below.
+        byte[] payload = new byte[128 * 1024];
+        for (int i = 0; i < payload.length; i++) {
+            payload[i] = (byte) (i % 251);
+        }
+        ByteArrayOutputStream compressedOut = new ByteArrayOutputStream();
+        BrotliOutputStream brotliOs = new BrotliOutputStream(compressedOut);
+        brotliOs.write(payload);
+        brotliOs.close();
+        byte[] compressed = compressedOut.toByteArray();
+
+        // Deliberately use a tiny maxAllocation. Before the fix this configured
+        // BrotliDecoder.inputBufferSize = 64, effectively breaking the decoder
+        // for realistic payloads; after the fix it configures outputBufferSize.
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpContentDecompressor(64));
+        try {
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            response.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.BR);
+            response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+            assertTrue(channel.writeInbound(response));
+            assertTrue(channel.writeInbound(new DefaultHttpContent(Unpooled.wrappedBuffer(compressed))));
+            assertTrue(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+            // Drain and concatenate every decompressed HttpContent chunk.
+            byte[] decompressed = new byte[0];
+            int contentChunks = 0;
+            Object msg;
+            while ((msg = channel.readInbound()) != null) {
+                try {
+                    if (msg instanceof HttpContent) {
+                        ByteBuf buf = ((HttpContent) msg).content();
+                        if (buf.readableBytes() > 0) {
+                            contentChunks++;
+                            int len = decompressed.length;
+                            decompressed = Arrays.copyOf(decompressed, len + buf.readableBytes());
+                            buf.readBytes(decompressed, len, buf.readableBytes());
+                        }
+                    }
+                } finally {
+                    ReferenceCountUtil.release(msg);
+                }
+            }
+
+            assertThat(decompressed)
+                    .as("decompressed bytes must match original payload")
+                    .isEqualTo(payload);
+
+            // Regression signal: with maxAllocation=64 correctly routed to
+            // BrotliDecoder.outputBufferSize, a 128KB payload must be forwarded
+            // in many small chunks. Under the previous (buggy) wiring the same
+            // maxAllocation would be applied to inputBufferSize while
+            // outputBufferSize stayed at BrotliDecoder's 64KB default, so only
+            // a handful of large chunks would be emitted.
+            assertThat(contentChunks)
+                    .as("expected many small chunks when maxAllocation=64 caps output size")
+                    .isGreaterThan(100);
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     private static final class ZipBombIncomingHandler extends ChannelInboundHandlerAdapter {
