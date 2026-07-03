@@ -164,7 +164,13 @@ final class OcspClient {
                         // If Future was successful then we have received OCSP response
                         // We will now validate it.
                         if (future.isSuccess()) {
-                            Object responseObject = future.getNow().getResponseObject();
+                            final Object responseObject;
+                            try {
+                                responseObject = future.getNow().getResponseObject();
+                            } catch (OCSPException e) {
+                                responsePromise.setFailure(future.cause());
+                                return;
+                            }
                             if (responseObject instanceof BasicOCSPResp) {
                                 validateResponse(x509Certificate, digestCalculatorProvider, responsePromise,
                                         (BasicOCSPResp) responseObject, derNonce, issuer, validateResponseNonce);
