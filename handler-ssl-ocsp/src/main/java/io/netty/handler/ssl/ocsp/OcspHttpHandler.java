@@ -98,6 +98,7 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         responseFuture.tryFailure(cause);
+        ctx.close();
     }
 
     @Override
@@ -107,6 +108,7 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
             if (!responseFuture.isDone()) {
                 responseFuture.tryFailure(new OCSPException("OCSP response was not received within "
                         + timeoutMillis + "ms"));
+                ctx.close();
             }
         }, timeoutMillis, TimeUnit.MILLISECONDS);
     }

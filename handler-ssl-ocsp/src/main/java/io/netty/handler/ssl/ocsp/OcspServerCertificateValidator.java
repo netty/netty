@@ -17,7 +17,6 @@ package io.netty.handler.ssl.ocsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -155,8 +154,9 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
 
                 assert certificates.length >= 2 : "There must an end-entity certificate and issuer certificate";
 
-                Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
-                        (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);
+                Promise<BasicOCSPResp> ocspRespPromise = ctx.executor().newPromise();
+                OcspClient.query((X509Certificate) certificates[0], (X509Certificate) certificates[1],
+                        validateNonce, ioTransport, dnsNameResolver, ocspRespPromise);
                 ocspQueryInProgress = true;
                 ocspRespPromise.addListener((GenericFutureListener<Future<BasicOCSPResp>>) future -> {
                     ocspQueryInProgress = false;
@@ -210,7 +210,11 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                         }
                     }
                 });
+            } else {
+                ctx.fireUserEventTriggered(evt);
             }
+        } else {
+            ctx.fireUserEventTriggered(evt);
         }
     }
 

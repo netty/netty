@@ -105,11 +105,11 @@ final class OcspClient {
      * @param ioTransport           {@link IoTransport} to use
      * @return {@link Promise} of {@link BasicOCSPResp}
      */
-    static Promise<BasicOCSPResp> query(final X509Certificate x509Certificate,
+    static void query(final X509Certificate x509Certificate,
                                         final X509Certificate issuer, final boolean validateResponseNonce,
-                                        final IoTransport ioTransport, final DnsNameResolver dnsNameResolver) {
+                                        final IoTransport ioTransport, final DnsNameResolver dnsNameResolver,
+                                        final Promise<BasicOCSPResp> responsePromise) {
         final EventLoop eventLoop = ioTransport.eventLoop();
-        final Promise<BasicOCSPResp> responsePromise = eventLoop.newPromise();
         eventLoop.execute(new Runnable() {
             @Override
             public void run() {
@@ -177,7 +177,6 @@ final class OcspClient {
                 }
             }
         });
-        return responsePromise;
     }
 
     /**
