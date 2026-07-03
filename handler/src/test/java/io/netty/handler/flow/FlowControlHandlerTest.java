@@ -713,7 +713,7 @@ public class FlowControlHandlerTest {
     }
 
     @Test
-    public void testSuppressingUpstreamReadCompletes() throws Exception {
+    public void testSuppressingUpstreamReadCompletesStrict() throws Exception {
         final AtomicInteger reads = new AtomicInteger();
         final AtomicInteger readCompletes = new AtomicInteger();
         final EmbeddedChannel channel = new EmbeddedChannel(
@@ -759,6 +759,65 @@ public class FlowControlHandlerTest {
 
         assertEquals(1, reads.get());
         assertEquals(1, readCompletes.get());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testSuppressingUpstreamReadCompletesRelaxed() throws Exception {
+        final List<String> events = new ArrayList<>();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void read(ChannelHandlerContext ctx) throws Exception {
+                        events.add("#r");
+                        super.read(ctx);
+                    }
+                },
+                new FlowControlHandler(DEFAUT_RELEASE_MESSAGES, true),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        events.add((String) msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        events.add("#rc");
+                    }
+                });
+
+
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        assertEquals(Collections.emptyList(), events);
+
+        channel.flushInbound();
+        channel.flushInbound();
+        channel.flushInbound();
+
+        assertEquals(Collections.emptyList(), events);
+
+        channel.read();
+        assertEquals(Collections.singletonList("#r"), events);
+
+        channel.writeInbound("1");
+        assertEquals(Arrays.asList("#r", "1", "#rc"), events);
+
+        channel.flushInbound();
+        channel.flushInbound();
+        assertEquals(Arrays.asList("#r", "1", "#rc"), events);
+
+        channel.read();
+        assertEquals(Arrays.asList("#r", "1", "#rc", "#r"), events);
+
+        channel.flushInbound();
+        assertEquals(Arrays.asList("#r", "1", "#rc", "#r", "#rc"), events);
+
+        channel.flushInbound();
+        assertEquals(Arrays.asList("#r", "1", "#rc", "#r", "#rc"), events);
 
         assertFalse(channel.finishAndReleaseAll());
     }

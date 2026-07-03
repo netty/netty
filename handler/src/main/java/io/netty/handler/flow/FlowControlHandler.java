@@ -105,6 +105,11 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private boolean reading;
 
     /**
+     * {@code true} if downstream is awaiting for readComplete event.
+     */
+    private boolean awaitingReadComplete;
+
+    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
@@ -194,6 +199,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         unsatisfiedReads++;
+        awaitingReadComplete = true;
 
         boolean didSatisfyARead = dequeue(ctx);
         if (config.isAutoRead()) {
@@ -202,7 +208,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             // Auto-read is off, and we have satisfied all reads.
             // As such, we can complete the current read cycle. && !dequeueing makes sure we are completing the
             // read cycle only once in the top-most read() call.
-            ctx.fireChannelReadComplete();
+            fireChannelReadCompleteIfNeeded(ctx);
         } else if (didSatisfyARead) {
             // Auto-read is off, and either reads are still unsatisfied or we are nested in a dequeue.
             // Wait for the outermost call, an upstream channelRead() or a channelReadComplete().
@@ -223,7 +229,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
         if (dequeue(ctx)) {
             if (!config.isAutoRead() && unsatisfiedReads == 0 && !dequeuing) {
-                ctx.fireChannelReadComplete();
+                fireChannelReadCompleteIfNeeded(ctx);
             }
         }
     }
@@ -231,10 +237,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         reading = false;
-        if (propagateReadComplete || config.isAutoRead()) {
+        if (config.isAutoRead()) {
             // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
             // channelReadComplete; spurious upstream completions with no pending read are dropped.
             ctx.fireChannelReadComplete();
+        } else if (propagateReadComplete) {
+            fireChannelReadCompleteIfNeeded(ctx);
         } else if (unsatisfiedReads > 0) {
             // Upstream closed the read cycle, initiating the next one.
             readIfNeeded(ctx);
@@ -245,6 +253,12 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         if (!reading) {
             reading = true;
             ctx.read();
+        }
+    }
+    private void fireChannelReadCompleteIfNeeded(ChannelHandlerContext ctx) {
+        if (awaitingReadComplete) {
+            awaitingReadComplete = false;
+            ctx.fireChannelReadComplete();
         }
     }
 
