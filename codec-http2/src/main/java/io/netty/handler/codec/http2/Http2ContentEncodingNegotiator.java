@@ -46,7 +46,6 @@ final class Http2ContentEncodingNegotiator {
     private SnappyOptions snappyOptions;
 
     Http2ContentEncodingNegotiator(CompressionOptions... options) {
-        ObjectUtil.checkNotNull(options, "options");
         ObjectUtil.deepCheckNotNull("options", options);
 
         for (CompressionOptions option : options) {
