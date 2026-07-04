@@ -796,7 +796,6 @@ public class FlowControlHandlerTest {
                     }
                 });
 
-
         channel.config().setAutoRead(false);
         channel.register();
 
