@@ -1651,6 +1651,23 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testAddComponentsReleasesBuffersOnInvalidIndex() {
+        final ByteBuf buffer = Unpooled.buffer(8).writeZero(8);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() {
+                    compositeByteBuf.addComponents(1, buffer);
+                }
+            });
+            assertEquals(0, buffer.refCnt());
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
+    @Test
     public void testOverflowWhileAddingComponent() {
         int capacity = 1024 * 1024; // 1MB
         final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
@@ -1722,10 +1739,10 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
         final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
         for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
-            buffers.add(buffer.duplicate());
+            buffers.add(buffer.retainedDuplicate());
         }
         // Add one more
-        buffers.add(buffer.duplicate());
+        buffers.add(buffer.retainedDuplicate());
 
         try {
             assertThrows(IllegalArgumentException.class, new Executable() {

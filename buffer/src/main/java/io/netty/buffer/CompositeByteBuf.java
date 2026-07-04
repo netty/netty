@@ -372,24 +372,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             final int cIndex, ByteBuf[] buffers, int arrOffset) {
         final int len = buffers.length, count = len - arrOffset;
 
-        int readableBytes = 0;
         int capacity = capacity();
-        for (int i = arrOffset; i < buffers.length; i++) {
-            ByteBuf b = buffers[i];
-            if (b == null) {
-                break;
-            }
-            readableBytes += b.readableBytes();
-
-            // Check if we would overflow.
-            // See https://github.com/netty/netty/issues/10194
-            checkForOverflow(capacity, readableBytes);
-        }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
+        boolean shifted = false;
         try {
             checkComponentIndex(cIndex);
             shiftComps(cIndex, count); // will increase componentCount
+            shifted = true;
             int nextOffset = cIndex > 0 ? components[cIndex - 1].endOffset : 0;
             for (ci = cIndex; arrOffset < len; arrOffset++, ci++) {
                 ByteBuf b = buffers[arrOffset];
@@ -397,11 +387,23 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                     break;
                 }
                 Component c = newComponent(ensureAccessible(b), nextOffset);
+                int readableBytes = c.length();
+
+                // Check if we would overflow.
+                // See https://github.com/netty/netty/issues/10194
+                checkForOverflow(capacity, readableBytes);
+                capacity += readableBytes;
+
                 components[ci] = c;
                 nextOffset = c.endOffset;
             }
             return this;
         } finally {
+            if (!shifted) {
+                for (; arrOffset < len; ++arrOffset) {
+                    ReferenceCountUtil.safeRelease(buffers[arrOffset]);
+                }
+            }
             // ci is now the index following the last successfully added component
             if (ci < componentCount) {
                 if (ci < cIndex + count) {
