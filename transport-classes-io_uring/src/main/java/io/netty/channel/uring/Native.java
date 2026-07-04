@@ -375,11 +375,11 @@ final class Native {
             // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
             if (IoUring.isSetupSingleIssuerSupported()) {
                 flags |= Native.IORING_SETUP_SINGLE_ISSUER;
-            }
-            // IORING_SETUP_DEFER_TASKRUN also requires IORING_SETUP_SINGLE_ISSUER.
-            if (IoUring.isSetupDeferTaskrunSupported()) {
-                flags |= Native.IORING_SETUP_DEFER_TASKRUN;
-                flags |= Native.IORING_SETUP_TASKRUN_FLAG;
+                // IORING_SETUP_DEFER_TASKRUN also requires IORING_SETUP_SINGLE_ISSUER.
+                if (IoUring.isSetupDeferTaskrunSupported()) {
+                    flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+                    flags |= Native.IORING_SETUP_TASKRUN_FLAG;
+                }
             }
         }
         // liburing uses IORING_SETUP_NO_SQARRAY by default these days, we should do the same by default if possible.
