@@ -518,7 +518,7 @@ public class StompSubframeDecoderTest {
     @Test
     void testMaxNumHeadersEnforcedForInvalidHeaders() {
         // limit to 1 header as CONNECT_FRAME has 2.
-        channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, 3, false));
+        channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, 2, false));
 
         ByteBuf incoming = Unpooled.wrappedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
         assertTrue(channel.writeInbound(incoming));
