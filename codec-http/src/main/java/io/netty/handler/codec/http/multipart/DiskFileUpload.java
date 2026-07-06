@@ -75,7 +75,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setFilename(String filename) {
-        this.filename = ObjectUtil.checkNotNull(filename, "filename");
+        this.filename = FileUploadUtil.validateFileNameForMultiPart(filename);
     }
 
     @Override
