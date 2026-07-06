@@ -106,7 +106,12 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe stompHeadersSubframe = (StompHeadersSubframe) msg;
             ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(stompHeadersSubframe));
-            encodeHeaders(stompHeadersSubframe, buf);
+            try {
+                encodeHeaders(stompHeadersSubframe, buf);
+            } catch (Exception e) {
+                buf.release();
+                PlatformDependent.throwException(e);
+            }
 
             out.add(convertHeadersSubFrame(stompHeadersSubframe, buf));
         } else if (msg instanceof StompContentSubframe) {
@@ -163,7 +168,12 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     private ByteBuf encodeFullFrame(StompFrame frame, ChannelHandlerContext ctx) {
         int contentReadableBytes = frame.content().readableBytes();
         ByteBuf buf = ctx.alloc().buffer(headersSubFrameSize(frame) + contentReadableBytes);
-        encodeHeaders(frame, buf);
+        try {
+            encodeHeaders(frame, buf);
+        } catch (Exception e) {
+            buf.release();
+            PlatformDependent.throwException(e);
+        }
 
         if (contentReadableBytes > 0) {
             buf.writeBytes(frame.content());
@@ -182,26 +192,21 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         for (Entry<CharSequence, CharSequence> entry : frame.headers()) {
             CharSequence headerKey = entry.getKey();
             CharSequence headerValue = entry.getValue();
-            try {
-                if (headerKey.length() == 0) {
-                    throw new IllegalArgumentException("STOMP " + command + " contains empty header name");
+            if (headerKey.length() == 0) {
+                throw new IllegalArgumentException("STOMP " + command + " contains empty header name");
+            }
+            if (shouldEscape) {
+                CharSequence cachedHeaderKey = cache.get(headerKey);
+                if (cachedHeaderKey == null) {
+                    cachedHeaderKey = escape(command, "header name", headerKey);
+                    cache.put(headerKey, cachedHeaderKey);
                 }
-                if (shouldEscape) {
-                    CharSequence cachedHeaderKey = cache.get(headerKey);
-                    if (cachedHeaderKey == null) {
-                        cachedHeaderKey = escape(command, "header name", headerKey);
-                        cache.put(headerKey, cachedHeaderKey);
-                    }
-                    headerKey = cachedHeaderKey;
-                    headerValue = escape(command, "header value", headerValue);
-                } else {
-                    // For CONNECT/CONNECTED: don't escape but REJECT illegal characters
-                    validateNoIllegalCharacters(command, headerKey, "header name");
-                    validateNoIllegalCharacters(command, headerValue, "header value");
-                }
-            } catch (Exception e) {
-                buf.release();
-                PlatformDependent.throwException(e);
+                headerKey = cachedHeaderKey;
+                headerValue = escape(command, "header value", headerValue);
+            } else {
+                // For CONNECT/CONNECTED: don't escape but REJECT illegal characters
+                validateNoIllegalCharacters(command, headerKey, "header name");
+                validateNoIllegalCharacters(command, headerValue, "header value");
             }
 
             ByteBufUtil.writeUtf8(buf, headerKey);
