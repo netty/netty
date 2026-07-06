@@ -1440,6 +1440,14 @@
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method void io.netty.handler.codec.spdy.SpdyHttpDecoder::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.spdy.SpdyHttpDecoder</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
