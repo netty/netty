@@ -40,11 +40,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PkiTestingTlsTest {
 
@@ -282,6 +286,19 @@ public class PkiTestingTlsTest {
                                             if (evt instanceof SslHandshakeCompletionEvent) {
                                                 SslHandshakeCompletionEvent shce = (SslHandshakeCompletionEvent) evt;
                                                 if (shce.isSuccess()) {
+                                                    SSLSession session = handler.engine().getSession();
+                                                    if (session instanceof OpenSslSession) {
+                                                        String namedGroup = ((OpenSslSession) handler.engine()
+                                                                .getSession()).getNamedGroup();
+                                                        if (groups != null) {
+                                                            assertTrue(Arrays.asList(groups).contains(namedGroup));
+                                                        } else {
+                                                            // If not specified explicit we will still use
+                                                            // what we can support.
+                                                            assertTrue(Arrays.asList(OpenSsl.NAMED_GROUPS)
+                                                                    .contains(namedGroup));
+                                                        }
+                                                    }
                                                     promise.setSuccess(shce);
                                                 } else {
                                                     promise.setFailure(shce.cause());

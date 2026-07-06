@@ -2489,6 +2489,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Updated once a new handshake is started and so the SSLSession reused.
         private long lastAccessed = -1;
 
+        private volatile String namedGroup;
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
         private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<String, Object>();
@@ -2653,7 +2654,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     this.cipher = toJavaCipherSuite(cipher, protocol);
                     this.protocol = protocol;
-
+                    try {
+                        this.namedGroup = SSL.getGroupName(ssl);
+                    } catch (Exception e) {
+                        throw new SSLException(e);
+                    }
                     if (clientMode) {
                         if (isEmpty(peerCertificateChain)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
@@ -2723,6 +2728,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
                 }
             }
+        }
+
+        @Override
+        public String getNamedGroup() {
+            return namedGroup;
         }
 
         @Override
