@@ -1428,6 +1428,18 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIFastResetCompressor</new>
+                  <justification>The optional lz4-java dependency exposes this class through LZ4Factory, which is part of Netty's public API to allow users to customize LZ4 implementations.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIHCFastResetCompressor</new>
+                  <justification>The optional lz4-java dependency exposes this class through LZ4Factory, which is part of Netty's public API to allow users to customize LZ4 implementations.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.field.removed</code>
                   <classQualifiedName>io.netty.util.internal.InternalThreadLocalMap</classQualifiedName>
                   <justification>Ignore cache padding.</justification>
