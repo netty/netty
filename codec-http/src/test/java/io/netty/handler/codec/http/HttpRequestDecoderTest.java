@@ -490,6 +490,31 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testNonCrlfControlBytesPrecedingRequestLineAreRejected() {
+        // RFC 9112 §2.2: servers SHOULD ignore "at least one empty line (CRLF)" before the
+        // request-line.  Non-CRLF control bytes are not part of this robustness allowance
+        // and must not be silently swallowed.
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte(0x00);   // NUL  — not an empty CRLF line
+        buf.writeByte(0x01);   // SOH  — not an empty CRLF line
+        buf.writeCharSequence(
+                "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII);
+
+        channel.writeInbound(buf);
+        HttpRequest req = channel.readInbound();
+
+        DecoderResult decoderResult = req.decoderResult();
+        assertTrue(decoderResult.isFailure(),
+                "Non-CRLF control bytes before the request-line must not be silently skipped");
+        assertThat(decoderResult.cause()).isInstanceOf(InvalidLineSeparatorException.class);
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testTooLargeHeaders() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 10, 1024));
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
@@ -1238,6 +1263,33 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
         assertTrue(request.decoderResult().isFailure());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testNulInVersionTokenIsRejected() {
+        // A NUL right before the version token must be rejected.
+        testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNulInMethodTokenIsRejected() {
+        // Control case: a NUL inside the method token is also rejected.
+        testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNormalRequestStillDecodes() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertNotNull(req);
+        assertTrue(req.decoderResult().isSuccess());
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        LastHttpContent last = channel.readInbound();
+        assertNotNull(last);
+        last.release();
         assertFalse(channel.finish());
     }
 }

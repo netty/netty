@@ -24,9 +24,12 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +38,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class IpSubnetFilterTest {
+
+    @Test
+    void noClassCastExceptionIpv4RuleOnly() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("10.10.0.0/16", IpFilterRuleType.ACCEPT);
+        IpSubnetFilter filter = new IpSubnetFilter(false, rule);
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet4Address.getLoopbackAddress(), 80)));
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet6Address.getLoopbackAddress(), 80)));
+    }
+
+    @Test
+    void noClassCastExceptionIpv6RuleOnly() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("::1/16", IpFilterRuleType.ACCEPT);
+        IpSubnetFilter filter = new IpSubnetFilter(false, rule);
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet4Address.getLoopbackAddress(), 80)));
+        assertFalse(filter.accept(null, new InetSocketAddress(Inet6Address.getLoopbackAddress(), 80)));
+    }
 
     @Test
     public void testIpv4DefaultRoute() {
@@ -195,11 +214,28 @@ public class IpSubnetFilterTest {
         assertTrue(ch6.close().isSuccess());
 
         //2001:db8:abcd:0000::/52
-        EmbeddedChannel ch7 = newEmbeddedInetChannel("2001:db8:abcd:1000::",
+        EmbeddedChannel ch7 = newEmbeddedInetChannel("2001:db8:abcd:0000::1",
                 new IpSubnetFilter(ipSubnetFilterRuleList));
         assertFalse(ch7.isActive());
         assertTrue(ch7.close().isSuccess());
     }
+
+    @Test
+    public void testIpv6MaskCorrectlyApplied() {
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.ACCEPT);
+
+        EmbeddedChannel ch = newEmbeddedInetChannel("2001:db8:ffff:0000::",
+                new IpSubnetFilter(false, Collections.singletonList(rule)));
+        assertFalse(ch.isActive());
+        assertTrue(ch.close().isSuccess());
+    }
+
+    @Test
+    public void testIpv6MatchesNoFalsePositiveForAllOnesNetworkBits() {
+        // FFFF:FFFF::1 is NOT in 2001:db8::/32, which will be the case if the comparison is made unsigned.
+        IpSubnetFilterRule rule = new IpSubnetFilterRule("2001:db8::", 32, IpFilterRuleType.ACCEPT);
+        assertFalse(rule.matches(newSockAddress("FFFF:FFFF::1")));
+     }
 
     private static IpSubnetFilterRule buildRejectIP(String ipAddress, int mask) {
         return new IpSubnetFilterRule(ipAddress, mask, IpFilterRuleType.REJECT);

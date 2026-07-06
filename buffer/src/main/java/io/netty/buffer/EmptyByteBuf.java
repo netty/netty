@@ -46,7 +46,7 @@ public final class EmptyByteBuf extends ByteBuf {
     static {
         long emptyByteBufferAddress = 0;
         try {
-            if (PlatformDependent.hasUnsafe()) {
+            if (PlatformDependent.hasDirectByteBufferAddress(EMPTY_BYTE_BUFFER)) {
                 emptyByteBufferAddress = PlatformDependent.directBufferAddress(EMPTY_BYTE_BUFFER);
             }
         } catch (Throwable t) {

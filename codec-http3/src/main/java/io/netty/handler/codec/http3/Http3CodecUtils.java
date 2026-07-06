@@ -57,6 +57,12 @@ final class Http3CodecUtils {
     static final int HTTP3_QPACK_ENCODER_STREAM_TYPE = 0x02;
     static final int HTTP3_QPACK_DECODER_STREAM_TYPE = 0x03;
 
+    /**
+     * Default is unlimited in the RFC but we want to enforce some "security" default limit.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc9114#section-4.2.2">RFC9114 Section 4.2.2</a>.
+     */
+    static final long DEFAULT_MAX_FIELD_SECTION_SIZE = 8192;
+
     private Http3CodecUtils() { }
 
     static long checkIsReservedFrameType(long type) {

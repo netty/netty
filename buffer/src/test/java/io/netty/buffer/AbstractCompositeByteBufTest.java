@@ -25,6 +25,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -1876,6 +1877,52 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals('c', composite.readByte());
 
         composite.release();
+    }
+
+    @Test
+    // See https://github.com/netty/netty/issues/16799
+    public void testDiscardReadComponentsWithOffsetSourceBuffersDoesNotCorruptNextRead() {
+        final int bufferSize = 32768;
+        byte[] sourceData = new byte[2 * bufferSize];
+        CompositeByteBuf composite = ByteBufAllocator.DEFAULT.compositeDirectBuffer();
+
+        try {
+            Arrays.fill(sourceData, (byte) 0x01);
+            ByteBuf buffer1 = directBuffer(2 * bufferSize);
+            buffer1.writeBytes(sourceData, 0, 9);
+            buffer1.skipBytes(9);
+            buffer1.writeBytes(sourceData, 0, bufferSize);
+            composite.addFlattenedComponents(true, buffer1);
+            assertEquals(bufferSize, composite.readableBytes());
+
+            Arrays.fill(sourceData, (byte) 0x02);
+            ByteBuf buffer2 = directBuffer(2 * bufferSize);
+            buffer2.writeBytes(sourceData, 0, 32781);
+            buffer2.skipBytes(32781);
+            buffer2.writeBytes(sourceData, 0, bufferSize);
+            composite.addFlattenedComponents(true, buffer2);
+            assertEquals(2 * bufferSize, composite.readableBytes());
+
+            composite.skipBytes(bufferSize + 9);
+            assertEquals((byte) 0x02, composite.readByte());
+            composite.skipBytes(22519);
+            composite.discardReadComponents();
+
+            Arrays.fill(sourceData, (byte) 0x03);
+            ByteBuf buffer3 = directBuffer(bufferSize);
+            buffer3.writeBytes(sourceData, 0, bufferSize);
+            composite.addFlattenedComponents(true, buffer3);
+
+            Arrays.fill(sourceData, (byte) 0x04);
+            ByteBuf buffer4 = directBuffer(bufferSize);
+            buffer4.writeBytes(sourceData, 0, bufferSize);
+            composite.addFlattenedComponents(true, buffer4);
+
+            composite.skipBytes(bufferSize);
+            assertEquals((byte) 0x03, composite.readByte());
+        } finally {
+            composite.release();
+        }
     }
 
 }

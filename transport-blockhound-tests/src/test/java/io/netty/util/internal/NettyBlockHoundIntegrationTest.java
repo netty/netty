@@ -40,6 +40,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.util.HashedWheelTimer;
@@ -75,6 +76,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -415,6 +417,40 @@ public class NettyBlockHoundIntegrationTest {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .datagramChannelFactory(NioDatagramChannel::new);
             doTestParseResolverFilesAllowsBlockingCalls(builder::build);
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testDnsNameResolverAllowsBlockingCalls() throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        List<Throwable> error = new ArrayList<>();
+        ThreadFactory threadFactory = r -> {
+            Thread t = new DefaultThreadFactory("test").newThread(r);
+            t.setUncaughtExceptionHandler((t1, e) -> {
+                error.add(e);
+                latch.countDown();
+            });
+            return t;
+        };
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, threadFactory, NioIoHandler.newFactory());
+        try (DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
+                .datagramChannelFactory(NioDatagramChannel::new)
+                .build()) {
+            resolver.resolve("netty.io").addListener(future -> {
+                if (!future.isSuccess()) {
+                    error.add(future.cause());
+                }
+                latch.countDown();
+            });
+            latch.await();
+            for (Throwable t : error) {
+                if (t instanceof BlockingOperationError || t.getCause() instanceof BlockingOperationError) {
+                    fail("BlockingOperationError was thrown: " + t);
+                }
+            }
         } finally {
             group.shutdownGracefully();
         }

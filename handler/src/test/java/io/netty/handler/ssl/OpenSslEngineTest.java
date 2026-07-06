@@ -27,12 +27,14 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.test.LeakPresenceExtension;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -85,6 +87,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+@ExtendWith(LeakPresenceExtension.class)
 public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
@@ -1878,6 +1881,101 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 cleanupServerSslEngine(serverEngine);
             }
         } finally {
+            ReferenceCountUtil.safeRelease(rsaCredential);
+            ReferenceCountUtil.safeRelease(ecdsaCredential);
+        }
+    }
+
+    @Test
+    public void addCredentialRetainsAndShutdownReleases() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
+        OpenSslCredential credential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+
+        SslContext serverContext = SslContextBuilder
+                .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .build();
+
+        try {
+            ReferenceCountedOpenSslEngine engine =
+                    (ReferenceCountedOpenSslEngine) serverContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            try {
+                assertThat(credential.refCnt()).isEqualTo(1);
+                engine.addCredential(credential);
+                assertThat(credential.refCnt()).isEqualTo(2);
+                engine.shutdown();
+                assertThat(credential.refCnt()).isEqualTo(1);
+            } finally {
+                ReferenceCountUtil.release(engine);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(credential);
+            ReferenceCountUtil.release(serverContext);
+        }
+    }
+
+    @Test
+    public void testServerSelectsAddedCredentialWithOpenSslProvider() throws Exception {
+        assumeTrue(OpenSslCredential.isAvailable());
+
+        // The base/legacy certificate is RSA; the ECDSA certificate is supplied ONLY via
+        // addCredentials(). A client that offers only an ECDSA-auth cipher therefore forces the
+        // server to select the added ECDSA credential. This must work for the default OPENSSL
+        // provider (not just OPENSSL_REFCNT): newServerContextInternal must forward the credentials
+        // to OpenSslServerContext, otherwise they are silently dropped and the handshake fails with
+        // NO_SHARED_CIPHER.
+        OpenSslCredential rsaCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+
+        SslContext serverSslContext = null;
+        SslContext clientSslContext = null;
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            serverSslContext = SslContextBuilder
+                    .forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .addCredentials(rsaCredential, ecdsaCredential)
+                    .protocols("TLSv1.2")
+                    .ciphers(Arrays.asList("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"))
+                    .build();
+
+            clientSslContext = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .protocols("TLSv1.2")
+                    .ciphers(Arrays.asList("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"))
+                    .build();
+
+            clientEngine = clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            serverEngine = serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+            handshake(BufferType.Direct, false, clientEngine, serverEngine);
+
+            X509Certificate served =
+                    (X509Certificate) clientEngine.getSession().getPeerCertificates()[0];
+            assertEquals("EC", served.getPublicKey().getAlgorithm());
+        } finally {
+            if (clientEngine != null) {
+                cleanupClientSslEngine(clientEngine);
+            }
+            if (serverEngine != null) {
+                cleanupServerSslEngine(serverEngine);
+            }
+            if (clientSslContext != null) {
+                cleanupClientSslContext(clientSslContext);
+            }
+            if (serverSslContext != null) {
+                cleanupServerSslContext(serverSslContext);
+            }
             ReferenceCountUtil.safeRelease(rsaCredential);
             ReferenceCountUtil.safeRelease(ecdsaCredential);
         }

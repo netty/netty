@@ -20,9 +20,7 @@ import io.netty.buffer.ByteBuf;
 import java.net.InetSocketAddress;
 
 /**
- * {@link QuicTokenHandler} which will disable token generation / validation completely.
- * This will reduce the round-trip for QUIC connection migration, but will also weaking the
- * security during connection establishment.
+ * {@link QuicTokenHandler} which will not use any token and so also fail to validate any given token.
  */
 final class NoQuicTokenHandler implements QuicTokenHandler {
 
@@ -38,7 +36,7 @@ final class NoQuicTokenHandler implements QuicTokenHandler {
 
     @Override
     public int validateToken(ByteBuf token, InetSocketAddress address) {
-        return 0;
+        return -1;
     }
 
     @Override

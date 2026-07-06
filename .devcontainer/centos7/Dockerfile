@@ -52,7 +52,7 @@ RUN wget -q https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_
 RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io?ci=true" | bash
+RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
 ARG java_version="11.0.26-zulu"
 ENV JAVA_VERSION=$java_version

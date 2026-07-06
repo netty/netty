@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.redis;
 
+import io.netty.util.internal.SystemPropertyUtil;
+
 /**
  * Constant values for Redis encoder/decoder.
  */
@@ -43,4 +45,7 @@ final class RedisConstants {
     static final short NULL_SHORT = RedisCodecUtil.makeShort('-', '1');
 
     static final short EOL_SHORT = RedisCodecUtil.makeShort('\r', '\n');
+
+    static final String PROP_REDIS_MAX_ARRAY_LENGTH = "io.netty.handler.codec.redis.maxArrayLength";
+    static final int REDIS_MAX_ARRAY_LENGTH = SystemPropertyUtil.getInt(PROP_REDIS_MAX_ARRAY_LENGTH, 1_000_000);
 }

@@ -41,6 +41,7 @@ import java.nio.ReadOnlyBufferException;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -155,6 +156,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
     private boolean receivedShutdown;
     private volatile boolean destroyed;
+    // Credentials added via addCredential(); released in shutdown() to balance the retain() in addCredential().
+    private List<OpenSslCredential> engineCredentials;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
     private boolean hasTLSv13Cipher;
@@ -594,6 +597,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // the finalizer as well.
             if (engines != null) {
                 engines.remove(ssl);
+            }
+            if (engineCredentials != null) {
+                for (OpenSslCredential credential : engineCredentials) {
+                    credential.release();
+                }
+                engineCredentials = null;
             }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
@@ -2346,6 +2355,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             credential.retain();
             try {
                 SSL.addCredential(ssl, pointer.credentialAddress());
+                if (engineCredentials == null) {
+                    engineCredentials = new ArrayList<>();
+                }
+                engineCredentials.add(credential);
             } catch (Exception e) {
                 credential.release();
                 throw new SSLException("Failed to add credential to SSL engine", e);
@@ -2359,6 +2372,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      *
      * <p>This method returns the credential that was ultimately chosen by the TLS handshake.
      * It's useful for introspection after the handshake completes.
+     *
+     * <p><strong>Lifetime warning:</strong> the returned {@link OpenSslCredential} is a
+     * <em>borrowed</em> reference backed by a native pointer owned by BoringSSL. It is only valid
+     * while this engine is alive. Do <em>not</em> retain the returned credential and use it after
+     * {@link #shutdown()} has been called — doing so will access freed native memory.
      *
      * <p>This is a BoringSSL-specific feature.
      *

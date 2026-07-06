@@ -612,7 +612,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 segmentSize = 0;
             }
 
-            long bufferAddress = IoUring.memoryAddress(data);
+            long bufferAddress = IoUring.memoryAddress(data) + data.readerIndex();
             return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
         }
 

@@ -45,6 +45,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -70,6 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Combines algorithm-specific testing with end-to-end scenarios using reliable
  * single-byte message handlers to avoid partial message issues.
  */
+@Isolated("Adds and removes Security providers")
 @EnabledIf("isSignatureDelegationSupported")
 @Timeout(30)
 public class JdkDelegatingPrivateKeyMethodTest {

@@ -387,19 +387,22 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                         return;
                     }
 
-                    // Also take padding into account.
-                    incrementDecompressedBytes(padding);
+                    try {
+                        // Also take padding into account.
+                        incrementDecompressedBytes(padding);
 
-                    incrementDecompressedBytes(buf.readableBytes());
-                    // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
-                    // from the decompressed amount which the user knows about to the compressed amount which flow
-                    // control knows about.
-                    connection.local().flowController().consumeBytes(stream,
-                            listener.onDataRead(targetCtx, stream.id(), buf, padding, false));
-                    padding = 0; // Padding is only communicated once on the first iteration.
-                    buf.release();
+                        incrementDecompressedBytes(buf.readableBytes());
+                        // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
+                        // from the decompressed amount which the user knows about to the compressed amount which flow
+                        // control knows about.
+                        connection.local().flowController().consumeBytes(stream,
+                                listener.onDataRead(targetCtx, stream.id(), buf, padding, false));
+                        padding = 0; // Padding is only communicated once on the first iteration.
 
-                    dataDecompressed = true;
+                        dataDecompressed = true;
+                    } finally {
+                        buf.release();
+                    }
                 }
 
                 @Override
