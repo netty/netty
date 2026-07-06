@@ -219,8 +219,10 @@ class OcspClientTest extends AbstractOcspTest {
             }, NioDatagramChannel::new);
 
             DnsNameResolver resolver = OcspServerCertificateValidator.createDefaultResolver(transport);
-            Promise<BasicOCSPResp> promise = OcspClient.query(
-                    targetCert.getCertificate(), caRoot.getCertificate(), false, transport, resolver);
+            Promise<BasicOCSPResp> promise = transport.eventLoop().newPromise();
+            OcspClient.query(
+                    targetCert.getCertificate(), caRoot.getCertificate(), false,
+                    transport, resolver, promise);
 
             promise.await();
 
