@@ -25,6 +25,8 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -398,6 +400,44 @@ public class HaProxyMessageEncoderTest {
                         invalidUnixAddress, "/var/run/dst.sock", 0, 0);
             }
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {'\r', '\n', ' '})
+    public void testIllegalCharacterInV1UnixAddress(char illegal) {
+        final String invalidUnixAddress = "/var/run/dst" + illegal + ".sock";
+        final String fineUnixAddress = "/var/run/dst.sock";
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        invalidUnixAddress, fineUnixAddress, 0, 0);
+            }
+        });
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new HAProxyMessage(
+                        HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                        fineUnixAddress, invalidUnixAddress, 0, 0);
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {'\r', '\n', ' '})
+    public void testIllegalV1UnixCharactersAreFineInV2(char illegal) {
+        final String suspectUnixAddress = "/var/run/dst" + illegal + ".sock";
+        final String fineUnixAddress = "/var/run/dst.sock";
+        new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                suspectUnixAddress, fineUnixAddress, 0, 0)
+                .release();
+        new HAProxyMessage(
+                HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
+                fineUnixAddress, suspectUnixAddress, 0, 0)
+                .release();
     }
 
     @Test
