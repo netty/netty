@@ -337,6 +337,7 @@ jobs:
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           targets: x86_64-pc-windows-msvc
+          toolchain: 'stable'
 
       # Pinned to v2
       - name: Add msbuild to PATH
