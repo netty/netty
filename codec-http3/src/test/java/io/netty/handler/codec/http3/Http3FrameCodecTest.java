@@ -94,6 +94,11 @@ public class Http3FrameCodecTest {
     private EmbeddedQuicStreamChannel codecChannel;
 
     private void setUp(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+        setUp(maxBlockedStreams, delayQpackStreams, Integer.MAX_VALUE);
+    }
+
+    private void setUp(int maxBlockedStreams, boolean delayQpackStreams, int maxUnknownFramePayloadLength)
+            throws Exception {
         parent = new EmbeddedQuicChannel(true);
         qpackAttributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, qpackAttributes);
@@ -129,7 +134,8 @@ public class Http3FrameCodecTest {
                         Http3RequestStreamDecodeStateValidator decStateValidator =
                                 new Http3RequestStreamDecodeStateValidator();
                         ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder,
-                                MAX_HEADER_SIZE, encoder, encStateValidator, decStateValidator, (id, v) -> false));
+                                MAX_HEADER_SIZE, maxUnknownFramePayloadLength, encoder,
+                                encStateValidator, decStateValidator, (id, v) -> false));
                         ch.pipeline().addLast(encStateValidator);
                         ch.pipeline().addLast(decStateValidator);
                     }
@@ -372,6 +378,17 @@ public class Http3FrameCodecTest {
         setUp(maxBlockedStreams, delayQpackStreams);
         testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams,
                 new DefaultHttp3UnknownFrame(Http3CodecUtils.MIN_RESERVED_FRAME_TYPE, Unpooled.buffer().writeLong(8)));
+    }
+
+    @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
+    @MethodSource("data")
+    public void testHttp3UnknownFrameWithInvalidPayloadLength(
+            boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+        setUp(maxBlockedStreams, delayQpackStreams, 127);
+        assertThrows(Http3Exception.class, () ->
+                testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams,
+                        new DefaultHttp3UnknownFrame(Http3CodecUtils.MIN_RESERVED_FRAME_TYPE,
+                                Unpooled.buffer().writeZero(128))));
     }
 
     // Reserved types that were used in HTTP/2 and should close the connection with an error
