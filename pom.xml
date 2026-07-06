@@ -1063,7 +1063,7 @@
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.10.1</version>
+        <version>1.11.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1425,6 +1425,18 @@
                   <regex>true</regex>
                   <package>io\.netty\..*</package>
                   <justification>They're not "external classes" if they're from a Netty package.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIFastResetCompressor</new>
+                  <justification>The optional lz4-java dependency exposes this class through LZ4Factory, which is part of Netty's public API to allow users to customize LZ4 implementations.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4JNIHCFastResetCompressor</new>
+                  <justification>The optional lz4-java dependency exposes this class through LZ4Factory, which is part of Netty's public API to allow users to customize LZ4 implementations.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
