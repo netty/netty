@@ -88,7 +88,8 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
                                         @Nullable Http3Settings.NonStandardHttp3SettingsValidator
                                                 nonStandardSettingsValidator) {
         this(requestStreamHandler, inboundControlStreamHandler, unknownInboundStreamHandlerFactory,
-                localSettings, disableQpackDynamicTable, nonStandardSettingsValidator, null);
+                localSettings, disableQpackDynamicTable, nonStandardSettingsValidator, null,
+                Http3CodecUtils.DEFAULT_MAX_UNKNOWN_FRAME_PAYLOAD_LENGTH);
     }
 
     /**
@@ -109,6 +110,7 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      *                                              use when validating settings that are non-standard.
      * @param sensitivityDetector                   detector that marks sensitive headers for QPACK Never Indexed
      *                                              encoding, or {@code null} to use the historical default.
+     * @param maxUnknownFramePayloadLength          the maximum payload size of an unknown frame.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler,
                                         @Nullable ChannelHandler inboundControlStreamHandler,
@@ -116,9 +118,11 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
                                         @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable,
                                         @Nullable Http3Settings.NonStandardHttp3SettingsValidator
                                                 nonStandardSettingsValidator,
-                                        @Nullable QpackSensitivityDetector sensitivityDetector) {
+                                        @Nullable QpackSensitivityDetector sensitivityDetector,
+                                        int maxUnknownFramePayloadLength) {
         super(true, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
-                disableQpackDynamicTable, nonStandardSettingsValidator, sensitivityDetector);
+                disableQpackDynamicTable, nonStandardSettingsValidator, sensitivityDetector,
+                maxUnknownFramePayloadLength);
         this.requestStreamHandler = ObjectUtil.checkNotNull(requestStreamHandler, "requestStreamHandler");
     }
 
