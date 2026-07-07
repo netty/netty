@@ -446,12 +446,16 @@ public class HttpContentEncoderTest {
 
     @Test
     public void testPipelineDepthLimited() {
-        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder(2));
+        final EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder(2));
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
-        assertThrows(DecoderException.class, () -> ch.writeInbound(
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+            }
+        });
 
         ch.finishAndReleaseAll();
     }

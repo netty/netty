@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.handler.codec.http.HttpConstants;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -48,7 +49,12 @@ public class MemoryFileUploadTest {
     }
 
     private static void assertIllegalFilename(String filename) {
-        assertThatThrownBy(() -> new MemoryFileUpload("f", filename, "plain/text", null, null, 0))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                new MemoryFileUpload("f", filename, "plain/text", null, null, 0);
+            }
+        })
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Illegal filename character");
     }
