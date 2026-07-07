@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -53,9 +54,12 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
     OcspHttpHandler(Promise<OCSPResp> responsePromise, long timeoutMillis) {
         this.responseFuture = checkNotNull(responsePromise, "ResponsePromise");
         this.timeoutMillis = ObjectUtil.checkPositive(timeoutMillis, "timeoutMillis");
-        this.responseFuture.addListener(f -> {
-            if (timeoutFuture != null) {
-                timeoutFuture.cancel(true);
+        this.responseFuture.addListener(new GenericFutureListener<Future<? super OCSPResp>>() {
+            @Override
+            public void operationComplete(Future<? super OCSPResp> future) throws Exception {
+                if (timeoutFuture != null) {
+                    timeoutFuture.cancel(true);
+                }
             }
         });
     }
