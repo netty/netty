@@ -105,13 +105,16 @@ final class OcspHttpHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         super.write(ctx, msg, promise);
-        timeoutFuture = ctx.executor().schedule(() -> {
-            if (!responseFuture.isDone()) {
-                responseFuture.tryFailure(new OCSPException("OCSP response was not received within "
-                        + timeoutMillis + "ms"));
-                ctx.close();
+        timeoutFuture = ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (!responseFuture.isDone()) {
+                    responseFuture.tryFailure(new OCSPException("OCSP response was not received within "
+                            + timeoutMillis + "ms"));
+                    ctx.close();
+                }
             }
         }, timeoutMillis, TimeUnit.MILLISECONDS);
     }
