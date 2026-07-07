@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -130,18 +131,28 @@ public class StompSubframeEncoderTest {
     @Test
     void mustRejectNulCharacterInHeaders() {
         // The NUL character has no escape and is always rejected.
-        StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
+        final StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
         frame1.headers()
                 .add("header\0", "value");
-        assertThatThrownBy(() -> channel.writeOutbound(frame1))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(frame1);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
 
-        StompFrame frame2 = new DefaultStompFrame(StompCommand.CONNECT);
+        final StompFrame frame2 = new DefaultStompFrame(StompCommand.CONNECT);
         frame2.headers()
                 .add("header", "value\0");
-        assertThatThrownBy(() -> channel.writeOutbound(frame2))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(frame2);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
@@ -149,10 +160,15 @@ public class StompSubframeEncoderTest {
 
     @Test
     void mustRejectEmptyHeaderNames() {
-        StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
+        final StompFrame frame1 = new DefaultStompFrame(StompCommand.MESSAGE);
         frame1.headers()
                 .add("", "value");
-        assertThatThrownBy(() -> channel.writeOutbound(frame1))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(frame1);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty header name");
@@ -180,18 +196,28 @@ public class StompSubframeEncoderTest {
     @ParameterizedTest
     @ValueSource(chars = {'\r', '\n', '\0', ':'})
     void mustRejectIllegalCharsInConnectCommandHeaders(char illegalChar) {
-        StompFrame connectFrame1 = new DefaultStompFrame(StompCommand.CONNECT);
+        final StompFrame connectFrame1 = new DefaultStompFrame(StompCommand.CONNECT);
         connectFrame1.headers()
                 .add("header" + illegalChar, "value");
-        assertThatThrownBy(() -> channel.writeOutbound(connectFrame1))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(connectFrame1);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
 
-        StompFrame connectFrame2 = new DefaultStompFrame(StompCommand.CONNECT);
+        final StompFrame connectFrame2 = new DefaultStompFrame(StompCommand.CONNECT);
         connectFrame2.headers()
                 .add("header", "value" + illegalChar);
-        assertThatThrownBy(() -> channel.writeOutbound(connectFrame2))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(connectFrame2);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
@@ -219,18 +245,28 @@ public class StompSubframeEncoderTest {
     @ParameterizedTest
     @ValueSource(chars = {'\r', '\n', '\0', ':'})
     void mustRejectIllegalCharsInConnectedCommandHeaders(char illegalChar) {
-        StompFrame connectedFrame1 = new DefaultStompFrame(StompCommand.CONNECTED);
+        final StompFrame connectedFrame1 = new DefaultStompFrame(StompCommand.CONNECTED);
         connectedFrame1.headers()
                 .add("header" + illegalChar, "name");
-        assertThatThrownBy(() -> channel.writeOutbound(connectedFrame1))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(connectedFrame1);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
 
-        StompFrame connectedFrame2 = new DefaultStompFrame(StompCommand.CONNECTED);
+        final StompFrame connectedFrame2 = new DefaultStompFrame(StompCommand.CONNECTED);
         connectedFrame2.headers()
                 .add("header", "name" + illegalChar);
-        assertThatThrownBy(() -> channel.writeOutbound(connectedFrame2))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeOutbound(connectedFrame2);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("illegal character");
