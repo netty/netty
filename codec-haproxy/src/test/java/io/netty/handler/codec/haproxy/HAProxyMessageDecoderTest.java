@@ -1296,7 +1296,12 @@ public class HAProxyMessageDecoderTest {
         final ByteBuf invalidData = buffer().writeBytes(
                 new byte[] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, (byte) 0xFF });
         invalidData.writeZero(64);
-        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(invalidData));
+        assertThrows(HAProxyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeInbound(invalidData);
+            }
+        });
     }
 
     @Test
