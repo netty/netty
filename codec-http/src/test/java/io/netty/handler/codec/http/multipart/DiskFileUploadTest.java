@@ -315,7 +315,7 @@ public class DiskFileUploadTest {
         assertIllegalFilename("f" + ((char) illegal));
     }
 
-    private static void assertIllegalFilename(String filename) {
+    private static void assertIllegalFilename(final String filename) {
         assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
             @Override
             public void call() throws Throwable {
