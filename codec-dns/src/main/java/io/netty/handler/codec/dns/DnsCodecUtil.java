@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.*;
 
@@ -157,7 +158,7 @@ final class DnsCodecUtil {
             encodeDomainName(domainName, result);
         } catch (Throwable cause) {
             result.release();
-            throw cause;
+            PlatformDependent.throwException(cause);
         }
         return result;
     }
