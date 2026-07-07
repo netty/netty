@@ -43,8 +43,9 @@ class OcspClientTest {
             X509Certificate serverCert = certs[0];
             X509Certificate certIssuer = certs[1];
 
-            Promise<BasicOCSPResp> promise = OcspClient.query(serverCert, certIssuer, false,
-                    IoTransport.DEFAULT, createDefaultResolver(IoTransport.DEFAULT));
+            Promise<BasicOCSPResp> promise = IoTransport.DEFAULT.eventLoop().newPromise();
+            OcspClient.query(serverCert, certIssuer, false,
+                    IoTransport.DEFAULT, createDefaultResolver(IoTransport.DEFAULT), promise);
             BasicOCSPResp basicOCSPResp = promise.get();
 
             // 'null' means certificate is valid

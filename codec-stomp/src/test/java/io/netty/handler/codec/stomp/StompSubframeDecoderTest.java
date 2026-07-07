@@ -18,6 +18,7 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static io.netty.util.CharsetUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -495,5 +497,37 @@ public class StompSubframeDecoderTest {
         content.release();
 
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    void testMaxNumHeadersEnforced() {
+        // limit to 1 header as CONNECT_FRAME has 2.
+        channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, 1, true));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(CONNECT_FRAME.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+
+        assertInstanceOf(TooLongFrameException.class,
+                headersSubFrame.decoderResult().cause());
+    }
+
+    @Test
+    void testMaxNumHeadersEnforcedForInvalidHeaders() {
+        // limit to 1 header as CONNECT_FRAME has 2.
+        channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, 2, false));
+
+        ByteBuf incoming = Unpooled.wrappedBuffer(FRAME_WITH_INVALID_HEADER.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+
+        assertInstanceOf(TooLongFrameException.class,
+                headersSubFrame.decoderResult().cause());
     }
 }

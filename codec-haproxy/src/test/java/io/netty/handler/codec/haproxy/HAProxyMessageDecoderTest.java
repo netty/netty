@@ -1292,6 +1292,14 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
+    public void testInvalidProtocolUnsigned() {
+        final ByteBuf invalidData = buffer().writeBytes(
+                new byte[] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, (byte) 0xFF });
+        invalidData.writeZero(64);
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(invalidData));
+    }
+
+    @Test
     public void testNestedTLV() throws Exception {
         ByteArrayOutputStream headerWriter = new ByteArrayOutputStream();
         //src_ip = "AAAA", dst_ip = "BBBB", src_port = "CC", dst_port = "DD"

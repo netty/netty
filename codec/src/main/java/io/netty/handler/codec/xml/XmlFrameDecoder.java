@@ -88,6 +88,9 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         boolean openingBracketFound = false;
         boolean atLeastOneXmlElementFound = false;
         boolean inCDATASection = false;
+        boolean inCommentBlock = false;
+        boolean inProcessingInstruction = false;
+        boolean inClosingTag = false;
         long openBracketsCount = 0;
         int length = 0;
         int leadingWhiteSpaceCount = 0;
@@ -110,22 +113,18 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                 fail(ctx);
                 in.skipBytes(in.readableBytes());
                 return;
-            } else if (!inCDATASection && readByte == '<') {
+            } else if (inClosingTag && readByte == '<') {
+                fail(ctx);
+                in.skipBytes(in.readableBytes());
+                return;
+            } else if (!inCDATASection && !inCommentBlock && !inProcessingInstruction && readByte == '<') {
                 openingBracketFound = true;
 
                 if (i < bufferLength - 1) {
                     final byte peekAheadByte = in.getByte(i + 1);
                     if (peekAheadByte == '/') {
                         // found </, we must check if it is enclosed
-                        int peekFurtherAheadIndex = i + 2;
-                        while (peekFurtherAheadIndex <= bufferLength - 1) {
-                            //if we have </ and enclosing > we can decrement openBracketsCount
-                            if (in.getByte(peekFurtherAheadIndex) == '>') {
-                                openBracketsCount--;
-                                break;
-                            }
-                            peekFurtherAheadIndex++;
-                        }
+                        inClosingTag = true;
                     } else if (isValidStartCharForXmlElement(peekAheadByte)) {
                         atLeastOneXmlElementFound = true;
                         // char after < is a valid xml element start char,
@@ -135,6 +134,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                         if (isCommentBlockStart(in, i)) {
                             // <!-- comment --> start found
                             openBracketsCount++;
+                            inCommentBlock = true;
                         } else if (isCDATABlockStart(in, i)) {
                             // <![CDATA[ start found
                             openBracketsCount++;
@@ -143,9 +143,10 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                     } else if (peekAheadByte == '?') {
                         // <?xml ?> start found
                         openBracketsCount++;
+                        inProcessingInstruction = true;
                     }
                 }
-            } else if (!inCDATASection && readByte == '/') {
+            } else if (!inCDATASection && !inCommentBlock && !inProcessingInstruction && readByte == '/') {
                 if (i < bufferLength - 1 && in.getByte(i + 1) == '>') {
                     // found />, decrementing openBracketsCount
                     openBracketsCount--;
@@ -156,7 +157,22 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                 if (i - 1 > -1) {
                     final byte peekBehindByte = in.getByte(i - 1);
 
-                    if (!inCDATASection) {
+                    if (inCommentBlock) {
+                        if (peekBehindByte == '-' && i - 2 > -1 && in.getByte(i - 2) == '-') {
+                            // a <!-- comment --> was closed
+                            openBracketsCount--;
+                            inCommentBlock = false;
+                        }
+                    } else if (inProcessingInstruction) {
+                        if (peekBehindByte == '?') {
+                            // an <?xml ?> tag was closed
+                            openBracketsCount--;
+                            inProcessingInstruction = false;
+                        }
+                    } else if (inClosingTag) {
+                        openBracketsCount--;
+                        inClosingTag = false;
+                    } else if (!inCDATASection) {
                         if (peekBehindByte == '?') {
                             // an <?xml ?> tag was closed
                             openBracketsCount--;
@@ -164,7 +180,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                             // a <!-- comment --> was closed
                             openBracketsCount--;
                         }
-                    } else if (peekBehindByte == ']' && i - 2 > -1 && in.getByte(i - 2) == ']') {
+                    } else if (inCDATASection && peekBehindByte == ']' && i - 2 > -1 && in.getByte(i - 2) == ']') {
                         // a <![CDATA[...]]> block was closed
                         openBracketsCount--;
                         inCDATASection = false;
