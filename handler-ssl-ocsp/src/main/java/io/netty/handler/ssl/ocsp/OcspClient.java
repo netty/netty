@@ -103,7 +103,7 @@ final class OcspClient {
             @Override
             public void run() {
                 try {
-                    DigestCalculatorProvider digestCalculatorProvider = new JcaDigestCalculatorProviderBuilder()
+                    final DigestCalculatorProvider digestCalculatorProvider = new JcaDigestCalculatorProviderBuilder()
                             .build();
 
                     CertificateID certificateID = new CertificateID(digestCalculatorProvider.get(HASH_SHA1),
