@@ -31,6 +31,10 @@ RUN yum install -y \
  make \
  openssl-devel \
  perl \
+ perl-IPC-Cmd \
+ perl-Time-Piece \
+ perl-parent \
+ perl-devel \
  tar \
  unzip \
  wget \
