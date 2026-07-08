@@ -70,6 +70,8 @@ RUN set -x && \
   make -j1 install_sw) && \
   rm -rf openssl-$OPENSSL_VERSION openssl-$OPENSSL_VERSION.tar.gz
 
+RUN echo 'LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib' >> ~/.bashrc
+
 # Downloading and installing SDKMAN!
 RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
@@ -92,6 +94,7 @@ RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 # Prepare our own build
 ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
 ENV JAVA_HOME=/root/.sdkman/candidates/java/current
+ENV LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib
 
 # Cleanup
 RUN rm -rf $SOURCE_DIR
