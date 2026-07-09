@@ -883,7 +883,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // We don't need to release out here as this is done in a finally block already.
                     buf.release();
                     promise.setFailure(e);
-                    throw e;
+                    PlatformDependent.throwException(e);
                 }
 
                 if (buf.isReadable()) {
