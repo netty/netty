@@ -849,7 +849,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     break;
                 }
 
-                SSLEngineResult result;
+                SSLEngineResult result = null;
 
                 try {
                     if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
