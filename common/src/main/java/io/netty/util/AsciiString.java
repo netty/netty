@@ -1386,14 +1386,27 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     /**
-     * Returns an {@link AsciiString} containing the given string and retains/caches the input
-     * string for later use in {@link #toString()}.
+     * Returns an {@link AsciiString} containing the given string and retains/caches the
+     * input string for later use in {@link #toString()}.
+     * If the input contains only Latin-1 characters (0-255), the original string is reused
+     * to preserve identity for faster equality checks. Otherwise, the string is reconstructed
+     * from the Latin-1 byte content to guarantee consistency (the constructor's {@link #c2b(char)}
+     * converts non-Latin-1 characters to {@code '?'}).
      * Used for the constants (which already stored in the JVM's string table) and in cases
      * where the guaranteed use of the {@link #toString()} method.
      */
     public static AsciiString cached(String string) {
         AsciiString asciiString = new AsciiString(string);
         asciiString.string = string;
+        // Check if the input contains any non-Latin-1 characters that would have been
+        // truncated to '?' by c2b() during construction. If so, reconstruct the cached
+        // string from the byte array to ensure consistency.
+        for (int i = 0; i < string.length(); i++) {
+            if (string.charAt(i) > MAX_CHAR_VALUE) {
+                asciiString.string = asciiString.toString(0);
+                break;
+            }
+        }
         return asciiString;
     }
 
