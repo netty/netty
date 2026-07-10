@@ -256,7 +256,7 @@ final class AdaptivePoolingAllocator {
             }
         }
         if (allocated == null) {
-            allocated = allocateFallback(size, maxCapacity, currentThread, buf, originGroup);
+            allocated = allocateFallback(size, maxCapacity, buf);
         }
         return allocated;
     }
@@ -278,8 +278,7 @@ final class AdaptivePoolingAllocator {
         return SIZE_CLASSES.clone();
     }
 
-    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
-                                                AdaptiveByteBuf buf, MagazineGroup originGroup) {
+    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, AdaptiveByteBuf buf) {
         if (buf == null) {
             buf = newFallbackBuffer();
         }
