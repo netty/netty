@@ -279,7 +279,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
         long purgePolls = threadLocal ?
                 AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL :
-                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
+                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL;
         Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
         if (threadLocal) {
             FastThreadLocalThread.runWithFastThreadLocal(test);

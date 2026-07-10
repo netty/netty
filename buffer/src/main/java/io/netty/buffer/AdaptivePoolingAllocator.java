@@ -44,13 +44,10 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntConsumer;
@@ -127,9 +124,6 @@ final class AdaptivePoolingAllocator {
 
     static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
             "io.netty.allocator.chunkPurgePollsThreadLocal", 16L));
-
-    static final long CHUNK_PURGE_POLLS_SHARED = Math.max(1, SystemPropertyUtil.getLong(
-            "io.netty.allocator.chunkPurgePollsShared", 128L));
 
     static final int CHUNK_PURGE_THRESHOLD = Math.max(1, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkPurgeThreshold", 3));
@@ -287,7 +281,7 @@ final class AdaptivePoolingAllocator {
     private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
                                                 AdaptiveByteBuf buf, MagazineGroup originGroup) {
         if (buf == null) {
-            buf = newFallbackBuffer(currentThread, originGroup);
+            buf = newFallbackBuffer();
         }
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
@@ -305,11 +299,11 @@ final class AdaptivePoolingAllocator {
         return buf;
     }
 
-    private AdaptiveByteBuf newFallbackBuffer(Thread currentThread, MagazineGroup originGroup) {
-        if (originGroup == null) {
-            originGroup = largeBufferMagazineGroup;
-        }
-        return originGroup.newBufferFrom();
+    private AdaptiveByteBuf newFallbackBuffer() {
+        AdaptiveByteBuf buf = fallbackRecycler.get();
+        buf.resetRefCnt();
+        buf.discardMarks();
+        return buf;
     }
 
     /**
@@ -359,7 +353,7 @@ final class AdaptivePoolingAllocator {
             this.allocator = allocator;
             this.chunkAllocator = chunkAllocator;
             this.chunkManagementStrategy = chunkManagementStrategy;
-            chunkCache = chunkManagementStrategy.createChunkCache(isThreadLocal);
+            chunkCache = chunkManagementStrategy.createChunkCache();
             if (isThreadLocal) {
                 ownerThread = Thread.currentThread();
                 threadLocalMagazine = new Magazine(this, true);
@@ -423,13 +417,6 @@ final class AdaptivePoolingAllocator {
             }
             scanLength.compareAndSet(current, current << 1);
             return true;
-        }
-
-        AdaptiveByteBuf newBufferFrom() {
-            AdaptiveByteBuf buf = allocator.fallbackRecycler.get();
-            buf.resetRefCnt();
-            buf.discardMarks();
-            return buf;
         }
 
         Chunk pollChunk(int size) {
@@ -512,16 +499,10 @@ final class AdaptivePoolingAllocator {
     // 4. CONVERGENCE: idle chunks that are never picked by scan age undisturbed across
     //    purge cycles. After CHUNK_PURGE_THRESHOLD + 1 consecutive cycles of being idle and
     //    unpolled, they are evicted. Chunks picked by scan get epoch reset — aging interrupted.
-    //    Thread-local: partition orders [epoch=0 | 0<epoch<T | epoch>=T | noCap]. Scan takes
+    //    Partition orders [epoch=0 | 0<epoch<T | epoch>=T | noCap]. Scan takes
     //    from head (epoch=0 first). Chunks with epoch>=threshold are placed at the back of
     //    the hasCap zone so scan doesn't reach them — they age to threshold+1 and get evicted.
-    //    Shared: approximate, converges over multiple cycles (FIFO queue ordering,
-    //    LRU preference in scan, retained counter in purge).
     abstract static class SizeClassedChunkCache implements ChunkCache {
-        static SizeClassedChunkCache create(boolean isThreadLocal) {
-            return isThreadLocal ? new ThreadLocalSizeClassedChunkCache() : new SharedSizeClassedChunkCache();
-        }
-
         @Override
         public abstract SizeClassedChunk pollChunk(int size);
 
@@ -829,174 +810,6 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    /**
-     * MPMC queue cache for shared (cross-thread) chunk reuse.
-     *
-     * <p><b>scanForCapacity</b> — LRU preference with fallback:
-     * <pre>
-     *   fast path: head chunk has purgeEpoch == 0 and capacity → return O(1)
-     *
-     *   slow path: scan for epoch=0 chunk, hold first idle (epoch &gt; 0) as fallback
-     *     queue: [E&gt;0, E&gt;0, E=0, E&gt;0, ...]
-     *             skip   skip  ↑ return (put fallback back)
-     *
-     *   no epoch=0 found → use fallback, reset its epoch to 0
-     * </pre>
-     *
-     * <p>The LRU preference creates a natural separation: recently-used chunks (epoch=0,
-     * returned via {@link #offerChunk} after magazine use) cycle at the front. Idle chunks
-     * (epoch &gt; 0, aged by purge) are scanned past but never returned — they age undisturbed.
-     * When no recently-used chunks exist, idle ones are reused (fallback) rather than
-     * allocating new chunks.
-     *
-     * <p>All re-offered chunks are stamped with {@code lastScanGeneration} for cycle detection.
-     * The {@code >=} check terminates the scan when encountering any chunk already processed
-     * by this or a later scan, preventing livelock under concurrent access.
-     *
-     * <p><b>runPurgeScan</b> (every {@link #CHUNK_PURGE_POLLS_SHARED} polls):
-     * drains the queue, ages full chunks (epoch++), resets non-full (epoch=0).
-     * Non-candidate capacity chunks are re-offered inline. Eviction candidates (full,
-     * epoch past threshold) and no-capacity chunks are deferred to a buffer. After the drain,
-     * the buffer is walked with the known total: candidates are evicted while above
-     * {@link #CHUNK_REUSE_QUEUE}, remainder re-offered. No selection — that is
-     * {@code scanForCapacity}'s job (called after purge via {@code pollChunk}).
-     */
-    static final class SharedSizeClassedChunkCache extends SizeClassedChunkCache {
-        private static final int SHARED_CACHE_CHUNK_SIZE = Math.max(128, CHUNK_REUSE_QUEUE * 2);
-        private final Queue<SizeClassedChunk> queue;
-        private final AtomicLong purgeBudget;
-        private final ArrayList<SizeClassedChunk> deferredBuffer = new ArrayList<>();
-        private long purgeGeneration;
-        private final AtomicLong scanGeneration = new AtomicLong();
-
-        SharedSizeClassedChunkCache() {
-            queue = PlatformDependent.newMpmcUnboundedXaddQueue(SHARED_CACHE_CHUNK_SIZE);
-            purgeBudget = new AtomicLong(CHUNK_PURGE_POLLS_SHARED);
-        }
-
-        @Override
-        SizeClassedChunk forcePurge() {
-            purgeBudget.set(1);
-            return pollChunk(0);
-        }
-
-        @Override
-        public SizeClassedChunk pollChunk(int size) {
-            long budget = purgeBudget.decrementAndGet();
-            if (budget == 0) {
-                runPurgeScan();
-            }
-            return scanForCapacity();
-        }
-
-        private SizeClassedChunk scanForCapacity() {
-            SizeClassedChunk first = queue.poll();
-            if (first == null) {
-                return null;
-            }
-            if (first.purgeEpoch == 0 && first.hasRemainingCapacity()) {
-                return first;
-            }
-            long generation = scanGeneration.incrementAndGet();
-            first.lastScanGeneration = generation;
-            if (first.hasRemainingCapacity()) {
-                return scanForCapacitySlow(generation, first);
-            }
-            queue.offer(first);
-            return scanForCapacitySlow(generation, null);
-        }
-
-        private SizeClassedChunk scanForCapacitySlow(long generation, SizeClassedChunk fallback) {
-            SizeClassedChunk chunk;
-            while ((chunk = queue.poll()) != null) {
-                if (chunk.lastScanGeneration >= generation) {
-                    queue.offer(chunk);
-                    break;
-                }
-                if (chunk.hasRemainingCapacity()) {
-                    if (chunk.purgeEpoch == 0) {
-                        if (fallback != null) {
-                            queue.offer(fallback);
-                        }
-                        return chunk;
-                    }
-                    if (fallback == null) {
-                        fallback = chunk;
-                        continue;
-                    }
-                }
-                chunk.lastScanGeneration = generation;
-                queue.offer(chunk);
-            }
-            if (fallback != null) {
-                fallback.purgeEpoch = 0;
-                return fallback;
-            }
-            return null;
-        }
-
-        private void runPurgeScan() {
-            long generation = ++purgeGeneration;
-            int retained = 0;
-            ArrayList<SizeClassedChunk> deferred = deferredBuffer;
-            SizeClassedChunk chunk;
-            while ((chunk = queue.poll()) != null) {
-                if (chunk.lastPurgeGeneration == generation) {
-                    chunk.lastPurgeGeneration = generation;
-                    queue.offer(chunk);
-                    break;
-                }
-                retained++;
-                if (chunk.hasFullCapacity()) {
-                    chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD) {
-                        deferred.add(chunk);
-                        continue;
-                    }
-                } else {
-                    chunk.purgeEpoch = 0;
-                }
-                int remaining = chunk.remainingCapacity();
-                if (remaining > 0) {
-                    chunk.lastPurgeGeneration = generation;
-                    queue.offer(chunk);
-                } else {
-                    deferred.add(chunk);
-                }
-            }
-            for (int i = 0, size = deferred.size(); i < size; i++) {
-                chunk = deferred.get(i);
-                if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && retained > CHUNK_REUSE_QUEUE) {
-                    chunk.markToDeallocate();
-                    retained--;
-                } else {
-                    chunk.lastPurgeGeneration = generation;
-                    queue.offer(chunk);
-                }
-            }
-            deferred.clear();
-            purgeBudget.lazySet(CHUNK_PURGE_POLLS_SHARED);
-        }
-
-        @Override
-        public boolean offerChunk(Chunk chunk) {
-            return queue.offer((SizeClassedChunk) chunk);
-        }
-
-        @Override
-        public void free() {
-            SizeClassedChunk chunk;
-            while ((chunk = queue.poll()) != null) {
-                chunk.markToDeallocate();
-            }
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return queue.isEmpty();
-        }
-    }
-
     private static final class ConcurrentSkipListChunkCache implements ChunkCache {
         private final ConcurrentSkipListIntObjMultimap<Chunk> chunks;
 
@@ -1103,7 +916,7 @@ final class AdaptivePoolingAllocator {
     private interface ChunkManagementStrategy {
         ChunkController createController(MagazineGroup group);
 
-        ChunkCache createChunkCache(boolean isThreadLocal);
+        ChunkCache createChunkCache();
 
         boolean hasPerMagazineCache();
     }
@@ -1139,8 +952,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ChunkCache createChunkCache(boolean isThreadLocal) {
-            return SizeClassedChunkCache.create(isThreadLocal);
+        public ChunkCache createChunkCache() {
+            return new ThreadLocalSizeClassedChunkCache();
         }
 
         @Override
@@ -1214,7 +1027,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ChunkCache createChunkCache(boolean isThreadLocal) {
+        public ChunkCache createChunkCache() {
             return new ConcurrentSkipListChunkCache();
         }
 
@@ -1373,7 +1186,7 @@ final class AdaptivePoolingAllocator {
             this.isThreadLocal = isThreadLocal;
             this.chunkController = group.chunkManagementStrategy.createController(group);
             this.chunkCache = group.chunkManagementStrategy.hasPerMagazineCache() ?
-                    group.chunkManagementStrategy.createChunkCache(isThreadLocal) : null;
+                    group.chunkManagementStrategy.createChunkCache() : null;
             this.recycler = isThreadLocal ? null : AdaptiveRecycler.sharedMpsc(MAGAZINE_BUFFER_QUEUE_CAPACITY);
         }
 

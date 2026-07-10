@@ -167,14 +167,6 @@
                 </relocation>
               </relocations>
               <minimizeJar>true</minimizeJar>
-              <filters>
-                <filter>
-                  <artifact>org.jctools:jctools-core</artifact>
-                  <includes>
-                    <include>**</include>
-                  </includes>
-                </filter>
-              </filters>
               <createSourcesJar>true</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
             </configuration>
