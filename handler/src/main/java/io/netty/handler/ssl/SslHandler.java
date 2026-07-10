@@ -849,7 +849,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     break;
                 }
 
-                SSLEngineResult result;
+                SSLEngineResult result = null;
 
                 try {
                     if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
@@ -874,16 +874,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                         result = wrap(alloc, engine, buf, out);
                     }
-                } catch (SSLException e) {
-                    // Either wrapMultiple(...) or wrap(...) did throw. In this case we need to release the buffer
-                    // that we removed from pendingUnencryptedWrites before failing the promise and rethrowing it.
-                    // Failing to do so would result in a buffer leak.
+                } catch (Throwable e) {
+                    // Either wrapMultiple(...), wrap(...) or allocateOutNetBuf(...) did throw.
+                    // In this case we need to release the buffer that we removed from pendingUnencryptedWrites
+                    // before failing the promise and rethrowing it. Failing to do so would result in a buffer leak.
                     // See https://github.com/netty/netty/issues/14644
                     //
                     // We don't need to release out here as this is done in a finally block already.
                     buf.release();
                     promise.setFailure(e);
-                    throw e;
+                    PlatformDependent.throwException(e);
                 }
 
                 if (buf.isReadable()) {
