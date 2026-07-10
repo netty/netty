@@ -32,6 +32,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.PlatformDependent.newFixedMpmcQueue;
+import static io.netty.util.internal.PlatformDependent.newFixedMpscQueue;
 import static io.netty.util.internal.PlatformDependent.newMpscQueue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -523,12 +524,13 @@ public abstract class Recycler<T> {
             this(maxCapacity, false);
         }
 
+        @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, boolean mpsc) {
             this.ratioInterval = maxCapacity == 0? -1 : 0;
             this.owner = null;
             batch = null;
             batchSize = 0;
-            pooledHandles = mpsc ? createExternalScPool(max(2, maxCapacity >> 1), maxCapacity)
+            pooledHandles = mpsc ? (MessagePassingQueue<H>) newFixedMpscQueue(maxCapacity)
                     : createExternalMcPool(maxCapacity);
             ratioCounter = 0;
         }
