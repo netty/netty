@@ -55,6 +55,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.*;
  * converts them into {@link ByteBuf}s.
  */
 public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpRequest, HttpObject> {
+    public static final int DEFAULT_MAX_PIPELINE_DEPTH = 128;
 
     private enum State {
         PASS_THROUGH,
@@ -65,12 +66,18 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private static final CharSequence ZERO_LENGTH_HEAD = "HEAD";
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
 
+    private final int maxPipelineDepth;
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
     public HttpContentEncoder() {
+        this(DEFAULT_MAX_PIPELINE_DEPTH);
+    }
+
+    public HttpContentEncoder(int maxPipelineDepth) {
         super(HttpRequest.class, HttpObject.class);
+        this.maxPipelineDepth = ObjectUtil.checkPositive(maxPipelineDepth, "maxPipelineDepth");
     }
 
     @Override
@@ -80,6 +87,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+        if (maxPipelineDepth <= acceptEncodingQueue.size()) {
+            throw new IllegalStateException("maxPipelineDepth exceeded: " + maxPipelineDepth);
+        }
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {
