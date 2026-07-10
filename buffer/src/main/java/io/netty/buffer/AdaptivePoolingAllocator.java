@@ -238,7 +238,6 @@ final class AdaptivePoolingAllocator {
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         AdaptiveByteBuf allocated = null;
-        MagazineGroup originGroup = null;
         if (size <= MAX_POOLED_BUF_SIZE) {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
@@ -248,11 +247,9 @@ final class AdaptivePoolingAllocator {
                 magazineGroups = sizeClassedMagazineGroups;
             }
             if (index < magazineGroups.length) {
-                originGroup = magazineGroups[index];
-                allocated = originGroup.allocate(size, maxCapacity, currentThread, buf);
+                allocated = magazineGroups[index].allocate(size, maxCapacity, currentThread, buf);
             } else if (!IS_LOW_MEM) {
-                originGroup = largeBufferMagazineGroup;
-                allocated = originGroup.allocate(size, maxCapacity, currentThread, buf);
+                allocated = largeBufferMagazineGroup.allocate(size, maxCapacity, currentThread, buf);
             }
         }
         if (allocated == null) {
