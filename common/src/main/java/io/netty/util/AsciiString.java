@@ -1396,17 +1396,18 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * where the guaranteed use of the {@link #toString()} method.
      */
     public static AsciiString cached(String string) {
-        AsciiString asciiString = new AsciiString(string);
-        asciiString.string = string;
-        // Check if the input contains any non-Latin-1 characters that would have been
-        // truncated to '?' by c2b() during construction. If so, reconstruct the cached
-        // string from the byte array to ensure consistency.
-        for (int i = 0; i < string.length(); i++) {
-            if (string.charAt(i) > MAX_CHAR_VALUE) {
-                asciiString.string = asciiString.toString(0);
-                break;
+        byte[] value = PlatformDependent.allocateUninitializedArray(string.length());
+        boolean allLatin1 = true;
+        for (int i = 0; i < value.length; i++) {
+            char c = string.charAt(i);
+            value[i] = c2b(c);
+            if (c > MAX_CHAR_VALUE) {
+                allLatin1 = false;
             }
         }
+
+        AsciiString asciiString = new AsciiString(value, false);
+        asciiString.string = allLatin1 ? string : asciiString.toString(0);
         return asciiString;
     }
 
