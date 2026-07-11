@@ -29,6 +29,8 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
 
+import java.nio.channels.ClosedChannelException;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.BR;
@@ -429,6 +431,15 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 this.dataDecompressed = false;
                 this.targetCtx = ctx;
 
+                if (!decompressor.isOpen()) {
+                    // Directly throw an exception in this case which we will handle in the catch block below.
+                    // This is required as otherwise it will impossible for us to know if the used EmbeddedChannel
+                    // did throw because it was closed already or because of other reasons. We need this knowledge
+                    // to know if we need to call data.release() ourselves after it was retained or not. This is needed
+                    // as EmbeddedChannel will not release the buffer if it throws because it was not open.
+                    // This mimics what EmbeddedChannel will throw.
+                    throw new ClosedChannelException();
+                }
                 // call retain here as it will call release after its written to the channel
                 decompressor.writeInbound(data.retain());
                 if (endOfStream) {

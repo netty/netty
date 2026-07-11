@@ -63,6 +63,9 @@ final class Http3CodecUtils {
      */
     static final long DEFAULT_MAX_FIELD_SECTION_SIZE = 8192;
 
+    // Let's use 32kb as max
+    static final int DEFAULT_MAX_UNKNOWN_FRAME_PAYLOAD_LENGTH = 32 * 1024;
+
     private Http3CodecUtils() { }
 
     static long checkIsReservedFrameType(long type) {

@@ -34,6 +34,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -51,6 +52,7 @@ import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.OCSPReqBuilder;
 import org.bouncycastle.cert.ocsp.OCSPResp;
 import org.bouncycastle.operator.ContentVerifierProvider;
+import org.bouncycastle.operator.DigestCalculatorProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
@@ -102,19 +104,22 @@ final class OcspClient {
      * @param issuer                {@link X509Certificate} issuer of client certificate
      * @param validateResponseNonce Set to {@code true} to enable OCSP response validation
      * @param ioTransport           {@link IoTransport} to use
-     * @return {@link Promise} of {@link BasicOCSPResp}
+     * @return                      {@link Promise} of {@link BasicOCSPResp}
      */
-    static Promise<BasicOCSPResp> query(final X509Certificate x509Certificate,
+    static void query(final X509Certificate x509Certificate,
                                         final X509Certificate issuer, final boolean validateResponseNonce,
-                                        final IoTransport ioTransport, final DnsNameResolver dnsNameResolver) {
+                                        final IoTransport ioTransport, final DnsNameResolver dnsNameResolver,
+                                        final Promise<BasicOCSPResp> responsePromise) {
         final EventLoop eventLoop = ioTransport.eventLoop();
-        final Promise<BasicOCSPResp> responsePromise = eventLoop.newPromise();
         eventLoop.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    CertificateID certificateID = new CertificateID(new JcaDigestCalculatorProviderBuilder()
-                            .build().get(HASH_SHA1), new JcaX509CertificateHolder(issuer),
+                    DigestCalculatorProvider digestCalculatorProvider = new JcaDigestCalculatorProviderBuilder()
+                            .build();
+
+                    CertificateID certificateID = new CertificateID(digestCalculatorProvider.get(HASH_SHA1),
+                            new JcaX509CertificateHolder(issuer),
                             x509Certificate.getSerialNumber());
 
                     // Initialize OCSP Request Builder and add CertificateID into it.
@@ -160,23 +165,29 @@ final class OcspClient {
                         // If Future was successful then we have received OCSP response
                         // We will now validate it.
                         if (future.isSuccess()) {
+                            final Object responseObject;
                             try {
-                                BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
-                                validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
-                            } catch (Throwable t) {
-                                responsePromise.tryFailure(t);
+                                responseObject = future.getNow().getResponseObject();
+                            } catch (OCSPException e) {
+                                responsePromise.setFailure(future.cause());
+                                return;
+                            }
+                            if (responseObject instanceof BasicOCSPResp) {
+                                validateResponse(x509Certificate, digestCalculatorProvider, responsePromise,
+                                        (BasicOCSPResp) responseObject, derNonce, issuer, validateResponseNonce);
+                            } else {
+                                responsePromise.tryFailure(new OCSPException("Unsupported OCSP response type: "
+                                        + (responseObject == null ? null : responseObject.getClass())));
                             }
                         } else {
                             responsePromise.tryFailure(future.cause());
                         }
                     });
-
                 } catch (Exception ex) {
                     responsePromise.tryFailure(ex);
                 }
             }
         });
-        return responsePromise;
     }
 
     /**
@@ -201,7 +212,7 @@ final class OcspClient {
                     .option(ChannelOption.TCP_NODELAY, true)
                     .channelFactory(ioTransport.socketChannel())
                     .attr(OcspServerCertificateValidator.OCSP_PIPELINE_ATTRIBUTE, Boolean.TRUE)
-                    .handler(new Initializer(responsePromise));
+                    .handler(new Initializer(responsePromise, 10 * 1000));
             dnsNameResolver.resolve(host).addListener((FutureListener<InetAddress>) future -> {
 
                 // If Future was successful then we have successfully resolved OCSP server address.
@@ -240,14 +251,26 @@ final class OcspClient {
         return responsePromise;
     }
 
-    private static void validateResponse(Promise<BasicOCSPResp> responsePromise, BasicOCSPResp basicResponse,
-                                         DEROctetString derNonce, X509Certificate issuer, boolean validateNonce) {
+    private static void validateResponse(
+            X509Certificate x509Certificate, DigestCalculatorProvider digestCalculatorProvider,
+            Promise<BasicOCSPResp> responsePromise, BasicOCSPResp basicResponse,
+            DEROctetString derNonce, X509Certificate issuer, boolean validateNonce) {
         try {
             // Validate number of responses. We only requested for 1 certificate
             // so number of responses must be 1. If not, we will throw an error.
             int responses = basicResponse.getResponses().length;
             if (responses != 1) {
-                throw new IllegalArgumentException("Expected number of responses was 1 but got: " + responses);
+                responsePromise.tryFailure(
+                        new IllegalArgumentException("Expected number of responses was 1 but got: " + responses));
+                return;
+            }
+
+            CertificateID respCertId = basicResponse.getResponses()[0].getCertID();
+            if (!respCertId.matchesIssuer(new JcaX509CertificateHolder(issuer), digestCalculatorProvider)
+                    || !respCertId.getSerialNumber().equals(x509Certificate.getSerialNumber())) {
+                responsePromise.tryFailure(
+                        new CertificateException("OCSP response CertID does not match queried certificate"));
+                return;
             }
 
             if (validateNonce) {
@@ -390,9 +413,11 @@ final class OcspClient {
     static final class Initializer extends ChannelInitializer<SocketChannel> {
 
         private final Promise<OCSPResp> responsePromise;
+        private final long timeoutMillis;
 
-        Initializer(Promise<OCSPResp> responsePromise) {
-            this.responsePromise = checkNotNull(responsePromise, "ResponsePromise");
+        Initializer(Promise<OCSPResp> responsePromise, long timeoutMillis) {
+            this.responsePromise = checkNotNull(responsePromise, "responsePromise");
+            this.timeoutMillis = ObjectUtil.checkPositive(timeoutMillis, "timeoutMillis");
         }
 
         @Override
@@ -400,7 +425,7 @@ final class OcspClient {
             ChannelPipeline pipeline = socketChannel.pipeline();
             pipeline.addLast(new HttpClientCodec());
             pipeline.addLast(new HttpObjectAggregator(OCSP_RESPONSE_MAX_SIZE));
-            pipeline.addLast(new OcspHttpHandler(responsePromise));
+            pipeline.addLast(new OcspHttpHandler(responsePromise, timeoutMillis));
         }
     }
 

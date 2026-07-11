@@ -21,7 +21,9 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ExecutionCondition;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -44,13 +46,27 @@ import java.util.concurrent.TimeUnit;
  * in a test are assigned to the test resource scope.
  */
 public final class LeakPresenceExtension
-        implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
+        implements ExecutionCondition, BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
+
+    static final String LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY =
+            "io.netty.test.leakPresenceDetection.disabled";
 
     private static final Object SCOPE_KEY = new Object();
     private static final Object PREVIOUS_SCOPE_KEY = new Object();
 
     static {
-        System.setProperty("io.netty.customResourceLeakDetector", WithTransferableScope.class.getName());
+        if (!Boolean.getBoolean(LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY)) {
+            System.setProperty("io.netty.customResourceLeakDetector", WithTransferableScope.class.getName());
+        }
+    }
+
+    @Override
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+        if (Boolean.getBoolean(LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY)) {
+            return ConditionEvaluationResult.disabled(
+                    "Leak presence detection disabled by " + LEAK_PRESENCE_DETECTION_DISABLED_PROPERTY);
+        }
+        return ConditionEvaluationResult.enabled("Leak presence detection enabled");
     }
 
     @Override

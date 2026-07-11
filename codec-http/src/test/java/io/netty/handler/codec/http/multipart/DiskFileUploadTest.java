@@ -19,10 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,6 +35,7 @@ import java.io.InputStream;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -286,5 +290,26 @@ public class DiskFileUploadTest {
         } finally {
             f1.delete();
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {
+            0x00,
+            HttpConstants.CR,
+            HttpConstants.LF,
+            0x19,
+            HttpConstants.DEL,
+            HttpConstants.DOUBLE_QUOTE,
+            HttpConstants.BACKSLASH})
+    void filenameCannotContainIllegalCharacters(byte illegal) {
+        assertIllegalFilename(((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal));
+    }
+
+    private static void assertIllegalFilename(String filename) {
+        assertThatThrownBy(() -> new DiskFileUpload("f", filename, "plain/text", null, null, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Illegal filename character");
     }
 }

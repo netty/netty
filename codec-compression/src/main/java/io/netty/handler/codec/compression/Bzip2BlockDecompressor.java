@@ -293,6 +293,9 @@ final class Bzip2BlockDecompressor {
                 crc.updateCRC(nextByte);
             } else {
                 if (++rleAccumulator == 4) {
+                    if (bwtBytesDecoded >= bwtBlockLength) {
+                        throw new DecompressionException("malformed RLE: run-length byte missing at end of block");
+                    }
                     // Accumulation complete, start repetition
                     int rleRepeat = decodeNextBWTByte() + 1;
                     this.rleRepeat = rleRepeat;
