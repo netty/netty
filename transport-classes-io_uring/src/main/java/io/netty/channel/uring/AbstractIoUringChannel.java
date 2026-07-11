@@ -705,6 +705,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                             // in the meantime. If this is the case we need to schedule the read to ensure
                             // we do not stall.
                             if (pending) {
+                                readPending = true;
                                 doBeginReadNow();
                             }
                         } else if (rearm) {
@@ -722,6 +723,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     // in the meantime. If this is the case we need to schedule the read to ensure
                     // we do not stall.
                     if (pending) {
+                        readPending = true;
                         doBeginReadNow();
                     }
                 } else if (multishot && rearm) {
