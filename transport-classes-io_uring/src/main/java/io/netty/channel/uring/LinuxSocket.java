@@ -313,9 +313,6 @@ final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketStream(SocketProtocolFamily family, boolean mptcp) {
-        if (mptcp && !isMptcpSupported()) {
-            throw new ChannelException("MPTCP is not supported by the kernel");
-        }
         int fd = newSocketStream0(family, mptcp);
         return new LinuxSocket(fd);
     }
