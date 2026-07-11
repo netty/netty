@@ -54,17 +54,11 @@ public class IoUringMptcpTest {
         assertTrue(IoUring.isAvailable(), "io_uring native transport must load");
         Assumptions.assumeFalse(Socket.isMptcpSupported(), "Only runs on kernels without MPTCP");
 
-        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
-        try {
-            ChannelException ex = assertThrows(ChannelException.class,
-                () -> new IoUringServerSocketChannel(SocketProtocolFamily.INET, true));
-            assertTrue(ex.getMessage().contains("MPTCP is not supported"));
-
-            ex = assertThrows(ChannelException.class,
-                () -> new IoUringSocketChannel(SocketProtocolFamily.INET, true));
-            assertTrue(ex.getMessage().contains("MPTCP is not supported"));
-        } finally {
-            group.shutdownGracefully();
-        }
+        ChannelException ex = assertThrows(ChannelException.class,
+            () -> new IoUringServerSocketChannel(SocketProtocolFamily.INET, true));
+        assertTrue(ex.getMessage().contains("MPTCP is not supported"));
+        ex = assertThrows(ChannelException.class,
+            () -> new IoUringSocketChannel(SocketProtocolFamily.INET, true));
+        assertTrue(ex.getMessage().contains("MPTCP is not supported"));
     }
 }
