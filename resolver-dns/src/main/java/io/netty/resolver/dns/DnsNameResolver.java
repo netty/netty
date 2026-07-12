@@ -306,6 +306,9 @@ public class DnsNameResolver extends InetNameResolver {
     private final DnsResolveChannelProvider resolveChannelProvider;
     private final Bootstrap socketBootstrap;
     private final boolean retryWithTcpOnTimeout;
+    private final boolean clearResolveCacheOnClose;
+    private final boolean clearCnameCacheOnClose;
+    private final boolean clearAuthoritativeDnsServerCacheOnClose;
 
     private final int maxNumConsolidation;
     private final Map<DnsQuestion, Promise<AddressedEnvelope<? extends DnsResponse,
@@ -418,7 +421,6 @@ public class DnsNameResolver extends InetNameResolver {
              searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver);
     }
 
-    @SuppressWarnings("deprecation")
     DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
@@ -427,6 +429,43 @@ public class DnsNameResolver extends InetNameResolver {
             final DnsCache resolveCache,
             final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            SocketAddress localAddress,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            final int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            DnsServerAddressStream queryDnsServerAddressStream,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn,
+            boolean completeOncePreferredResolved,
+            int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        this(eventLoop, channelFactory, socketChannelFactory, retryWithTcpOnTimeout, resolveCache, true,
+                cnameCache, true, authoritativeDnsServerCache, true, localAddress,
+                dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
+                maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
+                dnsServerAddressStreamProvider, queryDnsServerAddressStream, searchDomains, ndots, decodeIdn,
+                completeOncePreferredResolved, maxNumConsolidation, datagramChannelStrategy);
+    }
+
+    @SuppressWarnings("deprecation")
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            ChannelFactory<? extends SocketChannel> socketChannelFactory,
+            boolean retryWithTcpOnTimeout,
+            final DnsCache resolveCache,
+            boolean clearResolveCacheOnClose,
+            final DnsCnameCache cnameCache,
+            boolean clearCnameCacheOnClose,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            boolean clearAuthoritativeDnsServerCacheOnClose,
             SocketAddress localAddress,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
@@ -458,7 +497,9 @@ public class DnsNameResolver extends InetNameResolver {
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.queryDnsServerAddressStream = checkNotNull(queryDnsServerAddressStream, "queryDnsServerAddressStream");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.clearResolveCacheOnClose = clearResolveCacheOnClose;
         this.cnameCache = checkNotNull(cnameCache, "cnameCache");
+        this.clearCnameCacheOnClose = clearCnameCacheOnClose;
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
                         new LoggingDnsQueryLifeCycleObserverFactory() :
@@ -515,6 +556,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
         preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
+        this.clearAuthoritativeDnsServerCacheOnClose = clearAuthoritativeDnsServerCacheOnClose;
         nameServerComparator = new NameServerComparator(addressType(preferredAddressType));
         this.maxNumConsolidation = maxNumConsolidation;
         if (maxNumConsolidation > 0) {
@@ -715,15 +757,22 @@ public class DnsNameResolver extends InetNameResolver {
 
     /**
      * Closes the internal datagram channel used for sending and receiving DNS messages, and clears all DNS resource
-     * records from the cache. Attempting to send a DNS query or to resolve a domain name will fail once this method
-     * has been called.
+     * records from the caches that were created by this resolver. Caches that were provided by the user via
+     * {@link DnsNameResolverBuilder} are not cleared as they might still be shared with other resolvers.
+     * Attempting to send a DNS query or to resolve a domain name will fail once this method has been called.
      */
     @Override
     public void close() {
         resolveChannelProvider.close();
-        resolveCache.clear();
-        cnameCache.clear();
-        authoritativeDnsServerCache.clear();
+        if (clearResolveCacheOnClose) {
+            resolveCache.clear();
+        }
+        if (clearCnameCacheOnClose) {
+            cnameCache.clear();
+        }
+        if (clearAuthoritativeDnsServerCacheOnClose) {
+            authoritativeDnsServerCache.clear();
+        }
     }
 
     @Override

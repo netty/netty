@@ -73,6 +73,39 @@ public class DefaultDnsCacheTest {
     }
 
     @Test
+    public void testExpireAfterEventLoopShutdown() throws Throwable {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoopGroup verificationGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        final DefaultDnsCache cache = new DefaultDnsCache();
+
+        try {
+            EventLoop loop = group.next();
+            cache.cache("netty.io", null, NetUtil.LOCALHOST, 1, loop);
+            assertNotNull(cache.get("netty.io", null));
+
+            group.shutdownGracefully(0, 1, TimeUnit.SECONDS).syncUninterruptibly();
+
+            Throwable error = verificationGroup.next().schedule(new Callable<Throwable>() {
+                @Override
+                public Throwable call() {
+                    try {
+                        assertNull(cache.get("netty.io", null));
+                        return null;
+                    } catch (Throwable cause) {
+                        return cause;
+                    }
+                }
+            }, 1, TimeUnit.SECONDS).get();
+            if (error != null) {
+                throw error;
+            }
+        } finally {
+            group.shutdownGracefully();
+            verificationGroup.shutdownGracefully();
+        }
+    }
+
+    @Test
     public void testExpireWithDifferentTTLs() {
         testExpireWithTTL0(1);
         testExpireWithTTL0(1000);
