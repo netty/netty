@@ -907,6 +907,100 @@ public class DnsNameResolverTest {
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveDotLocalhostViaDnsWhenDisabled(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "myservice.localhost";
+        final String expectedIp = "10.0.0.1";
+        final TestDnsServer customDnsServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getRecordType() == RecordType.A) {
+                    String domainName = question.getDomainName();
+                    if (domainName.equalsIgnoreCase(hostname) || domainName.equalsIgnoreCase(hostname + '.')) {
+                        return Collections.singleton(newARecord(hostname, expectedIp));
+                    }
+                }
+                return Collections.emptySet();
+            }
+        });
+        customDnsServer.start();
+        DnsNameResolver.setResolveLocalhostWithoutDns(false);
+        try {
+            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
+                        @Override
+                        public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
+                            return null;
+                        }
+                    })
+                    .build();
+            try {
+                InetAddress address = resolver.resolve(hostname).syncUninterruptibly().getNow();
+                assertEquals(expectedIp, address.getHostAddress());
+
+                TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
+                        (TestRecursiveCacheDnsQueryLifecycleObserverFactory)
+                                resolver.dnsQueryLifecycleObserverFactory();
+                assertFalse(lifecycleObserverFactory.observers.isEmpty());
+            } finally {
+                resolver.close();
+            }
+        } finally {
+            DnsNameResolver.setResolveLocalhostWithoutDns(true);
+            customDnsServer.stop();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveLocalhostViaDnsWhenDisabledOnNonWindows(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        assumeThat(PlatformDependent.isWindows()).isFalse();
+
+        final String expectedIp = "10.0.0.2";
+        final TestDnsServer customDnsServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getRecordType() == RecordType.A) {
+                    String domainName = question.getDomainName();
+                    if (domainName.equalsIgnoreCase("localhost") || domainName.equalsIgnoreCase("localhost.")) {
+                        return Collections.singleton(newARecord("localhost", expectedIp));
+                    }
+                }
+                return Collections.emptySet();
+            }
+        });
+        customDnsServer.start();
+        DnsNameResolver.setResolveLocalhostWithoutDns(false);
+        try {
+            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
+                        @Override
+                        public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
+                            return null;
+                        }
+                    })
+                    .build();
+            try {
+                InetAddress address = resolver.resolve("localhost").syncUninterruptibly().getNow();
+                assertEquals(expectedIp, address.getHostAddress());
+
+                TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
+                        (TestRecursiveCacheDnsQueryLifecycleObserverFactory)
+                                resolver.dnsQueryLifecycleObserverFactory();
+                assertFalse(lifecycleObserverFactory.observers.isEmpty());
+            } finally {
+                resolver.close();
+            }
+        } finally {
+            DnsNameResolver.setResolveLocalhostWithoutDns(true);
+            customDnsServer.stop();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testResolveNullIpv4(DnsNameResolverChannelStrategy strategy) {
         testResolve0(strategy, ResolvedAddressTypes.IPV4_ONLY, NetUtil.LOCALHOST4, null);
     }

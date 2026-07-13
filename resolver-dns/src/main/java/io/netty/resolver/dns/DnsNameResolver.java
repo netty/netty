@@ -62,6 +62,7 @@ import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -130,6 +131,29 @@ public class DnsNameResolver extends InetNameResolver {
         }
     };
 
+    /**
+     * System property to control RFC 6761 localhost resolution.
+     * <p>
+     * When {@code true} (the default), {@code localhost} and {@code *.localhost}
+     * are resolved to the loopback address without querying DNS servers. When
+     * {@code false}, only the pre-#16749 rules apply (Windows {@code localhost}
+     * and the Windows machine hostname). Set to {@code false} when
+     * {@code *.localhost} hostnames must resolve via DNS to non-loopback
+     * addresses.
+     *
+     * @see <a href="https://github.com/netty/netty/issues/16744">Issue 16744</a>
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc6761.html#section-6.3">RFC 6761</a>
+     */
+    private static final String RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY =
+            "io.netty.resolver.dns.resolveLocalhostWithoutDns";
+
+    /** The runtime value of {@link #RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY}. */
+    private static boolean resolveLocalhostWithoutDns;
+
+    static void setResolveLocalhostWithoutDns(final boolean value) {
+        resolveLocalhostWithoutDns = value;
+    }
+
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
     private static final UnixResolverOptions DEFAULT_OPTIONS;
@@ -176,6 +200,12 @@ public class DnsNameResolver extends InetNameResolver {
         }
         DEFAULT_OPTIONS = options;
         logger.debug("Default {}", DEFAULT_OPTIONS);
+
+        resolveLocalhostWithoutDns =
+                SystemPropertyUtil.getBoolean(RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY, true);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {}", RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY, resolveLocalhostWithoutDns);
+        }
     }
 
     /**
@@ -738,6 +768,10 @@ public class DnsNameResolver extends InetNameResolver {
      * According to RFC 6761 Section 6.3, localhost and subdomains of localhost should be resolved to the loopback
      * address by name resolution libraries without querying DNS servers. The hostname of the local machine can usually
      * be resolved from the hosts file, but on Windows, this is no longer possible.
+     * <p>
+     * RFC 6761 behavior for {@code localhost} and {@code *.localhost} can be
+     * disabled via the {@code io.netty.resolver.dns.resolveLocalhostWithoutDns}
+     * system property.
      *
      * @param hostname the hostname that's being looked up
      * @return true if the hostname should point to the loopback adress. False otherwise.
@@ -752,10 +786,15 @@ public class DnsNameResolver extends InetNameResolver {
             return true;
         }
 
+        if (!resolveLocalhostWithoutDns) {
+            return PlatformDependent.isWindows() && LOCALHOST.equalsIgnoreCase(hostname);
+        }
+
         if (hostname.endsWith(".")) {
             hostname = hostname.substring(0, hostname.length() - 1);
         }
-        return hostname.equalsIgnoreCase(LOCALHOST) || hostname.toLowerCase(Locale.US).endsWith(DOT_LOCALHOST);
+        return hostname.equalsIgnoreCase(LOCALHOST)
+                || hostname.toLowerCase(Locale.US).endsWith(DOT_LOCALHOST);
     }
 
     private InetAddress getLocalHostAddress() {
