@@ -822,7 +822,11 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private Result<MqttProperties> decodeProperties(ByteBuf buffer) {
         final long propertiesLength = decodeVariableByteInteger(buffer);
         int totalPropertiesLength = unpackA(propertiesLength);
-        int numberOfBytesConsumed = unpackB(propertiesLength);
+        // Number of bytes used by the Property Length Variable Byte Integer itself. These bytes are
+        // part of the value returned by this method, but they must not be counted against
+        // totalPropertiesLength, which only covers the properties content that follows the length.
+        final int propertiesLengthSize = unpackB(propertiesLength);
+        int numberOfBytesConsumed = propertiesLengthSize;
         if (totalPropertiesLength > 0) {
             // Force an early REPLAY when the buffer does not yet have the full properties block,
             // so we don't repeatedly parse partial properties as data arrives. A direct
@@ -834,7 +838,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         }
 
         MqttProperties decodedProperties = new MqttProperties();
-        while (numberOfBytesConsumed < totalPropertiesLength) {
+        while (numberOfBytesConsumed - propertiesLengthSize < totalPropertiesLength) {
             long propertyId = decodeVariableByteInteger(buffer);
             final int propertyIdValue = unpackA(propertyId);
             numberOfBytesConsumed += unpackB(propertyId);
