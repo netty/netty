@@ -66,7 +66,7 @@ public class EpollMptcpTest {
     public void newChannelConstructorsWhenSupportMptcp() throws Exception {
         Epoll.ensureAvailability();
         assertTrue(Epoll.isAvailable(), "epoll native transport must load");
-        assertTrue(Socket.isMptcpSupported(), "kernel without MPTCP support");
+        Assumptions.assumeTrue(Socket.isMptcpSupported(), "MPTCP not supported on this kernel");
 
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
