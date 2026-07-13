@@ -626,7 +626,7 @@ public class Socket extends FileDescriptor {
 
     protected static int newSocketStream0(boolean ipv6, boolean mptcp) {
         if (mptcp && !isMptcpSupported()) {
-            throw new ChannelException("MPTCP is not supported by the kernel");
+            throw new ChannelException("MPTCP not supported on this kernel");
         }
         int res = newSocketStreamFd(ipv6, mptcp);
         if (res < 0) {

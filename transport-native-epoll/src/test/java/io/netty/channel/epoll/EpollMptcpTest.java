@@ -57,7 +57,7 @@ public class EpollMptcpTest {
 
     @Test
     public void newSocketStreamMptcpThrowsWhenUnsupported() {
-        Assumptions.assumeFalse(Socket.isMptcpSupported(), "only runs on kernels WITHOUT MPTCP support");
+        Assumptions.assumeFalse(Socket.isMptcpSupported(), "Only runs on kernels without MPTCP");
         assertThrows(ChannelException.class,
             () -> LinuxSocket.newSocketStream(SocketProtocolFamily.INET, true));
     }
