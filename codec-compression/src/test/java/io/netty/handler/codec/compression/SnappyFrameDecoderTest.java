@@ -248,19 +248,22 @@ public class SnappyFrameDecoderTest {
     private static void assertInvalidChunkLength(boolean validateChecksums, byte chunkType, int chunkLength) {
         final EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(validateChecksums));
         try {
-            final byte[] input = new byte[14 + chunkLength];
-            input[0] = (byte) 0xff;
-            input[1] = 0x06;
-            input[4] = 0x73;
-            input[5] = 0x4e;
-            input[6] = 0x61;
-            input[7] = 0x50;
-            input[8] = 0x70;
-            input[9] = 0x59;
-            input[10] = chunkType;
-            input[11] = (byte) chunkLength;
-            final ByteBuf in = channel.alloc().buffer(input.length);
-            in.writeBytes(input);
+            final ByteBuf in = channel.alloc().buffer(14 + chunkLength);
+
+            // Snappy stream identifier chunk: type 0xff, 3-byte little-endian length 6, payload "sNaPpY".
+            in.writeByte(0xff);
+            in.writeMediumLE(6);
+            in.writeByte('s');
+            in.writeByte('N');
+            in.writeByte('a');
+            in.writeByte('P');
+            in.writeByte('p');
+            in.writeByte('Y');
+
+            // Invalid data chunk header: caller-supplied type and too-short 3-byte little-endian length.
+            in.writeByte(chunkType);
+            in.writeMediumLE(chunkLength);
+            in.writeZero(chunkLength);
 
             assertThrows(DecompressionException.class, new Executable() {
                 @Override
