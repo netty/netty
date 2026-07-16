@@ -130,6 +130,9 @@ final class BoringSSL {
 
     static native void SSL_cleanup(long ssl);
 
+    static native byte @Nullable [] SSL_export_keying_material(
+            long ssl, byte[] label, byte @Nullable [] context, int length);
+
     static native long EVP_PKEY_parse(byte[] bytes, String pass);
     static native void EVP_PKEY_free(long key);
 

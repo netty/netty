@@ -140,6 +140,15 @@ final class QuicheQuicConnection {
         };
     }
 
+    byte @Nullable [] exportKeyingMaterial(byte[] label, byte @Nullable [] context, int length) {
+        synchronized (this) {
+            if (connection == -1) {
+                return null;
+            }
+            return BoringSSL.SSL_export_keying_material(ssl, label, context, length);
+        }
+    }
+
     @Nullable
     QuicConnectionAddress sourceId() {
         return connectionId(() -> Quiche.quiche_conn_source_id(connection));

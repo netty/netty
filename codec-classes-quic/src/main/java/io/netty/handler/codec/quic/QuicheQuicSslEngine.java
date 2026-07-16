@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -34,6 +35,7 @@ import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.Arrays;
@@ -200,6 +202,29 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     @Override
     public SSLSession getSession() {
         return session;
+    }
+
+    @Override
+    public byte[] exportKeyingMaterial(String label, byte @Nullable [] context, int length) throws SSLException {
+        ObjectUtil.checkNotNull(label, "label");
+        ObjectUtil.checkPositiveOrZero(length, "length");
+
+        final byte[] keyingMaterial;
+        synchronized (this) {
+            if (!handshakeFinished) {
+                throw new SSLException("Handshake did not complete yet, unable to export keying material");
+            }
+            QuicheQuicConnection connection = this.connection;
+            if (connection == null) {
+                throw new SSLException("No connection available, unable to export keying material");
+            }
+            keyingMaterial = connection.exportKeyingMaterial(
+                    label.getBytes(StandardCharsets.US_ASCII), context, length);
+        }
+        if (keyingMaterial == null) {
+            throw new SSLException("Unable to export keying material");
+        }
+        return keyingMaterial;
     }
 
     @Override
