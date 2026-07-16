@@ -292,7 +292,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    void attachQuicheConnection(QuicheQuicConnection connection) {
+    void attachQuicheConnection(QuicheQuicConnection connection, EventLoop eventLoop) {
         this.connection = connection;
 
         byte[] traceId = Quiche.quiche_conn_trace_id(connection.address());
@@ -300,7 +300,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             this.traceId = new String(traceId);
         }
 
-        connection.init(local, remote,
+        connection.init(eventLoop, local, remote,
                 sniHostname -> pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname)));
 
         // Setup QLOG if needed.
@@ -397,7 +397,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 failConnectPromiseAndThrow(new ConnectException());
                 return;
             }
-            attachQuicheConnection(connection);
+            attachQuicheConnection(connection, eventLoop());
             QuicClientSessionCache sessionCache = quicheEngine.ctx.getSessionCache();
             if (sessionCache != null) {
                 byte[] sessionBytes = sessionCache
