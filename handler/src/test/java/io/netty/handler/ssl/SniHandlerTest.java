@@ -56,6 +56,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -66,6 +67,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
@@ -654,6 +656,24 @@ public class SniHandlerTest {
     @MethodSource("data")
     public void testFragmented(SslProvider provider) throws Exception {
         testWithFragmentSize(provider, 50);
+    }
+
+    static Stream<Arguments> tinyFragmentData() {
+        List<Arguments> args = new ArrayList<Arguments>();
+        for (Object provider : data()) {
+            // Fragment sizes smaller than the 4-byte handshake header, so the header itself is
+            // split across multiple TLS records.
+            for (int size = 1; size <= 4; size++) {
+                args.add(Arguments.of(provider, size));
+            }
+        }
+        return args.stream();
+    }
+
+    @ParameterizedTest(name = "{index}: sslProvider={0}, fragmentSize={1}")
+    @MethodSource("tinyFragmentData")
+    public void testTinyFragments(SslProvider provider, int fragmentSize) throws Exception {
+        testWithFragmentSize(provider, fragmentSize);
     }
 
     private void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {

@@ -121,13 +121,61 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
 
                                 // Let's check if we already parsed the handshake length or not.
                                 if (handshakeLength == -1) {
-                                    if (readerIndex + 4 > endOffset) {
-                                        // Need more data to read HandshakeType and handshakeLength (4 bytes)
-                                        return;
+                                    if (readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH + 4 <= endOffset) {
+                                        final int handshakeType = in.getUnsignedByte(readerIndex +
+                                                SslUtils.SSL_RECORD_HEADER_LENGTH);
+
+                                        // Check if this is a clientHello(1)
+                                        // See https://tools.ietf.org/html/rfc5246#section-7.4
+                                        if (handshakeType != 1) {
+                                            select(ctx, null);
+                                            return;
+                                        }
+
+                                        // Read the length of the handshake as it may arrive in fragments
+                                        // See https://tools.ietf.org/html/rfc5246#section-7.4
+                                        handshakeLength = in.getUnsignedMedium(readerIndex +
+                                                SslUtils.SSL_RECORD_HEADER_LENGTH + 1);
+
+                                        if (handshakeLength > maxClientHelloLength && maxClientHelloLength != 0) {
+                                            TooLongFrameException e = new TooLongFrameException(
+                                                    "ClientHello length exceeds " + maxClientHelloLength +
+                                                            ": " + handshakeLength);
+                                            in.skipBytes(in.readableBytes());
+                                            ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                                            SslUtils.handleHandshakeFailure(ctx, e, true);
+                                            throw e;
+                                        }
+
+                                        if (handshakeLength + 4 + SslUtils.SSL_RECORD_HEADER_LENGTH <= packetLength) {
+                                            // We have everything we need in one packet.
+                                            // Skip the record header and handshake header (this sums up as 4 bytes)
+                                            readerIndex += SslUtils.SSL_RECORD_HEADER_LENGTH + 4;
+                                            select(ctx, in.retainedSlice(readerIndex, handshakeLength));
+                                            return;
+                                        }
+                                    }
+                                }
+
+                                if (handshakeBuffer == null) {
+                                    handshakeBuffer = ctx.alloc().buffer();
+                                } else if (readerIndex == in.readerIndex()) {
+                                    // Clear the buffer so we can aggregate into it again.
+                                    handshakeBuffer.clear();
+                                }
+
+                                // Combine the encapsulated data in one buffer but not include the SSL_RECORD_HEADER
+                                handshakeBuffer.writeBytes(in, readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH,
+                                        packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH);
+                                readerIndex += packetLength;
+                                readableBytes -= packetLength;
+                                if (handshakeLength == -1) {
+                                    if (handshakeBuffer.readableBytes() < 4) {
+                                        continue;
                                     }
 
-                                    final int handshakeType = in.getUnsignedByte(readerIndex +
-                                            SslUtils.SSL_RECORD_HEADER_LENGTH);
+                                    final int handshakeType = handshakeBuffer.getUnsignedByte(0);
+                                    handshakeLength = handshakeBuffer.getUnsignedMedium(1);
 
                                     // Check if this is a clientHello(1)
                                     // See https://tools.ietf.org/html/rfc5246#section-7.4
@@ -135,11 +183,6 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                         select(ctx, null);
                                         return;
                                     }
-
-                                    // Read the length of the handshake as it may arrive in fragments
-                                    // See https://tools.ietf.org/html/rfc5246#section-7.4
-                                    handshakeLength = in.getUnsignedMedium(readerIndex +
-                                            SslUtils.SSL_RECORD_HEADER_LENGTH + 1);
 
                                     if (handshakeLength > maxClientHelloLength && maxClientHelloLength != 0) {
                                         TooLongFrameException e = new TooLongFrameException(
@@ -150,33 +193,10 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                         SslUtils.handleHandshakeFailure(ctx, e, true);
                                         throw e;
                                     }
-                                    // Consume handshakeType and handshakeLength (this sums up as 4 bytes)
-                                    readerIndex += 4;
-                                    packetLength -= 4;
-
-                                    if (handshakeLength + 4 + SslUtils.SSL_RECORD_HEADER_LENGTH <= packetLength) {
-                                        // We have everything we need in one packet.
-                                        // Skip the record header
-                                        readerIndex += SslUtils.SSL_RECORD_HEADER_LENGTH;
-                                        select(ctx, in.retainedSlice(readerIndex, handshakeLength));
-                                        return;
-                                    } else {
-                                        if (handshakeBuffer == null) {
-                                            handshakeBuffer = ctx.alloc().buffer(handshakeLength);
-                                        } else {
-                                            // Clear the buffer so we can aggregate into it again.
-                                            handshakeBuffer.clear();
-                                        }
-                                    }
                                 }
 
-                                // Combine the encapsulated data in one buffer but not include the SSL_RECORD_HEADER
-                                handshakeBuffer.writeBytes(in, readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH,
-                                        packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH);
-                                readerIndex += packetLength;
-                                readableBytes -= packetLength;
-                                if (handshakeLength <= handshakeBuffer.readableBytes()) {
-                                    ByteBuf clientHello = handshakeBuffer.setIndex(0, handshakeLength);
+                                if (handshakeBuffer.readableBytes() >= handshakeLength + 4) {
+                                    ByteBuf clientHello = handshakeBuffer.setIndex(4, handshakeLength + 4).slice();
                                     handshakeBuffer = null;
 
                                     select(ctx, clientHello);
