@@ -160,7 +160,7 @@ public class SnappyFrameDecoderTest {
             "true, 0", "true, 1", "true, 2", "true, 3", "true, 4"
     })
     public void testCompressedDataWithTooShortChunkLengthThrowsException(
-            boolean validateChecksums, int chunkLength) {
+            boolean validateChecksums, int chunkLength) throws Exception {
         assertInvalidChunkLength(validateChecksums, (byte) 0x00, chunkLength);
     }
 
@@ -170,7 +170,7 @@ public class SnappyFrameDecoderTest {
             "true, 0", "true, 1", "true, 2", "true, 3"
     })
     public void testUncompressedDataWithTooShortChunkLengthThrowsException(
-            boolean validateChecksums, int chunkLength) {
+            boolean validateChecksums, int chunkLength) throws Exception {
         assertInvalidChunkLength(validateChecksums, (byte) 0x01, chunkLength);
     }
 
@@ -215,7 +215,8 @@ public class SnappyFrameDecoderTest {
         }
     }
 
-    private static void assertInvalidChunkLength(boolean validateChecksums, byte chunkType, int chunkLength) {
+    private static void assertInvalidChunkLength(boolean validateChecksums, byte chunkType, int chunkLength)
+            throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(validateChecksums));
         try {
             final ByteBuf in = channel.alloc().buffer(14 + chunkLength);
@@ -237,7 +238,7 @@ public class SnappyFrameDecoderTest {
 
             assertThrows(DecompressionException.class, new Executable() {
                 @Override
-                public void execute() {
+                public void execute() throws Exception {
                     channel.writeInbound(in);
                 }
             });
