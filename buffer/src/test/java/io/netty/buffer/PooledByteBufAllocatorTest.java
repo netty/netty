@@ -23,6 +23,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -76,6 +78,18 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @Override
     protected void trimCaches(PooledByteBufAllocator allocator) {
         allocator.trimCurrentThreadCache();
+    }
+
+    @Test
+    public void testRejectNegativeMaxOrder() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new PooledByteBufAllocator(true, 1, 1, 8192, -1, 0, 0, false);
+            }
+        });
+
+        assertEquals("maxOrder: -1 (expected: 0-14)", exception.getMessage());
     }
 
     @Test
