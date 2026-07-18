@@ -512,8 +512,16 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 
-        if (array.count() >= 1) {
-            // TODO: Handle the case where cnt == 1 specially.
+        if (array.count() == 1) {
+            // Only a single non-empty buffer ended up in the IovArray, for example because
+            // maxBytesPerGatheringWrite was reached after the first buffer or because all the
+            // other flushed buffers were empty. Route through doWriteSingle(...) so we issue a
+            // send(2) instead of a writev(2) with a single iov, mirroring the single-buffer fast
+            // path introduced in #12679. forEachFlushedMessage(...) neither consumes nor mutates
+            // the ChannelOutboundBuffer, so in.current() still returns the buffer to write.
+            return doWriteSingle(in);
+        }
+        if (array.count() > 1) {
             return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
