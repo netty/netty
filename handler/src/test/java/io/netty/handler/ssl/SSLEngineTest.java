@@ -1342,20 +1342,19 @@ public abstract class SSLEngineTest {
             assertFalse(receiver.messages.isEmpty());
 
             buf = Unpooled.buffer();
-            int bufferCount = 0;
+            ByteBuf buffer = receiver.messages.take();
             for (;;) {
-                ByteBuf buffer = receiver.messages.poll(500, TimeUnit.MILLISECONDS);
-                if (buffer == null) {
-                    break;
-                }
-                bufferCount++;
                 buf.writeBytes(buffer);
                 buffer.release();
-                if (buffer.readableBytes() >= message.readableBytes()) {
+                if (buf.readableBytes() < message.readableBytes()) {
+                    buffer = receiver.messages.poll(1, TimeUnit.SECONDS);
+                    if (buffer == null) {
+                        break;
+                    }
+                } else {
                     break;
                 }
             }
-            System.out.println("######### bufferCount = " + bufferCount);
             assertEquals(message, buf);
         } finally {
             if (buf != null) {
