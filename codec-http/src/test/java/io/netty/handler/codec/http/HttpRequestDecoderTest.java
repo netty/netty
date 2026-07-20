@@ -702,14 +702,45 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0(requestStr);
     }
 
-    @Test
-    public void testChunkedNotLastInTransferEncoding() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Transfer-Encoding: chunked, identity\r\nContent-Length: 1\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: gzip\r\n",
+            "Transfer-Encoding: chunked, gzip,\r\n",
+            "Transfer-Encoding: chunked, xchunked\r\n",
+            "Transfer-Encoding: gzip\r\n",
+            "Transfer-Encoding: chunked gzip\r\nContent-Length: 1\r\n",
+            "Transfer-Encoding: chunked, chunked\r\n",
+            "Transfer-Encoding: chunked, gzip, chunked\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\n",
+            "Transfer-Encoding: Chunked, , CHUNKED,\r\n",
+            "Transfer-Encoding: chunked;foo=bar\r\n"
+    })
+    public void testInvalidTransferEncodingFraming(String headers) throws Exception {
+        testInvalidHeaders0("GET /some/path HTTP/1.1\r\n" + headers + "Host: netty.io\r\n\r\n");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Transfer-Encoding: gzip\r\nTransfer-Encoding: chunked\r\n",
+            "Transfer-Encoding: gzip\r\nTransfer-Encoding: chunked,\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: , \t,\r\n"
+    })
+    public void testChunkedLastInMultiLineTransferEncoding(String transferEncodingHeaders) throws Exception {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
-                "Transfer-Encoding: chunked, identity\r\n" +
-                "Content-Length: 1\r\n" +
+                transferEncodingHeaders +
                 "Host: netty.io\r\n\r\n" +
-                "a";
-        testInvalidHeaders0(requestStr);
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertEquals(2, request.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING).size());
+        LastHttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isSuccess());
+        content.release();
+        assertFalse(channel.finish());
     }
 
     // Regression: the chunked-must-be-last check was nested inside a protocolVersion() ==
