@@ -1336,23 +1336,26 @@ public abstract class SSLEngineTest {
                                                MessageReceiver receiver) throws Exception {
         ByteBuf buf = null;
         try {
-            assertTrue(sendChannel.writeAndFlush(message).await(10, TimeUnit.SECONDS));
-            receiverLatch.await(5, TimeUnit.SECONDS);
-            message.resetReaderIndex();
+            assertTrue(sendChannel.writeAndFlush(message.duplicate())
+                    .await(10, TimeUnit.SECONDS));
+            receiverLatch.await(10, TimeUnit.SECONDS);
             assertFalse(receiver.messages.isEmpty());
 
             buf = Unpooled.buffer();
+            int bufferCount = 0;
             for (;;) {
-                ByteBuf buffer = receiver.messages.poll();
+                ByteBuf buffer = receiver.messages.poll(500, TimeUnit.MILLISECONDS);
                 if (buffer == null) {
                     break;
                 }
+                bufferCount++;
                 buf.writeBytes(buffer);
                 buffer.release();
                 if (buffer.readableBytes() >= message.readableBytes()) {
                     break;
                 }
             }
+            System.out.println("######### bufferCount = " + bufferCount);
             assertEquals(message, buf);
         } finally {
             if (buf != null) {
