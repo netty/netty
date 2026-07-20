@@ -29,7 +29,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -840,14 +839,21 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         }
-        if (message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING) &&
+        boolean hasTransferEncoding = message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING);
+        if (hasTransferEncoding &&
                 message.protocolVersion() != HttpVersion.HTTP_1_1 &&
                 useRfc9112TransferEncoding) {
             // The Transfer-Encoding header is not permitted at all with HTTP protocols older than 1.1,
             // and such requests must be rejected.
             throw TRANSFER_ENCODING_NOT_ALLOWED;
         }
-        if (HttpUtil.isTransferEncodingChunked(message)) {
+        boolean isTransferEncodingChunked = HttpUtil.isTransferEncodingChunked(message);
+        // Unlike responses, requests without a final chunked coding cannot use connection close for framing.
+        // See https://datatracker.ietf.org/doc/html/rfc9112#section-6.3-4
+        if (hasTransferEncoding && !isTransferEncodingChunked && isDecodingRequest()) {
+            throw new IllegalArgumentException("The final transfer coding must be chunked for HTTP requests");
+        }
+        if (isTransferEncodingChunked) {
             this.chunked = true;
             // The "chunked must be the last encoding" rule (RFC 9112 6.1) is not specific to
             // HTTP/1.1 -- it applies to any message that carries a Transfer-Encoding header at
@@ -856,20 +862,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // still reach this point for HTTP/1.0 and other non-1.1 messages, and the ordering
             // requirement applies to those just as much as it does to HTTP/1.1.
             // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
-            Iterator<? extends CharSequence> encodingIt =
-                    message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
-            CharSequence v = null;
-            while (encodingIt.hasNext()) {
-                v = encodingIt.next();
-            }
-            final int vLen = v.length();
-            final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
-            // We only need to validate if we have more then the chunked value length contained as otherwise
-            // we know it is only chunked.
-            if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
-                    HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
-                    throw new IllegalArgumentException(
-                            "chunked must be the last encoding present in the Transfer-Encoding header");
+            if (!isLastTransferEncodingChunked(headers.getAll(HttpHeaderNames.TRANSFER_ENCODING))) {
+                throw new IllegalArgumentException(
+                        "chunked must be the last encoding present in the Transfer-Encoding header");
             }
             if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 if (!contentLengthFields.isEmpty()) {
@@ -882,6 +877,50 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return State.READ_FIXED_LENGTH_CONTENT;
         }
         return State.READ_VARIABLE_LENGTH_CONTENT;
+    }
+
+    private static boolean isLastTransferEncodingChunked(List<String> transferEncodingFields) {
+        boolean chunkedSeen = false;
+        boolean lastChunked = false;
+        int chunkedLength = HttpHeaderValues.CHUNKED.length();
+        for (int i = 0; i < transferEncodingFields.size(); ++i) {
+            String value = transferEncodingFields.get(i);
+            int start = 0;
+            while (start <= value.length()) {
+                int comma = value.indexOf(',', start);
+                int end = comma == -1 ? value.length() : comma;
+                while (start < end && (value.charAt(start) == ' ' || value.charAt(start) == '\t')) {
+                    ++start;
+                }
+                while (end > start && (value.charAt(end - 1) == ' ' || value.charAt(end - 1) == '\t')) {
+                    --end;
+                }
+                if (start < end) {
+                    lastChunked = end - start == chunkedLength &&
+                            HttpHeaderValues.CHUNKED.regionMatches(true, 0, value, start, chunkedLength);
+                    if (lastChunked) {
+                        if (chunkedSeen) {
+                            throw new IllegalArgumentException(
+                                    "chunked transfer coding must not be applied more than once");
+                        }
+                        chunkedSeen = true;
+                    }
+                }
+                if (comma == -1) {
+                    break;
+                }
+                start = comma + 1;
+            }
+        }
+        return lastChunked;
+    }
+
+    private static boolean isLengthEqual(String lengthValue, long contentLength) {
+        try {
+            return Long.parseLong(lengthValue) == contentLength;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**
