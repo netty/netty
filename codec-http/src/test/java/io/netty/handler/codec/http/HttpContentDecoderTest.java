@@ -751,33 +751,33 @@ public class HttpContentDecoderTest {
 
     @Test
     public void testTransferCodingGZIP() {
-        String requestStr = "POST / HTTP/1.1\r\n" +
-                "Content-Length: " + GZ_HELLO_WORLD.length + "\r\n" +
+        String responseStr = "HTTP/1.1 200 OK\r\n" +
+                "Connection: close\r\n" +
                 "Transfer-Encoding: gzip\r\n" +
                 "\r\n";
-        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
         HttpContentDecoder decompressor = new HttpContentDecompressor(0);
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
 
-        channel.writeInbound(Unpooled.copiedBuffer(requestStr.getBytes()));
+        channel.writeInbound(Unpooled.copiedBuffer(responseStr.getBytes()));
         channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD));
 
-        HttpRequest request = channel.readInbound();
-        assertTrue(request.decoderResult().isSuccess());
-        assertFalse(request.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertFalse(response.headers().contains(HttpHeaderNames.CONTENT_LENGTH));
 
         HttpContent content = channel.readInbound();
         assertTrue(content.decoderResult().isSuccess());
         assertEquals(HELLO_WORLD, content.content().toString(CharsetUtil.US_ASCII));
         content.release();
 
+        assertTrue(channel.finish());
         LastHttpContent lastHttpContent = channel.readInbound();
         assertTrue(lastHttpContent.decoderResult().isSuccess());
         lastHttpContent.release();
 
         assertHasInboundMessages(channel, false);
         assertHasOutboundMessages(channel, false);
-        assertFalse(channel.finish());
         channel.releaseInbound();
     }
 
