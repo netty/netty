@@ -34,7 +34,7 @@ class OcspClientTest {
     void simpleOcspQueryTest() throws IOException, ExecutionException, InterruptedException {
         HttpsURLConnection httpsConnection = null;
         try {
-            URL url = new URL("https://netty.io");
+            URL url = new URL("https://apple.com");
             httpsConnection = (HttpsURLConnection) url.openConnection();
             httpsConnection.connect();
 
