@@ -207,7 +207,7 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras} -Djdk.tls.SunX509KeyManager.certChecking=false</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
              our EventExecutorGroup implementations
