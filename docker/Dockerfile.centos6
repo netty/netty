@@ -6,7 +6,7 @@ ENV OPENSSL_VERSION $openssl_version
 ENV OPENSSL_SHA256 $openssl_sha256
 
 # Update as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
@@ -23,7 +23,19 @@ RUN yum install -y \
  tar \
  unzip \
  wget \
- zip
+ zip \
+ zlib-devel \
+ perl \
+ perl-IPC-Cmd \
+ perl-Time-Piece \
+ perl-parent \
+ perl-devel \
+ centos-release-SCL
+
+# Update the SCL repo as well.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' \
+           -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/6\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/6.10\//g' \
+           /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 RUN yum -y install devtoolset-9-gcc devtoolset-9-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-9/enable' >> ~/.bashrc
