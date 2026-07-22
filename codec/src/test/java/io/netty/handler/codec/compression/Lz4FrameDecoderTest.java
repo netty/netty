@@ -51,8 +51,8 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testRejectsCompressedDataBeyondDeclaredLength() {
-        EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
-        ByteBuf input = decoder.alloc().buffer();
+        final EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        final ByteBuf input = decoder.alloc().buffer();
         input.writeLong(MAGIC_NUMBER);
         input.writeByte(BLOCK_TYPE_COMPRESSED);
         input.writeIntLE(1);
@@ -62,7 +62,12 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         input.writeZero(8);
 
         try {
-            assertThrows(DecompressionException.class, () -> decoder.writeInbound(input));
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.writeInbound(input);
+                }
+            });
         } finally {
             decoder.finishAndReleaseAll();
         }
@@ -70,8 +75,8 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
 
     @Test
     public void testRejectsDecompressedLengthMismatch() {
-        EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
-        ByteBuf input = decoder.alloc().buffer();
+        final EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        final ByteBuf input = decoder.alloc().buffer();
         input.writeLong(MAGIC_NUMBER);
         input.writeByte(BLOCK_TYPE_COMPRESSED);
         input.writeIntLE(2);
@@ -81,7 +86,12 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
         input.writeByte(0);
 
         try {
-            assertThrows(DecompressionException.class, () -> decoder.writeInbound(input));
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.writeInbound(input);
+                }
+            });
         } finally {
             decoder.finishAndReleaseAll();
         }
