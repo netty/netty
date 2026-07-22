@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.jpountz.lz4.LZ4BlockOutputStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -50,7 +49,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testRejectsCompressedDataBeyondDeclaredLength() {
+    public void testRejectsCompressedDataBeyondDeclaredLength() throws Exception {
         EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
         ByteBuf input = decoder.alloc().buffer();
         input.writeLong(MAGIC_NUMBER);
@@ -69,7 +68,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testRejectsDecompressedLengthMismatch() {
+    public void testRejectsDecompressedLengthMismatch() throws Exception {
         EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
         ByteBuf input = decoder.alloc().buffer();
         input.writeLong(MAGIC_NUMBER);
