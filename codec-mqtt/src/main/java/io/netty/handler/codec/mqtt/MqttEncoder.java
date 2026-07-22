@@ -418,13 +418,18 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             MqttUnsubAckMessage message) {
         if (message.variableHeader() instanceof  MqttMessageIdAndPropertiesVariableHeader) {
             MqttVersion mqttVersion = getMqttVersion(ctx);
+            // Reason Codes were introduced in MQTT 5.0 only. MQTT 3.1.1 (and 3.1) UNSUBACK packets
+            // have no payload, so reason codes must be suppressed for older protocol versions
+            // even when the caller populated them via MqttMessageBuilders.
+            final boolean writeReasonCodes = mqttVersion == MqttVersion.MQTT_5;
             ByteBuf propertiesBuf = encodePropertiesIfNeeded(mqttVersion,
                     ctx.alloc(),
                     message.idAndPropertiesVariableHeader().properties());
             try {
                 int variableHeaderBufferSize = 2 + propertiesBuf.readableBytes();
                 MqttUnsubAckPayload payload = message.payload();
-                int payloadBufferSize = payload == null ? 0 : payload.unsubscribeReasonCodes().size();
+                int payloadBufferSize = writeReasonCodes && payload != null
+                        ? payload.unsubscribeReasonCodes().size() : 0;
                 int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
                 int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
                 ByteBuf buf = ctx.alloc().buffer(fixedHeaderBufferSize + variablePartSize);
@@ -433,7 +438,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 buf.writeShort(message.variableHeader().messageId());
                 buf.writeBytes(propertiesBuf);
 
-                if (payload != null) {
+                if (writeReasonCodes && payload != null) {
                     for (Short reasonCode : payload.unsubscribeReasonCodes()) {
                         buf.writeByte(reasonCode);
                     }
