@@ -158,7 +158,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         // Client id
         String clientIdentifier = payload.clientIdentifier();
         if (!isValidClientId(mqttVersion, DEFAULT_MAX_CLIENT_ID_LENGTH, clientIdentifier, false)) {
-            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + clientIdentifier);
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier");
         }
         int clientIdentifierBytes = utf8Bytes(clientIdentifier);
         payloadBufferSize += 2 + clientIdentifierBytes;
@@ -170,7 +170,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         byte[] willMessageBytes = willMessage != null ? willMessage : EmptyArrays.EMPTY_BYTES;
         if (variableHeader.isWillFlag()) {
             if (!isValidPublishTopicName(willTopic)) {
-                throw new MqttIdentifierRejectedException("invalid willTopic: " + willTopic);
+                throw new MqttIdentifierRejectedException("invalid willTopic");
             }
             payloadBufferSize += 2 + willTopicBytes;
             payloadBufferSize += 2 + willMessageBytes.length;
@@ -180,7 +180,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         int userNameBytes = nullableUtf8Bytes(userName);
         if (variableHeader.hasUserName()) {
             if (!isValidUserName(userName)) {
-                throw new MqttIdentifierRejectedException("invalid userName: " + userName);
+                throw new MqttIdentifierRejectedException("invalid userName");
             }
             payloadBufferSize += 2 + userNameBytes;
         }
@@ -466,7 +466,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
         String topicName = variableHeader.topicName();
         if (!isValidPublishTopicName(topicName)) {
-            throw new MqttIdentifierRejectedException("invalid topicName: " + topicName);
+            throw new MqttIdentifierRejectedException("invalid topicName");
         }
         int topicNameBytes = utf8Bytes(topicName);
 
