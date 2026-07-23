@@ -193,7 +193,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
         IoUringSocketChannelConfig config = (IoUringSocketChannelConfig) config();
         ByteBuf current = (ByteBuf) in.current();
-        if (IoUring.isSendmsgZcSupported() && current != null && config.shouldWriteZeroCopy(current.readableBytes())) {
+        if (isSendmsgZcSupported() && current != null && config.shouldWriteZeroCopy(current.readableBytes())) {
             IoUringIoHandler handler = registration().attachment();
 
             IovArray iovArray = handler.iovArray();
@@ -791,6 +791,10 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     @Override
     public ChannelConfig config() {
         return config;
+    }
+
+    private boolean isSendmsgZcSupported() {
+        return IoUring.isSendmsgZcSupported() && socket.protocolFamily() != SocketProtocolFamily.UNIX;
     }
 
     private IoUringIoOps prepSendFdIoOps(FileDescriptor fileDescriptor, MsgHdrMemory msgHdrMemory) {
