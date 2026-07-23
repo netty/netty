@@ -41,6 +41,9 @@ import static io.netty.util.internal.ObjectUtil.*;
  * {@code maxChunkSize} The maximum length of the content or each chunk.  If the content length (or the length of each
  * chunk) exceeds this value, the content or chunk ill be split into multiple {@link StompContentSubframe}s whose length
  * is {@code maxChunkSize} at maximum.
+ * <br>
+ * {@code maxNumHeaders} The maximum number of headers per frame.
+ * If this limit exceeded a {@link TooLongFrameException} will be raised.
  *
  * <h3>Chunked Content</h3>
  * <p>
@@ -53,6 +56,7 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_CHUNK_SIZE = 8132;
     private static final int DEFAULT_MAX_LINE_LENGTH = 1024;
+    private static final int DEFAULT_MAX_NUMBER_HEADERS = 128;
 
     /**
      * @deprecated this should never be used by an user!
@@ -80,7 +84,7 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
     }
 
     public StompSubframeDecoder(boolean validateHeaders) {
-        this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE, validateHeaders);
+        this(DEFAULT_MAX_LINE_LENGTH, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_NUMBER_HEADERS, validateHeaders);
     }
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize) {
@@ -88,11 +92,17 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
     }
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
+        this(maxLineLength, maxChunkSize, DEFAULT_MAX_NUMBER_HEADERS, validateHeaders);
+    }
+
+    public StompSubframeDecoder(int maxLineLength, int maxChunkSize, int maxNumHeaders, boolean validateHeaders) {
         checkPositive(maxLineLength, "maxLineLength");
         checkPositive(maxChunkSize, "maxChunkSize");
+        checkPositive(maxNumHeaders, "maxNumHeaders");
+
         this.maxChunkSize = maxChunkSize;
         commandParser = new Utf8LineParser(new AppendableCharSequence(16), maxLineLength);
-        headerParser = new HeaderParser(new AppendableCharSequence(128), maxLineLength, validateHeaders);
+        headerParser = new HeaderParser(new AppendableCharSequence(128), maxLineLength, maxNumHeaders, validateHeaders);
     }
 
     @Override
@@ -358,16 +368,18 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
     private static final class HeaderParser extends Utf8LineParser {
 
         private final boolean validateHeaders;
-
+        private final int maxNumHeaders;
+        private int numHeaders;
         private String name;
         private boolean valid;
 
         private boolean shouldUnescape;
         private boolean unescapeInProgress;
 
-        HeaderParser(AppendableCharSequence charSeq, int maxLineLength, boolean validateHeaders) {
+        HeaderParser(AppendableCharSequence charSeq, int maxLineLength, int maxNumHeaders, boolean validateHeaders) {
             super(charSeq, maxLineLength);
             this.validateHeaders = validateHeaders;
+            this.maxNumHeaders = maxNumHeaders;
         }
 
         boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {
@@ -377,8 +389,13 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
                 if (value == null) {
                     return false;
                 }
-                if (name == null && value.length() == 0) {
+                if (name == null && value.isEmpty()) {
+                    numHeaders = 0;
                     return true;
+                }
+                numHeaders++;
+                if (maxNumHeaders < numHeaders) {
+                    throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
                 }
                 if (valid) {
                     headersSubframe.headers().add(name, value.toString());
@@ -398,7 +415,7 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
             if (nextByte == StompConstants.COLON) {
                 if (name == null) {
                     AppendableCharSequence charSeq = charSequence();
-                    if (charSeq.length() != 0) {
+                    if (!charSeq.isEmpty()) {
                         name = charSeq.substring(0, charSeq.length());
                         charSeq.reset();
                         valid = true;

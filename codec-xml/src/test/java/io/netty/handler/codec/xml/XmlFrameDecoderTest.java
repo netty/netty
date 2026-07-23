@@ -122,6 +122,33 @@ public class XmlFrameDecoderTest {
     }
 
     @Test
+    public void testDecodeInvalidNestedClosingTag() throws Exception {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                ch.writeInbound(Unpooled.copiedBuffer("<a></</a>", CharsetUtil.UTF_8));
+            }
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testDecodeInvalidRepeatedClosingTags() throws Exception {
+        XmlFrameDecoder decoder = new XmlFrameDecoder(1048576);
+        final EmbeddedChannel ch = new EmbeddedChannel(decoder);
+        ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() throws Exception {
+                ch.writeInbound(Unpooled.copiedBuffer("</", CharsetUtil.UTF_8));
+            }
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
     public void testDecodeWithCDATABlock() throws Exception {
         final String xml = "<book>" +
                 "<![CDATA[K&R, a.k.a. Kernighan & Ritchie]]>" +
@@ -135,6 +162,46 @@ public class XmlFrameDecoderTest {
         final String xml = "<info>" +
                 "<![CDATA[Copyright 2012-2013,<br><a href=\"http://www.acme.com\">ACME Inc.<a>]]>" +
                 "</info>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCDATABlockContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<![CDATA[close </a then open <b]]>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<!-- close </a then open <b -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithCommentContainingClosingTag() throws Exception {
+        final String xml = "<root>" +
+                "<!-- close </a -->" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTagThenOpeningBracket() throws Exception {
+        final String xml = "<root>" +
+                "<?pi close </a then open <b ?>" +
+                "</root>";
+        testDecodeWithXml(xml, xml);
+    }
+
+    @Test
+    public void testDecodeWithProcessingInstructionContainingClosingTag() throws Exception {
+        final String xml = "<root>" +
+                "<?pi close </a ?>" +
+                "</root>";
         testDecodeWithXml(xml, xml);
     }
 
@@ -159,6 +226,23 @@ public class XmlFrameDecoderTest {
     @Test
     public void testFraming() throws Exception {
         testDecodeWithXml(Arrays.asList("<abc", ">123</a", "bc>"), "<abc>123</abc>");
+    }
+
+    @Test
+    public void testFramingWithSplitClosingTag() throws Exception {
+        testDecodeWithXml(Arrays.asList("<abc>", "123</", "abc>"), "<abc>123</abc>");
+    }
+
+    @Test
+    public void testFramingWithCommentContainingClosingTagThenOpeningBracket() throws Exception {
+        final String frame = "<root><!-- close </a then open <b --></root>";
+        testDecodeWithXml(Arrays.asList("<root><!-- close </", "a then open <b --></root>"), frame);
+    }
+
+    @Test
+    public void testFramingWithProcessingInstructionContainingClosingTagThenOpeningBracket() throws Exception {
+        final String frame = "<root><?pi close </a then open <b ?></root>";
+        testDecodeWithXml(Arrays.asList("<root><?pi close </", "a then open <b ?></root>"), frame);
     }
 
     @Test

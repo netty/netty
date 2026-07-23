@@ -15,8 +15,10 @@
  */
 package io.netty.handler.ssl.ocsp;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
@@ -31,6 +33,7 @@ import org.bouncycastle.cert.ocsp.SingleResp;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -39,7 +42,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * using OCSP. Once TLS handshake is completed, {@link SslHandshakeCompletionEvent#SUCCESS} is fired, validator
  * will perform certificate validation using OCSP over HTTP/1.1 with the server's certificate issuer OCSP responder.
  */
-public class OcspServerCertificateValidator implements ChannelInboundHandler {
+public class OcspServerCertificateValidator extends ByteToMessageDecoder implements ChannelOutboundHandler {
     /**
      * An attribute used to mark all channels created by the {@link OcspServerCertificateValidator}.
      */
@@ -50,6 +53,8 @@ public class OcspServerCertificateValidator implements ChannelInboundHandler {
     private final boolean validateNonce;
     private final IoTransport ioTransport;
     private final DnsNameResolver dnsNameResolver;
+    private boolean ocspQueryInProgress;
+    private boolean readPending;
 
     /**
      * Create a new {@link OcspServerCertificateValidator} instance without nonce validation
@@ -126,9 +131,12 @@ public class OcspServerCertificateValidator implements ChannelInboundHandler {
     }
 
     @Override
-    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
-        ctx.fireUserEventTriggered(evt);
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        // Just buffer until the handler is removed which will happen once we did finish the OCSP processing.
+    }
 
+    @Override
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent sslHandshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
 
@@ -141,55 +149,85 @@ public class OcspServerCertificateValidator implements ChannelInboundHandler {
                         .getPeerCertificates();
 
                 assert certificates.length >= 2 : "There must an end-entity certificate and issuer certificate";
-
-                Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
-                        (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);
-
+                Promise<BasicOCSPResp> ocspRespPromise = ctx.executor().newPromise();
+                OcspClient.query((X509Certificate) certificates[0], (X509Certificate) certificates[1],
+                        validateNonce, ioTransport, dnsNameResolver, ocspRespPromise);
+                ocspQueryInProgress = true;
                 ocspRespPromise.addListener(future -> {
-                    // If Future is success then we have successfully received OCSP response
-                    // from OCSP responder. We will validate it now and process.
-                    if (future.isSuccess()) {
-                        SingleResp response = future.getNow().getResponses()[0];
+                    ocspQueryInProgress = false;
+                    try {
+                        // If Future is success then we have successfully received OCSP response
+                        // from OCSP responder. We will validate it now and process.
+                        if (future.isSuccess()) {
+                            SingleResp response = future.getNow().getResponses()[0];
 
-                        Date current = new Date();
-                        if (!(current.after(response.getThisUpdate()) &&
-                                current.before(response.getNextUpdate()))) {
-                            ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
-                        }
+                            Date current = new Date();
+                            Date thisUpdate = response.getThisUpdate();
+                        Date nextUpdate = response.getNextUpdate();
+                        if (thisUpdate == null || !current.after(thisUpdate) ||
+                                    (nextUpdate != null && !current.before(nextUpdate))) {
+                                ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
+                                return;
+                            }
 
-                        OcspResponse.Status status;
-                        if (response.getCertStatus() == null) {
-                            // 'null' means certificate is valid
-                            status = OcspResponse.Status.VALID;
-                        } else if (response.getCertStatus() instanceof RevokedStatus) {
-                            status = OcspResponse.Status.REVOKED;
+                            OcspResponse.Status status;
+                            if (response.getCertStatus() == null) {
+                                // 'null' means certificate is valid
+                                status = OcspResponse.Status.VALID;
+                            } else if (response.getCertStatus() instanceof RevokedStatus) {
+                                status = OcspResponse.Status.REVOKED;
+                            } else {
+                                status = OcspResponse.Status.UNKNOWN;
+                            }
+
+                            ctx.fireUserEventTriggered(new OcspValidationEvent(
+                                    new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
+
+                            // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
+                            // to 'true' then close the channel and throw an exception.
+                            if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
+                                // Certificate is not valid. Throw
+                                ctx.fireExceptionCaught(new OCSPException(
+                                        "Certificate not valid. Status: " + status));
+                                ctx.close();
+                            }
                         } else {
-                            status = OcspResponse.Status.UNKNOWN;
+                            ctx.fireExceptionCaught(future.cause());
+                            if (closeAndThrowIfNotValid) {
+                                ctx.close();
+                            }
                         }
-
-                        ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
-
-                        // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
-                        // to 'true' then close the channel and throw an exception.
-                        if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
-                            ctx.channel().close();
-                            // Certificate is not valid. Throw
-                            ctx.fireExceptionCaught(new OCSPException(
-                                    "Certificate not valid. Status: " + status));
+                    } finally {
+                        ctx.fireUserEventTriggered(evt);
+                        // Lets remove ourselves from the pipeline because we are done processing validation.
+                        ctx.pipeline().remove(this);
+                        if (readPending) {
+                            readPending = false;
+                            ctx.read();
                         }
-                    } else {
-                        ctx.fireExceptionCaught(future.cause());
                     }
                 });
+            } else {
+                ctx.fireUserEventTriggered(evt);
             }
-            // Lets remove ourselves from the pipeline because we are done processing validation.
-            ctx.pipeline().remove(this);
+        } else {
+            ctx.fireUserEventTriggered(evt);
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        ctx.channel().close();
+        ctx.close();
+    }
+
+    @Override
+    public void read(ChannelHandlerContext ctx) {
+        // Let's stop reading until we are done with the processing of the OCSP query.
+        if (ocspQueryInProgress) {
+            readPending = true;
+        } else {
+            readPending = false;
+            ctx.read();
+        }
     }
 }

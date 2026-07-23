@@ -155,7 +155,7 @@ public class CorsHandler implements ChannelInboundHandler, ChannelOutboundHandle
             if (corsConfig.origins().contains(requestOrigin)) {
                 return corsConfig;
             }
-            if (corsConfig.isNullOriginAllowed() || NULL_ORIGIN.equals(requestOrigin)) {
+            if (corsConfig.isNullOriginAllowed() && NULL_ORIGIN.equals(requestOrigin)) {
                 return corsConfig;
             }
         }

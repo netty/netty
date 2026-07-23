@@ -43,7 +43,8 @@ public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHand
     public void customSensitivityDetectorIsForwardedToQpackEncoder() {
         Http3ClientConnectionHandler handler = new Http3ClientConnectionHandler(
                 null, null, null, null,
-                true, null, QpackSensitivityDetector.ALWAYS_SENSITIVE);
+                true, null, QpackSensitivityDetector.ALWAYS_SENSITIVE,
+                Http3CodecUtils.DEFAULT_MAX_UNKNOWN_FRAME_PAYLOAD_LENGTH);
 
         Http3Headers headers = new DefaultHttp3Headers(false);
         headers.add("x-custom", "value");
