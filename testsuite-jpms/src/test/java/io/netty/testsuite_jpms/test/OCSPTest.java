@@ -63,7 +63,7 @@ public class OCSPTest {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(sslContext.newHandler(ch.alloc(), "netty.io", 443));
+                            pipeline.addLast(sslContext.newHandler(ch.alloc(), "apple.com", 443));
                             pipeline.addLast(new OcspServerCertificateValidator(false));
                             pipeline.addLast(new SimpleChannelInboundHandler<>() {
                                 @Override
@@ -85,7 +85,7 @@ public class OCSPTest {
                         }
                     });
 
-            Future<Channel> channelFuture = bootstrap.connect("netty.io", 443);
+            Future<Channel> channelFuture = bootstrap.connect("apple.com", 443);
             channelFuture.sync();
 
             // Wait for maximum of 1 minute for Ocsp validation to happen
