@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.16.Final-SNAPSHOT</version>
+  <version>4.2.17.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -207,7 +207,7 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras} -Djdk.tls.SunX509KeyManager.certChecking=false</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
              our EventExecutorGroup implementations
@@ -598,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.79.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.82.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -620,7 +620,11 @@
     <profile>
       <id>leak</id>
       <properties>
-        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</argLine.leak>
+        <argLine.leak>
+          -Dio.netty.leakDetectionLevel=paranoid
+          -Dio.netty.leakDetection.targetRecords=32
+          -Dio.netty.test.leakPresenceDetection.disabled=true
+        </argLine.leak>
       </properties>
     </profile>
     <profile>
@@ -740,7 +744,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.78.Final</tcnative.version>
+    <tcnative.version>2.0.81.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -951,7 +955,7 @@
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.11.0</version>
+        <version>1.11.1</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1439,6 +1443,59 @@
                   <new>method void io.netty.handler.codec.sctp.SctpMessageCompletionHandler::exceptionCaught(io.netty.channel.ChannelHandlerContext, java.lang.Throwable) throws java.lang.Exception</new>
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.added</code>
+                  <old>method void io.netty.handler.codec.spdy.SpdyHttpDecoder::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.spdy.SpdyHttpDecoder</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</old>
+                  <new>method void io.netty.handler.codec.ByteToMessageDecoder::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelRead(io.netty.channel.ChannelHandlerContext, java.lang.Object) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</old>
+                  <new>method void io.netty.handler.codec.ByteToMessageDecoder::channelRead(io.netty.channel.ChannelHandlerContext, java.lang.Object) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelReadComplete(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</old>
+                  <new>method void io.netty.handler.codec.ByteToMessageDecoder::channelReadComplete(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.ByteToMessageDecoder::discardSomeReadBytes() @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <justification>Change is tolerated for compatibility. Part of a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <old>method void io.netty.channel.ChannelHandlerAdapter::handlerRemoved(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</old>
+                  <new>method void io.netty.handler.codec.ByteToMessageDecoder::handlerRemoved(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <justification>Change is tolerated for compatibility. Part of a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</old>
+                  <new>class io.netty.handler.ssl.ocsp.OcspServerCertificateValidator</new>
+                  <superClass>io.netty.handler.codec.ByteToMessageDecoder</superClass>
+                  <justification>Change is tolerated for compatibility. Part of a security fix.</justification>
                 </item>
               </differences>
             </revapi.differences>

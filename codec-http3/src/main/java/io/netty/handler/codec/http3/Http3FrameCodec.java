@@ -51,6 +51,7 @@ import static io.netty.handler.codec.http3.Http3CodecUtils.readVariableLengthInt
 import static io.netty.handler.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Decodes / encodes {@link Http3Frame}s.
@@ -58,6 +59,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutboundHandler {
     private final Http3FrameTypeValidator validator;
     private final long maxHeaderListSize;
+    private final int maxUnknownFramePayloadLength;
     private final QpackDecoder qpackDecoder;
     private final QpackEncoder qpackEncoder;
     private final Http3RequestStreamCodecState encodeState;
@@ -72,23 +74,29 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private WriteResumptionListener writeResumptionListener;
 
     static Http3FrameCodecFactory newFactory(QpackDecoder qpackDecoder,
-                                             long maxHeaderListSize, QpackEncoder qpackEncoder) {
+                                             long maxHeaderListSize, int maxUnknownFramePayloadLength,
+                                             QpackEncoder qpackEncoder) {
         checkNotNull(qpackEncoder, "qpackEncoder");
         checkNotNull(qpackDecoder, "qpackDecoder");
+        checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        checkPositive(maxUnknownFramePayloadLength, "maxUnknownFramePayloadLength");
 
         // QPACK decoder and encoder are shared between streams in a connection.
         return (validator, encodeState, decodeState,
                 nonStandardSettingsValidator) -> new Http3FrameCodec(validator, qpackDecoder,
-                maxHeaderListSize, qpackEncoder, encodeState, decodeState, nonStandardSettingsValidator);
+                maxHeaderListSize, maxUnknownFramePayloadLength, qpackEncoder,
+                encodeState, decodeState, nonStandardSettingsValidator);
     }
 
     Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
-                    long maxHeaderListSize, QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
+                    long maxHeaderListSize, int maxUnknownFramePayloadLength,
+                    QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
                     Http3RequestStreamCodecState decodeState,
                     Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator) {
         this.validator = checkNotNull(validator, "validator");
         this.qpackDecoder = checkNotNull(qpackDecoder, "qpackDecoder");
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        this.maxUnknownFramePayloadLength = checkPositive(maxUnknownFramePayloadLength, "maxUnknownFramePayloadLength");
         this.qpackEncoder = checkNotNull(qpackEncoder, "qpackEncoder");
         this.encodeState = checkNotNull(encodeState, "encodeState");
         this.decodeState = checkNotNull(decodeState, "decodeState");
@@ -335,7 +343,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 }
                 // Handling reserved frame types
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        maxUnknownFramePayloadLength, Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
                 out.add(new DefaultHttp3UnknownFrame(longType, in.readRetainedSlice(payLoadLength)));

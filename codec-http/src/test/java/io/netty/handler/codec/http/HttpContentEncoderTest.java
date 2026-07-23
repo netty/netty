@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -44,6 +45,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
+
+        TestEncoder() {
+        }
+
+        TestEncoder(int maxPipelineDepth) {
+            super(maxPipelineDepth);
+        }
+
         @Override
         protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
             return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
@@ -433,6 +442,18 @@ public class HttpContentEncoderTest {
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
+    }
+
+    @Test
+    public void testPipelineDepthLimited() {
+        EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder(2));
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        assertThrows(DecoderException.class, () -> ch.writeInbound(
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+
+        ch.finishAndReleaseAll();
     }
 
     private static void assertEmptyResponse(EmbeddedChannel ch) {
