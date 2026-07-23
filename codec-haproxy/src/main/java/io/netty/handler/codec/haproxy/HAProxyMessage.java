@@ -100,8 +100,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         ObjectUtil.checkNotNull(tlvs, "tlvs");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
-        checkAddress(sourceAddress, addrFamily);
-        checkAddress(destinationAddress, addrFamily);
+        checkAddress(sourceAddress, addrFamily, protocolVersion);
+        checkAddress(destinationAddress, addrFamily, protocolVersion);
         checkPort(sourcePort, addrFamily);
         checkPort(destinationPort, addrFamily);
 
@@ -470,11 +470,12 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     /**
      * Validate an address (IPv4, IPv6, Unix Socket)
      *
-     * @param address                    human-readable address
-     * @param addrFamily                 the {@link AddressFamily} to check the address against
-     * @throws IllegalArgumentException  if the address is invalid
+     * @param address    human-readable address
+     * @param addrFamily the {@link AddressFamily} to check the address against
+     * @param version    the protocol version
+     * @throws IllegalArgumentException if the address is invalid
      */
-    private static void checkAddress(String address, AddressFamily addrFamily) {
+    private static void checkAddress(String address, AddressFamily addrFamily, HAProxyProtocolVersion version) {
         ObjectUtil.checkNotNull(addrFamily, "addrFamily");
 
         switch (addrFamily) {
@@ -487,6 +488,15 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 ObjectUtil.checkNotNull(address, "address");
                 if (address.getBytes(CharsetUtil.US_ASCII).length > 108) {
                     throw new IllegalArgumentException("invalid AF_UNIX address: " + address);
+                }
+                if (version == HAProxyProtocolVersion.V1) {
+                    // V1 is text-based and uses CR LF as header delimiters, and space as field delimiter.
+                    for (int i = 0, len = address.length(); i < len; i++) {
+                        char c = address.charAt(i);
+                        if (c == '\r' || c == '\n' || c == ' ') {
+                            throw new IllegalArgumentException("invalid AF_UNIX address: " + address);
+                        }
+                    }
                 }
                 return;
         }
