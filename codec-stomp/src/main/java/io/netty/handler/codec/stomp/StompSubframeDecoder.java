@@ -384,24 +384,30 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
 
         boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {
             shouldUnescape = shouldUnescape(headersSubframe.command());
-            AppendableCharSequence value = super.parse(buf);
-            if (value == null || (name == null && value.length() == 0)) {
-                numHeaders = 0;
-                return false;
-            }
-
-            numHeaders++;
-            if (maxNumHeaders < numHeaders) {
-                throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
-            }
-            if (valid) {
-                headersSubframe.headers().add(name, value.toString());
-            } else if (validateHeaders) {
-                if (StringUtil.isNullOrEmpty(name)) {
-                    throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
+            for (;;) {
+                AppendableCharSequence value = super.parse(buf);
+                if (value == null) {
+                    return false;
+                }
+                if (name == null && value.isEmpty()) {
+                    numHeaders = 0;
+                    return true;
+                }
+                numHeaders++;
+                if (maxNumHeaders < numHeaders) {
+                    throw new TooLongFrameException("maximum number of headers exceeded: " + maxNumHeaders);
+                }
+                if (valid) {
+                    headersSubframe.headers().add(name, value.toString());
+                } else if (validateHeaders) {
+                    if (StringUtil.isNullOrEmpty(name)) {
+                        throw new IllegalArgumentException("received an invalid header line '" + value + '\'');
+                    }
+                    String line = name + ':' + value;
+                    throw new IllegalArgumentException("a header value or name contains a prohibited character ':'"
+                            + ", " + line);
                 }
             }
-            return true;
         }
 
         @Override
@@ -409,7 +415,7 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
             if (nextByte == StompConstants.COLON) {
                 if (name == null) {
                     AppendableCharSequence charSeq = charSequence();
-                    if (charSeq.length() != 0) {
+                    if (!charSeq.isEmpty()) {
                         name = charSeq.substring(0, charSeq.length());
                         charSeq.reset();
                         valid = true;
