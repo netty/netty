@@ -107,6 +107,18 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         return IoUring.isUnixDomainSocketInqSupported() && super.socketIsEmpty(flags);
     }
 
+    @Override
+    protected boolean shouldCompleteReadLoop(int flags, boolean multishot) {
+        if (IoUring.isUnixDomainSocketInqSupported()) {
+            return socketIsEmpty(flags);
+        }
+        // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for dus, so the read-loop boundary
+        // cannot be determined reliably.
+        // Preserve the original behavior and complete the read loop for each
+        // multishot completion.
+        return multishot;
+    }
+
     private final class IoUringDomainSocketUnsafe extends IoUringStreamUnsafe {
 
         private MsgHdrMemory writeMsgHdrMemory;
