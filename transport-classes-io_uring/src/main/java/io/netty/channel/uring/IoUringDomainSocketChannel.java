@@ -102,6 +102,11 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         return false;
     }
 
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        return IoUring.isUnixDomainSocketInqSupported() && super.socketIsEmpty(flags);
+    }
+
     private final class IoUringDomainSocketUnsafe extends IoUringStreamUnsafe {
 
         private MsgHdrMemory writeMsgHdrMemory;

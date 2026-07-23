@@ -603,6 +603,7 @@ final class Native {
     }
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);
+    static native boolean isUnixDomainSocketInqSupported();
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {
