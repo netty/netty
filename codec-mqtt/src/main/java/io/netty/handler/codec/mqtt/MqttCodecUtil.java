@@ -42,6 +42,9 @@ final class MqttCodecUtil {
     }
 
     static boolean isValidPublishTopicName(String topicName) {
+        if (topicName == null) {
+            return false;
+        }
         // publish topic name must not contain any wildcard
         for (int i = 0; i < topicName.length(); i++) {
             char c = topicName.charAt(i);
