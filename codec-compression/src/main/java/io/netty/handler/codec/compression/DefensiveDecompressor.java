@@ -46,8 +46,13 @@ final class DefensiveDecompressor implements Decompressor {
 
     @Override
     public void addInput(ByteBuf buf) throws DecompressionException {
-        checkReady();
-        checkState(Status.NEED_INPUT);
+        try {
+            checkReady();
+            checkState(Status.NEED_INPUT);
+        } catch (Throwable t) {
+            buf.release();
+            throw t;
+        }
         try {
             delegate.addInput(buf);
         } catch (Exception e) {

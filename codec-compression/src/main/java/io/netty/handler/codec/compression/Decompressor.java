@@ -33,7 +33,8 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public interface Decompressor extends AutoCloseable {
     /**
-     * Get the current status.
+     * Get the current status. Like the other operations on this class, calling this method is not permitted if the
+     * decompressor has failed or was closed.
      *
      * @return The current status
      */
@@ -42,7 +43,7 @@ public interface Decompressor extends AutoCloseable {
     /**
      * Add a new input buffer. Only permitted for {@link Status#NEED_INPUT}.
      *
-     * @param buf The input buffer. Buffer ownership transfers to the decompressor.
+     * @param buf The input buffer. Buffer ownership transfers to the decompressor (also on exception).
      */
     void addInput(ByteBuf buf) throws DecompressionException;
 
@@ -67,6 +68,11 @@ public interface Decompressor extends AutoCloseable {
     @Override
     void close() throws DecompressionException;
 
+    /**
+     * Current status of the decompressor. The status indicates which method may be called to make progress on
+     * decompression.
+     */
+    @UnstableApi
     enum Status {
         /**
          * More input is required before decompression can proceed. Only calls to {@link #addInput} and
