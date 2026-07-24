@@ -332,11 +332,12 @@ jobs:
           distribution: 'zulu'
           java-version: 11
 
-      # Pinned to 1.71.0
+      # Pinned to 1.96.1
       - name: Install stable rust toolchain
-        uses: dtolnay/rust-toolchain@d36bfec312c4a8e1f20b70b99cdd6f73b7366bd0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           targets: x86_64-pc-windows-msvc
+          toolchain: 'stable'
 
       # Pinned to v2
       - name: Add msbuild to PATH
