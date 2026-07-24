@@ -50,6 +50,54 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
+    public void testRejectsCompressedDataBeyondDeclaredLength() {
+        final EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        final ByteBuf input = decoder.alloc().buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(1);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x80);
+        input.writeZero(8);
+
+        try {
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.writeInbound(input);
+                }
+            });
+        } finally {
+            decoder.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void testRejectsDecompressedLengthMismatch() {
+        final EmbeddedChannel decoder = new EmbeddedChannel(new Lz4FrameDecoder(false));
+        final ByteBuf input = decoder.alloc().buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(2);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x10);
+        input.writeByte(0);
+
+        try {
+            assertThrows(DecompressionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    decoder.writeInbound(input);
+                }
+            });
+        } finally {
+            decoder.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     public void testUnexpectedBlockIdentifier() {
         final byte[] data = Arrays.copyOf(DATA, DATA.length);
         data[1] = 0x00;
