@@ -112,10 +112,10 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         if (IoUring.isUnixDomainSocketInqSupported()) {
             return socketIsEmpty(flags);
         }
-        // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for dus, so the read-loop boundary
-        // cannot be determined reliably.
-        // Preserve the original behavior and complete the read loop for each
-        // multishot completion.
+        // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for UDS, so the read-loop boundary cannot be
+        // determined reliably.
+        // Multishot recv does not produce an EAGAIN completion while it remains armed, so
+        // complete the read loop for each multishot completion. A one-shot recv can continue until EAGAIN.
         return multishot;
     }
 
