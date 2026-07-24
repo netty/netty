@@ -90,6 +90,9 @@ jobs:
             cache-windows-maven-${{ hashFiles('**/pom.xml') }}
             cache-windows-maven-
 
+      - name: Set up TestLens
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
+
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
@@ -248,6 +251,9 @@ jobs:
             cache-maven-al2023-${{ hashFiles('**/pom.xml') }}
             cache-maven-al2023-
 
+      - name: Set up TestLens
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
+
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 
@@ -325,6 +331,9 @@ jobs:
 
       - name: Install tools via brew
         run: brew bundle
+
+      - name: Set up TestLens
+        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
 
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
