@@ -92,9 +92,6 @@ final class DefensiveDecompressor implements Decompressor {
 
     @Override
     public void close() {
-        if (closed) {
-            throw new IllegalStateException("Already closed");
-        }
         closed = true;
         delegate.close();
     }

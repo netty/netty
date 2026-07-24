@@ -63,7 +63,7 @@ public interface Decompressor extends AutoCloseable {
     ByteBuf takeOutput() throws DecompressionException;
 
     /**
-     * Close this decompressor, cleaning up any associated resources. <b>This method may only be called once.</b>
+     * Close this decompressor, cleaning up any associated resources. <b>This method is idempotent.</b>
      */
     @Override
     void close() throws DecompressionException;
