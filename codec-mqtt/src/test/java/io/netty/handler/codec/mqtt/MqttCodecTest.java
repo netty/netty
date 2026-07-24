@@ -960,7 +960,7 @@ public class MqttCodecTest {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
 
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
         final MqttUnsubAckMessage message = MqttMessageBuilders.unsubAck()
                 .packetId((short) 1)
                 .properties(props)
