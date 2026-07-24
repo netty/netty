@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,14 +68,8 @@ public class DefensiveDecompressorTest {
 
         delegate.status = Decompressor.Status.NEED_OUTPUT;
         assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
-        assertThrows(IllegalStateException.class, new org.junit.jupiter.api.function.Executable() {
-            @Override
-            public void execute() throws Throwable {
-                decompressor.addInput(input);
-            }
-        });
+        assertThrows(IllegalStateException.class, () -> decompressor.addInput(input));
 
-        input.release();
         decompressor.close();
     }
 
@@ -111,15 +106,16 @@ public class DefensiveDecompressorTest {
     }
 
     @Test
-    public void closeMayOnlyBeCalledOnce() {
+    public void closeIdempotent() {
         TestDecompressor delegate = new TestDecompressor();
         DefensiveDecompressor decompressor = new DefensiveDecompressor(delegate);
 
         decompressor.close();
 
         assertTrue(delegate.closeCalled);
-        assertThrows(IllegalStateException.class, decompressor::close);
         assertThrows(IllegalStateException.class, decompressor::status);
+
+        assertDoesNotThrow(decompressor::close);
     }
 
     private static final class TestDecompressor implements Decompressor {
