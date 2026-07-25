@@ -537,7 +537,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
 
-        boolean empty = socketIsEmpty(flags);
+        boolean completeRead = shouldCompleteReadLoop(flags, isReadMultishot());
         if (rearm) {
             // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
             readId = 0;
@@ -631,15 +631,26 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             allocHandle.incMessagesRead(1);
             pipeline.fireChannelRead(byteBuf);
             byteBuf = null;
-            scheduleNextRead(pipeline, allocHandle, rearm, empty);
+            scheduleNextRead(pipeline, allocHandle, rearm, completeRead);
         } catch (Throwable t) {
             handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
         }
     }
 
+    private boolean shouldCompleteReadLoop(int flags, boolean multishot) {
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX && !IoUring.isUnixDomainSocketInqSupported()) {
+            // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for UDS, so the read-loop boundary cannot be
+            // determined reliably.
+            // Multishot recv does not produce an EAGAIN completion while it remains armed, so
+            // complete the read loop for each multishot completion. A one-shot recv can continue until EAGAIN.
+            return multishot;
+        }
+        return socketIsEmpty(flags);
+    }
+
     private void scheduleNextRead(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
-                                  boolean rearm, boolean empty) {
-        if (allocHandle.continueReading() && !empty) {
+                                  boolean rearm, boolean completeRead) {
+        if (allocHandle.continueReading() && !completeRead) {
             if (rearm) {
                 // We only should schedule another read if we need to rearm.
                 // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
@@ -775,6 +786,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     @Override
     protected boolean socketIsEmpty(int flags) {
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX && !IoUring.isUnixDomainSocketInqSupported()) {
+            return false;
+        }
         return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 

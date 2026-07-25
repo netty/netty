@@ -31,6 +31,7 @@ public final class IoUring {
 
     private static final Throwable UNAVAILABILITY_CAUSE;
     private static final boolean IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
+    private static final boolean UNIX_DOMAIN_SOCKET_INQ_SUPPORTED;
     private static final boolean IORING_SPLICE_SUPPORTED;
     private static final boolean IORING_SEND_ZC_SUPPORTED;
     private static final boolean IORING_SENDMSG_ZC_SUPPORTED;
@@ -66,6 +67,7 @@ public final class IoUring {
         logger = InternalLoggerFactory.getInstance(IoUring.class);
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
+        boolean unixDomainSocketInqSupported = false;
         boolean spliceSupported = false;
         boolean sendZcSupported = false;
         boolean sendmsgZcSupported = false;
@@ -133,6 +135,7 @@ public final class IoUring {
                     registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
                     registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
                             Native.IOU_PBUF_RING_INC);
+                    unixDomainSocketInqSupported = Native.isUnixDomainSocketInqSupported();
                 } finally {
                     if (ringBuffer != null) {
                         try {
@@ -149,6 +152,7 @@ public final class IoUring {
         // Assign static finals first so printFeatures() (no-arg) can read them.
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
+        UNIX_DOMAIN_SOCKET_INQ_SUPPORTED = unixDomainSocketInqSupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
         IORING_SEND_ZC_SUPPORTED = sendZcSupported;
         IORING_SENDMSG_ZC_SUPPORTED = sendmsgZcSupported;
@@ -246,6 +250,10 @@ public final class IoUring {
         return IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     }
 
+    static boolean isUnixDomainSocketInqSupported() {
+        return UNIX_DOMAIN_SOCKET_INQ_SUPPORTED;
+    }
+
     /**
      * Returns if SPLICE is supported or not.
      *
@@ -320,7 +328,6 @@ public final class IoUring {
     static boolean isIoringSetupNoSqarraySupported() {
         return IORING_SETUP_NO_SQARRAY_SUPPORTED;
     }
-
     /**
      * Returns if it is supported to use a buffer ring.
      *
@@ -417,6 +424,7 @@ public final class IoUring {
             return "";
         }
         return "CQE_F_SOCK_NONEMPTY_SUPPORTED=" + IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED
+                + ", UNIX_DOMAIN_SOCKET_INQ_SUPPORTED=" + UNIX_DOMAIN_SOCKET_INQ_SUPPORTED
                 + ", SPLICE_SUPPORTED=" + IORING_SPLICE_SUPPORTED
                 + ", ACCEPT_NO_WAIT_SUPPORTED=" + IORING_ACCEPT_NO_WAIT_SUPPORTED
                 + ", ACCEPT_MULTISHOT_SUPPORTED=" + IORING_ACCEPT_MULTISHOT_SUPPORTED
