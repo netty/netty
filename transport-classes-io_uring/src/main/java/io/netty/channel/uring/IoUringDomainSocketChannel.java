@@ -102,6 +102,23 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         return false;
     }
 
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        return IoUring.isUnixDomainSocketInqSupported() && super.socketIsEmpty(flags);
+    }
+
+    @Override
+    protected boolean shouldCompleteReadLoop(int flags, boolean multishot) {
+        if (IoUring.isUnixDomainSocketInqSupported()) {
+            return socketIsEmpty(flags);
+        }
+        // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for UDS, so the read-loop boundary cannot be
+        // determined reliably.
+        // Multishot recv does not produce an EAGAIN completion while it remains armed, so
+        // complete the read loop for each multishot completion. A one-shot recv can continue until EAGAIN.
+        return multishot;
+    }
+
     private final class IoUringDomainSocketUnsafe extends IoUringStreamUnsafe {
 
         private MsgHdrMemory writeMsgHdrMemory;
