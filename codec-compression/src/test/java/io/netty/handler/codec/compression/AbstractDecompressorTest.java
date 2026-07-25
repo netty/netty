@@ -44,11 +44,11 @@ public abstract class AbstractDecompressorTest extends AbstractCompressionTest {
 
     protected abstract Decompressor.AbstractDecompressorBuilder createDecompressor();
 
-    public ByteBuf[] smallData() {
+    public ByteBuf[] smallData() throws Exception {
         return data(compressToByteArray(BYTES_SMALL));
     }
 
-    public ByteBuf[] largeData() {
+    public ByteBuf[] largeData() throws Exception {
         return data(compressToByteArray(BYTES_LARGE));
     }
 
@@ -115,7 +115,7 @@ public abstract class AbstractDecompressorTest extends AbstractCompressionTest {
         }
     }
 
-    private byte[] compressToByteArray(byte[] data) {
+    private byte[] compressToByteArray(byte[] data) throws Exception {
         ByteBuf compressed = compress(data);
         try {
             byte[] bytes = new byte[compressed.readableBytes()];
@@ -126,7 +126,7 @@ public abstract class AbstractDecompressorTest extends AbstractCompressionTest {
         }
     }
 
-    private ByteBuf compress(byte[] data) {
+    private ByteBuf compress(byte[] data) throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(createCompressor());
         ch.writeOutbound(Unpooled.wrappedBuffer(data));
         assertTrue(ch.close().isSuccess());
@@ -193,7 +193,7 @@ public abstract class AbstractDecompressorTest extends AbstractCompressionTest {
     }
 
     @Test
-    public void completeAfterEndOfInput() throws DecompressionException {
+    public void completeAfterEndOfInput() throws Exception {
         ByteBuf compressed = compress("foo".getBytes(StandardCharsets.UTF_8));
 
         try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
