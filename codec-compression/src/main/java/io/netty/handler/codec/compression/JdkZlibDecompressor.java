@@ -228,6 +228,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             if (!finished) {
                 inflater.reset();
                 crc.reset();
+                xlen = -1;
                 gzipState = GzipState.HEADER_START;
                 return true;
             }
@@ -285,7 +286,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                     crc.update(xlen1);
                     crc.update(xlen2);
 
-                    xlen |= xlen1 << 8 | xlen2;
+                    xlen = xlen2 << 8 | xlen1;
                 }
                 gzipState = GzipState.XLEN_READ;
                 // fall through
