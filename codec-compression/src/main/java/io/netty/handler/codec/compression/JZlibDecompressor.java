@@ -81,44 +81,56 @@ public class JZlibDecompressor extends ZlibDecompressor {
         int targetCapacity = maxAllocation == 0
                 ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
         ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
-        z.avail_out = decompressed.writableBytes();
-        z.next_out = decompressed.array();
-        z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();
+        boolean success = false;
+        try {
+            z.avail_out = decompressed.writableBytes();
+            z.next_out = decompressed.array();
+            z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();
 
-        // Decompress 'in' into 'out'
-        int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-        decompressed.writerIndex(z.next_out_index - decompressed.arrayOffset());
+            // Decompress 'in' into 'out'
+            int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
+            decompressed.writerIndex(z.next_out_index - decompressed.arrayOffset());
 
-        if (inputBufferInInflater) {
-            buf.readerIndex(buf.writerIndex() - z.avail_in);
+            if (inputBufferInInflater) {
+                buf.readerIndex(buf.writerIndex() - z.avail_in);
+                if (z.avail_in == 0) {
+                    inputBufferInInflater = false;
+                }
+            }
+
+            switch (resultCode) {
+                case JZlib.Z_NEED_DICT:
+                    if (dictionary == null) {
+                        ZlibUtil.fail(z, "decompression failure", resultCode);
+                    } else {
+                        resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+                        if (resultCode != JZlib.Z_OK) {
+                            ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                        }
+                    }
+                    break;
+                case JZlib.Z_STREAM_END:
+                    finished = true; // Do not decode anymore.
+                    z.inflateEnd();
+                    break;
+                case JZlib.Z_OK:
+                case JZlib.Z_BUF_ERROR:
+                    break;
+                default:
+                    ZlibUtil.fail(z, "decompression failure", resultCode);
+            }
+
+            success = true;
+            return decompressed;
+        } finally {
+            z.next_out = null;
             if (z.avail_in == 0) {
-                inputBufferInInflater = false;
+                z.next_in = null;
+            }
+            if (!success) {
+                decompressed.release();
             }
         }
-
-        switch (resultCode) {
-            case JZlib.Z_NEED_DICT:
-                if (dictionary == null) {
-                    ZlibUtil.fail(z, "decompression failure", resultCode);
-                } else {
-                    resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
-                    if (resultCode != JZlib.Z_OK) {
-                        ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
-                    }
-                }
-                break;
-            case JZlib.Z_STREAM_END:
-                finished = true; // Do not decode anymore.
-                z.inflateEnd();
-                break;
-            case JZlib.Z_OK:
-            case JZlib.Z_BUF_ERROR:
-                break;
-            default:
-                ZlibUtil.fail(z, "decompression failure", resultCode);
-        }
-
-        return decompressed;
     }
 
     @UnstableApi

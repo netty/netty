@@ -15,7 +15,13 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -26,5 +32,18 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Override
     protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
         return JZlibDecompressor.builder();
+    }
+
+    @Test
+    public void testMalformedInputDoesNotLeakOutput() {
+        Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT);
+        try {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0 }));
+            assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::takeOutput);
+        } finally {
+            decompressor.close();
+        }
     }
 }
