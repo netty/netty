@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -199,7 +200,62 @@ public final class ZlibCodecFactory {
         }
     }
 
+    /**
+     * Create a new decompressor builder that delegates to {@link JZlibDecompressor} or {@link JdkZlibDecompressor}.
+     *
+     * @return The decompressor builder
+     */
+    public static ZlibDecompressorBuilder decompressorBuilder() {
+        return new ZlibDecompressorBuilder();
+    }
+
     private ZlibCodecFactory() {
         // Unused
+    }
+
+    public static class ZlibDecompressorBuilder extends Decompressor.AbstractDecompressorBuilder {
+        private final ZlibDecompressor.AbstractZlibDecompressorBuilder delegate;
+
+        ZlibDecompressorBuilder() {
+            this.delegate = noJdkZlibDecoder ? new JZlibDecompressor.Builder() : new JdkZlibDecompressor.Builder();
+        }
+
+        /**
+         * Set the wrapper format for the deflated data. Defaults to {@link ZlibWrapper#ZLIB}.
+         *
+         * @param wrapper The wrapper format
+         * @return This builder
+         */
+        public ZlibDecompressorBuilder wrapper(ZlibWrapper wrapper) {
+            delegate.wrapper(wrapper);
+            return this;
+        }
+
+        /**
+         * Set the preset dictionary to use. Defaults to no dictionary.
+         *
+         * @param dictionary The dictionary
+         * @return This builder
+         */
+        public ZlibDecompressorBuilder dictionary(byte[] dictionary) {
+            delegate.dictionary(dictionary);
+            return this;
+        }
+
+        /**
+         * Set the maximum output buffer size. Defaults to 1M.
+         *
+         * @param maxAllocation The maximum output buffer size.
+         * @return This builder
+         */
+        public ZlibDecompressorBuilder maxAllocation(int maxAllocation) {
+            delegate.maxAllocation(maxAllocation);
+            return this;
+        }
+
+        @Override
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return delegate.build(allocator);
+        }
     }
 }
