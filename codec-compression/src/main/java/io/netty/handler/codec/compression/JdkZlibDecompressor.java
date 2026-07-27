@@ -59,6 +59,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     private boolean decideZlibOrNone;
     private boolean finished;
+    private boolean gzipMemberFinished;
     /**
      * If this is true, part of the input buffer is still in use by the {@link #inflater}, so we shouldn't touch that
      * buffer too much (e.g. compact it).
@@ -105,14 +106,14 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     @Override
     public void endOfInput() throws DecompressionException {
         if (finished) {
-            // make sure we return COMPLETE from status()
-            gzipState = GzipState.HEADER_START;
             return;
         }
-        if (gzipState != GzipState.HEADER_START) {
-            throw new DecompressionException("Incomplete gzip framing");
+        if (crc != null && decompressConcatenated && gzipMemberFinished &&
+                gzipState == GzipState.HEADER_START && available() == 0) {
+            finished = true;
+            return;
         }
-        finished = true;
+        throw new DecompressionException("Compressed stream ended before the end-of-stream marker");
     }
 
     @Override
@@ -223,6 +224,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     private boolean handleGzipFooter(ByteBuf in) {
         if (readGZIPFooter(in)) {
+            gzipMemberFinished = true;
             finished = !decompressConcatenated;
 
             if (!finished) {

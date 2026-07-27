@@ -30,12 +30,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @ParameterizedClass
 @MethodSource("wrappers")
@@ -84,6 +86,22 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
         decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 31 }));
         assertDoesNotThrow(decompressor::close);
         assertDoesNotThrow(decompressor::close);
+    }
+
+    @Test
+    public void testTruncatedZlibInputRejectedAtEndOfInput() throws Exception {
+        assumeTrue(wrapper == ZlibWrapper.ZLIB);
+        byte[] compressed = deflate("truncated zlib".getBytes(CharsetUtil.UTF_8));
+        assertTruncated(JdkZlibDecompressor.builder().wrapper(ZlibWrapper.ZLIB)
+                .build(ByteBufAllocator.DEFAULT), Arrays.copyOf(compressed, compressed.length - 1));
+    }
+
+    @Test
+    public void testTruncatedGzipInputRejectedAtEndOfInput() throws Exception {
+        assumeTrue(wrapper == ZlibWrapper.GZIP);
+        byte[] compressed = gzip("truncated gzip".getBytes(CharsetUtil.UTF_8));
+        assertTruncated(JdkZlibDecompressor.builder().wrapper(ZlibWrapper.GZIP)
+                .build(ByteBufAllocator.DEFAULT), Arrays.copyOf(compressed, compressed.length - 1));
     }
 
     @Test
@@ -148,6 +166,28 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
         gzip.write(data);
         gzip.close();
         return output.toByteArray();
+    }
+
+    private static byte[] deflate(byte[] data) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        DeflaterOutputStream deflater = new DeflaterOutputStream(output);
+        deflater.write(data);
+        deflater.close();
+        return output.toByteArray();
+    }
+
+    private static void assertTruncated(Decompressor decompressor, byte[] compressed) throws Exception {
+        try {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(compressed));
+            while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
+                decompressor.takeOutput().release();
+            }
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::endOfInput);
+        } finally {
+            decompressor.close();
+        }
     }
 
     private static byte[] gzipWithExtraField(byte[] data, byte[] extra) throws IOException {
