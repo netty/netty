@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -205,6 +206,7 @@ public final class ZlibCodecFactory {
      *
      * @return The decompressor builder
      */
+    @UnstableApi
     public static ZlibDecompressorBuilder decompressorBuilder() {
         return new ZlibDecompressorBuilder();
     }
@@ -213,6 +215,7 @@ public final class ZlibCodecFactory {
         // Unused
     }
 
+    @UnstableApi
     public static class ZlibDecompressorBuilder extends Decompressor.AbstractDecompressorBuilder {
         private final ZlibDecompressor.AbstractZlibDecompressorBuilder delegate;
 
