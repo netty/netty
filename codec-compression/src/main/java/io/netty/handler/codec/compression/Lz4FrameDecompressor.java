@@ -173,6 +173,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        throw new DecompressionException("Unexpected end of input");
     }
 
     @Override
@@ -194,15 +195,21 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
                     if (inBuffer.remaining() < compressedLength || outBuffer.remaining() < decompressedLength) {
                         throw new DecompressionException("Weird compressedLength");
                     }
+                    final int actualDecompressedLength;
                     try {
-                        decompressor.decompress(
+                        actualDecompressedLength = decompressor.decompress(
                                 inBuffer, inBuffer.position(), compressedLength,
                                 outBuffer, outBuffer.position(), decompressedLength);
                     } catch (LZ4Exception e) {
                         throw new DecompressionException(e);
                     }
+                    if (actualDecompressedLength != decompressedLength) {
+                        throw new DecompressionException(String.format(
+                                "stream corrupted: decompressedLength(%d) and actual length(%d) mismatch",
+                                decompressedLength, actualDecompressedLength));
+                    }
                     // Update the writerIndex now to reflect what we decompressed.
-                    uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
+                    uncompressed.writerIndex(uncompressed.writerIndex() + actualDecompressedLength);
                     break;
                 default:
                     throw new DecompressionException(String.format(

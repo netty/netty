@@ -15,7 +15,18 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import org.junit.jupiter.api.Test;
+
+import static io.netty.handler.codec.compression.Decompressor.Status.NEED_INPUT;
+import static io.netty.handler.codec.compression.Decompressor.Status.NEED_OUTPUT;
+import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Lz4DecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -26,5 +37,55 @@ public class Lz4DecompressorTest extends AbstractDecompressorTest {
     @Override
     protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
         return Lz4FrameDecompressor.builder();
+    }
+
+    @Test
+    public void testRejectsDecompressedLengthMismatch() throws Exception {
+        ByteBuf input = Unpooled.buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(2);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x10);
+        input.writeByte(0);
+
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(NEED_INPUT, decompressor.status());
+            decompressor.addInput(input);
+            assertEquals(NEED_OUTPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> {
+                ByteBuf output = decompressor.takeOutput();
+                output.release();
+            });
+        }
+    }
+
+    @Test
+    public void testRejectsTruncatedHeader() throws Exception {
+        ByteBuf input = Unpooled.buffer();
+        input.writeLong(MAGIC_NUMBER);
+        assertRejectsTruncatedInput(input);
+    }
+
+    @Test
+    public void testRejectsTruncatedBlock() throws Exception {
+        ByteBuf input = Unpooled.buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(2);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x10);
+        assertRejectsTruncatedInput(input);
+    }
+
+    private void assertRejectsTruncatedInput(ByteBuf input) throws Exception {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(NEED_INPUT, decompressor.status());
+            decompressor.addInput(input);
+            assertEquals(NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::endOfInput);
+        }
     }
 }
