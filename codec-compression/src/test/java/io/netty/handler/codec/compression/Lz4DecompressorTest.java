@@ -40,6 +40,28 @@ public class Lz4DecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testRejectsCompressedDataBeyondDeclaredLength() throws Exception {
+        ByteBuf input = Unpooled.buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED);
+        input.writeIntLE(1);
+        input.writeIntLE(8);
+        input.writeIntLE(0);
+        input.writeByte(0x80);
+        input.writeZero(8);
+
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(NEED_INPUT, decompressor.status());
+            decompressor.addInput(input);
+            assertEquals(NEED_OUTPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> {
+                ByteBuf output = decompressor.takeOutput();
+                output.release();
+            });
+        }
+    }
+
+    @Test
     public void testRejectsDecompressedLengthMismatch() throws Exception {
         ByteBuf input = Unpooled.buffer();
         input.writeLong(MAGIC_NUMBER);

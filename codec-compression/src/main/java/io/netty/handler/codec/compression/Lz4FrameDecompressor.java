@@ -189,7 +189,8 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
                 case BLOCK_TYPE_COMPRESSED:
                     uncompressed = allocator.buffer(decompressedLength, decompressedLength);
 
-                    ByteBuffer inBuffer = CompressionUtil.safeReadableNioBuffer(in);
+                    ByteBuffer inBuffer = CompressionUtil.safeNioBuffer(
+                            in, in.readerIndex(), compressedLength);
                     ByteBuffer outBuffer = uncompressed.internalNioBuffer(
                             uncompressed.writerIndex(), decompressedLength);
                     if (inBuffer.remaining() < compressedLength || outBuffer.remaining() < decompressedLength) {
