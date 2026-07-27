@@ -120,6 +120,22 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testBadSecondGzipMagicRejected() throws Exception {
+        assumeTrue(wrapper == ZlibWrapper.GZIP);
+        byte[] compressed = gzip("bad magic".getBytes(CharsetUtil.UTF_8));
+        compressed[1] = 0;
+        Decompressor decompressor = JdkZlibDecompressor.builder().wrapper(ZlibWrapper.GZIP)
+                .build(ByteBufAllocator.DEFAULT);
+        try {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class,
+                    () -> decompressor.addInput(Unpooled.wrappedBuffer(compressed)));
+        } finally {
+            decompressor.close();
+        }
+    }
+
+    @Test
     public void testGZIPDecodeWithExtraField() throws Exception {
         assumeTrue(wrapper == ZlibWrapper.GZIP);
         byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
