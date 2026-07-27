@@ -68,7 +68,7 @@ public class LzfDecompressor extends InputBufferingDecompressor {
     private int originalLength;
 
     /**
-     * Indicates is this chunk compressed or not.
+     * Indicates whether this chunk is compressed.
      */
     private boolean isCompressed;
 
@@ -109,8 +109,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
                 chunkLength = buf.readUnsignedShort();
 
                 // chunkLength can never exceed MAX_CHUNK_LEN as MAX_CHUNK_LEN is 64kb and readUnsignedShort can
-                // never return anything bigger as well. Let's add some check any way to make things easier in terms
-                // of debugging if we ever hit this because of an bug.
+                // never return anything bigger as well. Let's add a check anyway to make things easier in terms
+                // of debugging if we ever hit this because of a bug.
                 if (chunkLength > LZFChunk.MAX_CHUNK_LEN) {
                     throw new DecompressionException(String.format(
                             "chunk length exceeds maximum: %d (expected: =< %d)",
@@ -128,8 +128,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
                 originalLength = buf.readUnsignedShort();
 
                 // originalLength can never exceed MAX_CHUNK_LEN as MAX_CHUNK_LEN is 64kb and readUnsignedShort can
-                // never return anything bigger as well. Let's add some check any way to make things easier in terms
-                // of debugging if we ever hit this because of an bug.
+                // never return anything bigger as well. Let's add a check anyway to make things easier in terms
+                // of debugging if we ever hit this because of a bug.
                 if (originalLength > LZFChunk.MAX_CHUNK_LEN) {
                     throw new DecompressionException(String.format(
                             "original length exceeds maximum: %d (expected: =< %d)",
@@ -163,7 +163,7 @@ public class LzfDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
-        if (currentState != State.INIT_BLOCK) {
+        if (currentState != State.INIT_BLOCK || available() != 0) {
             throw new DecompressionException("Incomplete block");
         }
         currentState = State.END;
@@ -180,8 +180,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
         if (isCompressed) {
             ByteBuf arrayView;
             if (!in.hasArray()) {
-                arrayView = allocator.heapBuffer(in.readableBytes());
-                arrayView.writeBytes(in, in.readerIndex(), in.readableBytes());
+                arrayView = allocator.heapBuffer(chunkLength, chunkLength);
+                arrayView.writeBytes(in, in.readerIndex(), chunkLength);
             } else {
                 arrayView = in;
             }
@@ -192,23 +192,26 @@ public class LzfDecompressor extends InputBufferingDecompressor {
             final byte[] outputArray = uncompressed.array();
             final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
 
+            boolean success = false;
             try {
                 decoder.decodeChunk(
                         inputArray, inPos, inPos + chunkLength,
                         outputArray, outPos, outPos + originalLength);
                 uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
+                in.skipBytes(chunkLength);
+                currentState = State.INIT_BLOCK;
+                success = true;
+                return uncompressed;
             } catch (LZFException e) {
-                uncompressed.release();
                 throw new DecompressionException(e);
             } finally {
-                in.skipBytes(chunkLength);
+                if (!success) {
+                    uncompressed.release();
+                }
                 if (arrayView != in) {
                     arrayView.release();
                 }
             }
-
-            currentState = State.INIT_BLOCK;
-            return uncompressed;
         } else {
             currentState = State.INIT_BLOCK;
             return in.readRetainedSlice(chunkLength);
@@ -236,12 +239,14 @@ public class LzfDecompressor extends InputBufferingDecompressor {
          * @param safeInstance Whether to use the safe instance only
          * @return This builder
          */
+        @UnstableApi
         public Builder safeInstance(boolean safeInstance) {
             this.safeInstance = safeInstance;
             return this;
         }
 
         @Override
+        @UnstableApi
         public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
             return new DefensiveDecompressor(new LzfDecompressor(this, allocator));
         }
