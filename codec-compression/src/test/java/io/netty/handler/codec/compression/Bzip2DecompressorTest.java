@@ -15,7 +15,13 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Bzip2DecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -26,5 +32,16 @@ public class Bzip2DecompressorTest extends AbstractDecompressorTest {
     @Override
     protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
         return Bzip2Decompressor.builder();
+    }
+
+    @Test
+    public void endOfInputFailsOnTruncatedStream() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 'B', 'Z', 'h', '1' }));
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::endOfInput);
+        }
     }
 }
