@@ -34,6 +34,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @ParameterizedClass
@@ -72,6 +73,17 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
         } finally {
             decompressor.close();
         }
+    }
+
+    @Test
+    public void testCloseBeforeCompletionIsIdempotent() {
+        assumeTrue(wrapper == ZlibWrapper.GZIP);
+        Decompressor decompressor = JdkZlibDecompressor.builder().wrapper(ZlibWrapper.GZIP)
+                .build(ByteBufAllocator.DEFAULT);
+        assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+        decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 31 }));
+        assertDoesNotThrow(decompressor::close);
+        assertDoesNotThrow(decompressor::close);
     }
 
     @Test

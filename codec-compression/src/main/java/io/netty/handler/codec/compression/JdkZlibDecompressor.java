@@ -427,6 +427,18 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                 cmf_flg % 31 == 0;
     }
 
+    @Override
+    public void close() {
+        try {
+            super.close();
+        } finally {
+            if (inflater != null) {
+                inflater.end();
+                inflater = null;
+            }
+        }
+    }
+
     @UnstableApi
     public static Builder builder() {
         return new Builder();
