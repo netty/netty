@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
 
@@ -28,12 +27,6 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
         super(allocator);
         this.maxAllocation = builder.maxAllocation;
         this.dictionary = builder.dictionary;
-    }
-
-    final int outputBufferSize(int compressedSize) {
-        long proposedCapacity = Math.max(1L, (long) compressedSize << 1);
-        long maximumCapacity = maxAllocation == 0 ? Integer.MAX_VALUE : maxAllocation;
-        return (int) Math.min(maximumCapacity, proposedCapacity);
     }
 
     abstract static class AbstractZlibDecompressorBuilder extends AbstractDecompressorBuilder {
@@ -62,7 +55,7 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
          * @return This builder
          */
         public AbstractZlibDecompressorBuilder dictionary(byte[] dictionary) {
-            this.dictionary = ObjectUtil.checkNotNull(dictionary, "dictionary").clone();
+            this.dictionary = dictionary;
             return this;
         }
 
@@ -73,14 +66,8 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
          * @return This builder
          */
         public AbstractZlibDecompressorBuilder maxAllocation(int maxAllocation) {
-            this.maxAllocation = ObjectUtil.checkPositiveOrZero(maxAllocation, "maxAllocation");
+            this.maxAllocation = maxAllocation;
             return this;
-        }
-
-        final void validate() {
-            if (dictionary != null && wrapper != ZlibWrapper.ZLIB) {
-                throw new IllegalArgumentException("Dictionary is only supported for ZLIB wrapper");
-            }
         }
     }
 }
