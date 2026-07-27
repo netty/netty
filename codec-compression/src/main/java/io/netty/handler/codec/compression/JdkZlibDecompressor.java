@@ -18,7 +18,6 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.zip.CRC32;
@@ -38,7 +37,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     private static final int FRESERVED = 0xE0;
 
     private Inflater inflater;
-    private final ZlibWrapper wrapper;
 
     // GZIP related
     private final ByteBufChecksum crc;
@@ -61,8 +59,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     private boolean decideZlibOrNone;
     private boolean finished;
-    private boolean gzipMemberFinished;
-    private boolean closed;
     /**
      * If this is true, part of the input buffer is still in use by the {@link #inflater}, so we shouldn't touch that
      * buffer too much (e.g. compact it).
@@ -71,7 +67,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(builder, allocator);
-        this.wrapper = builder.wrapper;
         this.decompressConcatenated = builder.decompressConcatenated;
         switch (builder.wrapper) {
             case GZIP:
@@ -98,10 +93,10 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public Status status() throws DecompressionException {
-        if (finished) {
-            return Status.COMPLETE;
-        } else if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
+        if (inflater == null || (inflater.needsInput() && !finished) || gzipState == GzipState.FOOTER_START) {
             return Status.NEED_INPUT;
+        } else if (finished) {
+            return Status.COMPLETE;
         } else {
             return Status.NEED_OUTPUT;
         }
@@ -110,14 +105,14 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     @Override
     public void endOfInput() throws DecompressionException {
         if (finished) {
+            // make sure we return COMPLETE from status()
+            gzipState = GzipState.HEADER_START;
             return;
         }
-        if (wrapper == ZlibWrapper.GZIP && decompressConcatenated && gzipMemberFinished &&
-                gzipState == GzipState.HEADER_START && available() == 0) {
-            finished = true;
-            return;
+        if (gzipState != GzipState.HEADER_START) {
+            throw new DecompressionException("Incomplete gzip framing");
         }
-        throw new DecompressionException("Compressed stream ended before the end-of-stream marker");
+        finished = true;
     }
 
     @Override
@@ -179,69 +174,60 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             buf.readerIndex(buf.writerIndex() - inflater.getRemaining());
             if (inflater.getRemaining() == 0) {
                 inputBufferInInflater = false;
-                inflater.setInput(EmptyArrays.EMPTY_BYTES);
             }
         }
     }
 
     @Override
     ByteBuf processOutput(ByteBuf buf) throws DecompressionException {
-        ByteBuf decompressed = allocator.heapBuffer(outputBufferSize(inflater.getRemaining()));
-        boolean success = false;
+        int proposedCapacity = inflater.getRemaining() << 1;
+        int targetCapacity = maxAllocation == 0
+                ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
+        ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
+        byte[] outArray = decompressed.array();
+        int writerIndex = decompressed.writerIndex();
+        int outIndex = decompressed.arrayOffset() + writerIndex;
+        int writable = decompressed.writableBytes();
+        int outputLength;
         try {
-            byte[] outArray = decompressed.array();
-            int writerIndex = decompressed.writerIndex();
-            int outIndex = decompressed.arrayOffset() + writerIndex;
-            int outputLength;
-            try {
-                outputLength = inflater.inflate(outArray, outIndex, decompressed.writableBytes());
-            } catch (DataFormatException e) {
-                throw new DecompressionException("decompression failure", e);
-            }
-            consumeInput(buf);
-            if (outputLength > 0) {
-                decompressed.writerIndex(writerIndex + outputLength);
-                if (crc != null) {
-                    crc.update(outArray, outIndex, outputLength);
-                }
-            }
-            if (inflater.needsDictionary()) {
-                if (dictionary == null) {
-                    throw new DecompressionException(
-                            "decompression failure, unable to set dictionary as none was specified");
-                }
-                inflater.setDictionary(dictionary);
-            } else if (outputLength == 0 && !inflater.needsInput() && !inflater.finished()) {
-                throw new DecompressionException("Decompression made no progress");
-            }
-            if (inflater.finished()) {
-                inputBufferInInflater = false;
-                if (crc == null) {
-                    finished = true; // Do not decode anymore.
-                } else {
-                    gzipState = GzipState.FOOTER_START;
-                    // potentially consume footer
-                    processInput(buf);
-                }
-            }
-            success = true;
-            return decompressed;
-        } finally {
-            if (!success) {
-                decompressed.release();
+            outputLength = inflater.inflate(outArray, outIndex, writable);
+        } catch (DataFormatException e) {
+            throw new DecompressionException("decompression failure", e);
+        }
+        consumeInput(buf);
+        if (outputLength > 0) {
+            decompressed.writerIndex(writerIndex + outputLength);
+            if (crc != null) {
+                crc.update(outArray, outIndex, outputLength);
             }
         }
+        if (inflater.needsDictionary()) {
+            if (dictionary == null) {
+                throw new DecompressionException(
+                        "decompression failure, unable to set dictionary as non was specified");
+            }
+            inflater.setDictionary(dictionary);
+        }
+        if (inflater.finished()) {
+            inputBufferInInflater = false;
+            if (crc == null) {
+                finished = true; // Do not decode anymore.
+            } else {
+                gzipState = GzipState.FOOTER_START;
+                // potentially consume footer
+                processInput(buf);
+            }
+        }
+        return decompressed;
     }
 
     private boolean handleGzipFooter(ByteBuf in) {
         if (readGZIPFooter(in)) {
-            gzipMemberFinished = true;
             finished = !decompressConcatenated;
 
             if (!finished) {
                 inflater.reset();
                 crc.reset();
-                xlen = -1;
                 gzipState = GzipState.HEADER_START;
                 return true;
             }
@@ -256,10 +242,10 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                     return false;
                 }
                 // read magic numbers
-                int magic0 = in.readUnsignedByte();
-                int magic1 = in.readUnsignedByte();
+                int magic0 = in.readByte();
+                int magic1 = in.readByte();
 
-                if (magic0 != 31 || magic1 != 139) {
+                if (magic0 != 31) {
                     throw new DecompressionException("Input is not in the GZIP format");
                 }
                 crc.update(magic0);
@@ -299,7 +285,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                     crc.update(xlen1);
                     crc.update(xlen2);
 
-                    xlen = xlen2 << 8 | xlen1;
+                    xlen |= xlen1 << 8 | xlen2;
                 }
                 gzipState = GzipState.XLEN_READ;
                 // fall through
@@ -440,22 +426,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                 cmf_flg % 31 == 0;
     }
 
-    @Override
-    public void close() {
-        if (closed) {
-            return;
-        }
-        closed = true;
-        try {
-            super.close();
-        } finally {
-            if (inflater != null) {
-                inflater.end();
-                inflater = null;
-            }
-        }
-    }
-
     @UnstableApi
     public static Builder builder() {
         return new Builder();
@@ -499,7 +469,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
         @Override
         public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
-            validate();
             return new DefensiveDecompressor(new JdkZlibDecompressor(this, allocator));
         }
     }
