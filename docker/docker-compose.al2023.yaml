@@ -11,6 +11,7 @@ services:
     depends_on: [runtime-setup]
     environment:
       LD_LIBRARY_PATH: /opt/aws-lc/lib64
+      CI:
     volumes:
       # Use a separate directory for the AL2023 Maven repository
       - ~/.m2-al2023:/root/.m2
