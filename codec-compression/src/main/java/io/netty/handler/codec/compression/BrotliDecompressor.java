@@ -61,6 +61,9 @@ public final class BrotliDecompressor implements Decompressor {
                 case DONE:
                     return Status.COMPLETE;
                 case NEEDS_MORE_INPUT:
+                    if (decoder.hasOutput()) {
+                        return Status.NEED_OUTPUT;
+                    }
                     if (unusedInput == null) {
                         return Status.NEED_INPUT;
                     }
