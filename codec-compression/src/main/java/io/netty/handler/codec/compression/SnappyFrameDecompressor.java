@@ -27,7 +27,7 @@ import static io.netty.handler.codec.compression.Snappy.validateChecksum;
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
 @UnstableApi
-public class SnappyFrameDecompressor extends InputBufferingDecompressor {
+public final class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     private enum ChunkType {
         STREAM_IDENTIFIER,
