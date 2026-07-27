@@ -40,10 +40,14 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
     private static final int SNAPPY_IDENTIFIER_LEN = 6;
     // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L95
     private static final int MAX_UNCOMPRESSED_DATA_SIZE = 65536 + 4;
+    // An uncompressed chunk contains a 4-byte masked checksum followed by the data.
+    private static final int MIN_UNCOMPRESSED_DATA_SIZE = 4;
     // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L82
     private static final int MAX_DECOMPRESSED_DATA_SIZE = 65536;
     // See https://github.com/google/snappy/blob/1.1.9/framing_format.txt#L82
     private static final int MAX_COMPRESSED_CHUNK_SIZE = 16777216 - 1;
+    // A compressed chunk contains a 4-byte masked checksum followed by a Snappy stream.
+    private static final int MIN_COMPRESSED_CHUNK_SIZE = 5;
 
     private final Snappy snappy = new Snappy();
     private final boolean validateChecksums;
@@ -81,6 +85,9 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (available() != 0 || numBytesToSkip != 0) {
+            throw new DecompressionException("Unexpected end of input");
+        }
         eof = true;
     }
 
@@ -116,7 +123,7 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
                     }
 
                     if (inSize < 4 + SNAPPY_IDENTIFIER_LEN) {
-                        break;
+                        return;
                     }
 
                     in.skipBytes(4);
@@ -161,6 +168,10 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
                         throw new DecompressionException("Received UNCOMPRESSED_DATA larger than " +
                                 MAX_UNCOMPRESSED_DATA_SIZE + " bytes");
                     }
+                    if (chunkLength < MIN_UNCOMPRESSED_DATA_SIZE) {
+                        throw new DecompressionException("Received UNCOMPRESSED_DATA with invalid chunk length: " +
+                                chunkLength);
+                    }
 
                     if (inSize < 4 + chunkLength) {
                         return;
@@ -183,6 +194,10 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
                     if (chunkLength > MAX_COMPRESSED_CHUNK_SIZE) {
                         throw new DecompressionException("Received COMPRESSED_DATA that contains" +
                                 " chunk that exceeds " + MAX_COMPRESSED_CHUNK_SIZE + " bytes");
+                    }
+                    if (chunkLength < MIN_COMPRESSED_CHUNK_SIZE) {
+                        throw new DecompressionException("Received COMPRESSED_DATA with invalid chunk length: " +
+                                chunkLength);
                     }
 
                     if (inSize < 4 + chunkLength) {
