@@ -93,10 +93,10 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public Status status() throws DecompressionException {
-        if (inflater == null || (inflater.needsInput() && !finished) || gzipState == GzipState.FOOTER_START) {
-            return Status.NEED_INPUT;
-        } else if (finished) {
+        if (finished) {
             return Status.COMPLETE;
+        } else if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
+            return Status.NEED_INPUT;
         } else {
             return Status.NEED_OUTPUT;
         }
