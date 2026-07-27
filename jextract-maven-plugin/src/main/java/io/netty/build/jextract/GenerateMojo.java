@@ -173,8 +173,7 @@ public final class GenerateMojo extends AbstractMojo {
         // mid-run jextract failure therefore never leaves the committed source tree half-regenerated,
         // and promotion prunes the previously generated output for the target package so a removed or
         // renamed <binding> leaves no orphaned committed files.
-        final StagingDirectory staging = StagingDirectory.create(buildDirectory, outputDirectory);
-        try {
+        try (StagingDirectory staging = StagingDirectory.create(buildDirectory, outputDirectory)) {
             for (final Binding binding : bindings) {
                 final JextractCommand command = buildCommand(executable, staging.directory(), binding);
                 getLog().info(binding.className() + " <- " + binding.header());
@@ -183,8 +182,6 @@ public final class GenerateMojo extends AbstractMojo {
             }
             staging.promoteTo(targetPackage,
                     ProvenanceManifest.forCurrentOs(jextractVersion.trim(), sdk));
-        } finally {
-            staging.close();
         }
     }
 
