@@ -133,7 +133,7 @@ public class LzfDecompressor extends InputBufferingDecompressor {
                 if (originalLength > LZFChunk.MAX_CHUNK_LEN) {
                     throw new DecompressionException(String.format(
                             "original length exceeds maximum: %d (expected: =< %d)",
-                            chunkLength, LZFChunk.MAX_CHUNK_LEN));
+                            originalLength, LZFChunk.MAX_CHUNK_LEN));
                 }
 
                 currentState = State.DECOMPRESS_DATA;
