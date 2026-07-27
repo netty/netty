@@ -18,6 +18,8 @@ package io.netty.handler.codec.compression;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -29,22 +31,38 @@ import java.io.InputStream;
  */
 @UnstableApi
 public final class ZstdDecompressor implements Decompressor {
+    // Don't use static here as we want to still allow to load the classes.
+    {
+        try {
+            Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
+
+    /**
+     * Default upper bound on the {@code Window_Log} accepted by the decompressor.
+     * {@code 27} corresponds to a 128 MiB decompression window.
+     */
+    public static final int DEFAULT_MAX_WINDOW_LOG = 27;
+    private static final int MIN_WINDOW_LOG = 10;
+    private static final int MAX_WINDOW_LOG = 31;
+    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
+
     private final ByteBufAllocator allocator;
 
     private final MutableByteBufInputStream mutableInput = new MutableByteBufInputStream();
     private final ZstdInputStreamNoFinalizer output;
 
-    {
+    ZstdDecompressor(Builder builder, ByteBufAllocator allocator) {
+        this.allocator = allocator;
         try {
             output = new ZstdInputStreamNoFinalizer(mutableInput);
+            output.setContinuous(true);
+            output.setLongMax(builder.maxWindowLog);
         } catch (IOException e) {
             throw new DecompressionException(e);
         }
-        output.setContinuous(true);
-    }
-
-    ZstdDecompressor(ByteBufAllocator allocator) {
-        this.allocator = allocator;
     }
 
     @Override
@@ -64,6 +82,10 @@ public final class ZstdDecompressor implements Decompressor {
 
     @Override
     public void addInput(ByteBuf buf) throws DecompressionException {
+        if (!buf.isReadable()) {
+            buf.release();
+            return;
+        }
         if (mutableInput.current != null) {
             mutableInput.current.release();
         }
@@ -77,14 +99,18 @@ public final class ZstdDecompressor implements Decompressor {
 
     @Override
     public ByteBuf takeOutput() throws DecompressionException {
-        ByteBuf buf = allocator.buffer();
+        ByteBuf buf = allocator.buffer(DEFAULT_MAX_FORWARD_BYTES, DEFAULT_MAX_FORWARD_BYTES);
         try {
-            buf.writeBytes(output, buf.maxFastWritableBytes());
+            buf.writeBytes(output, DEFAULT_MAX_FORWARD_BYTES);
         } catch (IOException e) {
             buf.release();
             throw new DecompressionException(e);
         }
-        return buf;
+        if (buf.isReadable()) {
+            return buf;
+        }
+        buf.release();
+        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override
@@ -107,12 +133,31 @@ public final class ZstdDecompressor implements Decompressor {
 
     @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
+        private int maxWindowLog = DEFAULT_MAX_WINDOW_LOG;
+
         Builder() {
+        }
+
+        /**
+         * Set the upper bound on the accepted {@code Window_Log}.
+         * <p>
+         * The window log size bounds the memory usage of the sliding window for ZSTD frame decompression. Frames
+         * declaring a larger window will be rejected to bound the memory the decompressor may allocate per stream.
+         *
+         * @param maxWindowLog upper bound on the {@code Window_Log} field of incoming frames; must be in
+         *                     {@code [10, 31]}
+         * @return This builder
+         */
+        @UnstableApi
+        public Builder maxWindowLog(int maxWindowLog) {
+            this.maxWindowLog = ObjectUtil.checkInRange(
+                    maxWindowLog, MIN_WINDOW_LOG, MAX_WINDOW_LOG, "maxWindowLog");
+            return this;
         }
 
         @Override
         public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
-            return new DefensiveDecompressor(new ZstdDecompressor(allocator));
+            return new DefensiveDecompressor(new ZstdDecompressor(this, allocator));
         }
     }
 
