@@ -96,6 +96,7 @@ public final class ZstdDecompressor implements Decompressor {
         try {
             output.close();
         } catch (IOException ignored) {
+            // ignore
         }
     }
 
