@@ -330,6 +330,9 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (currentState != State.EOF) {
+            throw new DecompressionException("Unexpected end of input");
+        }
     }
 
     @Override
