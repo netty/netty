@@ -46,4 +46,9 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
             decompressor.close();
         }
     }
+
+    @Test
+    public void testNegativeMaxAllocationRejected() {
+        assertThrows(IllegalArgumentException.class, () -> JZlibDecompressor.builder().maxAllocation(-1));
+    }
 }
