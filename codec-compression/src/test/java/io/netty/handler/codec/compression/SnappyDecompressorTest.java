@@ -58,6 +58,42 @@ public class SnappyDecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testInvalidChecksumThrowsException() throws Exception {
+        try (Decompressor decompressor = SnappyFrameDecompressor.builder()
+                .validateChecksums(true).build(ByteBufAllocator.DEFAULT)) {
+            ByteBuf in = uncompressedDataWithChecksum(0, 0, 0, 0);
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(in));
+        }
+    }
+
+    @Test
+    public void testValidChecksumProducesOutput() throws Exception {
+        try (Decompressor decompressor = SnappyFrameDecompressor.builder()
+                .validateChecksums(true).build(ByteBufAllocator.DEFAULT)) {
+            ByteBuf in = uncompressedDataWithChecksum(0x6f, -0x68, 0x2e, -0x47);
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(in);
+            assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
+
+            ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
+            ByteBuf actual = decompressor.takeOutput();
+            try {
+                assertEquals(expected, actual);
+            } finally {
+                expected.release();
+                actual.release();
+            }
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.endOfInput();
+            assertEquals(Decompressor.Status.COMPLETE, decompressor.status());
+        }
+    }
+
+    @Test
     public void testEndOfInputWithPartialFrameHeaderThrowsException() throws Exception {
         assertTruncated(Unpooled.wrappedBuffer(new byte[] { (byte) 0xff, 0x06 }));
     }
@@ -107,6 +143,31 @@ public class SnappyDecompressorTest extends AbstractDecompressorTest {
             assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
             assertThrows(DecompressionException.class, () -> decompressor.addInput(in));
         }
+    }
+
+    private static ByteBuf uncompressedDataWithChecksum(int checksumByte1, int checksumByte2,
+            int checksumByte3, int checksumByte4) {
+        ByteBuf in = ByteBufAllocator.DEFAULT.buffer(23);
+        in.writeByte(0xff);
+        in.writeMediumLE(6);
+        in.writeByte('s');
+        in.writeByte('N');
+        in.writeByte('a');
+        in.writeByte('P');
+        in.writeByte('p');
+        in.writeByte('Y');
+        in.writeByte(0x01);
+        in.writeMediumLE(9);
+        in.writeByte(checksumByte1);
+        in.writeByte(checksumByte2);
+        in.writeByte(checksumByte3);
+        in.writeByte(checksumByte4);
+        in.writeByte('n');
+        in.writeByte('e');
+        in.writeByte('t');
+        in.writeByte('t');
+        in.writeByte('y');
+        return in;
     }
 
     private static void assertTruncated(ByteBuf in) throws Exception {
