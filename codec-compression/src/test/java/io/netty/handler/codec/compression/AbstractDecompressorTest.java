@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
@@ -130,9 +129,7 @@ public abstract class AbstractDecompressorTest extends AbstractCompressionTest {
     private ByteBuf compress(byte[] data) {
         EmbeddedChannel ch = new EmbeddedChannel(createCompressor());
         ch.writeOutbound(Unpooled.wrappedBuffer(data));
-        ChannelFuture closeFuture = ch.close();
-        ch.runPendingTasks();
-        assertTrue(closeFuture.isSuccess());
+        assertTrue(ch.close().isSuccess());
         assertTrue(ch.finish());
 
         CompositeByteBuf composite = ch.alloc().compositeBuffer();
