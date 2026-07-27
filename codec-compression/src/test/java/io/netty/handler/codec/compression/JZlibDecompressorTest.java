@@ -43,14 +43,11 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
 
     @Test
     public void testMalformedInputDoesNotLeakOutput() {
-        Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT);
-        try {
+        try (Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT)) {
             assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
             decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0 }));
             assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
             assertThrows(DecompressionException.class, decompressor::takeOutput);
-        } finally {
-            decompressor.close();
         }
     }
 
@@ -62,8 +59,7 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Test
     public void testTruncatedInputRejectedAtEndOfInput() throws Exception {
         byte[] compressed = deflate("truncated".getBytes(CharsetUtil.UTF_8));
-        Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT);
-        try {
+        try (Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT)) {
             assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
             decompressor.addInput(Unpooled.wrappedBuffer(Arrays.copyOf(compressed, compressed.length - 1)));
             while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
@@ -71,8 +67,6 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
             }
             assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
             assertThrows(DecompressionException.class, decompressor::endOfInput);
-        } finally {
-            decompressor.close();
         }
     }
 
