@@ -62,6 +62,7 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
         super.close();
         if (pendingOutput != null) {
             pendingOutput.release();
+            pendingOutput = null;
         }
     }
 

@@ -89,6 +89,7 @@ public final class ZstdDecompressor implements Decompressor {
     public void close() {
         if (mutableInput.current != null) {
             mutableInput.current.release();
+            mutableInput.current = null;
         }
         try {
             output.close();

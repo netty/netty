@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
  */
 public final class BrotliDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
-    private final DecoderJNI.Wrapper decoder;
+    private DecoderJNI.Wrapper decoder;
     private ByteBuf unusedInput;
 
     static {
@@ -114,9 +114,13 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public void close() {
-        decoder.destroy();
+        if (decoder != null) {
+            decoder.destroy();
+            decoder = null;
+        }
         if (unusedInput != null) {
             unusedInput.release();
+            unusedInput = null;
         }
     }
 
