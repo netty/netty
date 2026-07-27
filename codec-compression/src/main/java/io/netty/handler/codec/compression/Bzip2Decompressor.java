@@ -362,12 +362,14 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
          * @param outputBufferSize Output buffer size
          * @return This builder
          */
+        @UnstableApi
         public Builder outputBufferSize(int outputBufferSize) {
             this.outputBufferSize = ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize");
             return this;
         }
 
         @Override
+        @UnstableApi
         public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
             return new DefensiveDecompressor(new Bzip2Decompressor(this, allocator));
         }
