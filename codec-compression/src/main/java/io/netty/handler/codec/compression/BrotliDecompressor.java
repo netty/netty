@@ -44,7 +44,7 @@ public final class BrotliDecompressor implements Decompressor {
     BrotliDecompressor(Builder builder, ByteBufAllocator allocator) throws DecompressionException {
         this.allocator = allocator;
         try {
-            this.decoder = new DecoderJNI.Wrapper(builder.inputBufferSize);
+            this.decoder = new DecoderJNI.Wrapper(builder.inputBufferSize, builder.maxOutputChunkSize);
         } catch (IOException ioe) {
             throw new DecompressionException(ioe);
         }
@@ -81,10 +81,15 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public void addInput(ByteBuf buf) throws DecompressionException {
-        if (unusedInput != null) {
-            throw new IllegalStateException("Not in state NEED_INPUT");
+        try {
+            if (unusedInput != null) {
+                throw new IllegalStateException("Not in state NEED_INPUT");
+            }
+            addSomeInput(buf);
+        } catch (Throwable t) {
+            buf.release();
+            throw t;
         }
-        addSomeInput(buf);
         if (buf.isReadable()) {
             this.unusedInput = buf;
         } else {
@@ -107,6 +112,7 @@ public final class BrotliDecompressor implements Decompressor {
     public ByteBuf takeOutput() throws DecompressionException {
         ByteBuffer nativeBuffer = decoder.pull();
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content
+        // size limited by maxOutputChunkSize
         ByteBuf copy = allocator.buffer(nativeBuffer.remaining());
         copy.writeBytes(nativeBuffer);
         return copy;
@@ -139,6 +145,7 @@ public final class BrotliDecompressor implements Decompressor {
 
     public static final class Builder extends AbstractDecompressorBuilder {
         private int inputBufferSize = 8 * 1024;
+        private int maxOutputChunkSize = 64 * 1024;
 
         Builder() {
         }
@@ -151,6 +158,17 @@ public final class BrotliDecompressor implements Decompressor {
          */
         public Builder inputBufferSize(int inputBufferSize) {
             this.inputBufferSize = ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
+            return this;
+        }
+
+        /**
+         * Number of bytes of output to consume at a time. Default 64K.
+         *
+         * @param maxOutputChunkSize Maximum output chunk size
+         * @return This builder
+         */
+        public Builder maxOutputChunkSize(int maxOutputChunkSize) {
+            this.maxOutputChunkSize = ObjectUtil.checkPositive(maxOutputChunkSize, "maxOutputChunkSize");
             return this;
         }
 
