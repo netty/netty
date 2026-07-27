@@ -185,41 +185,48 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
         int targetCapacity = maxAllocation == 0
                 ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
         ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
-        byte[] outArray = decompressed.array();
-        int writerIndex = decompressed.writerIndex();
-        int outIndex = decompressed.arrayOffset() + writerIndex;
-        int writable = decompressed.writableBytes();
-        int outputLength;
+        boolean success = false;
         try {
-            outputLength = inflater.inflate(outArray, outIndex, writable);
-        } catch (DataFormatException e) {
-            throw new DecompressionException("decompression failure", e);
-        }
-        consumeInput(buf);
-        if (outputLength > 0) {
-            decompressed.writerIndex(writerIndex + outputLength);
-            if (crc != null) {
-                crc.update(outArray, outIndex, outputLength);
+            byte[] outArray = decompressed.array();
+            int writerIndex = decompressed.writerIndex();
+            int outIndex = decompressed.arrayOffset() + writerIndex;
+            int outputLength;
+            try {
+                outputLength = inflater.inflate(outArray, outIndex, decompressed.writableBytes());
+            } catch (DataFormatException e) {
+                throw new DecompressionException("decompression failure", e);
+            }
+            consumeInput(buf);
+            if (outputLength > 0) {
+                decompressed.writerIndex(writerIndex + outputLength);
+                if (crc != null) {
+                    crc.update(outArray, outIndex, outputLength);
+                }
+            }
+            if (inflater.needsDictionary()) {
+                if (dictionary == null) {
+                    throw new DecompressionException(
+                            "decompression failure, unable to set dictionary as non was specified");
+                }
+                inflater.setDictionary(dictionary);
+            }
+            if (inflater.finished()) {
+                inputBufferInInflater = false;
+                if (crc == null) {
+                    finished = true; // Do not decode anymore.
+                } else {
+                    gzipState = GzipState.FOOTER_START;
+                    // potentially consume footer
+                    processInput(buf);
+                }
+            }
+            success = true;
+            return decompressed;
+        } finally {
+            if (!success) {
+                decompressed.release();
             }
         }
-        if (inflater.needsDictionary()) {
-            if (dictionary == null) {
-                throw new DecompressionException(
-                        "decompression failure, unable to set dictionary as non was specified");
-            }
-            inflater.setDictionary(dictionary);
-        }
-        if (inflater.finished()) {
-            inputBufferInInflater = false;
-            if (crc == null) {
-                finished = true; // Do not decode anymore.
-            } else {
-                gzipState = GzipState.FOOTER_START;
-                // potentially consume footer
-                processInput(buf);
-            }
-        }
-        return decompressed;
     }
 
     private boolean handleGzipFooter(ByteBuf in) {

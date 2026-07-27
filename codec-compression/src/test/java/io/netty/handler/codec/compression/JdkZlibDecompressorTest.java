@@ -105,6 +105,21 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testMalformedInputDoesNotLeakOutput() {
+        assumeTrue(wrapper == ZlibWrapper.ZLIB);
+        Decompressor decompressor = JdkZlibDecompressor.builder().wrapper(ZlibWrapper.ZLIB)
+                .build(ByteBufAllocator.DEFAULT);
+        try {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 0, 0, 0, 0 }));
+            assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::takeOutput);
+        } finally {
+            decompressor.close();
+        }
+    }
+
+    @Test
     public void testGZIPDecodeWithExtraField() throws Exception {
         assumeTrue(wrapper == ZlibWrapper.GZIP);
         byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
