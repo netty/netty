@@ -73,6 +73,9 @@ public class JZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (!finished) {
+            throw new DecompressionException("Compressed stream ended before the end-of-stream marker");
+        }
     }
 
     @Override
