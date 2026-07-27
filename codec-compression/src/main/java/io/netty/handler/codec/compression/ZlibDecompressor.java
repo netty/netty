@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
 
@@ -66,7 +67,7 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
          * @return This builder
          */
         public AbstractZlibDecompressorBuilder maxAllocation(int maxAllocation) {
-            this.maxAllocation = maxAllocation;
+            this.maxAllocation = ObjectUtil.checkPositiveOrZero(maxAllocation, "maxAllocation");
             return this;
         }
     }
