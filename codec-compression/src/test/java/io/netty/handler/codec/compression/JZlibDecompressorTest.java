@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.zip.DeflaterOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -73,6 +74,15 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
         } finally {
             decompressor.close();
         }
+    }
+
+    @Test
+    public void testCloseBeforeCompletionIsIdempotent() {
+        Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT);
+        assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+        decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 0x78 }));
+        assertDoesNotThrow(decompressor::close);
+        assertDoesNotThrow(decompressor::close);
     }
 
     private static byte[] deflate(byte[] data) throws IOException {

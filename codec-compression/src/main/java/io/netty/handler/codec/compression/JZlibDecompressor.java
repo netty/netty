@@ -27,6 +27,7 @@ public class JZlibDecompressor extends ZlibDecompressor {
     private final Inflater z = new Inflater();
     private boolean finished;
     private boolean inputBufferInInflater;
+    private boolean inflaterEnded;
 
     JZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(builder, allocator);
@@ -114,7 +115,7 @@ public class JZlibDecompressor extends ZlibDecompressor {
                     break;
                 case JZlib.Z_STREAM_END:
                     finished = true; // Do not decode anymore.
-                    z.inflateEnd();
+                    endInflater();
                     break;
                 case JZlib.Z_OK:
                 case JZlib.Z_BUF_ERROR:
@@ -133,6 +134,24 @@ public class JZlibDecompressor extends ZlibDecompressor {
             if (!success) {
                 decompressed.release();
             }
+        }
+    }
+
+    private void endInflater() {
+        if (!inflaterEnded) {
+            inflaterEnded = true;
+            z.inflateEnd();
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            super.close();
+        } finally {
+            endInflater();
+            z.next_in = null;
+            z.next_out = null;
         }
     }
 
