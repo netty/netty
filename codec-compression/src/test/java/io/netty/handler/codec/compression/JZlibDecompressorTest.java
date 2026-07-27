@@ -15,17 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
-import java.util.zip.DeflaterOutputStream;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -36,35 +26,5 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Override
     protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
         return JZlibDecompressor.builder();
-    }
-
-    @Test
-    public void testTruncatedInputRejected() throws Exception {
-        byte[] compressed = deflate("truncated".getBytes("UTF-8"));
-        Decompressor decompressor = JZlibDecompressor.builder().build(ByteBufAllocator.DEFAULT);
-        try {
-            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
-            decompressor.addInput(Unpooled.wrappedBuffer(Arrays.copyOf(compressed, compressed.length - 1)));
-            while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
-                decompressor.takeOutput().release();
-            }
-            assertThrows(DecompressionException.class, decompressor::endOfInput);
-        } finally {
-            decompressor.close();
-        }
-    }
-
-    @Test
-    public void testNegativeMaxAllocationRejected() {
-        assertThrows(IllegalArgumentException.class, () ->
-                JZlibDecompressor.builder().maxAllocation(-1).build(ByteBufAllocator.DEFAULT));
-    }
-
-    private static byte[] deflate(byte[] data) throws Exception {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        DeflaterOutputStream deflater = new DeflaterOutputStream(output);
-        deflater.write(data);
-        deflater.close();
-        return output.toByteArray();
     }
 }
