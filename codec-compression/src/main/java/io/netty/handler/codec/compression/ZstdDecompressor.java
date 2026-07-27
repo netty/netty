@@ -31,6 +31,15 @@ import java.io.InputStream;
  */
 @UnstableApi
 public final class ZstdDecompressor implements Decompressor {
+    // Don't use static here as we want to still allow to load the classes.
+    {
+        try {
+            Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
+
     /**
      * Default upper bound on the {@code Window_Log} accepted by the decompressor.
      * {@code 27} corresponds to a 128 MiB decompression window.
@@ -73,6 +82,10 @@ public final class ZstdDecompressor implements Decompressor {
 
     @Override
     public void addInput(ByteBuf buf) throws DecompressionException {
+        if (!buf.isReadable()) {
+            buf.release();
+            return;
+        }
         if (mutableInput.current != null) {
             mutableInput.current.release();
         }

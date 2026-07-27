@@ -42,6 +42,17 @@ public class ZstdDecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void addInputReleasesEmptyBuffer() throws DecompressionException {
+        ByteBuf empty = Unpooled.buffer(0);
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(empty);
+            assertEquals(0, empty.refCnt());
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+        }
+    }
+
+    @Test
     public void testFrameWithWindowLogAboveCapIsRejected() {
         // Incompressible random data so libzstd actually has to use the declared window
         // (highly compressible content lets libzstd shrink the effective window to the
