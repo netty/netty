@@ -154,10 +154,10 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * @throws IOException If an error occurred during closure
      */
     public void finish(ChannelHandlerContext ctx) throws IOException {
-        finishEncode(ctx, ctx.newPromise());
+        finishEncode(ctx);
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) throws IOException {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx) throws IOException {
         Writer writer;
 
         if (isSharable) {
@@ -169,13 +169,14 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         if (writer != null) {
             writer.close();
             this.writer = null;
+            return writer.closeFuture;
         }
-        return promise;
+        return ctx.newSucceededFuture();
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+        ChannelFuture f = finishEncode(ctx);
         EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
     }
 
@@ -188,11 +189,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         private ByteBuf writableBuffer;
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
+        private final ChannelPromise closeFuture;
         private boolean isClosed;
 
         private Writer(Encoder.Parameters parameters, ChannelHandlerContext ctx) throws IOException {
             brotliEncoderChannel = new BrotliEncoderChannel(this, parameters);
             this.ctx = ctx;
+            this.closeFuture = ctx.newPromise();
         }
 
         private void encode(ByteBuf msg, boolean preferDirect) throws Exception {
@@ -241,15 +244,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
         @Override
         public void close() {
-            final ChannelPromise promise = ctx.newPromise();
-
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        finish(promise);
+                        finish(closeFuture);
                     } catch (IOException ex) {
-                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+                        closeFuture.setFailure(new IllegalStateException("Failed to finish encoding", ex));
                     }
                 }
             });
