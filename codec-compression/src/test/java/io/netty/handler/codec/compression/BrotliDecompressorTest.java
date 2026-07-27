@@ -15,7 +15,12 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import org.junit.jupiter.api.Test;
 import io.netty.channel.ChannelHandler;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BrotliDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -26,5 +31,25 @@ public class BrotliDecompressorTest extends AbstractDecompressorTest {
     @Override
     protected Decompressor.AbstractDecompressorBuilder createDecompressor() {
         return BrotliDecompressor.builder();
+    }
+
+    @Test
+    public void reportsOutputBeforeMoreInput() throws Exception {
+        ByteBuf[] data = largeData();
+
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(data[0]);
+            data[0] = null;
+
+            assertEquals(Decompressor.Status.NEED_OUTPUT, decompressor.status());
+            decompressor.takeOutput().release();
+        } finally {
+            for (ByteBuf buffer : data) {
+                if (buffer != null) {
+                    buffer.release();
+                }
+            }
+        }
     }
 }
