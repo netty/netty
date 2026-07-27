@@ -24,10 +24,9 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public class JZlibDecompressor extends ZlibDecompressor {
 
-    private final Inflater z = new Inflater();
+    private Inflater z = new Inflater();
     private boolean finished;
     private boolean inputBufferInInflater;
-    private boolean inflaterEnded;
 
     JZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(builder, allocator);
@@ -81,6 +80,7 @@ public class JZlibDecompressor extends ZlibDecompressor {
 
     @Override
     ByteBuf processOutput(ByteBuf buf) throws DecompressionException {
+        Inflater z = this.z;
         int proposedCapacity = z.avail_in << 1;
         int targetCapacity = maxAllocation == 0
                 ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
@@ -138,20 +138,24 @@ public class JZlibDecompressor extends ZlibDecompressor {
     }
 
     private void endInflater() {
-        if (!inflaterEnded) {
-            inflaterEnded = true;
+        Inflater z = this.z;
+        if (z != null) {
+            this.z = null;
             z.inflateEnd();
         }
     }
 
     @Override
     public void close() {
+        Inflater z = this.z;
         try {
             super.close();
         } finally {
             endInflater();
-            z.next_in = null;
-            z.next_out = null;
+            if (z != null) {
+                z.next_in = null;
+                z.next_out = null;
+            }
         }
     }
 

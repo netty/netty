@@ -206,7 +206,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             if (inflater.needsDictionary()) {
                 if (dictionary == null) {
                     throw new DecompressionException(
-                            "decompression failure, unable to set dictionary as non was specified");
+                            "decompression failure, unable to set dictionary as none was specified");
                 }
                 inflater.setDictionary(dictionary);
             }
