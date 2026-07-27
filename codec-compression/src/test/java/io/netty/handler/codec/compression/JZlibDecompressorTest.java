@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.util.CharsetUtil;
@@ -26,9 +27,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.zip.DeflaterOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class JZlibDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -77,6 +80,38 @@ public class JZlibDecompressorTest extends AbstractDecompressorTest {
         decompressor.addInput(Unpooled.wrappedBuffer(new byte[] { 0x78 }));
         assertDoesNotThrow(decompressor::close);
         assertDoesNotThrow(decompressor::close);
+    }
+
+    @Test
+    public void testDirectInputRetainedAcrossOutputChunks() throws Exception {
+        byte[] expected = new byte[8192];
+        Arrays.fill(expected, (byte) 'a');
+        byte[] compressed = deflate(expected);
+        CompositeByteBuf output = ByteBufAllocator.DEFAULT.compositeBuffer();
+        try (Decompressor decompressor = JZlibDecompressor.builder().maxAllocation(1)
+                .build(ByteBufAllocator.DEFAULT)) {
+            decompressor.status();
+            decompressor.addInput(Unpooled.directBuffer(compressed.length).writeBytes(compressed));
+            for (;;) {
+                switch (decompressor.status()) {
+                    case NEED_OUTPUT:
+                        output.addComponent(true, decompressor.takeOutput());
+                        break;
+                    case COMPLETE:
+                        byte[] actual = new byte[output.readableBytes()];
+                        output.readBytes(actual);
+                        assertArrayEquals(expected, actual);
+                        return;
+                    case NEED_INPUT:
+                        fail("Decompressor requested more input before reaching the stream end");
+                        break;
+                    default:
+                        throw new AssertionError("Unknown decompressor status");
+                }
+            }
+        } finally {
+            output.release();
+        }
     }
 
     private static byte[] deflate(byte[] data) throws IOException {
