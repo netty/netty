@@ -40,6 +40,11 @@ public class Lz4DecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testFactoryRejectsNull() {
+        assertThrows(NullPointerException.class, () -> Lz4FrameDecompressor.builder().factory(null));
+    }
+
+    @Test
     public void testRejectsCompressedDataBeyondDeclaredLength() throws Exception {
         ByteBuf input = Unpooled.buffer();
         input.writeLong(MAGIC_NUMBER);

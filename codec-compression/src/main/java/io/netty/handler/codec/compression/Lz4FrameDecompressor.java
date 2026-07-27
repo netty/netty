@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
@@ -194,7 +195,10 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
                     ByteBuffer outBuffer = uncompressed.internalNioBuffer(
                             uncompressed.writerIndex(), decompressedLength);
                     if (inBuffer.remaining() < compressedLength || outBuffer.remaining() < decompressedLength) {
-                        throw new DecompressionException("Weird compressedLength");
+                        throw new DecompressionException(String.format(
+                                "buffer lengths too small: compressed(%d/%d), decompressed(%d/%d)",
+                                inBuffer.remaining(), compressedLength,
+                                outBuffer.remaining(), decompressedLength));
                     }
                     final int actualDecompressedLength;
                     try {
@@ -254,7 +258,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
          * @return This builder
          */
         public Builder factory(LZ4Factory factory) {
-            this.factory = factory;
+            this.factory = ObjectUtil.checkNotNull(factory, "factory");
             return this;
         }
 
