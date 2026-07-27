@@ -31,8 +31,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+import static io.netty.handler.codec.http3.Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -53,6 +53,7 @@ public class QpackEncoderDecoderTest {
     private QpackEncoderDynamicTable encDynamicTable;
     private QpackDecoderDynamicTable decDynamicTable;
     private BlockingQueue<Callable<Void>> suspendedEncoderInstructions;
+    private QpackSensitivityDetector sensitivityDetector = QpackSensitivityDetector.NEVER_SENSITIVE;
 
     private final QpackDecoderStateSyncStrategy syncStrategy = mock(QpackDecoderStateSyncStrategy.class);
     private final Http3Headers encHeaders = new DefaultHttp3Headers();
@@ -409,6 +410,107 @@ public class QpackEncoderDecoderTest {
         assertThrows(QpackException.class, () -> decode(out, decHeaders));
     }
 
+    @Test
+    public void sensitiveHeaderIsNotInsertedIntoDynamicTable() throws Exception {
+        sensitivityDetector = (name, value) -> "authorization".contentEquals(name);
+        setup(128, 0);
+
+        encHeaders.add("authorization", "Bearer secret");
+        encHeaders.add("foo", "bar");
+        encode(out, encHeaders);
+
+        // Only the non-sensitive sibling should consume a dynamic-table slot.
+        verifyRequiredInsertCount(1);
+        assertThat("Sensitive header must not be inserted into the encoder dynamic table.",
+                encDynamicTable.getEntryIndex("authorization", "Bearer secret"),
+                is(QpackEncoderDynamicTable.NOT_FOUND));
+        assertThat("Non-sensitive header must still be inserted into the encoder dynamic table.",
+                encDynamicTable.getEntryIndex("foo", "bar"), greaterThanOrEqualTo(0));
+
+        decode(out, decHeaders);
+        assertThat(decDynamicTable.insertCount(), is(1));
+        assertThat(decHeaders.size(), is(2));
+        verifyDecodedHeader("authorization", "Bearer secret");
+        verifyDecodedHeader("foo", "bar");
+    }
+
+    @Test
+    public void sensitiveHeaderWithStaticExactMatchUsesIndexedStatic() throws Exception {
+        sensitivityDetector = QpackSensitivityDetector.ALWAYS_SENSITIVE;
+        setup(128, 0);
+
+        encHeaders.add(":method", "GET");
+        encode(out, encHeaders);
+
+        verifyRequiredInsertCount(0);
+        assertThat("No dynamic-table insert expected for sensitive static exact match.",
+                encDynamicTable.insertCount(), is(0));
+
+        // First literal byte (byte 2) is an indexed-field-line with T=1.
+        assertThat("Section prefix required_insert_count byte must be 0.", (int) out.getByte(0), is(0));
+        assertThat("Section prefix delta_base byte must be 0.",            (int) out.getByte(1), is(0));
+        int firstLiteralByte = out.getByte(2) & 0xFF;
+        assertThat("Indexed-static-reference literal must start with 0b11 prefix.",
+                firstLiteralByte & 0b1100_0000, is(0b1100_0000));
+
+        decode(out, decHeaders);
+        assertThat(decDynamicTable.insertCount(), is(0));
+        assertThat(decHeaders.size(), is(1));
+        verifyDecodedHeader(":method", "GET");
+    }
+
+    @Test
+    public void sensitiveHeaderWithStaticNameRefSetsNeverIndexBit() throws Exception {
+        sensitivityDetector = QpackSensitivityDetector.ALWAYS_SENSITIVE;
+        setup(128, 0);
+
+        encHeaders.add(":authority", "netty.quic");
+        encode(out, encHeaders);
+
+        verifyRequiredInsertCount(0);
+        assertThat("No dynamic-table insert expected for sensitive header.",
+                encDynamicTable.insertCount(), is(0));
+
+        // Layout 0 1 N T NameIndex(4+); N is bit 5, T is bit 4 (=1 for static).
+        int firstLiteralByte = out.getByte(2) & 0xFF;
+        assertThat("High two bits must be 01 for literal-with-name-ref.",
+                firstLiteralByte & 0b1100_0000, is(0b0100_0000));
+        assertThat("Never-Indexed (N) bit must be set for sensitive header.",
+                firstLiteralByte & 0b0010_0000, is(0b0010_0000));
+        assertThat("T bit must be 1 (static table).",
+                firstLiteralByte & 0b0001_0000, is(0b0001_0000));
+
+        decode(out, decHeaders);
+        assertThat(decDynamicTable.insertCount(), is(0));
+        assertThat(decHeaders.size(), is(1));
+        verifyDecodedHeader(":authority", "netty.quic");
+    }
+
+    @Test
+    public void sensitiveHeaderWithLiteralNameSetsNeverIndexBit() throws Exception {
+        sensitivityDetector = QpackSensitivityDetector.ALWAYS_SENSITIVE;
+        setup(128, 0);
+
+        encHeaders.add("x-secret", "shhh");
+        encode(out, encHeaders);
+
+        verifyRequiredInsertCount(0);
+        assertThat("No dynamic-table insert expected for sensitive header.",
+                encDynamicTable.insertCount(), is(0));
+
+        // Layout 0 0 1 N H NameLen(3+); N is bit 4, H is bit 3 (=1, Huffman).
+        int firstLiteralByte = out.getByte(2) & 0xFF;
+        assertThat("High three bits must be 001 for literal-with-literal-name.",
+                firstLiteralByte & 0b1110_0000, is(0b0010_0000));
+        assertThat("Never-Indexed (N) bit must be set for sensitive header.",
+                firstLiteralByte & 0b0001_0000, is(0b0001_0000));
+
+        decode(out, decHeaders);
+        assertThat(decDynamicTable.insertCount(), is(0));
+        assertThat(decHeaders.size(), is(1));
+        verifyDecodedHeader("x-secret", "shhh");
+    }
+
     private void resetState() {
         out.clear();
         encHeaders.clear();
@@ -461,9 +563,9 @@ public class QpackEncoderDecoderTest {
         attributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, attributes);
         maxEntries = Math.toIntExact(QpackUtil.maxEntries(maxTableCapacity));
-        DefaultHttp3SettingsFrame localSettings = new DefaultHttp3SettingsFrame();
-        localSettings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
-        localSettings.put(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
+        DefaultHttp3SettingsFrame localSettingsFrame = new DefaultHttp3SettingsFrame();
+        localSettingsFrame.settings().put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), maxTableCapacity);
+        localSettingsFrame.settings().put(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), (long) maxBlockedStreams);
         if (maxBlockedStreams > 0) {
             // section acknowledgment will implicitly ack insert count.
             stateSyncStrategyAckNextInsert = false;
@@ -472,7 +574,7 @@ public class QpackEncoderDecoderTest {
         encDynamicTable = new QpackEncoderDynamicTable(16, expectedTableFreePercentage);
         decDynamicTable = new QpackDecoderDynamicTable();
         decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams, decDynamicTable, syncStrategy);
-        encoder = new QpackEncoder(encDynamicTable);
+        encoder = new QpackEncoder(encDynamicTable, sensitivityDetector);
         if (maxBlockedStreams > 0) {
             suspendedEncoderInstructions = new LinkedBlockingQueue<>();
         }

@@ -512,6 +512,11 @@ public final class SslContextBuilder {
      * or {@link SslProvider#OPENSSL_REFCNT}.
      * Check {@link OpenSslCredential#isAvailable()} to verify that the feature is supported.
      *
+     * <p><strong>Lifetime:</strong> this builder does <em>not</em> retain the credential. The
+     * caller must ensure the credential remains alive (refcount {@code > 0}) until {@link #build()}
+     * returns. {@link #build()} will retain its own reference via the constructed
+     * {@link SslContext}.
+     *
      * @param credential the credential to add
      * @return this builder for chaining
      * @see OpenSslCredentialBuilder
@@ -764,7 +769,7 @@ public final class SslContextBuilder {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                    sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
+                sessionTimeout, startTls, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
                     serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
         }
     }

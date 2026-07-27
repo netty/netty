@@ -29,6 +29,8 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
 
+import java.nio.channels.ClosedChannelException;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.BR;
@@ -77,6 +79,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
      * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
      *                      If zero, maximum size is not limited by decoder.
+     *                      Some compression codecs will output buffers up to 64 KiB in size,
+     *                      even if {@code maxAllocation} is configured lower.
      */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                                                int maxAllocation) {
@@ -109,6 +113,8 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
      * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
      *                      If zero, maximum size is not limited by decoder.
+     *                      Some compression codecs will output buffers up to 64 KiB in size,
+     *                      even if {@code maxAllocation} is configured lower.
      */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                     boolean strict, int maxAllocation) {
@@ -190,7 +196,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     .channelId(channel.id())
                     .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder())
+                    .handlers(new BrotliDecoder(maxAllocation))
                     .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
@@ -206,7 +212,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                     .channelId(channel.id())
                     .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
-                    .handlers(new ZstdDecoder())
+                    .handlers(new ZstdDecoder(maxAllocation))
                     .build();
         }
         // 'identity' or unsupported
@@ -383,19 +389,22 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                         return;
                     }
 
-                    // Also take padding into account.
-                    incrementDecompressedBytes(padding);
+                    try {
+                        // Also take padding into account.
+                        incrementDecompressedBytes(padding);
 
-                    incrementDecompressedBytes(buf.readableBytes());
-                    // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
-                    // from the decompressed amount which the user knows about to the compressed amount which flow
-                    // control knows about.
-                    connection.local().flowController().consumeBytes(stream,
-                            listener.onDataRead(targetCtx, stream.id(), buf, padding, false));
-                    padding = 0; // Padding is only communicated once on the first iteration.
-                    buf.release();
+                        incrementDecompressedBytes(buf.readableBytes());
+                        // Immediately return the bytes back to the flow controller. ConsumedBytesConverter will convert
+                        // from the decompressed amount which the user knows about to the compressed amount which flow
+                        // control knows about.
+                        connection.local().flowController().consumeBytes(stream,
+                                listener.onDataRead(targetCtx, stream.id(), buf, padding, false));
+                        padding = 0; // Padding is only communicated once on the first iteration.
 
-                    dataDecompressed = true;
+                        dataDecompressed = true;
+                    } finally {
+                        buf.release();
+                    }
                 }
 
                 @Override
@@ -422,6 +431,15 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
                 this.dataDecompressed = false;
                 this.targetCtx = ctx;
 
+                if (!decompressor.isOpen()) {
+                    // Directly throw an exception in this case which we will handle in the catch block below.
+                    // This is required as otherwise it will impossible for us to know if the used EmbeddedChannel
+                    // did throw because it was closed already or because of other reasons. We need this knowledge
+                    // to know if we need to call data.release() ourselves after it was retained or not. This is needed
+                    // as EmbeddedChannel will not release the buffer if it throws because it was not open.
+                    // This mimics what EmbeddedChannel will throw.
+                    throw new ClosedChannelException();
+                }
                 // call retain here as it will call release after its written to the channel
                 decompressor.writeInbound(data.retain());
                 if (endOfStream) {

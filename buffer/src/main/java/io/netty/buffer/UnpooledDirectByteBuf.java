@@ -230,16 +230,28 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public boolean hasMemoryAddress() {
         CleanableDirectBuffer cleanable = this.cleanable;
-        return cleanable != null && cleanable.hasMemoryAddress();
+        if (cleanable != null) {
+            return cleanable.hasMemoryAddress();
+        }
+        ByteBuffer buffer = this.buffer;
+        return buffer != null && PlatformDependent.hasDirectByteBufferAddress(buffer);
     }
 
     @Override
     public long memoryAddress() {
         ensureAccessible();
-        if (!hasMemoryAddress()) {
-            throw new UnsupportedOperationException();
+        CleanableDirectBuffer cleanable = this.cleanable;
+        if (cleanable != null) {
+            if (cleanable.hasMemoryAddress()) {
+                return cleanable.memoryAddress();
+            }
+        } else {
+            ByteBuffer buffer = this.buffer;
+            if (PlatformDependent.hasDirectByteBufferAddress(buffer)) {
+                return PlatformDependent.directBufferAddress(buffer);
+            }
         }
-        return cleanable.memoryAddress();
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -362,14 +374,20 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         checkDstIndex(index, length, dstIndex, dst.capacity());
         if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
-        } else if (dst.nioBufferCount() > 0) {
-            for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
-                int bbLen = bb.remaining();
-                getBytes(index, bb);
-                index += bbLen;
-            }
         } else {
-            dst.setBytes(dstIndex, this, index, length);
+            ByteBuf unwrapped = dst instanceof WrappedByteBuf ? dst.unwrap() : dst;
+            if (unwrapped instanceof AbstractByteBuf) {
+                ByteBuffer dstBuf = unwrapped.internalNioBuffer(dstIndex, length);
+                PlatformDependent.absolutePut(dstBuf, dstBuf.position(), buffer, index, length);
+            } else if (dst.nioBufferCount() > 0) {
+                for (ByteBuffer bb : dst.nioBuffers(dstIndex, length)) {
+                    int bbLen = bb.remaining();
+                    getBytes(index, bb);
+                    index += bbLen;
+                }
+            } else {
+                dst.setBytes(dstIndex, this, index, length);
+            }
         }
         return this;
     }

@@ -18,6 +18,10 @@ package io.netty.handler.codec.compression;
 import io.netty.channel.ChannelHandler;
 
 public class FastLzDecompressorTest extends AbstractDecompressorTest {
+
+    public FastLzDecompressorTest() throws Exception {
+    }
+
     @Override
     protected ChannelHandler createCompressor() {
         return new FastLzFrameEncoder();

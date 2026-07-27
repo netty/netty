@@ -17,17 +17,24 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
 /**
  * Shared API for various decompression algorithms. A decompressor reports its current status using {@link #status()}.
- * Status documentation lists which operations are permitted for which status.
+ * Status documentation lists which operations are permitted for which status. Callers must observe the current
+ * status before invoking an operation that is only valid for that status.
  * <p>
  * All methods may throw exceptions. If an exception is thrown, no further operations are permitted, except for
  * {@link #close()}.
+ * <p>
+ * This API is still in progress as part of the decompression migration tracked by
+ * <a href="https://github.com/netty/netty/issues/16743">#16743</a>.
  */
+@UnstableApi
 public interface Decompressor extends AutoCloseable {
     /**
-     * Get the current status.
+     * Get the current status. Like the other operations on this class, calling this method is not permitted if the
+     * decompressor has failed or was closed.
      *
      * @return The current status
      */
@@ -36,7 +43,7 @@ public interface Decompressor extends AutoCloseable {
     /**
      * Add a new input buffer. Only permitted for {@link Status#NEED_INPUT}.
      *
-     * @param buf The input buffer. Buffer ownership transfers to the decompressor.
+     * @param buf The input buffer. Buffer ownership transfers to the decompressor (also on exception).
      */
     void addInput(ByteBuf buf) throws DecompressionException;
 
@@ -56,11 +63,16 @@ public interface Decompressor extends AutoCloseable {
     ByteBuf takeOutput() throws DecompressionException;
 
     /**
-     * Close this decompressor, cleaning up any associated resources. <b>This method may only be called once.</b>
+     * Close this decompressor, cleaning up any associated resources. <b>This method is idempotent.</b>
      */
     @Override
     void close() throws DecompressionException;
 
+    /**
+     * Current status of the decompressor. The status indicates which method may be called to make progress on
+     * decompression.
+     */
+    @UnstableApi
     enum Status {
         /**
          * More input is required before decompression can proceed. Only calls to {@link #addInput} and
@@ -79,6 +91,7 @@ public interface Decompressor extends AutoCloseable {
         COMPLETE,
     }
 
+    @UnstableApi
     abstract class AbstractDecompressorBuilder {
 
         protected AbstractDecompressorBuilder() {

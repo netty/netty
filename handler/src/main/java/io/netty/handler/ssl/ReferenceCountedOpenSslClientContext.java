@@ -65,8 +65,23 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>[] options,
                                          List<OpenSslCredential> credentials) throws SSLException {
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
+                cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, false, enableOcsp, keyStore,
+                endpointIdentificationAlgorithm, serverNames, resumptionController, options, credentials);
+    }
+
+    ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout,
+                                         boolean startTls, boolean enableOcsp, String keyStore,
+                                         String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                                         ResumptionController resumptionController,
+                                         Map.Entry<SslContextOption<?>, Object>[] options,
+                                         List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-              ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
+              ClientAuth.NONE, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, true,
                 serverNames, resumptionController, options, credentials);
         boolean success = false;
         try {

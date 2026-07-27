@@ -33,6 +33,6 @@ final class HmacSignQuicResetTokenGenerator implements QuicResetTokenGenerator {
     public ByteBuffer newResetToken(ByteBuffer cid) {
         ObjectUtil.checkNotNull(cid, "cid");
         ObjectUtil.checkPositive(cid.remaining(), "cid");
-        return Hmac.sign(cid, Quic.RESET_TOKEN_LEN);
+        return Hmac.signToken(cid, Quic.RESET_TOKEN_LEN);
     }
 }

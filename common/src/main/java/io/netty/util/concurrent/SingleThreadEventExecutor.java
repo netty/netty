@@ -690,7 +690,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Run the tasks in the {@link #taskQueue}
+     * Runs the task-processing loop until {@link #confirmShutdown()} returns {@code true}.
+     *
+     * <p>Implementations <strong>must not let a {@link Throwable} thrown by a task escape this
+     * method</strong>: any uncaught {@link Throwable} terminates the executor (logged at {@code WARN}
+     * and surfaced via {@link #terminationFuture()}), at which point every {@code Channel}
+     * registered with this executor stops processing I/O and new task submissions are rejected.
+     * The supplied helpers - {@link #runAllTasks()}, {@link #runAllTasks(long)}, and
+     * {@link #safeExecute(Runnable)} - catch {@code Throwable} for you; custom loops built on
+     * {@link #pollTask()} or {@link #takeTask()} are responsible for wrapping each task
+     * invocation accordingly.
      */
     protected abstract void run();
 

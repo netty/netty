@@ -59,13 +59,13 @@ abstract class InputBufferingDecompressor implements Decompressor {
     public final ByteBuf takeOutput() throws DecompressionException {
         ByteBuf buf = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
         ByteBuf output = processOutput(buf);
-        if (status() == Status.NEED_INPUT && buf.isReadable()) {
-            try {
+        try {
+            if (status() == Status.NEED_INPUT && buf.isReadable()) {
                 processInput(buf);
-            } catch (Throwable t) {
-                output.release();
-                throw t;
             }
+        } catch (Throwable t) {
+            output.release();
+            throw t;
         }
         if (this.cumulation != null && !this.cumulation.isReadable()) {
             this.cumulation.release();
@@ -103,6 +103,7 @@ abstract class InputBufferingDecompressor implements Decompressor {
     public void close() {
         if (this.cumulation != null) {
             this.cumulation.release();
+            this.cumulation = null;
         }
     }
 }

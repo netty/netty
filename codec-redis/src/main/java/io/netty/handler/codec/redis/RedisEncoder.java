@@ -102,6 +102,12 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
 
     private static void writeString(ByteBufAllocator allocator, RedisMessageType type, String content,
                                     List<Object> out) {
+        if (type.isInline()) {
+            // Inline, or "simple" messages do not permit CRLF bytes in their contents.
+            if (content.indexOf('\r') != -1 || content.indexOf('\n') != -1) {
+                throw new CodecException("Line breaks are not permitted in 'simple' messages");
+            }
+        }
         ByteBuf buf = allocator.ioBuffer(type.length() + ByteBufUtil.utf8MaxBytes(content) +
                                          RedisConstants.EOL_LENGTH);
         type.writeTo(buf);

@@ -16,18 +16,23 @@
 
 package io.netty.handler.traffic;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
@@ -37,12 +42,16 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TrafficShapingHandlerTest {
 
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
+    private static final long WRITE_LIMIT_BYTES_PER_SECOND = 1;
     private static final ScheduledExecutorService SES = Executors.newSingleThreadScheduledExecutor();
     private static final EventLoopGroup GROUP = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
@@ -70,6 +79,46 @@ public class TrafficShapingHandlerTest {
         } finally {
             trafficHandler2.release();
         }
+    }
+
+    @Test
+    public void testQueuedWritesReleasedAndFailedOnClose() {
+        testQueuedWritesReleasedAndFailedOnClose0(new ChannelTrafficShapingHandler(
+                WRITE_LIMIT_BYTES_PER_SECOND, 0, 0));
+
+        GlobalTrafficShapingHandler trafficHandler1 =
+                new GlobalTrafficShapingHandler(SES, WRITE_LIMIT_BYTES_PER_SECOND, 0, 0);
+        try {
+            testQueuedWritesReleasedAndFailedOnClose0(trafficHandler1);
+        } finally {
+            trafficHandler1.release();
+        }
+
+        GlobalChannelTrafficShapingHandler trafficHandler2 =
+                new GlobalChannelTrafficShapingHandler(SES, WRITE_LIMIT_BYTES_PER_SECOND, 0,
+                        WRITE_LIMIT_BYTES_PER_SECOND, 0, 0);
+        try {
+            testQueuedWritesReleasedAndFailedOnClose0(trafficHandler2);
+        } finally {
+            trafficHandler2.release();
+        }
+    }
+
+    private static void testQueuedWritesReleasedAndFailedOnClose0(AbstractTrafficShapingHandler trafficHandler) {
+        EmbeddedChannel ch = new EmbeddedChannel(trafficHandler);
+        ByteBufHolder holder = new DefaultByteBufHolder(Unpooled.buffer(64).writeZero(64));
+        ChannelPromise promise = ch.newPromise();
+
+        ch.writeOneOutbound(holder, promise);
+        assertFalse(promise.isDone());
+        assertNull(ch.readOutbound());
+        assertEquals(1, holder.refCnt());
+
+        ch.close().syncUninterruptibly();
+        assertEquals(0, holder.refCnt());
+        assertTrue(promise.isDone());
+        assertTrue(promise.cause() instanceof ClosedChannelException);
+        assertFalse(ch.finishAndReleaseAll());
     }
 
     private void testHandlerRemove0(final AbstractTrafficShapingHandler trafficHandler)

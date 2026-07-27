@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
@@ -30,7 +31,11 @@ import static io.netty.handler.codec.compression.FastLz.decompress;
  * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
+ * <p>
+ * This API is still in progress as part of the decompression migration tracked by
+ * <a href="https://github.com/netty/netty/issues/16743">#16743</a>.
  */
+@UnstableApi
 public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of decompression.
@@ -50,28 +55,28 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     private final ByteBufChecksum checksum;
 
     /**
-     * Length of current received chunk of data.
+     * Length of the current received chunk of data.
      */
     private int chunkLength;
 
     /**
-     * Original of current received chunk of data.
-     * It is equal to {@link #chunkLength} for non compressed chunks.
+     * Original length of the current received chunk of data.
+     * It is equal to {@link #chunkLength} for uncompressed chunks.
      */
     private int originalLength;
 
     /**
-     * Indicates is this chunk compressed or not.
+     * Indicates whether this chunk is compressed.
      */
     private boolean isCompressed;
 
     /**
-     * Indicates is this chunk has checksum or not.
+     * Indicates whether this chunk has a checksum.
      */
     private boolean hasChecksum;
 
     /**
-     * Checksum value of current received chunk of data which has checksum.
+     * Checksum value of the current received chunk of data when present.
      */
     private int currentChecksum;
 
@@ -196,10 +201,12 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         private Checksum checksum;
 
@@ -212,6 +219,7 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
          * @param checksum The checksum to use for validation
          * @return This builder
          */
+        @UnstableApi
         public Builder checksum(Checksum checksum) {
             this.checksum = checksum;
             return this;
@@ -222,11 +230,13 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
          *
          * @return This builder
          */
+        @UnstableApi
         public Builder defaultChecksum() {
             return checksum(new Adler32());
         }
 
         @Override
+        @UnstableApi
         public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
             return new DefensiveDecompressor(new FastLzFrameDecompressor(this, allocator));
         }

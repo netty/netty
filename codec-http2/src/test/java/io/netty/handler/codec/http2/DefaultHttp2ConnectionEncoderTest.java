@@ -389,6 +389,31 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void writeDataFailsStreamWhenFlowControlledQueueUnderDelivers() throws Exception {
+        createStream(STREAM_ID, false);
+        ByteBuf data = wrappedBuffer(new byte[10]);
+        ChannelPromise promise = newPromise();
+        // Include padding so we also cover that dataSize and padding are reset on failure.
+        encoder.writeData(ctx, STREAM_ID, data, 10, false, promise);
+        FlowControlled fc = payloadCaptor.getValue();
+        assertEquals(20, fc.size());
+
+        // Simulate a queued buffer being consumed out from under the queue
+        data.skipBytes(data.readableBytes());
+
+        fc.write(ctx, 20);
+
+        // Expect the stream to fail rather than emitting any frames
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(Http2Exception.class, promise.cause());
+        assertEquals(Http2Error.INTERNAL_ERROR, ((Http2Exception) promise.cause()).error());
+        assertTrue(writtenData.isEmpty());
+        // The frame reports as fully consumed so it is removed and its bytes return to flow control.
+        assertEquals(0, fc.size());
+        assertEquals(0, data.refCnt());
+    }
+
+    @Test
     public void headersWriteForUnknownStreamShouldCreateStream() throws Exception {
         writeAllFlowControlledFrames();
         final int streamId = 6;

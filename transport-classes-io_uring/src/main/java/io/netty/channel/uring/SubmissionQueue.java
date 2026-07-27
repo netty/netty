@@ -115,13 +115,18 @@ final class SubmissionQueue {
         // Try to use IORING_REGISTER_RING_FDS.
         // See https://manpages.debian.org/unstable/liburing-dev/io_uring_register.2.en.html#IORING_REGISTER_RING_FDS
         int enterRingFd = Native.ioUringRegisterRingFds(ringFd);
-        final int enterFlags;
+        int enterFlags;
         if (enterRingFd < 0) {
             // Use of IORING_REGISTER_RING_FDS failed, just use the ring fd directly.
             enterRingFd = ringFd;
             enterFlags = 0;
         } else {
             enterFlags = Native.IORING_ENTER_REGISTERED_RING;
+        }
+        // Opt out of iowait accounting while waiting on CQEs for pure networking workloads.
+        // See https://github.com/netty/netty/issues/16655
+        if (IoUring.isIoringEnterNoIoWaitEnabled()) {
+            enterFlags |= Native.IORING_ENTER_NO_IOWAIT;
         }
         this.enterRingFd = enterRingFd;
         this.enterFlags = enterFlags;

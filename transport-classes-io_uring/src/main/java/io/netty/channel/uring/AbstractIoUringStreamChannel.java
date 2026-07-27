@@ -341,7 +341,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     buf = alloc().directBuffer(chunkSize);
                     try {
                         ByteBufWritableByteChannel ch = new ByteBufWritableByteChannel(buf);
-                        while (buf.writableBytes() > 0) {
+                        // Mirror epoll's writeFileRegion(): stop calling transferTo() once
+                        // the region reports it has been fully transferred. The FileRegion
+                        // contract permits implementations to assume no further invocations
+                        // past transferred() == count().
+                        while (buf.writableBytes() > 0 && region.transferred() < region.count()) {
                             long t = region.transferTo(ch, region.transferred());
                             if (t <= 0) {
                                 break;
@@ -505,7 +509,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
             boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
 
-            boolean empty = socketIsEmpty(flags);
+            boolean completeRead = shouldCompleteReadLoop(flags, isReadMultishot());
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
                 readId = 0;
@@ -599,15 +603,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                scheduleNextRead(pipeline, allocHandle, rearm, empty);
+                scheduleNextRead(pipeline, allocHandle, rearm, completeRead);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }
 
         private void scheduleNextRead(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
-                                      boolean rearm, boolean empty) {
-            if (allocHandle.continueReading() && !empty) {
+                                      boolean rearm, boolean completeRead) {
+            if (allocHandle.continueReading() && !completeRead) {
                 if (rearm) {
                     // We only should schedule another read if we need to rearm.
                     // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
@@ -785,6 +789,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     @Override
     protected boolean socketIsEmpty(int flags) {
         return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
+
+    protected boolean shouldCompleteReadLoop(int flags, boolean multishot) {
+        return socketIsEmpty(flags);
     }
 
     @Override

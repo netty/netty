@@ -121,7 +121,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
                     .channelId(channel.id())
                     .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
-                    .handlers(new BrotliDecoder())
+                    .handlers(BrotliDecoder.newDecoderWithMaxAllocation(maxAllocation))
                     .build();
         }
 
@@ -139,7 +139,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
                     .channelId(channel.id())
                     .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
-                    .handlers(new ZstdDecoder())
+                    .handlers(new ZstdDecoder(maxAllocation))
                     .build();
         }
 

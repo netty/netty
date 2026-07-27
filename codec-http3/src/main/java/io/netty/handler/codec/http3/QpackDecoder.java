@@ -47,6 +47,9 @@ final class QpackDecoder {
     private static final QpackException INVALID_REQUIRED_INSERT_COUNT =
             QpackException.newStatic(QpackDecoder.class, "decodeRequiredInsertCount(...)",
                     "QPACK - invalid required insert count");
+    private static final QpackException INVALID_LENGTH_ENCODED_LITERAL =
+            QpackException.newStatic(QpackDecoder.class, "decodeHuffmanEncodedLiteral(...)",
+                    "QPACK - invalid length for LITERAL");
     private static final QpackException MAX_BLOCKED_STREAMS_EXCEEDED =
             QpackException.newStatic(QpackDecoder.class, "shouldWaitForDynamicTableUpdates(...)",
                     "QPACK - exceeded max blocked streams");
@@ -399,6 +402,9 @@ final class QpackDecoder {
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
+        if (in.readableBytes() < length) {
+            throw INVALID_LENGTH_ENCODED_LITERAL;
+        }
         byte[] buf = new byte[length];
         in.readBytes(buf);
         return new AsciiString(buf, false);
@@ -476,7 +482,7 @@ final class QpackDecoder {
 
     private boolean shouldWaitForDynamicTableUpdates(int requiredInsertCount) throws QpackException {
         if (requiredInsertCount > dynamicTable.insertCount()) {
-            if (blockedStreamsCount == maxBlockedStreams - 1) {
+            if (blockedStreamsCount >= maxBlockedStreams) {
                 throw MAX_BLOCKED_STREAMS_EXCEEDED;
             }
             return true;
@@ -486,8 +492,9 @@ final class QpackDecoder {
 
     private void sendInsertCountIncrementIfRequired(QuicStreamChannel qpackDecoderStream) throws QpackException {
         final int insertCount = dynamicTable.insertCount();
-        final List<Runnable> runnables = this.blockedStreams.get(insertCount);
+        final List<Runnable> runnables = this.blockedStreams.remove(insertCount);
         if (runnables != null) {
+            blockedStreamsCount -= runnables.size();
             boolean failed = false;
             for (Runnable runnable : runnables) {
                 try {

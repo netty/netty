@@ -42,6 +42,7 @@ import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -455,7 +456,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            short data = event.data();
+            short data = (short) event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:
@@ -747,10 +748,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
         }
 
+        protected final boolean isReadMultishot() {
+            return numOutstandingReads == -1;
+        }
+
         private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
 
-            boolean multishot = numOutstandingReads == -1;
+            boolean multishot = isReadMultishot();
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             if (rearm) {
                 // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
@@ -797,6 +802,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                                 // in the meantime. If this is the case we need to schedule the read to ensure
                                 // we do not stall.
                                 if (pending) {
+                                    readPending = true;
                                     doBeginReadNow();
                                 }
                             } else if (rearm) {
@@ -814,6 +820,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         // in the meantime. If this is the case we need to schedule the read to ensure
                         // we do not stall.
                         if (pending) {
+                            readPending = true;
                             doBeginReadNow();
                         }
                     } else if (multishot && rearm) {
@@ -1124,8 +1131,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     if (initialData != null) {
                         msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                         MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                        hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
-                                initialData.readableBytes(), (short) 0);
+                        fillTFOInitData(hdr, inetSocketAddress, initialData);
 
                         int fd = fd().intValue();
                         IoRegistration registration = registration();
@@ -1184,6 +1190,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
             });
+        }
+
+        private void fillTFOInitData(MsgHdrMemory hdr, InetSocketAddress inetSocketAddress,
+                                     ByteBuf initialData) throws Exception {
+           if (initialData.hasMemoryAddress()) {
+               hdr.set(socket, inetSocketAddress,
+                       initialData.memoryAddress() + initialData.readerIndex(),
+                       initialData.readableBytes(), (short) 0);
+           } else {
+               // Use an iovec array for CompositeByteBuf and other buffers without a memory address.
+               // If the shared IovArray has not enough space, the rest is sent after connect.
+               IoUringIoHandler handler = registration().attachment();
+               IovArray iovArray = handler.iovArray();
+               int iovOffset = iovArray.count();
+               iovArray.processMessage(initialData);
+               long iovArrayAddress = iovArray.memoryAddress(iovOffset);
+               int iovArrayLength = iovArray.count() - iovOffset;
+               hdr.setWithIovArrayAddress(socket, inetSocketAddress, iovArrayAddress, iovArrayLength, (short) 0);
+           }
         }
 
         @Override

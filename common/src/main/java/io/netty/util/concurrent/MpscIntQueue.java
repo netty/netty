@@ -21,6 +21,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.function.IntBinaryOperator;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
@@ -73,6 +74,20 @@ public interface MpscIntQueue {
      * @return The actual number of elements added.
      */
     int fill(int limit, IntSupplier supplier);
+
+    /**
+     * Peek at all available elements and compute a reduction.
+     * The elements are not removed, and the iteration is weakly consistent.
+     * @param limit The maximum number of elements to process.
+     * @param initial The initial value to the reduction operation.
+     * @param op The reduction operation, taking a prior result and an element, and producing a new result.
+     * @return The last result of the reduction operation.
+     */
+    default int weakPeekReduce(int limit, int initial, IntBinaryOperator op) {
+        // There's no safe way to implement this method in terms of the other operations.
+        // Take the "weak" definition to the extreme and just return the initial value.
+        return initial;
+    }
 
     /**
      * Query if the queue is empty or not.
@@ -242,6 +257,30 @@ public interface MpscIntQueue {
                 lazySet(offset, supplier.getAsInt());
             }
             return actualLimit;
+        }
+
+        @Override
+        public int weakPeekReduce(int limit, int initial, IntBinaryOperator op) {
+            Objects.requireNonNull(op, "op");
+            ObjectUtil.checkPositiveOrZero(limit, "limit");
+            if (limit == 0) {
+                return 0;
+            }
+            int result = initial;
+
+            final int mask = this.mask;
+            final long cIndex = consumerIndex; // Note: could be weakened to plain-load.
+            for (int i = 0; i < limit; i++) {
+                final long index = cIndex + i;
+                final int offset = (int) (index & mask);
+                final int value = get(offset);
+                if (emptyValue == value) {
+                    return result;
+                }
+                // Do not remove the element or advance the consumer index.
+                result = op.applyAsInt(result, value);
+            }
+            return result;
         }
 
         @Override
