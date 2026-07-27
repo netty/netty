@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 
@@ -25,6 +26,7 @@ import static io.netty.handler.codec.compression.Snappy.validateChecksum;
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
+@UnstableApi
 public class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     private enum ChunkType {
@@ -257,10 +259,12 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         boolean validateChecksums;
 

@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
@@ -48,6 +49,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
+@UnstableApi
 public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of stream.
@@ -222,10 +224,12 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         private LZ4Factory factory = LZ4Factory.fastestInstance();
         private Checksum checksum;

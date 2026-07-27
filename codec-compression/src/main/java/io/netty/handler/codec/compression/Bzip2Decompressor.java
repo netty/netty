@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_1;
@@ -39,6 +40,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
+@UnstableApi
 public final class Bzip2Decompressor extends InputBufferingDecompressor {
     private final int outputBufferSize;
 
@@ -342,10 +344,12 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         private int outputBufferSize = 65536;
 

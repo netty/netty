@@ -19,7 +19,9 @@ import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
+@UnstableApi
 public class JZlibDecompressor extends ZlibDecompressor {
 
     private final Inflater z = new Inflater();
@@ -119,10 +121,12 @@ public class JZlibDecompressor extends ZlibDecompressor {
         return decompressed;
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractZlibDecompressorBuilder {
         Builder() {
         }

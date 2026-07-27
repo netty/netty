@@ -19,6 +19,7 @@ import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,6 +29,7 @@ import java.nio.ByteBuffer;
  *
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
+@UnstableApi
 public final class BrotliDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
     private DecoderJNI.Wrapper decoder;
@@ -139,10 +141,12 @@ public final class BrotliDecompressor implements Decompressor {
         return limit;
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         private int inputBufferSize = 8 * 1024;
         private int maxOutputChunkSize = 64 * 1024;

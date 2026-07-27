@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,7 @@ import java.io.InputStream;
  * Decompresses a compressed block {@link ByteBuf} using the Zstandard algorithm.
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
+@UnstableApi
 public final class ZstdDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
 
@@ -97,10 +99,12 @@ public final class ZstdDecompressor implements Decompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         Builder() {
         }

@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -27,6 +28,7 @@ import java.util.zip.Inflater;
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
+@UnstableApi
 public final class JdkZlibDecompressor extends ZlibDecompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
@@ -424,10 +426,12 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                 cmf_flg % 31 == 0;
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractZlibDecompressorBuilder {
         boolean decompressConcatenated;
 

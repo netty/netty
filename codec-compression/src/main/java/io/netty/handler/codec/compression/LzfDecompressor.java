@@ -21,6 +21,7 @@ import com.ning.compress.lzf.LZFException;
 import com.ning.compress.lzf.util.ChunkDecoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.UnstableApi;
 
 import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_COMPRESSED;
 import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_NON_COMPRESSED;
@@ -34,6 +35,7 @@ import static com.ning.compress.lzf.LZFChunk.HEADER_LEN_NOT_COMPRESSED;
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
+@UnstableApi
 public class LzfDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of decompression.
@@ -213,10 +215,12 @@ public class LzfDecompressor extends InputBufferingDecompressor {
         }
     }
 
+    @UnstableApi
     public static Builder builder() {
         return new Builder();
     }
 
+    @UnstableApi
     public static final class Builder extends AbstractDecompressorBuilder {
         private boolean safeInstance;
 
