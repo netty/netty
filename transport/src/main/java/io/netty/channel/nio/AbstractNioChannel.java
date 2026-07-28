@@ -261,11 +261,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         protected final void removeReadOp() {
-            IoRegistration registration = registration();
+            IoRegistration reg = registration;
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
-            if (!registration.isValid()) {
+            if (reg == null || !reg.isValid()) {
                 return;
             }
             removeAndSubmit(readOps);
