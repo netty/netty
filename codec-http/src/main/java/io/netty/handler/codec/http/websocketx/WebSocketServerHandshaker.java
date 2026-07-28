@@ -228,7 +228,7 @@ public abstract class WebSocketServerHandshaker {
             encoderName = p.context(HttpResponseEncoder.class).name();
             p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
-        channel.writeAndFlush(response).addListener(future -> {
+        ctx.writeAndFlush(response).addListener(future -> {
             if (future.isSuccess()) {
                 ChannelPipeline p1 = channel.pipeline();
                 p1.remove(encoderName);
