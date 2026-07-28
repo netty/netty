@@ -56,6 +56,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     private boolean suppressRead;
     private boolean readPending;
     private ByteBuf handshakeBuffer;
+    private int aggregatedBytes;
+    private int handshakeLength = -1;
 
     public SslClientHelloHandler() {
         this(DEFAULT_MAX_CLIENT_HELLO_LENGTH);
@@ -72,9 +74,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!suppressRead && !handshakeFailed) {
             try {
-                int readerIndex = in.readerIndex();
-                int readableBytes = in.readableBytes();
-                int handshakeLength = -1;
+                int readerIndex = in.readerIndex() + aggregatedBytes;
+                int readableBytes = in.readableBytes() - aggregatedBytes;
 
                 // Check if we have enough data to determine the record type and length.
                 while (readableBytes >= SslUtils.SSL_RECORD_HEADER_LENGTH) {
@@ -121,7 +122,8 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
 
                                 // Let's check if we already parsed the handshake length or not.
                                 if (handshakeLength == -1) {
-                                    if (readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH + 4 <= endOffset) {
+                                    if (handshakeBuffer == null &&
+                                            readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH + 4 <= endOffset) {
                                         final int handshakeType = in.getUnsignedByte(readerIndex +
                                                 SslUtils.SSL_RECORD_HEADER_LENGTH);
 
@@ -151,7 +153,9 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                             // We have everything we need in one packet.
                                             // Skip the record header and handshake header (this sums up as 4 bytes)
                                             readerIndex += SslUtils.SSL_RECORD_HEADER_LENGTH + 4;
-                                            select(ctx, in.retainedSlice(readerIndex, handshakeLength));
+                                            final int clientHelloLength = handshakeLength;
+                                            handshakeLength = -1;
+                                            select(ctx, in.retainedSlice(readerIndex, clientHelloLength));
                                             return;
                                         }
                                     }
@@ -159,9 +163,6 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
 
                                 if (handshakeBuffer == null) {
                                     handshakeBuffer = ctx.alloc().buffer();
-                                } else if (readerIndex == in.readerIndex()) {
-                                    // Clear the buffer so we can aggregate into it again.
-                                    handshakeBuffer.clear();
                                 }
 
                                 // Combine the encapsulated data in one buffer but not include the SSL_RECORD_HEADER
@@ -169,6 +170,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                         packetLength - SslUtils.SSL_RECORD_HEADER_LENGTH);
                                 readerIndex += packetLength;
                                 readableBytes -= packetLength;
+                                aggregatedBytes += packetLength;
                                 if (handshakeLength == -1) {
                                     if (handshakeBuffer.readableBytes() < 4) {
                                         continue;
@@ -198,6 +200,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                 if (handshakeBuffer.readableBytes() >= handshakeLength + 4) {
                                     ByteBuf clientHello = handshakeBuffer.setIndex(4, handshakeLength + 4).slice();
                                     handshakeBuffer = null;
+                                    handshakeLength = -1;
 
                                     select(ctx, clientHello);
                                     return;
@@ -230,6 +233,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     private void releaseHandshakeBuffer() {
         releaseIfNotNull(handshakeBuffer);
         handshakeBuffer = null;
+        handshakeLength = -1;
     }
 
     private static void releaseIfNotNull(ByteBuf buffer) {
