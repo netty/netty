@@ -18,8 +18,10 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -29,7 +31,7 @@ import java.util.zip.Inflater;
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
 @UnstableApi
-public final class JdkZlibDecompressor extends ZlibDecompressor {
+public final class JdkZlibDecompressor extends InputBufferingDecompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -37,6 +39,8 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     private static final int FRESERVED = 0xE0;
 
     private Inflater inflater;
+    private final int maxAllocation;
+    private final byte[] dictionary;
 
     // GZIP related
     private final ByteBufChecksum crc;
@@ -67,7 +71,9 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     private boolean inputBufferInInflater;
 
     JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
-        super(builder, allocator);
+        super(allocator);
+        maxAllocation = builder.maxAllocation;
+        dictionary = builder.dictionary;
         this.decompressConcatenated = builder.decompressConcatenated;
         switch (builder.wrapper) {
             case GZIP:
@@ -454,34 +460,46 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     }
 
     @UnstableApi
-    public static final class Builder extends AbstractZlibDecompressorBuilder {
+    public static final class Builder extends Decompressor.AbstractDecompressorBuilder {
+        private ZlibWrapper wrapper = ZlibWrapper.ZLIB;
+        private byte[] dictionary;
+        private int maxAllocation = 1024 * 1024;
         boolean decompressConcatenated;
 
         Builder() {
         }
 
         /**
-         * {@inheritDoc}
+         * Set the wrapper format for the deflated data. Defaults to {@link ZlibWrapper#ZLIB}.
+         *
+         * @param wrapper The wrapper format
+         * @return This builder
          */
-        @Override
         public Builder wrapper(ZlibWrapper wrapper) {
-            return (Builder) super.wrapper(wrapper);
+            this.wrapper = Objects.requireNonNull(wrapper, "wrapper");
+            return this;
         }
 
         /**
-         * {@inheritDoc}
+         * Set the preset dictionary to use. Defaults to no dictionary.
+         *
+         * @param dictionary The dictionary
+         * @return This builder
          */
-        @Override
         public Builder dictionary(byte[] dictionary) {
-            return (Builder) super.dictionary(dictionary);
+            this.dictionary = dictionary;
+            return this;
         }
 
         /**
-         * {@inheritDoc}
+         * Set the maximum output buffer size. Defaults to 1M.
+         *
+         * @param maxAllocation The maximum output buffer size.
+         * @return This builder
          */
-        @Override
         public Builder maxAllocation(int maxAllocation) {
-            return (Builder) super.maxAllocation(maxAllocation);
+            this.maxAllocation = ObjectUtil.checkPositiveOrZero(maxAllocation, "maxAllocation");
+            return this;
         }
 
         public Builder decompressConcatenated(boolean decompressConcatenated) {
