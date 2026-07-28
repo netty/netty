@@ -252,18 +252,17 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
                 return false;
             } else {
                 // this sets reading = true
-                Object[] messages = heldBack.toArray();
-                heldBack.recycle();
+                int messageIndex = 0;
                 try {
-                    for (int i = 0; i < messages.length; i++) {
-                        Object msg = messages[i];
-                        messages[i] = null;
+                    while (messageIndex < heldBack.size()) {
+                        Object msg = heldBack.get(messageIndex++);
                         channelRead(ctx, msg);
                     }
                 } finally {
-                    for (Object msg : messages) {
-                        ReferenceCountUtil.release(msg);
+                    while (messageIndex < heldBack.size()) {
+                        ReferenceCountUtil.release(heldBack.get(messageIndex++));
                     }
+                    heldBack.recycle();
                 }
                 return true; // channelReadComplete(ctx)
             }
