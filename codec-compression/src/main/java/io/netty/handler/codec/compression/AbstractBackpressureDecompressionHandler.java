@@ -120,6 +120,7 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
                 throw new IllegalStateException("Unexpected decompressor status: " + status);
             }
             if (msg.isReadable()) {
+                int readableBytes = msg.readableBytes();
                 boolean failed = false;
                 try {
                     decompressor.addInput(msg);
@@ -130,8 +131,14 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
                 if (!failed) {
                     forwardOutput(ctx);
                 }
+                if (!isAutoRead(ctx) && !anyMessageWrittenSinceReadStart) {
+                    backpressureGauge.countMessage(readableBytes);
+                }
             } else {
                 msg.release();
+                if (!isAutoRead(ctx) && !anyMessageWrittenSinceReadStart) {
+                    backpressureGauge.countMessage(0);
+                }
             }
         }
     }
@@ -200,9 +207,19 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
             if (!anyMessageWrittenSinceReadStart) {
                 // we didn't forward any messages, so we need to ask upstream for more
                 reading = false;
-                readPending = false;
-                if (!isAutoRead(ctx)) {
+                boolean readPending = this.readPending;
+                this.readPending = false;
+                if (readPending) {
+                    backpressureGauge.relieveBackpressure();
+                }
+                if (!isAutoRead(ctx) && decompressor != null && !backpressureGauge.backpressureLimitExceeded()) {
                     ctx.read();
+                } else {
+                    backpressureGauge.increaseBackpressure();
+                    ctx.fireChannelReadComplete();
+                    if (readPending && decompressor == null && !isAutoRead(ctx)) {
+                        ctx.read();
+                    }
                 }
                 return;
             }
