@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,10 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.internal.UnstableApi;
 
-import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -28,11 +27,9 @@ import java.util.zip.Inflater;
 
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
- *
- * @deprecated Superseded by {@link JdkZlibDecompressor} and {@link BackpressureDecompressionHandler}
  */
-@Deprecated
-public class JdkZlibDecoder extends ZlibDecoder {
+@UnstableApi
+public final class JdkZlibDecompressor extends ZlibDecompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -40,7 +37,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private static final int FRESERVED = 0xE0;
 
     private Inflater inflater;
-    private final byte[] dictionary;
 
     // GZIP related
     private final ByteBufChecksum crc;
@@ -60,119 +56,20 @@ public class JdkZlibDecoder extends ZlibDecoder {
     private GzipState gzipState = GzipState.HEADER_START;
     private int flags = -1;
     private int xlen = -1;
-    private boolean needsRead;
-
-    private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
-    private final int maxForwardBytes;
-
-    private volatile boolean finished;
 
     private boolean decideZlibOrNone;
-
+    private boolean finished;
+    private boolean gzipMemberFinished;
     /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
-     *
-     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(int)}.
+     * If this is true, part of the input buffer is still in use by the {@link #inflater}, so we shouldn't touch that
+     * buffer too much (e.g. compact it).
      */
-    @Deprecated
-    public JdkZlibDecoder() {
-        this(ZlibWrapper.ZLIB, null, false, 0);
-    }
+    private boolean inputBufferInInflater;
 
-    /**
-     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB})
-     * and the specified maximum buffer allocation.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(int maxAllocation) {
-        this(ZlibWrapper.ZLIB, null, false, maxAllocation);
-    }
-
-    /**
-     * Creates a new instance with the specified preset dictionary. The wrapper
-     * is always {@link ZlibWrapper#ZLIB} because it is the only format that
-     * supports the preset dictionary.
-     *
-     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(byte[], int)}.
-     */
-    @Deprecated
-    public JdkZlibDecoder(byte[] dictionary) {
-        this(ZlibWrapper.ZLIB, dictionary, false, 0);
-    }
-
-    /**
-     * Creates a new instance with the specified preset dictionary and maximum buffer allocation.
-     * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
-     * supports the preset dictionary.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(byte[] dictionary, int maxAllocation) {
-        this(ZlibWrapper.ZLIB, dictionary, false, maxAllocation);
-    }
-
-    /**
-     * Creates a new instance with the specified wrapper.
-     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
-     * supported atm.
-     *
-     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(ZlibWrapper, int)}.
-     */
-    @Deprecated
-    public JdkZlibDecoder(ZlibWrapper wrapper) {
-        this(wrapper, null, false, 0);
-    }
-
-    /**
-     * Creates a new instance with the specified wrapper and maximum buffer allocation.
-     * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
-     * supported atm.
-     *
-     * @param maxAllocation
-     *          Maximum size of the decompression buffer. Must be &gt;= 0.
-     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
-     */
-    public JdkZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
-        this(wrapper, null, false, maxAllocation);
-    }
-
-    /**
-     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(ZlibWrapper, boolean, int)}.
-     */
-    @Deprecated
-    public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated) {
-        this(wrapper, null, decompressConcatenated, 0);
-    }
-
-    public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated, int maxAllocation) {
-        this(wrapper, null, decompressConcatenated, maxAllocation);
-    }
-
-    /**
-     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(boolean, int)}.
-     */
-    @Deprecated
-    public JdkZlibDecoder(boolean decompressConcatenated) {
-        this(ZlibWrapper.GZIP, null, decompressConcatenated, 0);
-    }
-
-    public JdkZlibDecoder(boolean decompressConcatenated, int maxAllocation) {
-        this(ZlibWrapper.GZIP, null, decompressConcatenated, maxAllocation);
-    }
-
-    private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated, int maxAllocation) {
-        super(maxAllocation);
-        this.maxForwardBytes = maxAllocation > 0 ? maxAllocation : DEFAULT_MAX_FORWARD_BYTES;
-
-        ObjectUtil.checkNotNull(wrapper, "wrapper");
-
-        this.decompressConcatenated = decompressConcatenated;
-        switch (wrapper) {
+    JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(builder, allocator);
+        this.decompressConcatenated = builder.decompressConcatenated;
+        switch (builder.wrapper) {
             case GZIP:
                 inflater = new Inflater(true);
                 crc = ByteBufChecksum.wrapChecksum(new CRC32());
@@ -191,26 +88,41 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 crc = null;
                 break;
             default:
-                throw new IllegalArgumentException("Only GZIP or ZLIB is supported, but you used " + wrapper);
+                throw new IllegalArgumentException("Only GZIP or ZLIB is supported, but you used " + builder.wrapper);
         }
-        this.dictionary = dictionary;
     }
 
     @Override
-    public boolean isClosed() {
-        return finished;
-    }
-
-    @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        needsRead = true;
+    public Status status() throws DecompressionException {
         if (finished) {
-            // Skip data received after finished.
-            in.skipBytes(in.readableBytes());
+            return Status.COMPLETE;
+        } else if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
+            return Status.NEED_INPUT;
+        } else {
+            return Status.NEED_OUTPUT;
+        }
+    }
+
+    @Override
+    public void endOfInput() throws DecompressionException {
+        if (finished) {
             return;
         }
+        if (crc != null && decompressConcatenated && gzipMemberFinished &&
+                gzipState == GzipState.HEADER_START && available() == 0) {
+            finished = true;
+            return;
+        }
+        throw new DecompressionException("Compressed stream ended before the end-of-stream marker");
+    }
 
-        int readableBytes = in.readableBytes();
+    @Override
+    void processInput(ByteBuf buf) throws DecompressionException {
+        if (inputBufferInInflater) {
+            throw new IllegalStateException("Not in state NEED_INPUT");
+        }
+
+        int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             return;
         }
@@ -221,7 +133,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 return;
             }
 
-            boolean nowrap = !looksLikeZlib(in.getShort(in.readerIndex()));
+            boolean nowrap = !looksLikeZlib(buf.getShort(buf.readerIndex()));
             inflater = new Inflater(nowrap);
             decideZlibOrNone = false;
         }
@@ -229,19 +141,19 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (crc != null) {
             if (gzipState != GzipState.HEADER_END) {
                 if (gzipState == GzipState.FOOTER_START) {
-                    if (!handleGzipFooter(in)) {
+                    if (!handleGzipFooter(buf)) {
                         // Either there was not enough data or the input is finished.
                         return;
                     }
                     // If we consumed the footer we will start with the header again.
                     assert gzipState == GzipState.HEADER_START;
                 }
-                if (!readGZIPHeader(in)) {
+                if (!readGZIPHeader(buf)) {
                     // There was not enough data readable to read the GZIP header.
                     return;
                 }
                 // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
-                readableBytes = in.readableBytes();
+                readableBytes = buf.readableBytes();
                 if (readableBytes == 0) {
                     return;
                 }
@@ -249,79 +161,77 @@ public class JdkZlibDecoder extends ZlibDecoder {
         }
 
         if (inflater.needsInput()) {
-            if (in.hasArray()) {
-                inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
+            if (buf.hasArray()) {
+                inflater.setInput(buf.array(), buf.arrayOffset() + buf.readerIndex(), readableBytes);
             } else {
-                byte[] array = new byte[readableBytes];
-                in.getBytes(in.readerIndex(), array);
-                inflater.setInput(array);
+                inflater.setInput(ByteBufUtil.getBytes(buf));
+            }
+            inputBufferInInflater = true;
+        }
+    }
+
+    private void consumeInput(ByteBuf buf) {
+        if (inputBufferInInflater) {
+            buf.readerIndex(buf.writerIndex() - inflater.getRemaining());
+            if (inflater.getRemaining() == 0) {
+                inputBufferInInflater = false;
             }
         }
+    }
 
-        ByteBuf decompressed = prepareDecompressBuffer(ctx, null, inflater.getRemaining() << 1);
+    @Override
+    ByteBuf processOutput(ByteBuf buf) throws DecompressionException {
+        int proposedCapacity = inflater.getRemaining() << 1;
+        int targetCapacity = maxAllocation == 0
+                ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
+        ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
+        boolean success = false;
         try {
-            boolean readFooter = false;
-            while (!inflater.needsInput()) {
-                byte[] outArray = decompressed.array();
-                int writerIndex = decompressed.writerIndex();
-                int outIndex = decompressed.arrayOffset() + writerIndex;
-                int writable = decompressed.writableBytes();
-                int outputLength = inflater.inflate(outArray, outIndex, writable);
-                if (outputLength > 0) {
-                    decompressed.writerIndex(writerIndex + outputLength);
-                    if (crc != null) {
-                        crc.update(outArray, outIndex, outputLength);
-                    }
-                    if (maxAllocation == 0 && decompressed.readableBytes() >= maxForwardBytes) {
-                        // Forward the buffer once it exceeds the threshold to bound memory
-                        // while avoiding excessive fireChannelRead calls.
-                        ByteBuf buffer = decompressed;
-                        decompressed = null;
-                        needsRead = false;
-                        ctx.fireChannelRead(buffer);
-                    }
-                } else if (inflater.needsDictionary()) {
-                    if (dictionary == null) {
-                        throw new DecompressionException(
-                                "decompression failure, unable to set dictionary as non was specified");
-                    }
-                    inflater.setDictionary(dictionary);
+            byte[] outArray = decompressed.array();
+            int writerIndex = decompressed.writerIndex();
+            int outIndex = decompressed.arrayOffset() + writerIndex;
+            int outputLength;
+            try {
+                outputLength = inflater.inflate(outArray, outIndex, decompressed.writableBytes());
+            } catch (DataFormatException e) {
+                throw new DecompressionException("decompression failure", e);
+            }
+            consumeInput(buf);
+            if (outputLength > 0) {
+                decompressed.writerIndex(writerIndex + outputLength);
+                if (crc != null) {
+                    crc.update(outArray, outIndex, outputLength);
                 }
-
-                if (inflater.finished()) {
-                    if (crc == null) {
-                        finished = true; // Do not decode anymore.
-                    } else {
-                        readFooter = true;
-                    }
-                    break;
+            }
+            if (inflater.needsDictionary()) {
+                if (dictionary == null) {
+                    throw new DecompressionException(
+                            "decompression failure, unable to set dictionary as none was specified");
+                }
+                inflater.setDictionary(dictionary);
+            }
+            if (inflater.finished()) {
+                inputBufferInInflater = false;
+                if (crc == null) {
+                    finished = true; // Do not decode anymore.
                 } else {
-                    decompressed = prepareDecompressBuffer(ctx, decompressed, inflater.getRemaining() << 1);
+                    gzipState = GzipState.FOOTER_START;
+                    // potentially consume footer
+                    processInput(buf);
                 }
             }
-
-            in.skipBytes(readableBytes - inflater.getRemaining());
-
-            if (readFooter) {
-                gzipState = GzipState.FOOTER_START;
-                handleGzipFooter(in);
-            }
-        } catch (DataFormatException e) {
-            throw new DecompressionException("decompression failure", e);
+            success = true;
+            return decompressed;
         } finally {
-            if (decompressed != null) {
-                if (decompressed.isReadable()) {
-                    needsRead = false;
-                    ctx.fireChannelRead(decompressed);
-                } else {
-                    decompressed.release();
-                }
+            if (!success) {
+                decompressed.release();
             }
         }
     }
 
     private boolean handleGzipFooter(ByteBuf in) {
         if (readGZIPFooter(in)) {
+            gzipMemberFinished = true;
             finished = !decompressConcatenated;
 
             if (!finished) {
@@ -335,19 +245,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
         return false;
     }
 
-    @Override
-    protected void decompressionBufferExhausted(ByteBuf buffer) {
-        finished = true;
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved0(ctx);
-        if (inflater != null) {
-            inflater.end();
-        }
-    }
-
     private boolean readGZIPHeader(ByteBuf in) {
         switch (gzipState) {
             case HEADER_START:
@@ -355,10 +252,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     return false;
                 }
                 // read magic numbers
-                int magic0 = in.readByte();
-                int magic1 = in.readByte();
+                int magic0 = in.readUnsignedByte();
+                int magic1 = in.readUnsignedByte();
 
-                if (magic0 != 31) {
+                if (magic0 != 31 || magic1 != 139) {
                     throw new DecompressionException("Input is not in the GZIP format");
                 }
                 crc.update(magic0);
@@ -398,10 +295,6 @@ public class JdkZlibDecoder extends ZlibDecoder {
                     crc.update(xlen1);
                     crc.update(xlen2);
 
-                    // XLEN is a little-endian unsigned 16-bit value (RFC 1952), so xlen1 is the
-                    // low byte and xlen2 the high byte. This must be an assignment, not |=: xlen
-                    // starts at the -1 "no extra field" sentinel, and OR-ing into -1 (0xFFFFFFFF)
-                    // would leave it -1, so the extra field was never skipped.
                     xlen = xlen2 << 8 | xlen1;
                 }
                 gzipState = GzipState.XLEN_READ;
@@ -544,13 +437,61 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Discard bytes of the cumulation buffer if needed.
-        discardSomeReadBytes();
-
-        if (needsRead && !ctx.channel().config().isAutoRead()) {
-            ctx.read();
+    public void close() {
+        try {
+            super.close();
+        } finally {
+            if (inflater != null) {
+                inflater.end();
+                inflater = null;
+            }
         }
-        ctx.fireChannelReadComplete();
+    }
+
+    @UnstableApi
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @UnstableApi
+    public static final class Builder extends AbstractZlibDecompressorBuilder {
+        boolean decompressConcatenated;
+
+        Builder() {
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Builder wrapper(ZlibWrapper wrapper) {
+            return (Builder) super.wrapper(wrapper);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Builder dictionary(byte[] dictionary) {
+            return (Builder) super.dictionary(dictionary);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Builder maxAllocation(int maxAllocation) {
+            return (Builder) super.maxAllocation(maxAllocation);
+        }
+
+        public Builder decompressConcatenated(boolean decompressConcatenated) {
+            this.decompressConcatenated = decompressConcatenated;
+            return this;
+        }
+
+        @Override
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new JdkZlibDecompressor(this, allocator));
+        }
     }
 }

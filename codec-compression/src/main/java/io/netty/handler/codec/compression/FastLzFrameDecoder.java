@@ -32,7 +32,10 @@ import static io.netty.handler.codec.compression.FastLz.decompress;
  * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
+ *
+ * @deprecated Superseded by {@link FastLzFrameDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class FastLzFrameDecoder extends ByteToMessageDecoder {
     /**
      * Current state of decompression.

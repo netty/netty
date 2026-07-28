@@ -50,7 +50,10 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
  *  * Magic * Token *  Compressed *  Decompressed *  Checksum *  +  *  LZ4 compressed *
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
+ *
+ * @deprecated Superseded by {@link Lz4FrameDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class Lz4FrameDecoder extends ByteToMessageDecoder {
     private final int maxDecompressedLength;
     /**

@@ -24,6 +24,10 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
+/**
+ * @deprecated Superseded by {@link JZlibDecompressor} and {@link BackpressureDecompressionHandler}
+ */
+@Deprecated
 public class JZlibDecoder extends ZlibDecoder {
 
     private final Inflater z = new Inflater();

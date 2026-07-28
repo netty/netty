@@ -38,7 +38,11 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in
  * {@code gzip} or {@code deflate} encoding.  For more information on how this
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
+ *
+ * @deprecated This class does not respect downstream backpressure, and may decompress data indefinitely. Migrate to
+ * {@link HttpDecompressionHandler} for an improved implementation.
  */
+@Deprecated
 public class HttpContentDecompressor extends HttpContentDecoder {
 
     private final boolean strict;

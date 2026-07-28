@@ -40,7 +40,10 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
  * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
  *
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
+ *
+ * @deprecated Superseded by {@link Bzip2Decompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class Bzip2Decoder extends ByteToMessageDecoder {
     /**
      * Current state of stream.
