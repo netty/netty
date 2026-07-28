@@ -52,6 +52,8 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
  */
 @UnstableApi
 public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
+    private static final int DEFAULT_MAX_DECOMPRESSED_LENGTH = 256 * 1024;
+
     /**
      * Current state of stream.
      */
@@ -72,6 +74,8 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
      * Underlying checksum calculator in use.
      */
     private ByteBufChecksum checksum;
+
+    private final int maxDecompressedLength;
 
     /**
      * Type of current block.
@@ -97,6 +101,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
         super(allocator);
         this.decompressor = builder.factory.safeDecompressor();
         this.checksum = builder.checksum == null ? null : ByteBufChecksum.wrapChecksum(builder.checksum);
+        this.maxDecompressedLength = builder.maxDecompressedLength;
     }
 
     @Override
@@ -125,11 +130,17 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
         }
 
         int decompressedLength = Integer.reverseBytes(buf.readInt());
-        final int maxDecompressedLength = 1 << compressionLevel;
-        if (decompressedLength < 0 || decompressedLength > maxDecompressedLength) {
+        if (decompressedLength > maxDecompressedLength) {
+            throw new DecompressionException(String.format(
+                    "decompressedLength too large: %d (expected: 0-%d)",
+                    decompressedLength, maxDecompressedLength));
+        }
+
+        final int maxLocalDecompressedLength = 1 << compressionLevel;
+        if (decompressedLength < 0 || decompressedLength > maxLocalDecompressedLength) {
             throw new DecompressionException(String.format(
                     "invalid decompressedLength: %d (expected: 0-%d)",
-                    decompressedLength, maxDecompressedLength));
+                    decompressedLength, maxLocalDecompressedLength));
         }
         if (decompressedLength == 0 && compressedLength != 0
                 || decompressedLength != 0 && compressedLength == 0
@@ -245,6 +256,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     public static final class Builder extends AbstractDecompressorBuilder {
         private LZ4Factory factory = LZ4Factory.fastestInstance();
         private Checksum checksum;
+        private int maxDecompressedLength = DEFAULT_MAX_DECOMPRESSED_LENGTH;
 
         Builder() {
         }
@@ -281,6 +293,19 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
          */
         public Builder defaultChecksum() {
             return checksum(new Lz4XXHash32(DEFAULT_SEED));
+        }
+
+        /**
+         * Set the maximum allowed decompressed block length. The default is 256 KiB. Use {@code 0} to allow the
+         * LZ4 format maximum of 32 MiB.
+         *
+         * @param maxDecompressedLength maximum decompressed block length
+         * @return This builder
+         */
+        public Builder maxDecompressedLength(int maxDecompressedLength) {
+            this.maxDecompressedLength = maxDecompressedLength == 0 ? MAX_BLOCK_SIZE :
+                    ObjectUtil.checkInRange(maxDecompressedLength, 0, MAX_BLOCK_SIZE, "maxDecompressedLength");
+            return this;
         }
 
         @Override

@@ -25,10 +25,13 @@ import static io.netty.handler.codec.compression.Decompressor.Status.NEED_INPUT;
 import static io.netty.handler.codec.compression.Decompressor.Status.NEED_OUTPUT;
 import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
 import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Lz4DecompressorTest extends AbstractDecompressorTest {
+    private static final int DEFAULT_MAX_DECOMPRESSED_LENGTH = 256 * 1024;
+
     @Override
     protected ChannelHandler createCompressor() {
         return new Lz4FrameEncoder();
@@ -42,6 +45,33 @@ public class Lz4DecompressorTest extends AbstractDecompressorTest {
     @Test
     public void testFactoryRejectsNull() {
         assertThrows(NullPointerException.class, () -> Lz4FrameDecompressor.builder().factory(null));
+    }
+
+    @Test
+    public void testDefaultMaxDecompressedLength() throws Exception {
+        assertRejectsDecompressedLength(
+                Lz4FrameDecompressor.builder(), DEFAULT_MAX_DECOMPRESSED_LENGTH + 1);
+    }
+
+    @Test
+    public void testCustomMaxDecompressedLength() throws Exception {
+        assertAcceptsDecompressedLength(
+                Lz4FrameDecompressor.builder().maxDecompressedLength(DEFAULT_MAX_DECOMPRESSED_LENGTH + 1),
+                DEFAULT_MAX_DECOMPRESSED_LENGTH + 1);
+    }
+
+    @Test
+    public void testZeroMaxDecompressedLengthAllowsFormatMaximum() throws Exception {
+        assertAcceptsDecompressedLength(
+                Lz4FrameDecompressor.builder().maxDecompressedLength(0), MAX_BLOCK_SIZE);
+    }
+
+    @Test
+    public void testInvalidMaxDecompressedLength() {
+        assertThrows(IllegalArgumentException.class,
+                () -> Lz4FrameDecompressor.builder().maxDecompressedLength(-1));
+        assertThrows(IllegalArgumentException.class,
+                () -> Lz4FrameDecompressor.builder().maxDecompressedLength(MAX_BLOCK_SIZE + 1));
     }
 
     @Test
@@ -114,5 +144,34 @@ public class Lz4DecompressorTest extends AbstractDecompressorTest {
             assertEquals(NEED_INPUT, decompressor.status());
             assertThrows(DecompressionException.class, decompressor::endOfInput);
         }
+    }
+
+    private static void assertRejectsDecompressedLength(Decompressor.AbstractDecompressorBuilder builder,
+                                                        int decompressedLength) throws Exception {
+        try (Decompressor decompressor = builder.build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class,
+                    () -> decompressor.addInput(compressedBlockHeader(decompressedLength)));
+        }
+    }
+
+    private static void assertAcceptsDecompressedLength(Decompressor.AbstractDecompressorBuilder builder,
+                                                        int decompressedLength) throws Exception {
+        try (Decompressor decompressor = builder.build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(NEED_INPUT, decompressor.status());
+            decompressor.addInput(compressedBlockHeader(decompressedLength));
+            assertEquals(NEED_INPUT, decompressor.status());
+        }
+    }
+
+    private static ByteBuf compressedBlockHeader(int decompressedLength) {
+        int compressionLevel = 32 - Integer.numberOfLeadingZeros(decompressedLength - 1);
+        ByteBuf input = Unpooled.buffer();
+        input.writeLong(MAGIC_NUMBER);
+        input.writeByte(BLOCK_TYPE_COMPRESSED | compressionLevel - Lz4Constants.COMPRESSION_LEVEL_BASE);
+        input.writeIntLE(1);
+        input.writeIntLE(decompressedLength);
+        input.writeIntLE(0);
+        return input;
     }
 }
