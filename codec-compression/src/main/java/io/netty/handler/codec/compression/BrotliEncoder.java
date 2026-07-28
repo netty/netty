@@ -165,8 +165,11 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         }
 
         if (writer != null) {
+            writer.closeFuture.addHandler(promise);
             writer.close();
             this.writer = null;
+        } else {
+            promise.setSuccess(null);
         }
     }
 
@@ -186,11 +189,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         private ByteBuf writableBuffer;
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
+        private final Promise<Void> closeFuture;
         private boolean isClosed;
 
         private Writer(Encoder.Parameters parameters, ChannelHandlerContext ctx) throws IOException {
             brotliEncoderChannel = new BrotliEncoderChannel(this, parameters);
             this.ctx = ctx;
+            this.closeFuture = ctx.newPromise();
         }
 
         private void encode(ByteBuf msg, boolean preferDirect) throws Exception {
@@ -239,16 +244,11 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
         @Override
         public void close() {
-            final Promise<Void> promise = ctx.newPromise();
-
-            ctx.executor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        finish(promise);
-                    } catch (IOException ex) {
-                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
-                    }
+            ctx.executor().execute(() -> {
+                try {
+                    finish(closeFuture);
+                } catch (IOException ex) {
+                    closeFuture.setFailure(new IllegalStateException("Failed to finish encoding", ex));
                 }
             });
         }
