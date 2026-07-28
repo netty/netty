@@ -17,10 +17,11 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.jupiter.api.Test;
 import io.netty.channel.ChannelHandler;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class BrotliDecompressorTest extends AbstractDecompressorTest {
     @Override
@@ -49,6 +50,32 @@ public class BrotliDecompressorTest extends AbstractDecompressorTest {
                 if (buffer != null) {
                     buffer.release();
                 }
+            }
+        }
+    }
+
+    @Test
+    public void endOfInputRejectsTruncatedStream() throws Exception {
+        ByteBuf[] data = smallData();
+        ByteBuf truncated = data[0].readRetainedSlice(data[0].readableBytes() - 1);
+
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(truncated);
+            truncated = null;
+
+            while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
+                decompressor.takeOutput().release();
+            }
+
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, decompressor::endOfInput);
+        } finally {
+            if (truncated != null) {
+                truncated.release();
+            }
+            for (ByteBuf buffer : data) {
+                buffer.release();
             }
         }
     }

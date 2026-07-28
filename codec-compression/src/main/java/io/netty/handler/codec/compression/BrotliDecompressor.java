@@ -111,6 +111,13 @@ public final class BrotliDecompressor implements Decompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (decoder.getStatus() == DecoderJNI.Status.NEEDS_MORE_INPUT) {
+            assert unusedInput == null : "Expected to be in NEED_INPUT state";
+            decoder.push(0);
+            if (decoder.getStatus() == DecoderJNI.Status.NEEDS_MORE_INPUT) {
+                throw new DecompressionException("Truncated brotli stream");
+            }
+        }
     }
 
     @Override
