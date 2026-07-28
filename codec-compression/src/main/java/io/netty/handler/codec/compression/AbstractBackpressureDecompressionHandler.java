@@ -391,6 +391,8 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        reading = false;
+        readPending = false;
         Exception closeFailure = null;
         if (decompressor != null) {
             try {
