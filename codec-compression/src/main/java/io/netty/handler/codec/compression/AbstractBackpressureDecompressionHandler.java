@@ -39,6 +39,8 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
 
     private boolean reading;
 
+    private boolean readPending;
+
     private boolean discardRemainingContent;
 
     private boolean anyMessageWrittenSinceReadStart;
@@ -198,6 +200,7 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
             if (!anyMessageWrittenSinceReadStart) {
                 // we didn't forward any messages, so we need to ask upstream for more
                 reading = false;
+                readPending = false;
                 if (!isAutoRead(ctx)) {
                     ctx.read();
                 }
@@ -209,6 +212,16 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
 
             ctx.fireChannelReadComplete();
             reading = false;
+            if (readPending) {
+                readPending = false;
+                backpressureGauge.relieveBackpressure();
+                if (decompressor == null) {
+                    if (!isAutoRead(ctx)) {
+                        ctx.read();
+                    }
+                    return;
+                }
+            }
 
         } while (fulfillDemandOutsideRead(ctx));
     }
@@ -291,11 +304,14 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
             return;
         }
 
+        if (reading) {
+            readPending = true;
+            return;
+        }
+
         backpressureGauge.relieveBackpressure();
-        if (!reading) {
-            if (fulfillDemandOutsideRead(ctx)) {
-                channelReadComplete(ctx);
-            }
+        if (fulfillDemandOutsideRead(ctx)) {
+            channelReadComplete(ctx);
         }
     }
 
@@ -323,6 +339,9 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
                     }
                     backpressureGauge.countMessage(output.readableBytes());
                     anyMessageWrittenSinceReadStart = true;
+                    if (readPending) {
+                        readPending = false;
+                    }
                     ctx.fireChannelRead(wrapOutputBuffer(output));
                     if (this.decompressor != decompressor) {
                         return;

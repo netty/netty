@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -141,6 +142,89 @@ class BackpressureDecompressionHandlerTest {
     }
 
     @Test
+    public void preservesReadFromChannelRead() {
+        ReadCounter readCounter = new ReadCounter();
+        EmbeddedChannel channel = new EmbeddedChannel(
+                readCounter,
+                new NumberToBuffer(),
+                BackpressureDecompressionHandler.builder(new MockDecompressor.Builder()
+                                .needInput()
+                                .needOutput(1)
+                                .needInput())
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(1))
+                        .build(),
+                new BufferToNumber(),
+                new ReadOnOne()
+        );
+        channel.config().setAutoRead(false);
+
+        channel.writeInbound(0);
+
+        assertEquals(1, channel.<Integer>readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertEquals(1, readCounter.reads);
+
+        channel.finish();
+    }
+
+    @Test
+    public void preservesReadAfterCompletion() {
+        ReadCounter readCounter = new ReadCounter();
+        EmbeddedChannel channel = new EmbeddedChannel(
+                readCounter,
+                new NumberToBuffer(),
+                BackpressureDecompressionHandler.builder(new MockDecompressor.Builder()
+                                .needInput()
+                                .needOutput(1)
+                                .complete())
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(1))
+                        .build(),
+                new BufferToNumber(),
+                new ReadOnOne()
+        );
+        channel.config().setAutoRead(false);
+
+        channel.writeInbound(0);
+
+        assertEquals(1, channel.<Integer>readInbound());
+        assertEquals(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE, channel.readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertEquals(1, readCounter.reads);
+
+        channel.finish();
+    }
+
+    @Test
+    public void reentrantReadIsSatisfiedByOutput() {
+        ReadCounter readCounter = new ReadCounter();
+        EmbeddedChannel channel = new EmbeddedChannel(
+                readCounter,
+                new NumberToBuffer(),
+                BackpressureDecompressionHandler.builder(new MockDecompressor.Builder()
+                                .needInput()
+                                .needOutput(2)
+                                .needInput())
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
+                        .build(),
+                new BufferToNumber(),
+                new ReadOnOne()
+        );
+        channel.config().setAutoRead(false);
+
+        channel.writeInbound(0);
+
+        assertEquals(1, channel.<Integer>readInbound());
+        assertEquals(2, channel.<Integer>readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
+        assertNull(channel.readInbound());
+        assertEquals(0, readCounter.reads);
+
+        channel.finish();
+    }
+
+    @Test
     public void handlerRemovalWhileResumingOutput() {
         BackpressureDecompressionHandler.Builder builder = BackpressureDecompressionHandler.builder(
                 new MockDecompressor.Builder().needInput().needOutput(2).complete());
@@ -237,6 +321,25 @@ class BackpressureDecompressionHandlerTest {
                 ctx.pipeline().remove(handler);
             }
             ctx.fireChannelRead(msg);
+        }
+    }
+
+    private static final class ReadOnOne extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (Integer.valueOf(1).equals(msg)) {
+                ctx.read();
+            }
+            ctx.fireChannelRead(msg);
+        }
+    }
+
+    private static final class ReadCounter extends ChannelDuplexHandler {
+        private int reads;
+
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            reads++;
         }
     }
 
