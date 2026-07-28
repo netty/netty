@@ -36,7 +36,7 @@ import static com.ning.compress.lzf.LZFChunk.HEADER_LEN_NOT_COMPRESSED;
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
 @UnstableApi
-public class LzfDecompressor extends InputBufferingDecompressor {
+public final class LzfDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of decompression.
      */
@@ -188,24 +188,24 @@ public class LzfDecompressor extends InputBufferingDecompressor {
             final byte[] inputArray = arrayView.array();
             final int inPos = arrayView.arrayOffset() + arrayView.readerIndex();
 
-            ByteBuf uncompressed = allocator.heapBuffer(originalLength, originalLength);
-            final byte[] outputArray = uncompressed.array();
-            final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
-
-            boolean success = false;
+            ByteBuf uncompressed = null;
             try {
+                uncompressed = allocator.heapBuffer(originalLength, originalLength);
+                final byte[] outputArray = uncompressed.array();
+                final int outPos = uncompressed.arrayOffset() + uncompressed.writerIndex();
                 decoder.decodeChunk(
                         inputArray, inPos, inPos + chunkLength,
                         outputArray, outPos, outPos + originalLength);
                 uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
                 in.skipBytes(chunkLength);
                 currentState = State.INIT_BLOCK;
-                success = true;
-                return uncompressed;
+                ByteBuf output = uncompressed;
+                uncompressed = null;
+                return output;
             } catch (LZFException e) {
                 throw new DecompressionException(e);
             } finally {
-                if (!success) {
+                if (uncompressed != null) {
                     uncompressed.release();
                 }
                 if (arrayView != in) {
