@@ -23,6 +23,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -75,6 +76,17 @@ public class ZstdDecompressorTest extends AbstractDecompressorTest {
         byte[] compressed = compressWithWindowLog(payload, 18); // 256 KiB window
 
         assertArrayEquals(payload, decompress(compressed, 20));
+    }
+
+    @Test
+    public void testTruncatedFrameIsRejectedAfterEndOfInput() {
+        byte[] payload = new byte[256 * 1024];
+        new Random(12345L).nextBytes(payload);
+
+        byte[] compressed = compressWithWindowLog(payload, 18);
+        byte[] truncated = Arrays.copyOf(compressed, compressed.length - 1);
+
+        assertThrows(DecompressionException.class, () -> decompress(truncated, 20));
     }
 
     private static byte[] decompress(byte[] compressed, int maxWindowLog) throws DecompressionException {

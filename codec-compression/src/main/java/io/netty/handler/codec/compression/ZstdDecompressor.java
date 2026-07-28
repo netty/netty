@@ -31,15 +31,6 @@ import java.io.InputStream;
  */
 @UnstableApi
 public final class ZstdDecompressor implements Decompressor {
-    // Don't use static here as we want to still allow to load the classes.
-    {
-        try {
-            Zstd.ensureAvailability();
-        } catch (Throwable throwable) {
-            throw new ExceptionInInitializerError(throwable);
-        }
-    }
-
     /**
      * Default upper bound on the {@code Window_Log} accepted by the decompressor.
      * {@code 27} corresponds to a 128 MiB decompression window.
@@ -55,12 +46,27 @@ public final class ZstdDecompressor implements Decompressor {
     private final ZstdInputStreamNoFinalizer output;
 
     ZstdDecompressor(Builder builder, ByteBufAllocator allocator) {
+        // Don't use static here as we want to still allow to load the classes.
+        try {
+            Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
         this.allocator = allocator;
+        ZstdInputStreamNoFinalizer output = null;
         try {
             output = new ZstdInputStreamNoFinalizer(mutableInput);
             output.setContinuous(true);
             output.setLongMax(builder.maxWindowLog);
+            this.output = output;
         } catch (IOException e) {
+            if (output != null) {
+                try {
+                    output.close();
+                } catch (IOException closeException) {
+                    e.addSuppressed(closeException);
+                }
+            }
             throw new DecompressionException(e);
         }
     }
@@ -94,7 +100,14 @@ public final class ZstdDecompressor implements Decompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
-        output.setContinuous(false);
+        try {
+            output.setContinuous(false);
+            if (output.read() != -1) {
+                throw new DecompressionException("Unexpected output after end of input");
+            }
+        } catch (IOException e) {
+            throw new DecompressionException(e);
+        }
     }
 
     @Override
