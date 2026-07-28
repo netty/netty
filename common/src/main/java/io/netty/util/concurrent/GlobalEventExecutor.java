@@ -88,7 +88,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
                 DefaultThreadFactory.toPoolName(getClass()), false, Thread.NORM_PRIORITY, null), this);
 
-        UnsupportedOperationException terminationFailure = new UnsupportedOperationException();
+        UnsupportedOperationException terminationFailure = new StacklessUnsupportedOperationException();
         ThrowableUtil.unknownStackTrace(terminationFailure, GlobalEventExecutor.class, "terminationFuture");
         terminationFuture = new FailedFuture<Object>(this, terminationFailure);
     }
@@ -325,6 +325,16 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     // -> keep this thread alive to handle the newly added entries.
                 }
             }
+        }
+    }
+
+    private static final class StacklessUnsupportedOperationException extends UnsupportedOperationException {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 }
