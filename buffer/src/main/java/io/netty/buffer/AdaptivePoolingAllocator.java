@@ -1088,25 +1088,14 @@ final class AdaptivePoolingAllocator {
 
             int size = chunks.size();
             while (size > CHUNK_REUSE_QUEUE) {
-                // Deallocate the chunk with the fewest incoming references.
                 int key = -1;
                 Chunk toDeallocate = null;
                 for (IntEntry<Chunk> entry : chunks) {
                     Chunk candidate = entry.getValue();
-                    if (candidate != null) {
-                        if (toDeallocate == null) {
-                            toDeallocate = candidate;
-                            key = entry.getKey();
-                        } else {
-                            int candidateRefCnt = RefCnt.refCnt(candidate.refCnt);
-                            int toDeallocateRefCnt = RefCnt.refCnt(toDeallocate.refCnt);
-                            if (candidateRefCnt < toDeallocateRefCnt ||
-                                    candidateRefCnt == toDeallocateRefCnt &&
-                                            candidate.capacity() < toDeallocate.capacity()) {
-                                toDeallocate = candidate;
-                                key = entry.getKey();
-                            }
-                        }
+                    if (candidate != null && RefCnt.refCnt(candidate.refCnt) == 1) {
+                        toDeallocate = candidate;
+                        key = entry.getKey();
+                        break;
                     }
                 }
                 if (toDeallocate == null) {
