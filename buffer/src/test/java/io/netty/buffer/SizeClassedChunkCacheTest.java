@@ -352,16 +352,19 @@ public class SizeClassedChunkCacheTest {
     void cacheSettlesAfterBurstShared() {
         SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
 
-        int excess = 10;
+        int crq = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        int capacity = Math.max(16, crq * 2);
+        int excess = Math.min(10, capacity - crq);
+        assertTrue(excess > 0, "excess must be positive for the test to be meaningful");
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE - 1; i++) {
+        for (int i = 0; i < crq - 1; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
         SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
             excessChunks[i] = fullChunk();
-            cache.offerChunk(excessChunks[i]);
+            assertTrue(cache.offerChunk(excessChunks[i]), "all excess chunks must be accepted by the queue");
         }
 
         int maxCycles = (AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1) * 3;

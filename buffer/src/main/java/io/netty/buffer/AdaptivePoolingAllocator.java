@@ -84,7 +84,9 @@ import java.util.function.IntConsumer;
 @UnstableApi
 final class AdaptivePoolingAllocator {
     private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
-    private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
+    private static final boolean IS_LOW_MEM = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.lowMemory",
+            Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD);
 
     /**
      * Whether the IS_LOW_MEM setting should disable thread-local magazines.
@@ -884,7 +886,7 @@ final class AdaptivePoolingAllocator {
     static final class SharedSizeClassedChunkCache extends SizeClassedChunkCache {
         // Must exceed CHUNK_REUSE_QUEUE (the retention floor) to leave room for burst absorption.
         // TODO replace with an unbounded concurrent collection once available.
-        private static final int SHARED_CACHE_CAPACITY = Math.max(128, CHUNK_REUSE_QUEUE * 2);
+        private static final int SHARED_CACHE_CAPACITY = Math.max(16, CHUNK_REUSE_QUEUE * 2);
         private final Queue<SizeClassedChunk> queue;
         private final AtomicLong purgeBudget;
         private final ArrayList<SizeClassedChunk> deferredBuffer = new ArrayList<>();
