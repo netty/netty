@@ -249,6 +249,7 @@
                   <!-- JFR is available only in JDK9+ and is optional -->
                   jdk.jfr;resolution:=optional,
                   <!-- JVM vendor packages are optional -->
+                  com.sun.management;resolution:=optional,
                   sun.misc;resolution:=optional,
                   sun.nio.ch;resolution:=optional,
                   *
