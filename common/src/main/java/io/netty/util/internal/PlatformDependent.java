@@ -95,7 +95,6 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
-    private static Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
@@ -1515,16 +1514,6 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static Pattern getMaxDirectMemorySizeArgPattern() {
-        // Pattern's is immutable so it's always safe published
-        Pattern pattern = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
-        if (pattern == null) {
-            pattern = Pattern.compile("\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
-            MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN =  pattern;
-        }
-        return pattern;
-    }
-
     /**
      * Compute an estimate of the maximum amount of direct memory available to this JVM.
      * <p>
@@ -1542,49 +1531,7 @@ public final class PlatformDependent {
         }
 
         if (!ignoreMaxDirectMemorySize()) {
-            try {
-                // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
-                // Note that we are using reflection because Android doesn't have these classes.
-                ClassLoader systemClassLoader = getSystemClassLoader();
-                Class<?> mgmtFactoryClass = Class.forName(
-                        "java.lang.management.ManagementFactory", true, systemClassLoader);
-                Class<?> runtimeClass = Class.forName(
-                        "java.lang.management.RuntimeMXBean", true, systemClassLoader);
-
-                MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-                MethodHandle getRuntime = lookup.findStatic(
-                        mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
-                MethodHandle getInputArguments = lookup.findVirtual(
-                        runtimeClass, "getInputArguments", methodType(List.class));
-                List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
-
-                Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
-
-                for (int i = vmArgs.size() - 1; i >= 0; i--) {
-                    Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
-                    if (!m.matches()) {
-                        continue;
-                    }
-
-                    maxDirectMemory = Long.parseLong(m.group(1));
-                    switch (m.group(2).charAt(0)) {
-                        case 'k': case 'K':
-                            maxDirectMemory *= 1024;
-                            break;
-                        case 'm': case 'M':
-                            maxDirectMemory *= 1024 * 1024;
-                            break;
-                        case 'g': case 'G':
-                            maxDirectMemory *= 1024 * 1024 * 1024;
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                }
-            } catch (Throwable ignored) {
-                // Ignore
-            }
+            maxDirectMemory = parseMaxDirectMemorySize(maxDirectMemory);
         }
 
         if (maxDirectMemory <= 0) {
@@ -1594,6 +1541,54 @@ public final class PlatformDependent {
             logger.debug("maxDirectMemory: {} bytes", maxDirectMemory);
         }
 
+        return maxDirectMemory;
+    }
+
+    private static long parseMaxDirectMemorySize(long maxDirectMemory) {
+        try {
+            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
+            // Note that we are using reflection because Android doesn't have these classes.
+            ClassLoader systemClassLoader = getSystemClassLoader();
+            Class<?> mgmtFactoryClass = Class.forName(
+                    "java.lang.management.ManagementFactory", true, systemClassLoader);
+            Class<?> runtimeClass = Class.forName(
+                    "java.lang.management.RuntimeMXBean", true, systemClassLoader);
+
+            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+            MethodHandle getRuntime = lookup.findStatic(
+                    mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
+            MethodHandle getInputArguments = lookup.findVirtual(
+                    runtimeClass, "getInputArguments", methodType(List.class));
+            List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
+
+            Pattern maxDirectMemorySizeArgPattern = Pattern
+                    .compile("\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
+
+            for (int i = vmArgs.size() - 1; i >= 0; i--) {
+                Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
+                if (!m.matches()) {
+                    continue;
+                }
+
+                maxDirectMemory = Long.parseLong(m.group(1));
+                switch (m.group(2).charAt(0)) {
+                    case 'k': case 'K':
+                        maxDirectMemory *= 1024;
+                        break;
+                    case 'm': case 'M':
+                        maxDirectMemory *= 1024 * 1024;
+                        break;
+                    case 'g': case 'G':
+                        maxDirectMemory *= 1024 * 1024 * 1024;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            }
+        } catch (Throwable ignored) {
+            // Ignore
+        }
         return maxDirectMemory;
     }
 
