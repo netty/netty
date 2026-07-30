@@ -1541,48 +1541,50 @@ public final class PlatformDependent {
             return maxDirectMemory;
         }
 
-        try {
-            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
-            // Note that we are using reflection because Android doesn't have these classes.
-            ClassLoader systemClassLoader = getSystemClassLoader();
-            Class<?> mgmtFactoryClass = Class.forName(
-                    "java.lang.management.ManagementFactory", true, systemClassLoader);
-            Class<?> runtimeClass = Class.forName(
-                    "java.lang.management.RuntimeMXBean", true, systemClassLoader);
+        if (!ignoreMaxDirectMemorySize()) {
+            try {
+                // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
+                // Note that we are using reflection because Android doesn't have these classes.
+                ClassLoader systemClassLoader = getSystemClassLoader();
+                Class<?> mgmtFactoryClass = Class.forName(
+                        "java.lang.management.ManagementFactory", true, systemClassLoader);
+                Class<?> runtimeClass = Class.forName(
+                        "java.lang.management.RuntimeMXBean", true, systemClassLoader);
 
-            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-            MethodHandle getRuntime = lookup.findStatic(
-                    mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
-            MethodHandle getInputArguments = lookup.findVirtual(
-                    runtimeClass, "getInputArguments", methodType(List.class));
-            List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
+                MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+                MethodHandle getRuntime = lookup.findStatic(
+                        mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
+                MethodHandle getInputArguments = lookup.findVirtual(
+                        runtimeClass, "getInputArguments", methodType(List.class));
+                List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
 
-            Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
+                Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
 
-            for (int i = vmArgs.size() - 1; i >= 0; i --) {
-                Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
-                if (!m.matches()) {
-                    continue;
+                for (int i = vmArgs.size() - 1; i >= 0; i--) {
+                    Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
+                    if (!m.matches()) {
+                        continue;
+                    }
+
+                    maxDirectMemory = Long.parseLong(m.group(1));
+                    switch (m.group(2).charAt(0)) {
+                        case 'k': case 'K':
+                            maxDirectMemory *= 1024;
+                            break;
+                        case 'm': case 'M':
+                            maxDirectMemory *= 1024 * 1024;
+                            break;
+                        case 'g': case 'G':
+                            maxDirectMemory *= 1024 * 1024 * 1024;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
                 }
-
-                maxDirectMemory = Long.parseLong(m.group(1));
-                switch (m.group(2).charAt(0)) {
-                    case 'k': case 'K':
-                        maxDirectMemory *= 1024;
-                        break;
-                    case 'm': case 'M':
-                        maxDirectMemory *= 1024 * 1024;
-                        break;
-                    case 'g': case 'G':
-                        maxDirectMemory *= 1024 * 1024 * 1024;
-                        break;
-                    default:
-                        break;
-                }
-                break;
+            } catch (Throwable ignored) {
+                // Ignore
             }
-        } catch (Throwable ignored) {
-            // Ignore
         }
 
         if (maxDirectMemory <= 0) {
@@ -1593,6 +1595,10 @@ public final class PlatformDependent {
         }
 
         return maxDirectMemory;
+    }
+
+    private static boolean ignoreMaxDirectMemorySize() {
+        return SystemPropertyUtil.getBoolean("io.netty.ignoreMaxDirectMemorySize", false);
     }
 
     private static File tmpdir0() {
