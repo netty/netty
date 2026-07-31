@@ -362,6 +362,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public void writePushPromise(ChannelHandlerContext ctx, int streamId,
                                  int promisedStreamId, Http2Headers headers, int padding, Promise<Void> promise) {
         ByteBuf headerBlock = null;
+        ByteBuf fragment = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
@@ -378,7 +379,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // INT_FIELD_LENGTH is for the length of the promisedStreamId
             int nonFragmentLength = INT_FIELD_LENGTH + padding;
             int maxFragmentLength = maxFrameSize - nonFragmentLength;
-            ByteBuf fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
+            fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
             flags.endOfHeaders(!headerBlock.isReadable());
 
@@ -393,6 +394,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Write the first fragment.
             ctx.write(fragment, promiseAggregator.newPromise());
+            fragment = null;
 
             // Write out the padding, if any.
             if (paddingBytes(padding) > 0) {
@@ -410,6 +412,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             promiseAggregator.doneAllocatingPromises();
             PlatformDependent.throwException(t);
         } finally {
+            if (fragment != null) {
+                fragment.release();
+            }
             if (headerBlock != null) {
                 headerBlock.release();
             }
@@ -501,6 +506,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int streamId, Http2Headers headers, int padding, boolean endStream,
             boolean hasPriority, int streamDependency, short weight, boolean exclusive, Promise<Void> promise) {
         ByteBuf headerBlock = null;
+        ByteBuf fragment = null;
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
@@ -521,7 +527,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             // Read the first fragment (possibly everything).
             int nonFragmentBytes = padding + flags.getNumPriorityBytes();
             int maxFragmentLength = maxFrameSize - nonFragmentBytes;
-            ByteBuf fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
+            fragment = headerBlock.readRetainedSlice(min(headerBlock.readableBytes(), maxFragmentLength));
 
             // Set the end of headers flag for the first frame.
             flags.endOfHeaders(!headerBlock.isReadable());
@@ -541,6 +547,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
             // Write the first fragment.
             ctx.write(fragment, promiseAggregator.newPromise());
+            fragment = null;
 
             // Write out the padding, if any.
             if (paddingBytes(padding) > 0) {
@@ -558,6 +565,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             promiseAggregator.doneAllocatingPromises();
             PlatformDependent.throwException(t);
         } finally {
+            if (fragment != null) {
+                fragment.release();
+            }
             if (headerBlock != null) {
                 headerBlock.release();
             }
@@ -573,33 +583,46 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         Http2Flags flags = new Http2Flags();
 
         if (headerBlock.isReadable()) {
-
             int fragmentReadableBytes;
             ByteBuf buf = null;
-
-            do {
-                fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
-                ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
-
-                if (headerBlock.isReadable()) {
-                    if (buf == null) {
-                        buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
-                        writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+            try {
+                do {
+                    fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
+                    ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
+                    boolean fragmentWritten = false;
+                    try {
+                        if (headerBlock.isReadable()) {
+                            if (buf == null) {
+                                buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
+                                writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+                            }
+                            ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
+                        } else {
+                            // The frame header is different for the last frame, so re-allocate and release
+                            // the old buffer
+                            if (buf != null) {
+                                buf.release();
+                                buf = null;
+                            }
+                            flags = flags.endOfHeaders(true);
+                            buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
+                            writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+                            ctx.write(buf, promiseAggregator.newPromise());
+                            buf = null;
+                        }
+                        ctx.write(fragment, promiseAggregator.newPromise());
+                        fragmentWritten = true;
+                    } finally {
+                        if (!fragmentWritten) {
+                            fragment.release();
+                        }
                     }
-                    ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
-                } else {
-                    // The frame header is different for the last frame, so re-allocate and release the old buffer
-                    if (buf != null) {
-                       buf.release();
-                    }
-                    flags = flags.endOfHeaders(true);
-                    buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
-                    writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
-                    ctx.write(buf, promiseAggregator.newPromise());
+                } while (headerBlock.isReadable());
+            } finally {
+                if (buf != null) {
+                    buf.release();
                 }
-                ctx.write(fragment, promiseAggregator.newPromise());
-
-            } while (headerBlock.isReadable());
+            }
         }
         return promiseAggregator;
     }
