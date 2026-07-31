@@ -137,6 +137,27 @@ final class AdaptivePoolingAllocator {
             "io.netty.allocator.chunkPurgeThreshold", 3));
 
     /**
+     * Per-size-class upper bound (in bytes) on the thread-local chunk cache.
+     * When a size class cache holds this many bytes worth of chunks,
+     * further offers are rejected and the chunk is marked for immediate deallocation.
+     * Chunks already in the cache are only evicted by the purge mechanism (they must be full and idle for
+     * {@link #CHUNK_PURGE_THRESHOLD} consecutive purge cycles).
+     */
+    static final int THREAD_LOCAL_CACHE_MAX_BYTES = Math.max(1, SystemPropertyUtil.getInt(
+            "io.netty.allocator.threadLocalChunkCacheMaxBytes", 8 * 1024 * 1024));
+
+    /**
+     * Per-size-class lower bound (in bytes) on the thread-local chunk cache.
+     * The purge mechanism will not evict chunks below this retention floor, even if they are full and idle.
+     * Clamped to {@link #THREAD_LOCAL_CACHE_MAX_BYTES} if the configured value exceeds it.
+     * When equal to {@link #THREAD_LOCAL_CACHE_MAX_BYTES}, purge eviction is effectively disabled.
+     */
+    static final int THREAD_LOCAL_CACHE_MIN_BYTES = Math.min(THREAD_LOCAL_CACHE_MAX_BYTES,
+            Math.max(1, SystemPropertyUtil.getInt(
+                    "io.netty.allocator.threadLocalChunkCacheMinBytes",
+                    THREAD_LOCAL_CACHE_MAX_BYTES / 2)));
+
+    /**
      * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
      * the actual memory and so helps to reduce GC pressure.
      */
@@ -524,7 +545,8 @@ final class AdaptivePoolingAllocator {
     // 2. EVICTION: idle chunks with epoch > CHUNK_PURGE_THRESHOLD are evicted (markToDeallocate).
     //    Eviction is immediate — all segments are in, no outstanding references.
     //    Non-idle chunks are never evicted (deallocation would be deferred, not immediate).
-    //    At least CHUNK_REUSE_QUEUE chunks are always retained (retention floor).
+    //    A retention floor prevents over-eviction: CHUNK_REUSE_QUEUE for the shared cache,
+    //    purgeRetentionFloor (from THREAD_LOCAL_CACHE_MIN_BYTES) for the thread-local cache.
     //
     // 3. SCAN RESET: scanForCapacity resets purgeEpoch = 0 on the chunk it picks. The scan
     //    knows the chunk is being used. The chunk gets allocated from, becomes non-idle, and
@@ -540,8 +562,9 @@ final class AdaptivePoolingAllocator {
     //    Shared: approximate, converges over multiple cycles (FIFO queue ordering,
     //    LRU preference in scan, retained counter in purge).
     abstract static class SizeClassedChunkCache implements ChunkCache {
-        static SizeClassedChunkCache create(boolean isThreadLocal) {
-            return isThreadLocal ? new ThreadLocalSizeClassedChunkCache() : new SharedSizeClassedChunkCache();
+        static SizeClassedChunkCache create(boolean isThreadLocal, int chunkSize) {
+            return isThreadLocal ? new ThreadLocalSizeClassedChunkCache(chunkSize) :
+                    new SharedSizeClassedChunkCache();
         }
 
         @Override
@@ -638,7 +661,7 @@ final class AdaptivePoolingAllocator {
      *              notEmptyCount=2, count=6
      * </pre>
      * Idle chunks ({@code remainingCapacity == capacity}) age via purgeEpoch and are evicted
-     * past threshold, but at least {@link #CHUNK_REUSE_QUEUE} chunks are always retained.
+     * past threshold, but at least {@code purgeRetentionFloor} chunks are always retained.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
         SizeClassedChunk[] chunks; // package-private for testing
@@ -647,10 +670,15 @@ final class AdaptivePoolingAllocator {
         int count;
         int notEmptyCount;
         private long purgeBudget;
+        final int maxCachedChunks; // package-private for testing
+        final int purgeRetentionFloor; // package-private for testing
 
-        ThreadLocalSizeClassedChunkCache() {
+        ThreadLocalSizeClassedChunkCache(int chunkSize) {
             chunks = new SizeClassedChunk[8];
             purgeBudget = CHUNK_PURGE_POLLS_THREAD_LOCAL;
+            maxCachedChunks = Math.max(1, THREAD_LOCAL_CACHE_MAX_BYTES / chunkSize);
+            purgeRetentionFloor = Math.min(maxCachedChunks,
+                    Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize));
         }
 
         @Override
@@ -711,7 +739,7 @@ final class AdaptivePoolingAllocator {
                 if (chunk.purgeEpoch > 0) {
                     assert chunk.hasFullCapacity();
                     chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > CHUNK_REUSE_QUEUE) {
+                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > purgeRetentionFloor) {
                         chunk.markToDeallocate();
                         chunks[readIdx] = null;
                         survivors--;
@@ -789,6 +817,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public boolean offerChunk(Chunk chunk) {
+            if (count >= maxCachedChunks) {
+                return false;
+            }
             if (count == chunks.length) {
                 SizeClassedChunk[] newChunks = new SizeClassedChunk[chunks.length * 2];
                 for (int i = 0; i < count; i++) {
@@ -1165,7 +1196,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ChunkCache createChunkCache(boolean isThreadLocal) {
-            return SizeClassedChunkCache.create(isThreadLocal);
+            return SizeClassedChunkCache.create(isThreadLocal, chunkSize);
         }
     }
 
