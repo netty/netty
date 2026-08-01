@@ -56,5 +56,6 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         HexDumpProxyFrontendHandler.closeOnFlush(ctx.channel());
+        HexDumpProxyFrontendHandler.closeOnFlush(inboundChannel);
     }
 }
