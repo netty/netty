@@ -1167,6 +1167,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean ensureThreadStarted(int oldState) {
+        // Fast-path for a never-started executor that has nothing to drain: mark terminated
+        // without spinning up a worker thread that would only shut down immediately.
+        // MultithreadEventExecutorGroup.shutdownGracefully() walks every child; without this,
+        // creating a group of N and shutting it down unused starts all N threads (#17135).
+        if (oldState == ST_NOT_STARTED && tryTerminateIfNeverStarted()) {
+            return true;
+        }
+
         if (oldState == ST_NOT_STARTED || oldState == ST_SUSPENDED) {
             try {
                 doStartThread();
@@ -1182,6 +1190,62 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
         return false;
+    }
+
+    /**
+     * If this executor was never started and has no pending work, transition straight to
+     * {@link #ST_TERMINATED} without creating a thread.
+     *
+     * @return {@code true} if termination completed (or was already complete) without starting
+     * a thread; {@code false} if a thread still needs to be started to drain work / run shutdown.
+     */
+    private boolean tryTerminateIfNeverStarted() {
+        // Try to take the processing lock so we do not race with a just-started worker thread.
+        // If the lock is held, a thread is (or will be) running — fall back to the normal path.
+        if (!processingLock.tryLock()) {
+            return false;
+        }
+        try {
+            if (thread != null) {
+                return false;
+            }
+            // Re-check work under the lock. taskQueue / scheduled queue may have received a task
+            // after shutdown0 observed ST_NOT_STARTED (execute accepts tasks while SHUTTING_DOWN).
+            if (!taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty()) {
+                return false;
+            }
+
+            for (;;) {
+                int currentState = state;
+                if (currentState >= ST_TERMINATED) {
+                    return true;
+                }
+                if (currentState < ST_SHUTTING_DOWN) {
+                    // Unexpected: state moved backwards from shutting down. Fall back.
+                    return false;
+                }
+                // Work may have appeared after the empty check above.
+                if (!taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty()) {
+                    return false;
+                }
+                if (STATE_UPDATER.compareAndSet(this, currentState, ST_TERMINATED)) {
+                    try {
+                        cleanup();
+                    } finally {
+                        threadLock.countDown();
+                        int numUserTasks = drainTasks();
+                        if (numUserTasks > 0 && logger.isWarnEnabled()) {
+                            logger.warn("An event executor terminated with " +
+                                    "non-empty task queue (" + numUserTasks + ')');
+                        }
+                        terminationFuture.setSuccess(null);
+                    }
+                    return true;
+                }
+            }
+        } finally {
+            processingLock.unlock();
+        }
     }
 
     private void doStartThread() {
