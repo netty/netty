@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -36,6 +37,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class SizeClassedChunkCacheTest {
+
+    private static final int TL_CHUNK_SIZE = AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES / 8;
+
+    private static int threadLocalPurgeFloor() {
+        AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache(TL_CHUNK_SIZE);
+        return cache.purgeRetentionFloor;
+    }
 
     private static SizeClassedChunk chunkWithCapacity() {
         SizeClassedChunk chunk = mock(SizeClassedChunk.class);
@@ -70,7 +79,7 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void purgeSelectsFirstChunkWithCapacity(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
 
         SizeClassedChunk noCap = chunkWithoutCapacity();
         SizeClassedChunk cap = chunkWithCapacity();
@@ -83,14 +92,14 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void purgeReturnsNullWhenCacheIsEmpty(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
         assertNull(cache.forcePurge());
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void purgeReturnsNullWhenNoChunkHasCapacity(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
         cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(chunkWithoutCapacity());
 
@@ -101,9 +110,9 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void fullChunkAgesEachPurgeAndIsEvictedPastThresholdThreadLocal() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, TL_CHUNK_SIZE);
 
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+        for (int i = 0; i < threadLocalPurgeFloor(); i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
         SizeClassedChunk workingSet = chunkWithCapacity();
@@ -125,7 +134,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void fullChunkAgesAndIsEventuallyEvictedShared() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false, 1024);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
@@ -148,7 +157,7 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void nonFullChunkDoesNotAge(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
 
         SizeClassedChunk chunk = chunkWithCapacity();
         cache.offerChunk(chunk);
@@ -160,7 +169,7 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void selectedFullChunkHasEpochReset(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
 
         SizeClassedChunk chunk = fullChunk();
         cache.offerChunk(chunk);
@@ -175,7 +184,7 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void scanForCapacityFallbackFindsChunkThatGainedCapacity(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, 1024);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -193,7 +202,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void purgeMovesCapacityChunksBeforeNoCapacityChunks() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, 1024);
 
         cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(chunkWithCapacity());
@@ -214,7 +223,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void scanForCapacityUsesO1FastPathAfterPurge() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, 1024);
 
         cache.offerChunk(chunkWithCapacity());
         cache.offerChunk(chunkWithCapacity());
@@ -233,7 +242,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void offerGrowsRingWhenFull() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, 1024);
 
         // Initial ring size is 8 — offer 9 to trigger growth
         for (int i = 0; i < 9; i++) {
@@ -250,7 +259,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void purgeHandlesWrappedRingCorrectly() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, 1024);
 
         // Fill with 4, purge (linearizes to head=0), consume 3 to advance head
         for (int i = 0; i < 4; i++) {
@@ -283,7 +292,7 @@ public class SizeClassedChunkCacheTest {
     void wrappedRingCompactionLeavesNoStaleReferences() {
         AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
                 (AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache)
-                        SizeClassedChunkCache.create(true);
+                        SizeClassedChunkCache.create(true, 1024);
 
         // Fill 6 slots of the initial ring (size=8), purge, drain to advance head
         for (int i = 0; i < 6; i++) {
@@ -323,10 +332,12 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void cacheSettlesAtRetentionFloorAfterBurstThreadLocal() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, TL_CHUNK_SIZE);
 
-        int floor = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
-        int excess = 10;
+        int floor = threadLocalPurgeFloor();
+        int cap = Math.max(2, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES / TL_CHUNK_SIZE);
+        int excess = cap - floor;
+        assertTrue(excess > 0, "excess must be positive for the test to be meaningful");
 
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
@@ -353,18 +364,21 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void cacheSettlesAfterBurstShared() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false, 1024);
 
-        int excess = 10;
+        int crq = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        int capacity = Math.max(16, crq * 2);
+        int excess = Math.min(10, capacity - crq);
+        assertTrue(excess > 0, "excess must be positive for the test to be meaningful");
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE - 1; i++) {
+        for (int i = 0; i < crq - 1; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
         SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
             excessChunks[i] = fullChunk();
-            cache.offerChunk(excessChunks[i]);
+            assertTrue(cache.offerChunk(excessChunks[i]), "all excess chunks must be accepted by the queue");
         }
 
         int maxCycles = (AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1) * 3;
@@ -387,9 +401,9 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void excessFullChunksAgeWhileWorkingSetIsPreferredThreadLocal() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(true, TL_CHUNK_SIZE);
 
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+        for (int i = 0; i < threadLocalPurgeFloor(); i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
         SizeClassedChunk workingSet = chunkWithCapacity();
@@ -415,7 +429,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void excessFullChunksEventuallyEvictedShared() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false, 1024);
 
         for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
             cache.offerChunk(chunkWithoutCapacity());
@@ -450,10 +464,11 @@ public class SizeClassedChunkCacheTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void activeChunkWithShortLivedBuffersShouldNotBeEvicted(boolean threadLocal) {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal);
+        int chunkSize = threadLocal ? TL_CHUNK_SIZE : 1024;
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(threadLocal, chunkSize);
 
-        // Pad above retention floor so eviction is allowed
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE; i++) {
+        int floor = threadLocal ? threadLocalPurgeFloor() : AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
+        for (int i = 0; i < floor; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
 
@@ -478,7 +493,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void concurrentScansTerminateWhenNoCapacity() throws Exception {
-        final SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+        final SizeClassedChunkCache cache = SizeClassedChunkCache.create(false, 1024);
 
         // Fill with no-capacity chunks — no scan can find anything
         for (int i = 0; i < 10; i++) {
@@ -521,7 +536,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void pollChunkCannotDrainNoCapChunksThreadLocal() {
         AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
-                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache(1024);
 
         cache.offerChunk(chunkWithCapacity());
         cache.offerChunk(chunkWithoutCapacity());
@@ -545,7 +560,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void freeDrainsAllChunksIncludingNoCapThreadLocal() {
         AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
-                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache();
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache(1024);
 
         SizeClassedChunk cap1 = chunkWithCapacity();
         SizeClassedChunk cap2 = chunkWithCapacity();
@@ -568,7 +583,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void freeDrainsAllChunksShared() {
-        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false);
+        SizeClassedChunkCache cache = SizeClassedChunkCache.create(false, 1024);
 
         SizeClassedChunk cap = chunkWithCapacity();
         SizeClassedChunk noCap = chunkWithoutCapacity();
@@ -581,5 +596,26 @@ public class SizeClassedChunkCacheTest {
         assertTrue(cache.isEmpty());
         verify(cap, atLeastOnce()).markToDeallocate();
         verify(noCap, atLeastOnce()).markToDeallocate();
+    }
+
+    @Test
+    void threadLocalCacheRejectsChunksWhenCapReached() {
+        int chunkSize = TL_CHUNK_SIZE;
+        int maxCached = Math.max(1,
+                AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES / chunkSize);
+
+        AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache cache =
+                new AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache(chunkSize);
+
+        // Fill to capacity
+        for (int i = 0; i < maxCached; i++) {
+            assertTrue(cache.offerChunk(chunkWithoutCapacity()),
+                    "offer should succeed for chunk " + i);
+        }
+
+        // Next offer should be rejected
+        SizeClassedChunk excess = chunkWithoutCapacity();
+        boolean accepted = cache.offerChunk(excess);
+        assertFalse(accepted, "offer should be rejected when cache is at capacity");
     }
 }
