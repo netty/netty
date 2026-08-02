@@ -88,9 +88,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
                 DefaultThreadFactory.toPoolName(getClass()), false, Thread.NORM_PRIORITY, null), this);
 
-        UnsupportedOperationException terminationFailure = new UnsupportedOperationException();
-        ThrowableUtil.unknownStackTrace(terminationFailure, GlobalEventExecutor.class, "terminationFuture");
-        terminationFuture = new FailedFuture<Object>(this, terminationFailure);
+        terminationFuture = new FailedFuture<Object>(this,
+                StacklessUnsupportedOperationException.newInstance(GlobalEventExecutor.class, "terminationFuture"));
     }
 
     /**
@@ -323,6 +322,26 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     // -> keep this thread alive to handle the newly added entries.
                 }
             }
+        }
+    }
+
+    private static final class StacklessUnsupportedOperationException extends UnsupportedOperationException {
+
+        private static final long serialVersionUID = -8060232216137960173L;
+
+        private StacklessUnsupportedOperationException() { }
+
+        // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
+        // Classloader. As the GlobalEventExecutor.INSTANCE is a singleton and holds on to this exception via its
+        // terminationFuture, a populated backtrace would pin the Classloader of whatever thread happened to trigger
+        // the lazy initialization of INSTANCE (see https://github.com/netty/netty/issues/17128).
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+
+        static StacklessUnsupportedOperationException newInstance(Class<?> clazz, String method) {
+            return ThrowableUtil.unknownStackTrace(new StacklessUnsupportedOperationException(), clazz, method);
         }
     }
 }
