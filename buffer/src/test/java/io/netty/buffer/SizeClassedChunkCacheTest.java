@@ -334,6 +334,7 @@ public class SizeClassedChunkCacheTest {
         int floor = threadLocalPurgeFloor();
         int cap = Math.max(2, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES / TL_CHUNK_SIZE);
         int excess = cap - floor;
+        assertTrue(excess > 0, "excess must be positive for the test to be meaningful");
 
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
@@ -594,7 +595,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void threadLocalCacheRejectsChunksWhenCapReached() {
-        int chunkSize = AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES;
+        int chunkSize = TL_CHUNK_SIZE;
         int maxCached = Math.max(1,
                 AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MAX_BYTES / chunkSize);
 
