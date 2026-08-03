@@ -32,8 +32,7 @@ final class RuntimeJvmArgs {
     private RuntimeJvmArgs() {
     }
 
-    static long parseMaxDirectMemorySize(
-            final long maxDirectMemory) {
+    static long parseMaxDirectMemorySize(final long maxDirectMemory) {
         try {
             List<String> vmArgs = ManagementFactory
                     .getRuntimeMXBean()
