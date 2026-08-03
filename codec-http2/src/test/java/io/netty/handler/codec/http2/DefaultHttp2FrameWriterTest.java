@@ -29,6 +29,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -371,12 +372,16 @@ public class DefaultHttp2FrameWriterTest {
                 new TrackingFailingAllocator(Http2CodecUtil.HEADERS_FRAME_HEADER_LENGTH);
         when(ctx.alloc()).thenReturn(allocator);
 
-        int streamId = 1;
-        Http2Headers headers = new DefaultHttp2Headers()
+        final int streamId = 1;
+        final Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
-        assertThrows(OutOfMemoryError.class,
-                () -> frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise));
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise);
+            }
+        });
 
         assertAllTrackedBuffersReleased(allocator);
     }
@@ -387,20 +392,24 @@ public class DefaultHttp2FrameWriterTest {
                 new TrackingFailingAllocator(Http2CodecUtil.PUSH_PROMISE_FRAME_HEADER_LENGTH);
         when(ctx.alloc()).thenReturn(allocator);
 
-        int streamId = 1;
-        int promisedStreamId = 2;
-        Http2Headers headers = new DefaultHttp2Headers()
+        final int streamId = 1;
+        final int promisedStreamId = 2;
+        final Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
 
-        assertThrows(OutOfMemoryError.class,
-                () -> frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, 0, promise));
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, 0, promise);
+            }
+        });
 
         assertAllTrackedBuffersReleased(allocator);
     }
 
     @Test
     public void writeContinuationFramesReleasesHeaderBlockWhenFrameHeaderAllocationFails() throws Exception {
-        int streamId = 1;
+        final int streamId = 1;
         Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
         final Http2Headers largeHeaders = dummyHeaders(headers, 60);
@@ -413,8 +422,12 @@ public class DefaultHttp2FrameWriterTest {
                 new TrackingFailingAllocator(Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH);
         when(ctx.alloc()).thenReturn(allocator);
 
-        assertThrows(OutOfMemoryError.class,
-                () -> frameWriter.writeHeaders(ctx, streamId, largeHeaders, 0, true, promise));
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writeHeaders(ctx, streamId, largeHeaders, 0, true, promise);
+            }
+        });
 
         assertAllTrackedBuffersReleased(allocator);
     }
