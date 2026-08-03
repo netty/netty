@@ -748,18 +748,21 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
         }
 
+        protected final boolean isReadMultishot() {
+            return numOutstandingReads == -1;
+        }
+
         private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
 
-            boolean multishot = numOutstandingReads == -1;
+            boolean multishot = isReadMultishot();
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (rearm) {
-                // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
-                // multi-shot and non multi-shot variants.
-                ioState &= ~READ_SCHEDULED;
-            }
             boolean pending = readPending;
             if (multishot) {
+                if (rearm) {
+                    // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm.
+                    ioState &= ~READ_SCHEDULED;
+                }
                 // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
                 // not.
                 readPending = false;

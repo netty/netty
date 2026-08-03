@@ -104,7 +104,7 @@ final class OcspClient {
      * @param issuer                {@link X509Certificate} issuer of client certificate
      * @param validateResponseNonce Set to {@code true} to enable OCSP response validation
      * @param ioTransport           {@link IoTransport} to use
-     * @return                      {@link Promise} of {@link BasicOCSPResp}
+     * @param responsePromise      {@link Promise} of {@link BasicOCSPResp}
      */
     static void query(final X509Certificate x509Certificate,
                                         final X509Certificate issuer, final boolean validateResponseNonce,
@@ -401,13 +401,15 @@ final class OcspClient {
         AuthorityInformationAccess aiaExtension = AuthorityInformationAccess.fromExtensions(holder.getExtensions());
 
         // Lookup for OCSP responder url
-        for (AccessDescription accessDescription : aiaExtension.getAccessDescriptions()) {
-            if (accessDescription.getAccessMethod().equals(id_ad_ocsp)) {
-                return accessDescription.getAccessLocation().getName().toASN1Primitive().toString();
+        if (aiaExtension != null) {
+            for (AccessDescription accessDescription : aiaExtension.getAccessDescriptions()) {
+                if (accessDescription.getAccessMethod().equals(id_ad_ocsp)) {
+                    return accessDescription.getAccessLocation().getName().toASN1Primitive().toString();
+                }
             }
         }
 
-        throw new NullPointerException("Unable to find OCSP responder URL in Certificate");
+        throw new NoOcspResponderException("Unable to find OCSP responder URL in Certificate");
     }
 
     static final class Initializer extends ChannelInitializer<SocketChannel> {
