@@ -459,6 +459,123 @@ public class HttpServerCodecTest {
         ch.finishAndReleaseAll();
     }
 
+    @Test
+    public void testHeadResponseHasNoContentAfterInterimResponse() {
+        // A 1xx interim response must not consume an entry of the method queue, as it is not the
+        // final response for the queued request.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Send a single HEAD request. Method queue = [HEAD].
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "HEAD /a HTTP/1.1\r\nHost: a\r\n\r\n", CharsetUtil.UTF_8)));
+        HttpRequest request = ch.readInbound();
+        assertEquals(HttpMethod.HEAD, request.method());
+        LastHttpContent requestContent = ch.readInbound();
+        assertFalse(requestContent.content().isReadable());
+        requestContent.release();
+
+        // Write a 103 Early Hints interim response. The HEAD entry must stay in the queue.
+        FullHttpResponse earlyHints = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS);
+        assertTrue(ch.writeOutbound(earlyHints));
+        ByteBuf earlyHintsBuf = ch.readOutbound();
+        assertEquals("HTTP/1.1 103 Early Hints\r\n\r\n", earlyHintsBuf.toString(CharsetUtil.US_ASCII));
+        earlyHintsBuf.release();
+
+        // Now write the final response for the HEAD request, with content attached.
+        FullHttpResponse finalResponse = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("body", CharsetUtil.UTF_8));
+        finalResponse.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 4);
+        assertTrue(ch.writeOutbound(finalResponse));
+
+        // A HEAD response must never carry a body per RFC 9110 section 9.3.2, regardless of
+        // any interim responses sent before it.
+        ByteBuf buf = ch.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\ncontent-length: 4\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testPipelinedResponseContentPreservedAfterInterimResponse() {
+        // A 1xx interim response for one pipelined request must not consume a method queue entry,
+        // so the queue order is preserved for the remaining pipelined requests.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Pipeline two requests: GET /a then HEAD /b. Method queue = [OTHER, HEAD].
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "GET /a HTTP/1.1\r\nHost: a\r\n\r\n" +
+                "HEAD /b HTTP/1.1\r\nHost: a\r\n\r\n", CharsetUtil.UTF_8)));
+
+        HttpRequest requestA = ch.readInbound();
+        assertEquals(HttpMethod.GET, requestA.method());
+        LastHttpContent requestAContent = ch.readInbound();
+        assertFalse(requestAContent.content().isReadable());
+        requestAContent.release();
+
+        HttpRequest requestB = ch.readInbound();
+        assertEquals(HttpMethod.HEAD, requestB.method());
+        LastHttpContent requestBContent = ch.readInbound();
+        assertFalse(requestBContent.content().isReadable());
+        requestBContent.release();
+
+        // Send a 1xx interim response for /a. The queue must stay at [OTHER, HEAD].
+        FullHttpResponse earlyHints = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS);
+        assertTrue(ch.writeOutbound(earlyHints));
+        ByteBuf earlyHintsBuf = ch.readOutbound();
+        assertEquals("HTTP/1.1 103 Early Hints\r\n\r\n", earlyHintsBuf.toString(CharsetUtil.US_ASCII));
+        earlyHintsBuf.release();
+
+        // Now send the final response to /a, with content attached.
+        FullHttpResponse finalResponseA = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                Unpooled.copiedBuffer("body-a", CharsetUtil.UTF_8));
+        finalResponseA.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 6);
+        assertTrue(ch.writeOutbound(finalResponseA));
+
+        // The GET /a response body must be preserved.
+        ByteBuf buf = ch.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\ncontent-length: 6\r\n\r\nbody-a", buf.toString(CharsetUtil.US_ASCII));
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testSwitchingProtocolsResponseHasNoContent() {
+        // A 101 Switching Protocols response must never carry a body.
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+
+        // Send a HEAD request that asks to switch protocols. Method queue = [HEAD].
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(
+                "HEAD / HTTP/1.1\r\n" +
+                "Host: a\r\n" +
+                "Connection: upgrade\r\n" +
+                "Upgrade: websocket\r\n\r\n", CharsetUtil.UTF_8)));
+        HttpRequest request = ch.readInbound();
+        assertEquals(HttpMethod.HEAD, request.method());
+        LastHttpContent requestContent = ch.readInbound();
+        assertFalse(requestContent.content().isReadable());
+        requestContent.release();
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        response.headers().set(HttpHeaderNames.CONNECTION, "upgrade");
+        response.headers().set(HttpHeaderNames.UPGRADE, "websocket");
+        assertTrue(ch.writeOutbound(response));
+        assertTrue(ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        ByteBuf buf = ch.readOutbound();
+        assertEquals("HTTP/1.1 101 Switching Protocols\r\n" +
+                "connection: upgrade\r\n" +
+                "upgrade: websocket\r\n\r\n", buf.toString(CharsetUtil.US_ASCII));
+        buf.release();
+
+        buf = ch.readOutbound();
+        assertFalse(buf.isReadable());
+        buf.release();
+
+        assertFalse(ch.finishAndReleaseAll());
+    }
+
     private static ByteBuf prepareDataChunk(int size) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; ++i) {
