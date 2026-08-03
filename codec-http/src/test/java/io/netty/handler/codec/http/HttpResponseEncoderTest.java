@@ -15,19 +15,31 @@
 */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.FileRegion;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.EncoderException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpResponseEncoderTest {
@@ -398,5 +410,157 @@ public class HttpResponseEncoderTest {
 
         assertEquals(responseText.toString(), written.toString());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testInitHttpMessageHeaderEncodingFailureReleasesBuffer() throws Exception {
+        final TrackingFailingAllocator allocator = new TrackingFailingAllocator();
+        final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        channel.config().setAllocator(allocator);
+
+        final DefaultHttpResponse response =
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, new ThrowingHeaders());
+
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeAndFlush(response).get();
+            }
+        });
+        assertInstanceOf(EncoderException.class, e.getCause());
+        assertInstanceOf(OutOfMemoryError.class, e.getCause().getCause());
+
+        assertAllTrackedBuffersReleased(allocator);
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testFullHttpMessageHeaderEncodingFailureReleasesBuffer() throws Exception {
+        final TrackingFailingAllocator allocator = new TrackingFailingAllocator();
+        final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        channel.config().setAllocator(allocator);
+
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER, new ThrowingHeaders(), new DefaultHttpHeaders());
+
+        ExecutionException e = assertThrows(ExecutionException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeAndFlush(response).get();
+            }
+        });
+        assertInstanceOf(EncoderException.class, e.getCause());
+        assertInstanceOf(OutOfMemoryError.class, e.getCause().getCause());
+
+        assertAllTrackedBuffersReleased(allocator);
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testChunkedContentLengthAllocationFailureDoesNotDoubleReleaseHeaderBuffer() throws Exception {
+        final TrackingFailingAllocator allocator = new TrackingFailingAllocator(3);
+        final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        channel.config().setAllocator(allocator);
+
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                HttpResponseStatus.OK, Unpooled.copiedBuffer("1", CharsetUtil.US_ASCII));
+        HttpUtil.setTransferEncodingChunked(response, true);
+
+        EncoderException e = assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeOutbound(response);
+            }
+        });
+        assertInstanceOf(OutOfMemoryError.class, e.getCause());
+
+        for (;;) {
+            ByteBuf buf = channel.readOutbound();
+            if (buf == null) {
+                break;
+            }
+            buf.release();
+        }
+
+        assertAllTrackedBuffersReleased(allocator);
+        channel.finishAndReleaseAll();
+    }
+
+    private static void assertAllTrackedBuffersReleased(TrackingFailingAllocator allocator) {
+        assertFalse(allocator.allocated.isEmpty(), "expected at least one buffer to be allocated");
+        for (ByteBuf buf : allocator.allocated) {
+            assertEquals(0, buf.refCnt(), "expected tracked buffer to be released: " + buf);
+        }
+    }
+
+    /**
+     * A {@link ByteBufAllocator} that throws an {@link OutOfMemoryError} when asked to allocate a buffer with a
+     * given {@code initialCapacity}, and otherwise delegates to an unpooled allocator while tracking every
+     * successfully allocated buffer for leak verification.
+     */
+    private static final class TrackingFailingAllocator extends AbstractByteBufAllocator {
+        private static final int NEVER_FAIL = -1;
+
+        private final ByteBufAllocator delegate = new UnpooledByteBufAllocator(false);
+        private final List<ByteBuf> allocated = new ArrayList<ByteBuf>();
+        private final int failOnInitialCapacity;
+
+        TrackingFailingAllocator() {
+            this(NEVER_FAIL);
+        }
+
+        TrackingFailingAllocator(int failOnInitialCapacity) {
+            super(false);
+            this.failOnInitialCapacity = failOnInitialCapacity;
+        }
+
+        private void failIfTargeted(int initialCapacity) {
+            if (failOnInitialCapacity != NEVER_FAIL && initialCapacity == failOnInitialCapacity) {
+                throw new OutOfMemoryError("simulated allocation failure for capacity " + initialCapacity);
+            }
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.heapBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.directBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return delegate.isDirectBufferPooled();
+        }
+    }
+
+    private static final class ThrowingHeaders extends DefaultHttpHeaders {
+        @Override
+        public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
+            return new Iterator<Entry<CharSequence, CharSequence>>() {
+                @Override
+                public boolean hasNext() {
+                    return true;
+                }
+
+                @Override
+                public Entry<CharSequence, CharSequence> next() {
+                    throw new OutOfMemoryError("simulated header encoding failure");
+                }
+
+                @Override
+                public void remove() {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
     }
 }

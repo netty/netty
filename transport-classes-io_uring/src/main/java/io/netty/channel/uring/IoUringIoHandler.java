@@ -190,6 +190,16 @@ public final class IoUringIoHandler implements IoHandler {
         return ioCompletions;
     }
 
+    int submitIfFullAndGetRemaining() {
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        if (submissionQueue.remaining() == 0) {
+            if (submitAndClearNow(submissionQueue) == 0) {
+                throw new IllegalStateException("Submission queue is full and no submissions were accepted");
+            }
+        }
+        return submissionQueue.remaining();
+    }
+
     private boolean needSubmit(int sqFlags) {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         return submissionQueue.count() > 0
