@@ -103,7 +103,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
-            handshaker.handshake(ctx.channel(), req);
+            handshaker.handshake(ctx, req);
         }
     }
 
