@@ -261,7 +261,7 @@ public class DnsNameResolverTest {
         DOMAINS_PUNYCODE.put("müller.de", "xn--mller-kva.de");
     }
 
-    private static final Set<String> DOMAINS_ALL;
+    static final Set<String> DOMAINS_ALL;
 
     static {
         Set<String> all = new HashSet<String>(DOMAINS.size() + DOMAINS_PUNYCODE.size());

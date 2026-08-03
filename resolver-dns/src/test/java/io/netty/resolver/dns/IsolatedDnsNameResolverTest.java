@@ -15,6 +15,9 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolverTest.TestRecursiveCacheDnsQueryLifecycleObserverFactory;
@@ -33,6 +36,7 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.Set;
 
+import static io.netty.resolver.dns.DnsNameResolverTest.DOMAINS_ALL;
 import static io.netty.resolver.dns.DnsNameResolverTest.newResolver;
 import static io.netty.resolver.dns.TestDnsServer.newARecord;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -41,17 +45,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @Isolated
 public class IsolatedDnsNameResolverTest {
+    private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
+    private static final EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
     private static boolean existingLocalhostSetting;
 
     @BeforeAll
     public static void captureSetting() throws Exception {
         existingLocalhostSetting = DnsNameResolver.resolveLocalhostWithoutDns;
+        dnsServer.start();
     }
 
     @AfterAll
     public static void restoreSetting() {
-        DnsNameResolver.resolveLocalhostWithoutDns = existingLocalhostSetting;
+        try {
+            dnsServer.stop();
+            group.shutdownGracefully();
+        } finally {
+            DnsNameResolver.resolveLocalhostWithoutDns = existingLocalhostSetting;
+        }
     }
+
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
