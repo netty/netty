@@ -281,6 +281,12 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpResponse msg) {
+            if (msg.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                // An informational response should be excluded from paired comparison. This covers 101 as well:
+                // once the protocol is switched this handler is removed from the pipeline, so the entry that is
+                // left behind goes away with it. Just delegate to super method which has all the needed handling.
+                return super.isContentAlwaysEmpty(msg);
+            }
             methodFlag = pollMethod();
             return methodFlag == METHOD_FLAG_HEAD || super.isContentAlwaysEmpty(msg);
         }
