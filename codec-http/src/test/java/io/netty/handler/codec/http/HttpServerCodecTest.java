@@ -460,7 +460,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testHeadResponseHasNoContentAfterInterimResponse() {
+    public void testHeadResponseHasNoContentAfterInterimResponse() throws Exception {
         // A 1xx interim response must not consume an entry of the method queue, as it is not the
         // final response for the queued request.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
@@ -497,7 +497,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testPipelinedResponseContentPreservedAfterInterimResponse() {
+    public void testPipelinedResponseContentPreservedAfterInterimResponse() throws Exception {
         // A 1xx interim response for one pipelined request must not consume a method queue entry,
         // so the queue order is preserved for the remaining pipelined requests.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
@@ -541,7 +541,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void testSwitchingProtocolsResponseHasNoContent() {
+    public void testSwitchingProtocolsResponseHasNoContent() throws Exception {
         // A 101 Switching Protocols response must never carry a body.
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
