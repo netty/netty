@@ -757,13 +757,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
             boolean multishot = isReadMultishot();
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (rearm) {
-                // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
-                // multi-shot and non multi-shot variants.
-                ioState &= ~READ_SCHEDULED;
-            }
             boolean pending = readPending;
             if (multishot) {
+                if (rearm) {
+                    // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm.
+                    ioState &= ~READ_SCHEDULED;
+                }
                 // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
                 // not.
                 readPending = false;
