@@ -57,8 +57,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -170,7 +168,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean hasTmpDhKeys;
     final String[] groups;
     final boolean enableOcsp;
-    final ConcurrentMap<Long, ReferenceCountedOpenSslEngine> engines = new ConcurrentHashMap<>();
+    final OpenSslEngineMap engines = new OpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
     final List<OpenSslCredential> credentials = new ArrayList<>();
 
@@ -880,9 +878,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     abstract static class AbstractCertificateVerifier extends CertificateVerifier {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
 
-        AbstractCertificateVerifier(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+        AbstractCertificateVerifier(OpenSslEngineMap engines) {
             this.engines = engines;
         }
 
@@ -1147,7 +1145,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    private static ReferenceCountedOpenSslEngine retrieveEngine(Map<Long, ReferenceCountedOpenSslEngine> engines,
+    private static ReferenceCountedOpenSslEngine retrieveEngine(OpenSslEngineMap engines,
                                                                 long ssl)
             throws SSLException {
         ReferenceCountedOpenSslEngine engine = engines.get(ssl);
@@ -1160,9 +1158,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class PrivateKeyMethod implements SSLPrivateKeyMethod {
 
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslPrivateKeyMethod keyMethod;
-        PrivateKeyMethod(Map<Long, ReferenceCountedOpenSslEngine> engines, OpenSslPrivateKeyMethod keyMethod) {
+        PrivateKeyMethod(OpenSslEngineMap engines, OpenSslPrivateKeyMethod keyMethod) {
             this.engines = engines;
             this.keyMethod = keyMethod;
         }
@@ -1192,10 +1190,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class AsyncPrivateKeyMethod implements AsyncSSLPrivateKeyMethod {
 
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslAsyncPrivateKeyMethod keyMethod;
 
-        AsyncPrivateKeyMethod(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        AsyncPrivateKeyMethod(OpenSslEngineMap engines,
                               OpenSslAsyncPrivateKeyMethod keyMethod) {
             this.engines = engines;
             this.keyMethod = keyMethod;
@@ -1261,10 +1259,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     private static final class CompressionAlgorithm implements CertificateCompressionAlgo {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslCertificateCompressionAlgorithm compressionAlgorithm;
 
-        CompressionAlgorithm(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        CompressionAlgorithm(OpenSslEngineMap engines,
                              OpenSslCertificateCompressionAlgorithm compressionAlgorithm) {
             this.engines = engines;
             this.compressionAlgorithm = compressionAlgorithm;
