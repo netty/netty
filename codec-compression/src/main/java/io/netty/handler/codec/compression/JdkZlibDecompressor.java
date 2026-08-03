@@ -38,6 +38,14 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
     private static final int FCOMMENT = 0x10;
     private static final int FRESERVED = 0xE0;
 
+    /**
+     * Smallest output buffer we hand to {@link Inflater#inflate(byte[], int, int)}. The number of remaining input
+     * bytes is only a hint for how much output to expect: the inflater may still hold decoded data that did not fit
+     * into the previous output buffer, and by then it may have consumed all input bytes already
+     * ({@link Inflater#getRemaining()} == 0). Inflating into a zero-sized buffer can never make progress.
+     */
+    private static final int MIN_OUTPUT_BUFFER_SIZE = 512;
+
     private Inflater inflater;
     private final int maxAllocation;
     private final byte[] dictionary;
@@ -69,6 +77,12 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
      * buffer too much (e.g. compact it).
      */
     private boolean inputBufferInInflater;
+    /**
+     * If this is true, the last {@link Inflater#inflate(byte[], int, int)} filled the output buffer completely, so
+     * the inflater may still hold decoded data even if {@link Inflater#needsInput()} reports that all input was
+     * consumed.
+     */
+    private boolean inflaterHasPendingOutput;
 
     JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(allocator);
@@ -102,6 +116,8 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
     public Status status() throws DecompressionException {
         if (finished) {
             return Status.COMPLETE;
+        } else if (inflaterHasPendingOutput) {
+            return Status.NEED_OUTPUT;
         } else if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
             return Status.NEED_INPUT;
         } else {
@@ -187,7 +203,7 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
 
     @Override
     ByteBuf processOutput(ByteBuf buf) throws DecompressionException {
-        int proposedCapacity = inflater.getRemaining() << 1;
+        int proposedCapacity = Math.max(inflater.getRemaining() << 1, MIN_OUTPUT_BUFFER_SIZE);
         int targetCapacity = maxAllocation == 0
                 ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
         ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
@@ -196,9 +212,10 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
             byte[] outArray = decompressed.array();
             int writerIndex = decompressed.writerIndex();
             int outIndex = decompressed.arrayOffset() + writerIndex;
+            int writableBytes = decompressed.writableBytes();
             int outputLength;
             try {
-                outputLength = inflater.inflate(outArray, outIndex, decompressed.writableBytes());
+                outputLength = inflater.inflate(outArray, outIndex, writableBytes);
             } catch (DataFormatException e) {
                 throw new DecompressionException("decompression failure", e);
             }
@@ -226,6 +243,10 @@ public final class JdkZlibDecompressor extends InputBufferingDecompressor {
                     processInput(buf);
                 }
             }
+            // If we filled the whole buffer the inflater may still have decoded data left that it could not write.
+            // In that case we must ask for another output buffer, as needsInput() only tells us that all input
+            // bytes were consumed, not that all output was produced.
+            inflaterHasPendingOutput = outputLength == writableBytes && !inflater.finished();
             success = true;
             return decompressed;
         } finally {
