@@ -868,15 +868,15 @@ public final class MqttDecoder extends ByteToMessageDecoder {
         // Number of bytes used by the Property Length Variable Byte Integer itself. These bytes are
         // part of the value returned by this method, but they must not be counted against
         // totalPropertiesLength, which only covers the properties content that follows the length.
-        final int propertiesLengthSize = unpackB(propertiesLength);
-        int numberOfBytesConsumed = propertiesLengthSize;
+        final int propertiesLengthNumBytes = unpackB(propertiesLength);
+        int numberOfBytesConsumed = propertiesLengthNumBytes;
         if (buffer.readableBytes() < totalPropertiesLength) {
             // Force an early REPLAY to avoid repeatedly parsing the properties.
             buffer.readSlice(totalPropertiesLength);
         }
 
         MqttProperties decodedProperties = new MqttProperties();
-        while (numberOfBytesConsumed - propertiesLengthSize < totalPropertiesLength) {
+        while (numberOfBytesConsumed - propertiesLengthNumBytes < totalPropertiesLength) {
             long propertyId = decodeVariableByteInteger(buffer);
             final int propertyIdValue = unpackA(propertyId);
             numberOfBytesConsumed += unpackB(propertyId);
