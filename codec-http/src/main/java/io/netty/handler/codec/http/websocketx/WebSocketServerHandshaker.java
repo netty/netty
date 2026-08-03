@@ -245,7 +245,7 @@ public abstract class WebSocketServerHandshaker {
      * @return future
      *            the {@link ChannelFuture} which is notified when the opening handshake is done
      */
-    public final ChannelFuture handshake(ChannelHandlerContext ctx, FullHttpRequest req,
+    public ChannelFuture handshake(ChannelHandlerContext ctx, FullHttpRequest req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(ctx, "ctx");
         return handshake0(ctx, ctx.channel(), req, responseHeaders, promise);
@@ -379,7 +379,7 @@ public abstract class WebSocketServerHandshaker {
      * @return future
      *            the {@link ChannelFuture} which is notified when the opening handshake is done
      */
-    public final ChannelFuture handshake(ChannelHandlerContext ctx, HttpRequest req,
+    public ChannelFuture handshake(ChannelHandlerContext ctx, HttpRequest req,
                                          final HttpHeaders responseHeaders, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(ctx, "ctx");
         return handshake0(ctx, ctx.channel(), req, responseHeaders, promise);
