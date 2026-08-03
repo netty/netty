@@ -74,6 +74,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioringEnterGetevents();
     static native int iosqeAsync();
     static native int iosqeLink();
+    static native int iosqeHardlink();
     static native int iosqeDrain();
     static native int msgDontwait();
     static native int iosqeBufferSelect();

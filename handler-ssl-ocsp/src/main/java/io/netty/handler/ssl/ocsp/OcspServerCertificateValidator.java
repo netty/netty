@@ -168,8 +168,8 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
 
                             Date current = new Date();
                             Date thisUpdate = response.getThisUpdate();
-                        Date nextUpdate = response.getNextUpdate();
-                        if (thisUpdate == null || !current.after(thisUpdate) ||
+                            Date nextUpdate = response.getNextUpdate();
+                            if (thisUpdate == null || !current.after(thisUpdate) ||
                                     (nextUpdate != null && !current.before(nextUpdate))) {
                                 ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
                                 return;

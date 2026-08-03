@@ -936,6 +936,41 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testUnsubAckMessageForMqtt311DropsReasonCodes() throws Exception {
+        // MQTT 3.1.1 UNSUBACK has no properties and no payload. Even when a caller populates
+        // properties / reason codes (for example via MqttMessageBuilders), the encoder must
+        // strip them so the wire format remains valid for 3.1.1 (Remaining Length must be 2).
+        when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_3_1_1);
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
+        final MqttUnsubAckMessage message = MqttMessageBuilders.unsubAck()
+                .packetId((short) 1)
+                .properties(props)
+                .addReasonCode((short) 0x83)
+                .build();
+        ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
+
+        // Fixed header (1 byte) + Remaining Length (0x02) + Packet Identifier (2 bytes) = 4 bytes.
+        assertEquals(4, byteBuf.readableBytes());
+        assertEquals(MqttMessageType.UNSUBACK.value() << 4, byteBuf.getByte(0) & 0xF0);
+        assertEquals(2, byteBuf.getByte(1));
+        assertEquals(1, byteBuf.getUnsignedShort(2));
+
+        mqttDecoder.channelRead(ctx, byteBuf);
+
+        assertEquals(1, out.size());
+
+        final MqttUnsubAckMessage decodedMessage = (MqttUnsubAckMessage) out.get(0);
+        validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
+        validateMessageIdVariableHeader(
+                message.variableHeader(),
+                decodedMessage.variableHeader());
+        assertTrue(decodedMessage.payload() == null
+                || decodedMessage.payload().unsubscribeReasonCodes().isEmpty());
+    }
+
+    @Test
     public void testDisconnectMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
