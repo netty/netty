@@ -40,7 +40,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -48,7 +47,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class PkiTestingTlsTest {
 
@@ -290,14 +289,7 @@ public class PkiTestingTlsTest {
                                                     if (session instanceof OpenSslSession) {
                                                         String namedGroup = ((OpenSslSession) handler.engine()
                                                                 .getSession()).getNamedGroup();
-                                                        if (groups != null) {
-                                                            assertTrue(Arrays.asList(groups).contains(namedGroup));
-                                                        } else {
-                                                            // If not specified explicit we will still use
-                                                            // what we can support.
-                                                            assertTrue(Arrays.asList(OpenSsl.NAMED_GROUPS)
-                                                                    .contains(namedGroup));
-                                                        }
+                                                        assertThat(OpenSsl.NAMED_GROUPS).contains(namedGroup);
                                                     }
                                                     promise.setSuccess(shce);
                                                 } else {
@@ -309,8 +301,7 @@ public class PkiTestingTlsTest {
                                         }
 
                                         @Override
-                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-                                                throws Exception {
+                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                             if (!promise.tryFailure(cause)) {
                                                 ctx.fireExceptionCaught(cause);
                                             }
