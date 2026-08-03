@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -109,7 +110,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel) null, request, null, null);
             }
         });
 
@@ -135,7 +136,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel) null, request, null, null);
             }
         });
 
@@ -161,7 +162,7 @@ public class WebSocketServerHandshaker13Test extends WebSocketServerHandshakerTe
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel)  null, request, null, null);
             }
         });
 
