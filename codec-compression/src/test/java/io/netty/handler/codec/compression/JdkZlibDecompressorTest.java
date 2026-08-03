@@ -277,6 +277,7 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
                 output.write(buffer, 0, read);
             }
             input.close();
+            output.close();
             return output.toByteArray();
         } finally {
             inflater.end();
