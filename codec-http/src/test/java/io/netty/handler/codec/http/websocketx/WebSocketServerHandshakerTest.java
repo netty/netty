@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -112,7 +113,7 @@ public abstract class WebSocketServerHandshakerTest {
                                                              "ws://example.com/chat");
         request.headers().set("x-client-header", "value");
         try {
-            serverHandshaker.handshake(null, request, null, null);
+            serverHandshaker.handshake((Channel) null, request, null, null);
         } catch (WebSocketServerHandshakeException exception) {
             assertNotNull(exception.getMessage());
             assertEquals(request.headers(), exception.request().headers());
@@ -195,7 +196,7 @@ public abstract class WebSocketServerHandshakerTest {
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel) null, request, null, null);
             }
         });
 
@@ -221,7 +222,7 @@ public abstract class WebSocketServerHandshakerTest {
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel) null, request, null, null);
             }
         });
 
@@ -247,7 +248,7 @@ public abstract class WebSocketServerHandshakerTest {
         Throwable exception = assertThrows(WebSocketServerHandshakeException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                serverHandshaker.handshake(null, request, null, null);
+                serverHandshaker.handshake((Channel) null, request, null, null);
             }
         });
 
