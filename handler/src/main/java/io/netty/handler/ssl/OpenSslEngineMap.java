@@ -16,8 +16,8 @@
 package io.netty.handler.ssl;
 
 import java.lang.ref.WeakReference;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Maps a native {@code SSL*} pointer to its {@link ReferenceCountedOpenSslEngine} so native OpenSSL callbacks
@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class OpenSslEngineMap {
 
-    private final ConcurrentMap<Long, WeakReference<ReferenceCountedOpenSslEngine>> engines =
+    private final Map<Long, WeakReference<ReferenceCountedOpenSslEngine>> engines =
             new ConcurrentHashMap<Long, WeakReference<ReferenceCountedOpenSslEngine>>();
 
     void add(long ssl, ReferenceCountedOpenSslEngine engine) {
