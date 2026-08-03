@@ -326,19 +326,26 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             final int headersAndContentSize = (int) headersEncodedSizeAccumulator +
                                                   (accountForContentSize? content.readableBytes() : 0);
             final ByteBuf buf = ctx.alloc().buffer(headersAndContentSize);
+            boolean handedOff = false;
+            try {
+                encodeInitialLine(buf, m);
 
-            encodeInitialLine(buf, m);
+                sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
-            sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+                encodeHeaders(m.headers(), buf);
+                ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
-            encodeHeaders(m.headers(), buf);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+                // don't consider the copyContent case here: the statistics is just related the headers
+                headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                        HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
 
-            // don't consider the copyContent case here: the statistics is just related the headers
-            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                    HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
-
-            encodeByteBufHttpContent(state, ctx, buf, content, msg.trailingHeaders(), out);
+                handedOff = true;
+                encodeByteBufHttpContent(state, ctx, buf, content, msg.trailingHeaders(), out);
+            } finally {
+                if (!handedOff) {
+                    buf.release();
+                }
+            }
         } finally {
             msg.release();
         }
@@ -516,19 +523,27 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         assert state == ST_INIT;
 
         ByteBuf buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
-        // Encode the message.
-        encodeInitialLine(buf, m);
-        state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
-                HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+        boolean success = false;
+        try {
+            // Encode the message.
+            encodeInitialLine(buf, m);
+            state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
+                    HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
 
-        sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+            sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
-        encodeHeaders(m.headers(), buf);
-        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            encodeHeaders(m.headers(), buf);
+            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
-        headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
-                HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
-        return buf;
+            headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
+                    HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
+            success = true;
+            return buf;
+        } finally {
+            if (!success) {
+                buf.release();
+            }
+        }
     }
 
     /**

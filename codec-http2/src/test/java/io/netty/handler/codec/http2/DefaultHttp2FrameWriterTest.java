@@ -14,7 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -27,6 +29,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -34,10 +37,14 @@ import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -357,6 +364,128 @@ public class DefaultHttp2FrameWriterTest {
                 (byte) 0x0F, // weight = 15 (implicit +1)
         });
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writeHeadersReleasesHeaderBlockWhenFrameHeaderAllocationFails() {
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.HEADERS_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        final int streamId = 1;
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writeHeaders(ctx, streamId, headers, 0, true, promise);
+            }
+        });
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    @Test
+    public void writePushPromiseReleasesHeaderBlockWhenFrameHeaderAllocationFails() {
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.PUSH_PROMISE_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        final int streamId = 1;
+        final int promisedStreamId = 2;
+        final Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, 0, promise);
+            }
+        });
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    @Test
+    public void writeContinuationFramesReleasesHeaderBlockWhenFrameHeaderAllocationFails() throws Exception {
+        final int streamId = 1;
+        Http2Headers headers = new DefaultHttp2Headers()
+                .method("GET").path("/").authority("foo.com").scheme("https");
+        final Http2Headers largeHeaders = dummyHeaders(headers, 60);
+
+        http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        TrackingFailingAllocator allocator =
+                new TrackingFailingAllocator(Http2CodecUtil.CONTINUATION_FRAME_HEADER_LENGTH);
+        when(ctx.alloc()).thenReturn(allocator);
+
+        assertThrows(OutOfMemoryError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                frameWriter.writeHeaders(ctx, streamId, largeHeaders, 0, true, promise);
+            }
+        });
+
+        assertAllTrackedBuffersReleased(allocator);
+    }
+
+    private static void assertAllTrackedBuffersReleased(TrackingFailingAllocator allocator) {
+        assertFalse(allocator.allocated.isEmpty(), "expected at least one buffer to be allocated");
+        for (ByteBuf buf : allocator.allocated) {
+            assertEquals(0, buf.refCnt(), "expected tracked buffer to be fully released");
+        }
+    }
+
+    /**
+     * A {@link ByteBufAllocator} that throws an {@link OutOfMemoryError} when asked to allocate a buffer with a
+     * given {@code initialCapacity}, and otherwise delegates to an unpooled allocator while tracking every
+     * successfully allocated buffer for leak verification.
+     */
+    private static final class TrackingFailingAllocator extends AbstractByteBufAllocator {
+        private static final int NEVER_FAIL = -1;
+
+        private final ByteBufAllocator delegate = new UnpooledByteBufAllocator(false);
+        private final List<ByteBuf> allocated = new ArrayList<ByteBuf>();
+        private final int failOnInitialCapacity;
+
+        TrackingFailingAllocator() {
+            this(NEVER_FAIL);
+        }
+
+        TrackingFailingAllocator(int failOnInitialCapacity) {
+            super(false);
+            this.failOnInitialCapacity = failOnInitialCapacity;
+        }
+
+        private void failIfTargeted(int initialCapacity) {
+            if (failOnInitialCapacity != NEVER_FAIL && initialCapacity == failOnInitialCapacity) {
+                throw new OutOfMemoryError("simulated allocation failure for capacity " + initialCapacity);
+            }
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.heapBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            failIfTargeted(initialCapacity);
+            ByteBuf buf = delegate.directBuffer(initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return delegate.isDirectBufferPooled();
+        }
     }
 
     private byte[] headerPayload(int streamId, Http2Headers headers, byte padding) throws Http2Exception, IOException {
