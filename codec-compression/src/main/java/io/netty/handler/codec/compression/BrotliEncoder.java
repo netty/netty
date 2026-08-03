@@ -190,6 +190,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
         private final ChannelPromise closeFuture;
+        private boolean closeInitiated;
         private boolean isClosed;
 
         private Writer(Encoder.Parameters parameters, ChannelHandlerContext ctx) throws IOException {
@@ -244,6 +245,10 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
         @Override
         public void close() {
+            if (closeInitiated) {
+                return;
+            }
+            closeInitiated = true;
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
