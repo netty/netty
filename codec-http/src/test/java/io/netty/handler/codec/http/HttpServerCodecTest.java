@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -441,13 +442,18 @@ public class HttpServerCodecTest {
     public void testPollFromEmptyQueueReturnsNone() {
         // If a response is written without a matching request (unusual but defensive),
         // pollMethod should return METHOD_FLAG_NONE, so body is treated normally.
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 
         // Write a response without any prior request.
-        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+        final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer("data", CharsetUtil.UTF_8));
         resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 4);
-        assertDoesNotThrow(() -> ch.writeOutbound(resp));
+        assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeOutbound(resp);
+            }
+        });
 
         ByteBuf buf = ch.readOutbound();
         assertNotNull(buf);
