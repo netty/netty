@@ -54,8 +54,7 @@ final class RuntimeJvmArgs {
         return maxDirectMemory;
     }
 
-    private static long parseSize(
-            final String arg, final int offset) {
+    private static long parseSize(final String arg, final int offset) {
         String val = arg.substring(offset).trim();
         if (val.isEmpty()) {
             return -1;
