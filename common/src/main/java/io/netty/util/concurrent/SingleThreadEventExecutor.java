@@ -1166,12 +1166,24 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    /**
+     * Returns {@code true} if no worker thread has ever been started for this executor.
+     * Used by {@link MultithreadEventExecutorGroup} to skip the quiet period for unused
+     * children so they can terminate without creating threads (#17135).
+     */
+    final boolean isNeverStarted() {
+        return thread == null && state == ST_NOT_STARTED;
+    }
+
     private boolean ensureThreadStarted(int oldState) {
-        // Fast-path for a never-started executor that has nothing to drain: mark terminated
-        // without spinning up a worker thread that would only shut down immediately.
-        // MultithreadEventExecutorGroup.shutdownGracefully() walks every child; without this,
-        // creating a group of N and shutting it down unused starts all N threads (#17135).
-        if (oldState == ST_NOT_STARTED && tryTerminateIfNeverStarted()) {
+        // Fast-path for a never-started executor with zero quiet period and nothing to drain:
+        // mark terminated without spinning up a worker that would only shut down immediately.
+        // Non-zero quiet periods still start a thread so tasks submitted during the quiet
+        // period are accepted (see SingleThreadEventLoopTest#testGracefulShutdownQuietPeriod).
+        // MultithreadEventExecutorGroup forces quietPeriod=0 for never-started children (#17135).
+        if (oldState == ST_NOT_STARTED
+                && gracefulShutdownQuietPeriod == 0
+                && tryTerminateIfNeverStarted()) {
             return true;
         }
 
@@ -1195,6 +1207,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * If this executor was never started and has no pending work, transition straight to
      * {@link #ST_TERMINATED} without creating a thread.
+     * <p>
+     * Only used when {@link #gracefulShutdownQuietPeriod} is {@code 0}; otherwise a thread
+     * must run to honor the quiet period and accept further tasks until it elapses.
      *
      * @return {@code true} if termination completed (or was already complete) without starting
      * a thread; {@code false} if a thread still needs to be started to drain work / run shutdown.
@@ -1230,7 +1245,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
                 if (STATE_UPDATER.compareAndSet(this, currentState, ST_TERMINATED)) {
                     try {
-                        cleanup();
+                        // Subclass cleanup (e.g. SingleThreadIoEventLoop) may assert
+                        // inEventLoop() and must still destroy constructor-created
+                        // resources (IoHandler / native FDs). Bind the current thread
+                        // as the event-loop thread only for cleanup; run() never ran
+                        // so there is no concurrent event-loop activity.
+                        assert thread == null;
+                        thread = Thread.currentThread();
+                        try {
+                            cleanup();
+                        } finally {
+                            thread = null;
+                        }
                     } finally {
                         threadLock.countDown();
                         int numUserTasks = drainTasks();
