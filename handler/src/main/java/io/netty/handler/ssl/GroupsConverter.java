@@ -34,6 +34,10 @@ final class GroupsConverter {
                 return "P-521";
             case "x25519":
                 return "X25519";
+            case "x448":
+                return "X448";
+            case "x25519mlkem786":
+                return "X25519MLKEM768";
             default:
                 return key;
         }
