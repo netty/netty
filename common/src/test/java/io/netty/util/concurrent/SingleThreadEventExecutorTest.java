@@ -725,6 +725,53 @@ public class SingleThreadEventExecutorTest {
     }
 
     /**
+     * Never-started MultithreadEventExecutorGroup children force quietPeriod=0 on shutdown
+     * (#17135). After that, execute on the group must not start workers — it rejects.
+     * Already-started children still honor the caller's quiet period.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testGroupShutdownNonZeroQuietPeriodRejectsExecuteOnNeverStartedChildren()
+            throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "group-quiet-" + idx.getAndIncrement());
+            }
+        };
+
+        final int nThreads = 8;
+        DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
+        try {
+            assertEquals(0, threadsCreated.get());
+            // Non-zero quiet period on the group; unused children still terminate immediately.
+            group.shutdownGracefully(100, 100, TimeUnit.MILLISECONDS);
+            // Give never-started children time to reach TERMINATED via the 0,0 path.
+            Thread.sleep(20);
+            assertThrows(RejectedExecutionException.class, new Executable() {
+                @Override
+                public void execute() {
+                    group.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            // must not run — children already terminated without workers
+                        }
+                    });
+                }
+            });
+            assertEquals(0, threadsCreated.get(),
+                    "execute after group shutdown must not start never-used children");
+            group.terminationFuture().syncUninterruptibly();
+            assertTrue(group.isTerminated());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
      * A never-started executor that receives a task before shutdown still starts a thread and runs it.
      */
     @Test

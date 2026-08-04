@@ -192,6 +192,12 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             // SingleThreadEventExecutor can terminate without creating a worker thread that
             // would only exit immediately (#17135). Children that already run still honor
             // the caller's quietPeriod/timeout.
+            //
+            // Consequence: unused children may reach TERMINATED before the caller's quiet
+            // period elapses. Tasks submitted via next()/execute after that are rejected
+            // on those children — accepting them would require starting the worker, which
+            // is exactly what this path avoids. Already-started children keep full quiet-
+            // period task acceptance.
             if (l instanceof SingleThreadEventExecutor
                     && ((SingleThreadEventExecutor) l).isNeverStarted()) {
                 l.shutdownGracefully(0, 0, unit);
