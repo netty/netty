@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -682,6 +683,32 @@ public class CorsHandlerTest {
         assertEquals("null", response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN));
         assertTrue(ReferenceCountUtil.release(response));
     }
+
+   @Test
+   public void varyHeaderIsAppended() {
+       CorsConfig config = forAnyOrigin().allowCredentials().build();
+       EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config),
+               new SimpleChannelInboundHandler<Object>() {
+                   @Override
+                   protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                       HttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.buffer(0));
+                       response.headers().set(VARY, ACCEPT_ENCODING);
+                       ctx.writeAndFlush(response);
+                   }
+               });
+       FullHttpRequest request = createHttpRequest(GET);
+       request.headers().set(ORIGIN, "http://localhost:7777");
+       assertFalse(channel.writeInbound(request));
+
+       FullHttpResponse response = channel.readOutbound();
+
+       List<String> varyHeaders = response.headers().getAll(VARY);
+       assertThat(varyHeaders).contains(ACCEPT_ENCODING.toString());
+       assertThat(varyHeaders).contains(ORIGIN.toString());
+
+       response.release();
+       assertFalse(channel.finish());
+   }
 
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
         return simpleRequest(config, origin, null);
