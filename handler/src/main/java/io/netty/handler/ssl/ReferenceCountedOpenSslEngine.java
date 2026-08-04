@@ -1977,9 +1977,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return handshakeException();
         }
 
-        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engines.add(ssl, this);
-
         if (!sessionSet) {
             if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {
                 // The session was not reused via the cache. Call prepareHandshake() to ensure we remove all previous
