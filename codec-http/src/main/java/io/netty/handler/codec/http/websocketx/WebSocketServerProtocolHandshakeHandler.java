@@ -80,7 +80,8 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
                     WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
                     ctx.pipeline().remove(this);
 
-                    final Future<Void> handshakeFuture = handshaker.handshake(ctx.channel(), req);
+                    // The write via the removed handler's ctx still starts at this handler's former position.
+                    final Future<Void> handshakeFuture = handshaker.handshake(ctx, req);
                     handshakeFuture.addListener(future -> {
                         if (!future.isSuccess()) {
                             localHandshakePromise.tryFailure(future.cause());

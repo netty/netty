@@ -45,6 +45,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class PkiTestingTlsTest {
 
@@ -282,6 +285,12 @@ public class PkiTestingTlsTest {
                                             if (evt instanceof SslHandshakeCompletionEvent) {
                                                 SslHandshakeCompletionEvent shce = (SslHandshakeCompletionEvent) evt;
                                                 if (shce.isSuccess()) {
+                                                    SSLSession session = handler.engine().getSession();
+                                                    if (session instanceof OpenSslSession) {
+                                                        String namedGroup = ((OpenSslSession) handler.engine()
+                                                                .getSession()).getNamedGroup();
+                                                        assertThat(OpenSsl.NAMED_GROUPS).contains(namedGroup);
+                                                    }
                                                     promise.setSuccess(shce);
                                                 } else {
                                                     promise.setFailure(shce.cause());
@@ -292,8 +301,7 @@ public class PkiTestingTlsTest {
                                         }
 
                                         @Override
-                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-                                                throws Exception {
+                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                             if (!promise.tryFailure(cause)) {
                                                 ctx.fireExceptionCaught(cause);
                                             }

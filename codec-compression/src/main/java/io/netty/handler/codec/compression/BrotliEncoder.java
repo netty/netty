@@ -10,7 +10,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
+ * License for the specific language governing permissions and limitationsx
  * under the License.
  */
 package io.netty.handler.codec.compression;
@@ -189,7 +189,6 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         private ByteBuf writableBuffer;
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
-        private final Promise<Void> closeFuture;
         private boolean closeInitiated;
         private boolean isClosed;
 
@@ -249,11 +248,15 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 return;
             }
             closeInitiated = true;
-            ctx.executor().execute(() -> {
-                try {
-                    finish(closeFuture);
-                } catch (IOException ex) {
-                    closeFuture.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+            final Promise<Void> promise = ctx.newPromise();
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        finish(promise);
+                    } catch (IOException ex) {
+                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+                    }
                 }
             });
         }

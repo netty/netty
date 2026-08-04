@@ -39,6 +39,13 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
         return SslProvider.OPENSSL_REFCNT;
     }
 
+    // OPENSSL_REFCNT has no finalizer, so the superclass's OPENSSL-only reclaim test does not apply here.
+    // Overriding it without @Test disables it for this subclass.
+    @Override
+    public void leakedEngineIsReclaimedWhileContextAlive() {
+        // noop
+    }
+
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testNotLeakOnException(SSLEngineTestParam param) throws Exception {
