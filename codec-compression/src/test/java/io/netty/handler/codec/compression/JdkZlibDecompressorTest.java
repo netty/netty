@@ -30,9 +30,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -159,6 +162,18 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
     }
 
     @Test
+    public void testHighlyCompressibleStreamIsFullyDecompressed() throws Exception {
+        // The tail of such a stream expands far beyond the number of remaining input bytes: the inflater pulls the
+        // last input bytes into its internal state while it still has to emit data. getRemaining() is 0 by then,
+        // so sizing the output buffer by it alone leaves the inflater without room to write the rest.
+        byte[] expected = new byte[100000];
+        Arrays.fill(expected, (byte) 'a');
+        byte[] compressed = compress(expected);
+        assertArrayEquals(expected, jdkDecompress(compressed));
+        assertArrayEquals(expected, decompress(createDecompressor().build(ByteBufAllocator.DEFAULT), compressed));
+    }
+
+    @Test
     public void testBadSecondGzipMagicRejected() throws Exception {
         assumeTrue(wrapper == ZlibWrapper.GZIP);
         byte[] compressed = gzip("bad magic".getBytes(CharsetUtil.UTF_8));
@@ -227,6 +242,58 @@ public class JdkZlibDecompressorTest extends AbstractDecompressorTest {
             }
         } finally {
             output.release();
+        }
+    }
+
+    /**
+     * Compress with the wrapper this test instance runs with, using the JDK so that the input is known-good
+     * independently of netty's own encoders.
+     */
+    private byte[] compress(byte[] data) throws IOException {
+        switch (wrapper) {
+            case GZIP:
+                return gzip(data);
+            case ZLIB:
+                return deflate(data);
+            case NONE:
+                return rawDeflate(data);
+            default:
+                throw new AssertionError("Unexpected wrapper: " + wrapper);
+        }
+    }
+
+    /** Decompress with the JDK, to prove the compressed input is valid. */
+    private byte[] jdkDecompress(byte[] compressed) throws IOException {
+        if (wrapper == ZlibWrapper.GZIP) {
+            return jdkGunzip(compressed);
+        }
+        Inflater inflater = new Inflater(wrapper == ZlibWrapper.NONE);
+        try {
+            InflaterInputStream input = new InflaterInputStream(new ByteArrayInputStream(compressed), inflater);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[256];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            input.close();
+            output.close();
+            return output.toByteArray();
+        } finally {
+            inflater.end();
+        }
+    }
+
+    private static byte[] rawDeflate(byte[] data) throws IOException {
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            DeflaterOutputStream stream = new DeflaterOutputStream(output, deflater);
+            stream.write(data);
+            stream.close();
+            return output.toByteArray();
+        } finally {
+            deflater.end();
         }
     }
 
