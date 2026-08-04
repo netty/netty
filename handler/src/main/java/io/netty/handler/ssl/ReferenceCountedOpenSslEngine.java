@@ -2656,7 +2656,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     this.protocol = protocol;
                     try {
                         String groupName = SSL.getGroupName(ssl);
-                        groupName = GroupsConverter.toOpenSsl(groupName); // Normalize group name (BoringSSL/OpenSSL)
+                        if (groupName != null) {
+                            // Normalize group name across BoringSSL/OpenSSL versions.
+                            groupName = GroupsConverter.toOpenSsl(groupName);
+                        }
                         this.namedGroup = groupName;
                     } catch (Exception e) {
                         throw new SSLException(e);
