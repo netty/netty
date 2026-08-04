@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 centos:6.10
 
-ARG openssl_version=3.6.1
-ARG openssl_sha256=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e
+ARG openssl_version=3.5.7
+ARG openssl_sha256=a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8
 ENV OPENSSL_VERSION $openssl_version
 ENV OPENSSL_SHA256 $openssl_sha256
 
