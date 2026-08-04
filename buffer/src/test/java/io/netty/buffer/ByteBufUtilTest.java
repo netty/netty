@@ -91,6 +91,26 @@ public class ByteBufUtilTest {
         }
     }
 
+    private static ByteBufAllocator newAllocator(BufferType bufferType) {
+        switch (bufferType) {
+
+        case DIRECT_UNPOOLED:
+            return new UnpooledByteBufAllocator(true, true);
+        case HEAP_UNPOOLED:
+            return new UnpooledByteBufAllocator(false, true);
+        case DIRECT_POOLED:
+            return new PooledByteBufAllocator(true);
+        case HEAP_POOLED:
+            return new PooledByteBufAllocator(false);
+        case DIRECT_ADAPTIVE:
+            return new AdaptiveByteBufAllocator(true);
+        case HEAP_ADAPTIVE:
+            return new AdaptiveByteBufAllocator(false);
+        default:
+            throw new AssertionError("unexpected buffer type: " + bufferType);
+        }
+    }
+
     public static Collection<Object[]> noUnsafe() {
         return Arrays.asList(new Object[][] {
                 { BufferType.DIRECT_POOLED },
@@ -508,6 +528,59 @@ public class ByteBufUtilTest {
 
         buf.release();
         buf2.release();
+    }
+
+    @Test
+    public void testWriteUtf8AsciiStringAvoidsResize() {
+        AsciiString sequence = asciiString(1024);
+        TrackingUnpooledByteBufAllocator allocator = new TrackingUnpooledByteBufAllocator();
+        ByteBuf oldBuffer = allocator.buffer(sequence.length());
+        TrackingUnpooledHeapByteBuf oldHeapBuffer = allocator.lastBuffer;
+        ByteBuf newBuffer = ByteBufUtil.writeUtf8(allocator, sequence);
+        TrackingUnpooledHeapByteBuf newHeapBuffer = allocator.lastBuffer;
+        try {
+            ByteBufUtil.writeUtf8(oldBuffer, sequence);
+
+            assertEquals(1, oldHeapBuffer.capacityChanges);
+            assertEquals(sequence.length(), oldHeapBuffer.copiedBytes);
+            assertEquals(0, newHeapBuffer.capacityChanges);
+            assertEquals(0, newHeapBuffer.copiedBytes);
+            assertEquals(oldBuffer.capacity(), newBuffer.capacity());
+            assertEquals(oldBuffer, newBuffer);
+        } finally {
+            oldBuffer.release();
+            newBuffer.release();
+        }
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
+    public void testWriteUtf8AsciiStringPreservesCapacity(BufferType bufferType) {
+        AsciiString sequence = asciiString(1024);
+        ByteBufAllocator allocator = newAllocator(bufferType);
+        ByteBuf oldBuffer = allocator.buffer(sequence.length());
+        ByteBuf newBuffer = ByteBufUtil.writeUtf8(allocator, sequence);
+        try {
+            ByteBufUtil.writeUtf8(oldBuffer, sequence);
+            assertEquals(oldBuffer.capacity(), newBuffer.capacity());
+            assertEquals(oldBuffer, newBuffer);
+
+            for (int i = 0; i < 3; ++i) {
+                oldBuffer.writeBytes(sequence.array(), sequence.arrayOffset(), sequence.length());
+                newBuffer.writeBytes(sequence.array(), sequence.arrayOffset(), sequence.length());
+                assertEquals(oldBuffer.capacity(), newBuffer.capacity());
+                assertEquals(oldBuffer, newBuffer);
+            }
+        } finally {
+            oldBuffer.release();
+            newBuffer.release();
+        }
+    }
+
+    private static AsciiString asciiString(int length) {
+        byte[] bytes = new byte[length];
+        Arrays.fill(bytes, (byte) 'a');
+        return new AsciiString(bytes, false);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
@@ -1081,6 +1154,50 @@ public class ByteBufUtilTest {
             checkGetBytes(slice);
         } finally {
             buf.release();
+        }
+    }
+
+    private static final class TrackingUnpooledByteBufAllocator extends AbstractByteBufAllocator {
+        TrackingUnpooledHeapByteBuf lastBuffer;
+
+        TrackingUnpooledByteBufAllocator() {
+            super(false);
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            lastBuffer = new TrackingUnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
+            return lastBuffer;
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
+    }
+
+    private static final class TrackingUnpooledHeapByteBuf extends UnpooledHeapByteBuf {
+        int capacityChanges;
+        int copiedBytes;
+
+        TrackingUnpooledHeapByteBuf(ByteBufAllocator allocator, int initialCapacity, int maxCapacity) {
+            super(allocator, initialCapacity, maxCapacity);
+        }
+
+        @Override
+        public ByteBuf capacity(int newCapacity) {
+            int oldCapacity = capacity();
+            if (newCapacity != oldCapacity) {
+                ++capacityChanges;
+                // UnpooledHeapByteBuf copies its full old capacity when it grows.
+                copiedBytes += oldCapacity;
+            }
+            return super.capacity(newCapacity);
         }
     }
 
