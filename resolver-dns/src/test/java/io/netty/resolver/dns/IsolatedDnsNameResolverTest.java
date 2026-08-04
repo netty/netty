@@ -65,7 +65,6 @@ public class IsolatedDnsNameResolverTest {
         }
     }
 
-
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testResolveDotLocalhostViaDnsWhenDisabled(DnsNameResolverChannelStrategy strategy) throws Exception {
