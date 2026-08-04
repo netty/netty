@@ -186,6 +186,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private static final class Writer implements WritableByteChannel {
 
+        private final Promise<Void> closeFuture;
         private ByteBuf writableBuffer;
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
