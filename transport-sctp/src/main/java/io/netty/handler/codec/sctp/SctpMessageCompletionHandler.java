@@ -37,9 +37,13 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
+    private static final int DEFAULT_MAX_BUFFERED_BYTES = 16 * 1024 * 1024;
+
     private final IntObjectMap<List<ByteBuf>> incompleteSctpMessages = new IntObjectHashMap<List<ByteBuf>>();
     private final int maxIncompleteSctpMessages;
     private final int maxFragments;
+    private final int maxBufferedBytes;
+    private long bufferedBytes;
 
     public SctpMessageCompletionHandler() {
         this(128, 128);
@@ -52,9 +56,21 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
      * @param maxFragments              the maximum number of fragments per sctp message.
      */
     public SctpMessageCompletionHandler(int maxIncompleteSctpMessages, int maxFragments) {
+        this(maxIncompleteSctpMessages, maxFragments, DEFAULT_MAX_BUFFERED_BYTES);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param maxIncompleteSctpMessages the maximum number of incomplete sctp message inflight.
+     * @param maxFragments              the maximum number of fragments per sctp message.
+     * @param maxBufferedBytes          the maximum number of bytes buffered by incomplete sctp messages.
+     */
+    public SctpMessageCompletionHandler(int maxIncompleteSctpMessages, int maxFragments, int maxBufferedBytes) {
         super(SctpMessage.class);
         this.maxIncompleteSctpMessages = checkPositive(maxIncompleteSctpMessages, "maxIncompleteSctpMessages");
         this.maxFragments = checkPositive(maxFragments, "maxFragments");
+        this.maxBufferedBytes = checkPositive(maxBufferedBytes, "maxBufferedBytes");
     }
 
     @Override
@@ -75,16 +91,20 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
                     throw new CodecException(
                             "Too many incomplete sctp messages in flight: " + maxIncompleteSctpMessages);
                 }
+                checkBufferedBytes(byteBuf);
                 //first incomplete message
                 frag = new ArrayList<ByteBuf>();
                 frag.add(byteBuf.retain());
+                bufferedBytes += byteBuf.readableBytes();
                 incompleteSctpMessages.put(streamIdentifier, frag);
             }
         } else {
             if (maxFragments <= frag.size()) {
                 throw new CodecException("Too many fragments for sctp message: " + maxFragments);
             }
+            checkBufferedBytes(byteBuf);
             frag.add(byteBuf.retain());
+            bufferedBytes += byteBuf.readableBytes();
             if (isComplete) {
                 // Is complete so remove it.
                 incompleteSctpMessages.remove(streamIdentifier);
@@ -100,7 +120,21 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
                         isUnordered,
                         composite);
                 out.add(assembledMsg);
+                removeBufferedBytes(frag);
             }
+        }
+    }
+
+    private void checkBufferedBytes(ByteBuf byteBuf) {
+        int readableBytes = byteBuf.readableBytes();
+        if (readableBytes > maxBufferedBytes - bufferedBytes) {
+            throw new CodecException("Too many buffered bytes for incomplete sctp messages: " + maxBufferedBytes);
+        }
+    }
+
+    private void removeBufferedBytes(List<ByteBuf> buffers) {
+        for (ByteBuf buffer : buffers) {
+            bufferedBytes -= buffer.readableBytes();
         }
     }
 
@@ -112,6 +146,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
             }
         }
         incompleteSctpMessages.clear();
+        bufferedBytes = 0;
         super.handlerRemoved(ctx);
     }
 
