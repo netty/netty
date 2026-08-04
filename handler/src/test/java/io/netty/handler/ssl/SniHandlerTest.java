@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import javax.net.ssl.SSLEngine;
 
@@ -37,9 +39,11 @@ import io.netty.util.concurrent.Future;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -66,6 +70,7 @@ import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -651,7 +656,83 @@ public class SniHandlerTest {
         testWithFragmentSize(provider, 50);
     }
 
+    static Stream<Arguments> tinyFragmentData() {
+        List<Arguments> args = new ArrayList<Arguments>();
+        for (Object provider : data()) {
+            // Fragment sizes smaller than the 4-byte handshake header, so the header itself is
+            // split across multiple TLS records.
+            for (int size = 1; size <= 4; size++) {
+                args.add(Arguments.of(provider, size));
+            }
+        }
+        return args.stream();
+    }
+
+    @ParameterizedTest(name = "{index}: sslProvider={0}, fragmentSize={1}")
+    @MethodSource("tinyFragmentData")
+    public void testTinyFragments(SslProvider provider, int fragmentSize) throws Exception {
+        testWithFragmentSize(provider, fragmentSize);
+    }
+
+    @ParameterizedTest(name = "{index}: sslProvider={0}")
+    @MethodSource("data")
+    @SuppressWarnings("unchecked")
+    public void testTinyFragmentsAreAggregatedOnlyOnce(SslProvider provider) throws Exception {
+        AtomicLong copiedBytes = new AtomicLong();
+        EmbeddedChannel server = new EmbeddedChannel(new SniHandler(mock(DomainNameMapping.class)));
+        server.config().setAllocator(new AbstractByteBufAllocator() {
+            @Override
+            public boolean isDirectBufferPooled() {
+                return false;
+            }
+
+            @Override
+            protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+                return countingBuffer(Unpooled.buffer(initialCapacity, maxCapacity), copiedBytes);
+            }
+
+            @Override
+            protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+                return countingBuffer(Unpooled.directBuffer(initialCapacity, maxCapacity), copiedBytes);
+            }
+        });
+
+        try {
+            List<ByteBuf> fragments = clientHelloInMultipleFragments(provider, "netty.io", 1, 1);
+            // Hold back the last fragment on purpose, so the handler keeps aggregating the ClientHello.
+            ReferenceCountUtil.release(fragments.remove(fragments.size() - 1));
+            for (ByteBuf fragment : fragments) {
+                assertFalse(server.writeInbound(fragment));
+            }
+
+            assertEquals(fragments.size(), copiedBytes.get());
+        } finally {
+            server.finishAndReleaseAll();
+        }
+    }
+
+    private static ByteBuf countingBuffer(ByteBuf buffer, AtomicLong copiedBytes) {
+        return new WrappedByteBuf(buffer) {
+            @Override
+            public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+                copiedBytes.addAndGet(length);
+                return super.writeBytes(src, srcIndex, length);
+            }
+        };
+    }
+
+    @ParameterizedTest(name = "{index}: sslProvider={0}")
+    @MethodSource("data")
+    public void testTinyFirstFragment(SslProvider provider) throws Exception {
+        testWithFragmentSize(provider, 1, Integer.MAX_VALUE);
+    }
+
     private void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
+        testWithFragmentSize(provider, maxFragmentSize, maxFragmentSize);
+    }
+
+    private void testWithFragmentSize(SslProvider provider, final int firstFragmentSize, final int maxFragmentSize)
+            throws Exception {
         final String sni = "netty.io";
         SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
@@ -667,7 +748,8 @@ public class SniHandlerTest {
                 }
             });
 
-            final List<ByteBuf> buffers = clientHelloInMultipleFragments(provider, sni, maxFragmentSize);
+            final List<ByteBuf> buffers =
+                    clientHelloInMultipleFragments(provider, sni, firstFragmentSize, maxFragmentSize);
             for (ByteBuf buffer : buffers) {
                 server.writeInbound(buffer);
             }
@@ -678,7 +760,8 @@ public class SniHandlerTest {
     }
 
     private static List<ByteBuf> clientHelloInMultipleFragments(
-            SslProvider provider, String hostname, int maxTlsPlaintextSize) throws Exception {
+            SslProvider provider, String hostname, int firstTlsPlaintextSize, int maxTlsPlaintextSize)
+            throws Exception {
         final EmbeddedChannel client = new EmbeddedChannel();
         final SslContext ctx = SslContextBuilder.forClient()
                 .sslProvider(provider)
@@ -688,7 +771,7 @@ public class SniHandlerTest {
             final SslHandler sslHandler = ctx.newHandler(client.alloc(), hostname, -1);
             client.pipeline().addLast(sslHandler);
             final ByteBuf clientHello = client.readOutbound();
-            List<ByteBuf> buffers = split(clientHello, maxTlsPlaintextSize);
+            List<ByteBuf> buffers = split(clientHello, firstTlsPlaintextSize, maxTlsPlaintextSize);
             assertTrue(client.finishAndReleaseAll());
             return buffers;
         } finally {
@@ -696,7 +779,7 @@ public class SniHandlerTest {
         }
     }
 
-    private static List<ByteBuf> split(ByteBuf clientHello, int maxSize) {
+    private static List<ByteBuf> split(ByteBuf clientHello, int firstSize, int maxSize) {
         final int type = clientHello.readUnsignedByte();
         final int version = clientHello.readUnsignedShort();
         final int length = clientHello.readUnsignedShort();
@@ -704,7 +787,7 @@ public class SniHandlerTest {
 
         final List<ByteBuf> result = new ArrayList<ByteBuf>();
         while (clientHello.readableBytes() > 0) {
-            final int toRead = Math.min(maxSize, clientHello.readableBytes());
+            final int toRead = Math.min(result.isEmpty() ? firstSize : maxSize, clientHello.readableBytes());
             final ByteBuf bb = clientHello.alloc().buffer(SslUtils.SSL_RECORD_HEADER_LENGTH + toRead);
             bb.writeByte(type);
             bb.writeShort(version);
