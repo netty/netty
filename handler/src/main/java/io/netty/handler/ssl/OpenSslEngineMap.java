@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2026 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,21 +15,47 @@
  */
 package io.netty.handler.ssl;
 
-interface OpenSslEngineMap {
+import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-    /**
-     * Remove the {@link OpenSslEngine} with the given {@code ssl} address and
-     * return it.
-     */
-    ReferenceCountedOpenSslEngine remove(long ssl);
+/**
+ * Maps a native {@code SSL*} pointer to its {@link ReferenceCountedOpenSslEngine} so native OpenSSL callbacks
+ * (certificate verification, private-key operations, certificate (de)compression) can recover the engine from the
+ * raw pointer they are handed.
+ * <p>
+ * Engines are held weakly so a leaked engine is not pinned by the long-lived parent
+ * {@link ReferenceCountedOpenSslContext} (a live engine is always strongly reachable via its {@link SslHandler}, and
+ * on the stack during a callback, so weak retention never collects a usable one). For {@link SslProvider#OPENSSL}
+ * this lets {@link OpenSslEngine#finalize()} reclaim the native {@code SSL*} without waiting for the whole context to
+ * be collected; a leaked {@link SslProvider#OPENSSL_REFCNT} engine has no finalizer so its native memory still leaks,
+ * but it becomes collectable and so is reported by the {@code ResourceLeakDetector} rather than pinned silently.
+ * <p>
+ * Entries are removed in {@link ReferenceCountedOpenSslEngine#shutdown()}, so the map does not grow in steady state.
+ * A cleared {@link WeakReference} lingers only for a leaked {@code OPENSSL_REFCNT} engine (whose {@code SSL*} is never
+ * freed, hence never reused); such a husk is tiny, dwarfed by the native memory it marks, and is deliberately left as
+ * a heap-inspectable leak signal. Do not reap it (e.g. via a {@code ReferenceQueue}): {@link #get(long)} already
+ * yields {@code null} for a cleared reference, so reaping would only erase that signal.
+ */
+final class OpenSslEngineMap {
 
-    /**
-     * Add a {@link OpenSslEngine} to this {@link OpenSslEngineMap}.
-     */
-    void add(ReferenceCountedOpenSslEngine engine);
+    private final Map<Long, WeakReference<ReferenceCountedOpenSslEngine>> engines =
+            new ConcurrentHashMap<Long, WeakReference<ReferenceCountedOpenSslEngine>>();
 
-    /**
-     * Get the {@link OpenSslEngine} for the given {@code ssl} address.
-     */
-    ReferenceCountedOpenSslEngine get(long ssl);
+    void add(long ssl, ReferenceCountedOpenSslEngine engine) {
+        // A fresh SSL_new() pointer maps to nothing yet: an SSL* is reused only after shutdown() removed its entry
+        // (remove-before-freeSSL), and a husk survives only for a never-freed, never-reused SSL*.
+        WeakReference<ReferenceCountedOpenSslEngine> prev =
+                engines.put(ssl, new WeakReference<ReferenceCountedOpenSslEngine>(engine));
+        assert prev == null : "OpenSslEngineMap already had an entry for SSL* 0x" + Long.toHexString(ssl);
+    }
+
+    void remove(long ssl) {
+        engines.remove(ssl);
+    }
+
+    ReferenceCountedOpenSslEngine get(long ssl) {
+        WeakReference<ReferenceCountedOpenSslEngine> ref = engines.get(ssl);
+        return ref == null ? null : ref.get();
+    }
 }
