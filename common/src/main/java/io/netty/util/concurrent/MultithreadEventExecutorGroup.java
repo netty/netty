@@ -188,22 +188,11 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         for (EventExecutor l: children) {
-            // Never-started children have no work to drain. Force a zero quiet period so
-            // SingleThreadEventExecutor can terminate without creating a worker thread that
-            // would only exit immediately (#17135). Children that already run still honor
-            // the caller's quietPeriod/timeout.
-            //
-            // Consequence: unused children may reach TERMINATED before the caller's quiet
-            // period elapses. Tasks submitted via next()/execute after that are rejected
-            // on those children — accepting them would require starting the worker, which
-            // is exactly what this path avoids. Already-started children keep full quiet-
-            // period task acceptance.
-            if (l instanceof SingleThreadEventExecutor
-                    && ((SingleThreadEventExecutor) l).isNeverStarted()) {
-                l.shutdownGracefully(0, 0, unit);
-            } else {
-                l.shutdownGracefully(quietPeriod, timeout, unit);
-            }
+            // Pass the caller's quietPeriod/timeout to every child, including never-started
+            // ones (#17135). SingleThreadEventExecutor terminates never-started children
+            // without creating a worker when the quiet period elapses with no tasks, and
+            // only starts a worker if execute() arrives during the quiet period.
+            l.shutdownGracefully(quietPeriod, timeout, unit);
         }
         return terminationFuture();
     }

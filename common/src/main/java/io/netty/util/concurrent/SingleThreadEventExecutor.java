@@ -40,6 +40,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
@@ -97,6 +98,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Lock processingLock = new ReentrantLock();
     private final CountDownLatch threadLock = new CountDownLatch(1);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    /**
+     * Ensures at most one worker start is issued for this executor (including the
+     * never-started → SHUTTING_DOWN path that must start a thread only if a task arrives
+     * during the quiet period).
+     */
+    private final AtomicBoolean threadStartIssued = new AtomicBoolean();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
     private final RejectedExecutionHandler rejectedExecutionHandler;
@@ -1155,41 +1162,59 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 resetBusyCycles();
                 boolean success = false;
                 try {
-                    doStartThread();
+                    issueDoStartThread();
                     success = true;
                 } finally {
                     if (!success) {
                         STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
+                        threadStartIssued.set(false);
                     }
+                }
+            }
+        } else if (currentState == ST_SHUTTING_DOWN && thread == null) {
+            // Never-started executor already in graceful shutdown: a task arrived during the
+            // quiet period. Start a worker without changing state away from SHUTTING_DOWN so
+            // confirmShutdown still honors quietPeriod/timeout (#17135 + quiet-period accept).
+            try {
+                issueDoStartThread();
+            } catch (Throwable cause) {
+                STATE_UPDATER.set(this, ST_TERMINATED);
+                terminationFuture.tryFailure(cause);
+                if (!(cause instanceof Exception)) {
+                    PlatformDependent.throwException(cause);
                 }
             }
         }
     }
 
     /**
-     * Returns {@code true} if no worker thread has ever been started for this executor.
-     * Used by {@link MultithreadEventExecutorGroup} to skip the quiet period for unused
-     * children so they can terminate without creating threads (#17135).
+     * Returns {@code true} if no worker thread has ever been started for this executor
+     * (still in {@link #ST_NOT_STARTED}).
      */
     final boolean isNeverStarted() {
         return thread == null && state == ST_NOT_STARTED;
     }
 
     private boolean ensureThreadStarted(int oldState) {
-        // Fast-path for a never-started executor with zero quiet period and nothing to drain:
-        // mark terminated without spinning up a worker that would only shut down immediately.
-        // Non-zero quiet periods still start a thread so tasks submitted during the quiet
-        // period are accepted (see SingleThreadEventLoopTest#testGracefulShutdownQuietPeriod).
-        // MultithreadEventExecutorGroup forces quietPeriod=0 for never-started children (#17135).
-        if (oldState == ST_NOT_STARTED
-                && gracefulShutdownQuietPeriod == 0
-                && tryTerminateIfNeverStarted()) {
-            return true;
+        // Never-started shutdown (#17135):
+        // - quietPeriod == 0: terminate immediately without creating a worker.
+        // - quietPeriod  > 0: stay SHUTTING_DOWN without a worker; schedule a timer to
+        //   terminate when the quiet period elapses with no tasks. execute() during that
+        //   window starts a worker via startThread() (ST_SHUTTING_DOWN + thread == null).
+        if (oldState == ST_NOT_STARTED) {
+            if (gracefulShutdownQuietPeriod == 0) {
+                if (tryTerminateIfNeverStarted()) {
+                    return true;
+                }
+            } else {
+                scheduleNeverStartedQuietPeriodExpire();
+                return true;
+            }
         }
 
         if (oldState == ST_NOT_STARTED || oldState == ST_SUSPENDED) {
             try {
-                doStartThread();
+                issueDoStartThread();
             } catch (Throwable cause) {
                 STATE_UPDATER.set(this, ST_TERMINATED);
                 terminationFuture.tryFailure(cause);
@@ -1205,11 +1230,68 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * Issue at most one {@link #doStartThread()} for this executor.
+     */
+    private void issueDoStartThread() {
+        if (!threadStartIssued.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            doStartThread();
+        } catch (Throwable t) {
+            threadStartIssued.set(false);
+            PlatformDependent.throwException(t);
+        }
+    }
+
+    /**
+     * Schedule termination (or late worker start if work appears) for a never-started
+     * executor that entered {@link #ST_SHUTTING_DOWN} with a non-zero quiet period.
+     */
+    private void scheduleNeverStartedQuietPeriodExpire() {
+        if (gracefulShutdownStartTime == 0) {
+            gracefulShutdownStartTime = getCurrentTimeNanos();
+        }
+        // Treat "no tasks yet" as last activity at shutdown start so quiet-period math matches
+        // confirmShutdown when a worker is started later.
+        lastExecutionTime = gracefulShutdownStartTime;
+
+        final long quietNanos = gracefulShutdownQuietPeriod;
+        final long timeoutNanos = gracefulShutdownTimeout;
+        // Fire at quiet-period end (and again at timeout if longer) so we still terminate if
+        // the first timer races with a late execute that then drains before the second fire.
+        GlobalEventExecutor.INSTANCE.schedule(neverStartedQuietPeriodTask, quietNanos, TimeUnit.NANOSECONDS);
+        if (timeoutNanos > quietNanos) {
+            GlobalEventExecutor.INSTANCE.schedule(neverStartedQuietPeriodTask, timeoutNanos, TimeUnit.NANOSECONDS);
+        }
+    }
+
+    private final Runnable neverStartedQuietPeriodTask = new Runnable() {
+        @Override
+        public void run() {
+            onNeverStartedQuietPeriodTimer();
+        }
+    };
+
+    private void onNeverStartedQuietPeriodTimer() {
+        if (thread != null || isTerminated() || !isShuttingDown()) {
+            return;
+        }
+        // Work pending → start worker under SHUTTING_DOWN so confirmShutdown drains it.
+        if (!taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty()) {
+            startThread();
+            return;
+        }
+        if (tryTerminateIfNeverStarted()) {
+            return;
+        }
+        // Race: work appeared after empty check.
+        startThread();
+    }
+
+    /**
      * If this executor was never started and has no pending work, transition straight to
      * {@link #ST_TERMINATED} without creating a thread.
-     * <p>
-     * Only used when {@link #gracefulShutdownQuietPeriod} is {@code 0}; otherwise a thread
-     * must run to honor the quiet period and accept further tasks until it elapses.
      *
      * @return {@code true} if termination completed (or was already complete) without starting
      * a thread; {@code false} if a thread still needs to be started to drain work / run shutdown.
@@ -1395,6 +1477,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             }
                         } finally {
                             thread = null;
+                            // Allow a later startThread()/issueDoStartThread() after suspension or
+                            // termination of this worker (suspension reuses the same executor).
+                            threadStartIssued.set(false);
                             // Let the next thread take over if needed.
                             processingLock.unlock();
                         }

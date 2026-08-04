@@ -725,13 +725,13 @@ public class SingleThreadEventExecutorTest {
     }
 
     /**
-     * Never-started MultithreadEventExecutorGroup children force quietPeriod=0 on shutdown
-     * (#17135). After that, execute on the group must not start workers — it rejects.
-     * Already-started children still honor the caller's quiet period.
+     * Never-started MultithreadEventExecutorGroup children honor a non-zero quiet period
+     * without starting all workers (#17135). execute() during the quiet period may start
+     * only the chosen child; idle children terminate without threads when quiet elapses.
      */
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
-    public void testGroupShutdownNonZeroQuietPeriodRejectsExecuteOnNeverStartedChildren()
+    public void testGroupShutdownNonZeroQuietPeriodAcceptsExecuteOnNeverStartedChildren()
             throws Exception {
         final AtomicInteger threadsCreated = new AtomicInteger();
         ThreadFactory threadFactory = new ThreadFactory() {
@@ -747,25 +747,53 @@ public class SingleThreadEventExecutorTest {
         DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
         try {
             assertEquals(0, threadsCreated.get());
-            // Non-zero quiet period on the group; unused children still terminate immediately.
-            group.shutdownGracefully(100, 100, TimeUnit.MILLISECONDS);
-            // Give never-started children time to reach TERMINATED via the 0,0 path.
-            Thread.sleep(20);
-            assertThrows(RejectedExecutionException.class, new Executable() {
+            group.shutdownGracefully(200, 500, TimeUnit.MILLISECONDS);
+            // Still within quiet period: task must be accepted and run (starts at most one child).
+            final CountDownLatch ran = new CountDownLatch(1);
+            group.execute(new Runnable() {
                 @Override
-                public void execute() {
-                    group.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            // must not run — children already terminated without workers
-                        }
-                    });
+                public void run() {
+                    ran.countDown();
                 }
             });
-            assertEquals(0, threadsCreated.get(),
-                    "execute after group shutdown must not start never-used children");
+            assertTrue(ran.await(2, TimeUnit.SECONDS), "task submitted during quiet period must run");
+            assertTrue(threadsCreated.get() >= 1,
+                    "execute during quiet period starts the chosen child worker");
+            assertTrue(threadsCreated.get() < nThreads,
+                    "must not start every unused child — only the one that received work");
             group.terminationFuture().syncUninterruptibly();
             assertTrue(group.isTerminated());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * Never-started children with a non-zero quiet period and no late execute terminate
+     * without creating worker threads once the quiet period elapses.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testGroupShutdownNonZeroQuietPeriodTerminatesUnusedWithoutThreads()
+            throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "group-quiet-idle-" + idx.getAndIncrement());
+            }
+        };
+
+        final int nThreads = 8;
+        DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
+        try {
+            assertEquals(0, threadsCreated.get());
+            group.shutdownGracefully(50, 200, TimeUnit.MILLISECONDS).syncUninterruptibly();
+            assertTrue(group.isTerminated());
+            assertEquals(0, threadsCreated.get(),
+                    "idle never-started children must not start workers on quiet-period shutdown");
         } finally {
             group.shutdownGracefully();
         }
