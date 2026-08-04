@@ -137,7 +137,7 @@ public class DnsAddressResolverGroupTest {
     // caller for the same hostname attached to the dead promise instead of issuing a new query.
     //
     // The three tests below exercise the fix in InflightNameResolver which replaces the
-    // promise-value map with an InflightEntry (refCount + delegate promise + hostname) so that the
+    // promise-value map with an InflightEntry (refCnt + delegate promise + hostname) so that the
     // map is cleaned up the moment the last caller gives up.
     // ---------------------------------------------------------------------------------------------
 
@@ -243,9 +243,9 @@ public class DnsAddressResolverGroupTest {
             resolver.resolve("example.com", p4);
             assertEquals(1, delegate.resolveCalls.get(), "delegate must only be called once");
             assertEquals(1, resolvesMap.size(), "all callers must share one inflight entry");
-            assertEquals(4, resolvesMap.get("example.com").refCount.get());
+            assertEquals(4, resolvesMap.get("example.com").refCnt());
 
-            // Cancel every caller. Each cancellation drops a refCount slot through
+            // Cancel every caller. Each cancellation drops a refCnt slot through
             // ReleaseListener / FirstCallerCleanupListener; when the last slot is dropped, the
             // map is cleared and the delegate's promise is aborted.
             assertTrue(p2.cancel(true));

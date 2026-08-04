@@ -17,6 +17,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.resolver.NameResolver;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -25,7 +27,6 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -86,7 +87,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
             final InflightEntry<U> existing = resolveMap.putIfAbsent(inetHost, newEntry);
 
             if (existing == null) {
-                // We are the first caller — drive the actual resolution through the delegate.
+                // We are the first caller - drive the actual resolution through the delegate.
                 try {
                     if (resolveAll) {
                         final Promise<List<T>> castPromise = (Promise<List<T>>) promise; // U is List<T>
@@ -96,19 +97,19 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                         delegate.resolve(inetHost, castPromise);
                     }
                 } catch (Throwable cause) {
-                    // case 7: delegate threw synchronously — fail the promise so that our
+                    // case 7: delegate threw synchronously - fail the promise so that our
                     // completion listener below can release the entry and clean the map.
                     promise.tryFailure(cause);
                 }
 
                 if (promise.isDone()) {
-                    // Synchronous completion — release our initial refCount and, if no other
+                    // Synchronous completion - release our initial refCnt and, if no other
                     // caller attached in the meantime, remove the entry from the map.
-                    if (newEntry.release()) {
+                    if (newEntry.tryRelease()) {
                         resolveMap.remove(inetHost, newEntry);
                     }
                 } else {
-                    // Asynchronous in flight. The first caller's refCount is released when the
+                    // Asynchronous in flight. The first caller's refCnt is released when the
                     // delegate's promise completes; if it drops to zero we know no subsequent
                     // caller ever attached and we must remove the map entry.
                     //
@@ -118,17 +119,17 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                     // FirstCallerCleanupListener below) will never fire because they are
                     // scheduled on the now-terminated executor. Release the entry here so that
                     // the map slot is dropped even when the executor is gone. We do this
-                    // unconditionally: if FirstCallerCleanupListener has already run, release()
-                    // is a no-op (refCount is already zero) and remove(...) is a no-op. If the
+                    // unconditionally: if FirstCallerCleanupListener has already run,
+                    // tryRelease() is a no-op and remove(...) is a no-op. If the
                     // delegate promise was completed but the listener never fired (the common
                     // case on shutdown), this is the path that actually cleans up the slot.
                     executor.terminationFuture().addListener(f -> {
                         if (f.isSuccess()) {
-                            if (newEntry.release()) {
+                            if (newEntry.tryRelease()) {
                                 resolveMap.remove(inetHost, newEntry);
                             }
                             if (!newEntry.promise.isDone()) {
-                                // Delegate can no longer complete the promise — abort it so
+                                // Delegate can no longer complete the promise - abort it so
                                 // any waiters on the first caller's promise are unblocked.
                                 newEntry.promise.tryFailure(
                                         new AbortedInflightResolveException(newEntry.hostname));
@@ -142,7 +143,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
 
             // Another resolution is already in progress for this hostname.
             if (existing.promise.isDone()) {
-                // Already completed — transfer the result directly to the caller's promise.
+                // Already completed - transfer the result directly to the caller's promise.
                 transferResult(existing.promise, promise);
                 return promise;
             }
@@ -152,7 +153,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 // between our putIfAbsent and tryAcquire.
                 if (existing.promise.isDone()) {
                     transferResult(existing.promise, promise);
-                    existing.release();
+                    existing.tryRelease();
                     return promise;
                 }
                 // Attach a transfer listener so this caller's promise completes with the same
@@ -189,9 +190,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
     /**
      * Holds an in-flight {@link Promise} together with the set of callers that have attached
      * to it. Each caller (including the original first caller) implicitly owns one reference on
-     * the entry and must {@link #release()} it when its own promise completes; the
-     * {@code released} flag guards against a caller attaching to an entry that is on the verge
-     * of being aborted.
+     * the entry and must release it when its own promise completes.
      * <p>
      * The reference count is independent of the DNS query-consolidation bookkeeping in
      * {@link DnsNameResolver} (the {@code inflightLookups} map keyed by {@code DnsQuestion}),
@@ -200,11 +199,9 @@ final class InflightNameResolver<T> implements NameResolver<T> {
      * Package-private so that {@link DnsAddressResolverGroup} can declare the in-flight maps
      * with the correct value type. Not exposed outside {@code io.netty.resolver.dns}.
      */
-    static final class InflightEntry<T> {
+    static final class InflightEntry<T> extends AbstractReferenceCounted {
         final Promise<T> promise; // visible for testing
         final String hostname; // visible for testing
-        final AtomicInteger refCount = new AtomicInteger(1); // visible for testing
-        volatile boolean released; // visible for testing
 
         InflightEntry(Promise<T> promise, String hostname) {
             this.promise = promise;
@@ -219,17 +216,14 @@ final class InflightNameResolver<T> implements NameResolver<T> {
          *         retry the resolve or start a new resolution.
          */
         boolean tryAcquire() {
-            for (;;) {
-                if (released) {
-                    return false;
-                }
-                int current = refCount.get();
-                if (current == 0) {
-                    return false;
-                }
-                if (refCount.compareAndSet(current, current + 1)) {
-                    return true;
-                }
+            if (refCnt() == 0) {
+                return false;
+            }
+            try {
+                retain();
+                return true;
+            } catch (IllegalReferenceCountException ignore) {
+                return false;
             }
         }
 
@@ -238,22 +232,27 @@ final class InflightNameResolver<T> implements NameResolver<T> {
          * which case the caller is responsible for cleaning the map and (if necessary)
          * aborting the {@link #promise}.
          */
-        boolean release() {
-            for (;;) {
-                int current = refCount.get();
-                if (current == 0) {
-                    // Already at zero — idempotent.
-                    return true;
-                }
-                if (refCount.compareAndSet(current, current - 1)) {
-                    if (current - 1 == 0) {
-                        released = true;
-                        return true;
-                    }
-                    return false;
-                }
+        boolean tryRelease() {
+            if (refCnt() == 0) {
+                return false;
+            }
+            try {
+                return release();
+            } catch (IllegalReferenceCountException ignore) {
+                return false;
             }
         }
+
+        @Override
+        protected void deallocate() {
+            // No resources to release; refCnt == 0 marks the entry as no longer attachable.
+        }
+
+        @Override
+        public InflightEntry<T> touch(Object hint) {
+            return this;
+        }
+
     }
 
     /**
@@ -271,10 +270,10 @@ final class InflightNameResolver<T> implements NameResolver<T> {
 
         @Override
         public void operationComplete(Future<U> f) {
-            // Release the first caller's refCount. If no subsequent caller attached, this
+            // Release the first caller's refCnt. If no subsequent caller attached, this
             // drops the count to zero and we must remove the map entry. The delegate promise
             // is already done at this point, so no abort is needed.
-            if (entry.release()) {
+            if (entry.tryRelease()) {
                 map.remove(entry.hostname, entry);
             }
         }
@@ -317,10 +316,10 @@ final class InflightNameResolver<T> implements NameResolver<T> {
 
         @Override
         public void operationComplete(Future<U> f) {
-            if (entry.release()) {
+            if (entry.tryRelease()) {
                 map.remove(entry.hostname, entry);
                 if (!entry.promise.isDone()) {
-                    // Last caller out and the delegate is still pending — abort it so that
+                    // Last caller out and the delegate is still pending - abort it so that
                     // future callers for the same hostname can start a fresh resolution
                     // instead of attaching to a stuck entry. See issue #17039.
                     entry.promise.tryFailure(new AbortedInflightResolveException(entry.hostname));
