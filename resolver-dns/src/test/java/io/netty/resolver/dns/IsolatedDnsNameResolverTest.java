@@ -85,7 +85,7 @@ public class IsolatedDnsNameResolverTest {
         customDnsServer.start();
         DnsNameResolver.resolveLocalhostWithoutDns = false;
         try {
-            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer)
+            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer, group.next())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
                         @Override
@@ -132,7 +132,7 @@ public class IsolatedDnsNameResolverTest {
         customDnsServer.start();
         DnsNameResolver.resolveLocalhostWithoutDns = false;
         try {
-            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer)
+            DnsNameResolver resolver = newResolver(strategy, false, null, customDnsServer, group.next())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
                         @Override

@@ -380,20 +380,26 @@ public class DnsNameResolverTest {
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
     private static final EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
-    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy,
+    private static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy,
                                                       boolean decodeToUnicode) {
         return newResolver(strategy, decodeToUnicode, null);
     }
 
-    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
+    private static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
                                                       DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         return newResolver(strategy, decodeToUnicode, dnsServerAddressStreamProvider, dnsServer);
     }
 
-    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
+    private static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
                                                       DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
                                                       TestDnsServer dnsServer) {
-        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
+        return newResolver(strategy, decodeToUnicode, dnsServerAddressStreamProvider, dnsServer, group.next());
+    }
+
+    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
+                                                      DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+                                                      TestDnsServer dnsServer, EventLoop eventLoop) {
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop)
                 .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
                 .datagramChannelType(NioDatagramChannel.class)
                 .maxQueriesPerResolve(1)
