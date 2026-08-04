@@ -329,7 +329,7 @@ public class QpackDecoderHandlerTest {
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QpackEncoderHandler(maxTableCapacity, decoder)).get();
         attributes.encoderStream(encoderStream);
-        encoder = new QpackEncoder(dynamicTable);
+        encoder = new QpackEncoder(dynamicTable, QpackSensitivityDetector.NEVER_SENSITIVE);
         encoder.configureDynamicTable(attributes, maxTableCapacity, 0);
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QpackDecoderHandler(encoder)).get();

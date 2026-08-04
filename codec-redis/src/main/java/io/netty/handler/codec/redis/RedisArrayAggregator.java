@@ -98,6 +98,11 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         out.add(msg);
     }
 
+    private CodecException clearAndCreateException(String msg) {
+        releaseAndClearDepths();
+        return new CodecException(msg);
+    }
+
     private RedisMessage decodeRedisArrayHeader(ArrayHeaderRedisMessage header) {
         if (header.isNull()) {
             return ArrayRedisMessage.NULL_INSTANCE;
@@ -106,18 +111,17 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         } else if (header.length() > 0L) {
             // Currently, this codec doesn't support `long` length for arrays because Java's List.size() is int.
             if (header.length() > maxElements) {
-                throw new CodecException("this codec doesn't support longer length than " + maxElements);
+                throw clearAndCreateException("this codec doesn't support longer length than " + maxElements);
             }
 
             if (depths.size() >= maxNestedArrayDepth) {
-                releaseAndClearDepths();
-                throw new CodecException("max nested array depth exceeded: "  + maxNestedArrayDepth);
+                throw clearAndCreateException("max nested array depth exceeded: "  + maxNestedArrayDepth);
             }
             // start aggregating array
             depths.push(new AggregateState((int) header.length()));
             return null;
         } else {
-            throw new CodecException("bad length: " + header.length());
+            throw clearAndCreateException("bad length: " + header.length());
         }
     }
 

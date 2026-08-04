@@ -53,6 +53,11 @@
 #define UDP_SEGMENT 103
 #endif
 
+// SO_INQ was added in Linux 6.17. Define it here so we can compile with older kernel headers.
+#ifndef SO_INQ
+#define SO_INQ 84
+#endif
+
 // Add define if NETTY_IO_URING_BUILD_STATIC is defined so it is picked up in netty_jni_util.c
 #ifdef NETTY_IO_URING_BUILD_STATIC
 #define NETTY_JNI_UTIL_BUILD_STATIC
@@ -277,6 +282,18 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     }
     close(ring_fd);
     return JNI_TRUE;
+}
+
+static jboolean netty_io_uring_is_unix_domain_socket_inq_supported(JNIEnv *env, jclass clazz) {
+    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) {
+        return JNI_FALSE;
+    }
+
+    int enable = 1;
+    int ret = setsockopt(fd, SOL_SOCKET, SO_INQ, &enable, sizeof(enable));
+    close(fd);
+    return ret == 0 ? JNI_TRUE : JNI_FALSE;
 }
 
 static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) {
@@ -721,6 +738,10 @@ static jint netty_io_uring_iosqeLink(JNIEnv* env, jclass clazz) {
     return IOSQE_IO_LINK;
 }
 
+static jint netty_io_uring_iosqeHardlink(JNIEnv* env, jclass clazz) {
+    return IOSQE_IO_HARDLINK;
+}
+
 static jint netty_io_uring_iosqeDrain(JNIEnv* env, jclass clazz) {
     return IOSQE_IO_DRAIN;
 }
@@ -825,6 +846,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioringEnterGetevents", "()I", (void *) netty_io_uring_ioringEnterGetevents },
   { "iosqeAsync", "()I", (void *) netty_io_uring_iosqeAsync },
   { "iosqeLink", "()I", (void *) netty_io_uring_iosqeLink },
+  { "iosqeHardlink", "()I", (void *) netty_io_uring_iosqeHardlink },
   { "iosqeDrain", "()I", (void *) netty_io_uring_iosqeDrain },
   { "iosqeBufferSelect", "()I", (void *) netty_io_uring_BufferSelect },
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
@@ -848,6 +870,8 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetupSupportsFlags", "(I)Z", (void *) netty_io_uring_setup_supports_flags },
+    {"isUnixDomainSocketInqSupported", "()Z",
+        (void *) netty_io_uring_is_unix_domain_socket_inq_supported },
     {"ioUringSetup", "(III)[J", (void *) netty_io_uring_setup},
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
@@ -974,4 +998,3 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
     netty_jni_util_JNI_OnUnload(vm, reserved, netty_iouring_native_JNI_OnUnload);
 }
 #endif /* NETTY_IO_URING_BUILD_STATIC */
-

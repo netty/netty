@@ -252,6 +252,11 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
+    public String getNamedGroup() {
+        return wrapped.getNamedGroup();
+    }
+
+    @Override
     public boolean equals(Object o) {
         return wrapped.equals(o);
     }

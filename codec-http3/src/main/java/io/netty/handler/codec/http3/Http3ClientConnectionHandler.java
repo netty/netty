@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;
 
-public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
+public class Http3ClientConnectionHandler extends Http3ConnectionHandler {
 
     private final LongFunction<ChannelHandler> pushStreamHandlerFactory;
 
@@ -83,13 +83,49 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
                                         @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable,
                                         @Nullable Http3Settings.NonStandardHttp3SettingsValidator
                                                 nonStandardSettingsValidator) {
+        this(inboundControlStreamHandler, pushStreamHandlerFactory, unknownInboundStreamHandlerFactory,
+                localSettings, disableQpackDynamicTable, nonStandardSettingsValidator, null,
+                Http3CodecUtils.DEFAULT_MAX_UNKNOWN_FRAME_PAYLOAD_LENGTH);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param inboundControlStreamHandler           the {@link ChannelHandler} which will be notified about
+     *                                              {@link Http3RequestStreamFrame}s or {@code null} if the user is not
+     *                                              interested in these.
+     * @param pushStreamHandlerFactory              the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for push streams {@code null} if no special
+     *                                              handling should be done. When present, push ID will be passed as an
+     *                                              argument to the {@link LongFunction}.
+     * @param unknownInboundStreamHandlerFactory    the {@link LongFunction} that will provide a custom
+     *                                              {@link ChannelHandler} for unknown inbound stream types or
+     *                                              {@code null} if no special handling should be done.
+     * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
+     *                                              remote peer or {@code null} if the default settings should be used.
+     * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
+     * @param nonStandardSettingsValidator          the {@link Http3Settings.NonStandardHttp3SettingsValidator} to use
+     *                                              when validating settings that are non-standard.
+     * @param sensitivityDetector                   detector that marks sensitive headers for QPACK Never Indexed
+     *                                              encoding, or {@code null} to use the historical default.
+     * @param maxUnknownFramePayloadLength          the maximum payload size of an unknown frame.
+     */
+    public Http3ClientConnectionHandler(@Nullable ChannelHandler inboundControlStreamHandler,
+                                        @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
+                                        @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
+                                        @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable,
+                                        @Nullable Http3Settings.NonStandardHttp3SettingsValidator
+                                                nonStandardSettingsValidator,
+                                        @Nullable QpackSensitivityDetector sensitivityDetector,
+                                        int maxUnknownFramePayloadLength) {
         super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
-                disableQpackDynamicTable, nonStandardSettingsValidator);
+                disableQpackDynamicTable, nonStandardSettingsValidator, sensitivityDetector,
+                maxUnknownFramePayloadLength);
         this.pushStreamHandlerFactory = pushStreamHandlerFactory;
     }
 
     @Override
-    void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel channel) {
+    protected void initBidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel channel) {
         // See https://datatracker.ietf.org/doc/html/rfc9114#name-bidirectional-streams
         // https://datatracker.ietf.org/doc/html/rfc9114#section-6.1-3
         Http3CodecUtils.connectionError(ctx, Http3ErrorCode.H3_STREAM_CREATION_ERROR,
@@ -97,7 +133,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
     }
 
     @Override
-    void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
+    protected void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
         final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
                 new Http3UnidirectionalStreamInboundClientHandler(codecFactory, nonStandardSettingsValidator,
