@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
@@ -197,6 +198,49 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     ChannelFuture deregister(ChannelPromise promise);
+
+    /**
+     * Request to deregister from the currently assigned {@link EventLoop} and register with the given
+     * {@link EventLoop}, effectively moving the {@link Channel} from one {@link EventLoop} to another. The returned
+     * {@link ChannelFuture} is notified once the operation completes, either because the operation was successful or
+     * because of an error.
+     * <p>
+     * This is a convenience method that is equivalent to calling {@link #deregister()} and, once it completed
+     * successfully, registering the {@link Channel} with the given {@link EventLoop}. If the deregistration fails the
+     * returned {@link ChannelFuture} is failed with the same cause and no registration is attempted.
+     *
+     * @param eventLoop the {@link EventLoop} to register with.
+     */
+    default ChannelFuture reRegister(EventLoop eventLoop) {
+        return reRegister(eventLoop, newPromise());
+    }
+
+    /**
+     * Request to deregister from the currently assigned {@link EventLoop} and register with the given
+     * {@link EventLoop}, effectively moving the {@link Channel} from one {@link EventLoop} to another.
+     *
+     * The given {@link ChannelPromise} will be notified once the operation completes and also returned. It must be
+     * associated with the {@link Channel} that should be re-registered.
+     * <p>
+     * This is a convenience method that is equivalent to calling {@link #deregister()} and, once it completed
+     * successfully, registering the {@link Channel} with the given {@link EventLoop}. If the deregistration fails the
+     * given {@link ChannelPromise} is failed with the same cause and no registration is attempted.
+     *
+     * @param eventLoop the {@link EventLoop} to register with.
+     * @param promise   the {@link ChannelPromise} that is notified once the operation completes and also returned.
+     */
+    default ChannelFuture reRegister(EventLoop eventLoop, final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(eventLoop, "eventLoop");
+        ObjectUtil.checkNotNull(promise, "promise");
+        deregister().addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                eventLoop.register(promise);
+            } else {
+                promise.setFailure(future.cause());
+            }
+        });
+        return promise;
+    }
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an

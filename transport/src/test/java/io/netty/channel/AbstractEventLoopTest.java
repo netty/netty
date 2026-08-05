@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -200,6 +201,187 @@ public abstract class AbstractEventLoopTest {
                 newLoop.register(deregister.channel()).addListener(pipelieModifyingListener);
             };
             method.apply(outCtx).addListener(reregisteringListener);
+        }
+
+        private EventLoop anyNotEqual(EventLoop eventLoop) {
+            EventLoop next;
+            do {
+                next = eventLoopGroup.next();
+            } while (eventLoop == next);
+
+            return next;
+        }
+    }
+
+    /**
+     * Test for the {@link ChannelOutboundInvoker#reRegister(EventLoop)} convenience method which deregisters a
+     * {@link Channel} and re-registers it with another {@link EventLoop}.
+     */
+    @Test
+    public void testReRegister() {
+        EventLoopGroup group = newEventLoopGroup();
+        EventLoopGroup group2 = newEventLoopGroup();
+        try {
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            Channel channel = bootstrap.channel(newChannel()).group(group)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                        }
+                    })
+                    .bind(0).awaitUninterruptibly().channel();
+
+            EventLoop oldLoop = channel.eventLoop();
+            EventLoop newLoop = group2.next();
+            assertNotSame(oldLoop, newLoop);
+
+            channel.reRegister(newLoop).awaitUninterruptibly();
+
+            assertTrue(channel.isRegistered());
+            assertSame(newLoop, channel.eventLoop());
+            assertNotSame(oldLoop, channel.eventLoop());
+        } finally {
+            group.shutdownGracefully();
+            group2.shutdownGracefully();
+        }
+    }
+
+    /**
+     * Test that {@link ChannelOutboundInvoker#reRegister(EventLoop)} can be used to move a {@link Channel} to another
+     * {@link EventLoop} from within a {@link ChannelHandler} and that the {@link ChannelPipeline} keeps working
+     * afterwards. This mirrors {@link #testReregisterOnChannelHandlerContext(DeregisterMethod)} but exercises the
+     * combined {@code reRegister} operation instead of a manual deregister + register.
+     */
+    @ParameterizedTest
+    @EnumSource(ReRegisterMethod.class)
+    void testReRegisterOnChannelHandlerContext(ReRegisterMethod method) throws Exception {
+        EventLoopGroup group = newEventLoopGroup();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        try {
+            ServerBootstrap b = new ServerBootstrap();
+            CombinedReRegisterHandler reRegisterHandler = new CombinedReRegisterHandler(group, method, throwable);
+            b.group(group)
+                    .channel(newChannel())
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast("logging", new LoggingHandler());
+                            p.addLast(reRegisterHandler);
+                        }
+                    });
+
+            ChannelFuture f = b.bind(0).sync();
+
+            Channel client = new Bootstrap()
+                    .group(group)
+                    .channel(newSocketChannel())
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                            super.channelReadComplete(ctx);
+                            ctx.close();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            throwable.set(cause);
+                            super.exceptionCaught(ctx, cause);
+                            ctx.close();
+                        }
+                    })
+                    .connect(f.channel().localAddress())
+                    .sync()
+                    .channel();
+            client.closeFuture().addListener(ignore -> f.channel().close());
+            client.writeAndFlush(Unpooled.copiedBuffer("hello", StandardCharsets.US_ASCII));
+
+            f.channel().closeFuture().sync();
+            Throwable caughtThrowable = throwable.get();
+            if (caughtThrowable != null) {
+                fail(caughtThrowable);
+            }
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    enum ReRegisterMethod implements BiFunction<ChannelHandlerContext, EventLoop, ChannelFuture> {
+        CONTEXT {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx, EventLoop loop) {
+                return ctx.reRegister(loop);
+            }
+        },
+        CONTEXT_PROMISE {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx, EventLoop loop) {
+                return ctx.reRegister(loop, ctx.newPromise());
+            }
+        },
+        CHANNEL {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx, EventLoop loop) {
+                return ctx.channel().reRegister(loop);
+            }
+        },
+        CHANNEL_PROMISE {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx, EventLoop loop) {
+                return ctx.channel().reRegister(loop, ctx.channel().newPromise());
+            }
+        }
+    }
+
+    @ChannelHandler.Sharable
+    static class CombinedReRegisterHandler extends ChannelInboundHandlerAdapter {
+
+        private final EventLoopGroup eventLoopGroup;
+        private final ReRegisterMethod method;
+        private final AtomicReference<Throwable> throwable;
+
+        CombinedReRegisterHandler(EventLoopGroup eventLoopGroup,
+                                  ReRegisterMethod method,
+                                  AtomicReference<Throwable> throwable) {
+            this.eventLoopGroup = eventLoopGroup;
+            this.method = method;
+            this.throwable = throwable;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            super.exceptionCaught(ctx, cause);
+            throwable.set(cause);
+            ctx.close();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext outCtx, Object msg) throws Exception {
+            final EventLoop newLoop = anyNotEqual(outCtx.channel().eventLoop());
+            method.apply(outCtx, newLoop).addListener((ChannelFutureListener) future -> {
+                if (!future.isSuccess()) {
+                    throwable.set(future.cause());
+                    outCtx.close();
+                    return;
+                }
+                if (outCtx.channel().eventLoop() != newLoop) {
+                    throwable.set(new AssertionError("Channel was not re-registered to the new EventLoop"));
+                    outCtx.close();
+                    return;
+                }
+                outCtx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext inCtx, Object inMsg) {
+                        outCtx.writeAndFlush(inMsg);
+                    }
+                });
+                outCtx.fireChannelRead(msg);
+            });
         }
 
         private EventLoop anyNotEqual(EventLoop eventLoop) {
