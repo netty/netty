@@ -44,7 +44,7 @@ class Socks5ClientEncoderTest {
 
     @Test
     public void initialRequestEncodingMustRejectTooManyAuthMethods() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
         assertThatThrownBy(
             new ThrowableAssert.ThrowingCallable() {
                 @Override
@@ -195,7 +195,7 @@ class Socks5ClientEncoderTest {
 
     @Test
     public void commandRequestEncodingMustRejectTooLongDstAddr() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
         assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
             @Override
             public void call() throws Throwable {
