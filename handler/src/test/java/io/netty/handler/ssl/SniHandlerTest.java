@@ -679,7 +679,7 @@ public class SniHandlerTest {
     @MethodSource("data")
     @SuppressWarnings("unchecked")
     public void testTinyFragmentsAreAggregatedOnlyOnce(SslProvider provider) throws Exception {
-        AtomicLong copiedBytes = new AtomicLong();
+        final AtomicLong copiedBytes = new AtomicLong();
         EmbeddedChannel server = new EmbeddedChannel(new SniHandler(mock(DomainNameMapping.class)));
         server.config().setAllocator(new AbstractByteBufAllocator() {
             @Override
@@ -712,7 +712,7 @@ public class SniHandlerTest {
         }
     }
 
-    private static ByteBuf countingBuffer(ByteBuf buffer, AtomicLong copiedBytes) {
+    private static ByteBuf countingBuffer(ByteBuf buffer, final AtomicLong copiedBytes) {
         return new DuplicatedByteBuf(buffer) {
             @Override
             public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
