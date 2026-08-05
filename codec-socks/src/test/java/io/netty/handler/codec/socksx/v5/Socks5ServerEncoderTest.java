@@ -20,6 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.socksx.SocksVersion;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
@@ -98,42 +99,52 @@ class Socks5ServerEncoderTest {
 
     @Test
     public void commandResponseEncodingMustRejectTooLongDstAddr() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
-        assertThatThrownBy(() -> encoder.writeOutbound(new Socks5CommandResponse() {
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
             @Override
-            public DecoderResult decoderResult() {
-                return DecoderResult.SUCCESS;
-            }
+            public void call() throws Throwable {
+                encoder.writeOutbound(new Socks5CommandResponse() {
+                    @Override
+                    public DecoderResult decoderResult() {
+                        return DecoderResult.SUCCESS;
+                    }
 
-            @Override
-            public void setDecoderResult(DecoderResult result) {
-            }
+                    @Override
+                    public void setDecoderResult(DecoderResult result) {
+                    }
 
-            @Override
-            public SocksVersion version() {
-                return SocksVersion.SOCKS5;
-            }
+                    @Override
+                    public SocksVersion version() {
+                        return SocksVersion.SOCKS5;
+                    }
 
-            @Override
-            public Socks5CommandStatus status() {
-                return Socks5CommandStatus.SUCCESS;
-            }
+                    @Override
+                    public Socks5CommandStatus status() {
+                        return Socks5CommandStatus.SUCCESS;
+                    }
 
-            @Override
-            public Socks5AddressType bndAddrType() {
-                return Socks5AddressType.DOMAIN;
-            }
+                    @Override
+                    public Socks5AddressType bndAddrType() {
+                        return Socks5AddressType.DOMAIN;
+                    }
 
-            @Override
-            public String bndAddr() {
-                return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
-            }
+                    @Override
+                    public String bndAddr() {
+                        return Stream.generate(new Supplier<String>() {
+                            @Override
+                            public String get() {
+                                return "a";
+                            }
+                        }).limit(256).collect(Collectors.joining());
+                    }
 
-            @Override
-            public int bndPort() {
-                return 8080;
+                    @Override
+                    public int bndPort() {
+                        return 8080;
+                    }
+                });
             }
-        }))
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Invalid field length");
         assertFalse(encoder.finish());

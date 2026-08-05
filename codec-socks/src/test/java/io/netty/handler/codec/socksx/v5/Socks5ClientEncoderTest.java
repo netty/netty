@@ -80,7 +80,12 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String username() {
-                        return Stream.generate(() -> "a").limit(255).collect(Collectors.joining());
+                        return Stream.generate(new Supplier<String>() {
+                            @Override
+                            public String get() {
+                                return "a";
+                            }
+                        }).limit(255).collect(Collectors.joining());
                     }
                 }
         ));
