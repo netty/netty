@@ -115,37 +115,47 @@ class Socks5ClientEncoderTest {
 
     @Test
     public void passwordAuthRequestEncodingMustRejectTooLongUsernameOrPassword() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
 
         // too long username
-        assertThatThrownBy(() -> encoder.writeOutbound(
-                new DefaultSocks5PasswordAuthRequest("user", "pass") {
-                    @Override
-                    public String username() {
-                        StringBuilder sb = new StringBuilder(256);
-                        for (int i = 0; i < 256; i++) {
-                            sb.append("a");
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                encoder.writeOutbound(
+                    new DefaultSocks5PasswordAuthRequest("user", "pass") {
+                        @Override
+                        public String username() {
+                            StringBuilder sb = new StringBuilder(256);
+                            for (int i = 0; i < 256; i++) {
+                                sb.append("a");
+                            }
+                            return sb.toString();
                         }
-                        return sb.toString();
                     }
-                }
-        ))
+                );
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Invalid field length");
 
         // too long password
-        assertThatThrownBy(() -> encoder.writeOutbound(
-                new DefaultSocks5PasswordAuthRequest("user", "pass") {
-                    @Override
-                    public String password() {
-                        StringBuilder sb = new StringBuilder(256);
-                        for (int i = 0; i < 256; i++) {
-                            sb.append("a");
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                encoder.writeOutbound(
+                    new DefaultSocks5PasswordAuthRequest("user", "pass") {
+                        @Override
+                        public String password() {
+                            StringBuilder sb = new StringBuilder(256);
+                            for (int i = 0; i < 256; i++) {
+                                sb.append("a");
+                            }
+                            return sb.toString();
                         }
-                        return sb.toString();
                     }
-                }
-        ))
+                );
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Invalid field length");
 
@@ -155,7 +165,12 @@ class Socks5ClientEncoderTest {
     @Test
     public void commandRequestEncodingMustAcceptMaxLengthDstAddr() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
-        String dstAddr = Stream.generate(() -> "aaa").limit(64).collect(Collectors.joining("."));
+        String dstAddr = Stream.generate(new Supplier<String>() {
+            @Override
+            public String get() {
+                return "aaa";
+            }
+        }).limit(64).collect(Collectors.joining("."));
         assertThat(dstAddr).hasSize(255);
         assertTrue(encoder.writeOutbound(new DefaultSocks5CommandRequest(
                 Socks5CommandType.CONNECT, Socks5AddressType.DOMAIN,
@@ -243,7 +258,12 @@ class Socks5ClientEncoderTest {
 
                     @Override
                     public String dstAddr() {
-                        return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
+                        return Stream.generate(new Supplier<String>() {
+                            @Override
+                            public String get() {
+                                return "a";
+                            }
+                        }).limit(256).collect(Collectors.joining());
                     }
 
                     @Override
