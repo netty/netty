@@ -275,6 +275,8 @@ jobs:
 
       - name: Set up TestLens
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
+        with:
+          working-directory: netty
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
