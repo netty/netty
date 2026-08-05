@@ -101,10 +101,10 @@ public class SctpMessageCompletionHandlerTest {
 
     @Test
     public void testBufferedBytesLimited() {
-        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
         ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
-        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1 });
+        final ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1 });
 
         assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
         assertEquals(1, buffer.refCnt());
@@ -112,8 +112,12 @@ public class SctpMessageCompletionHandlerTest {
         assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 2), buffer2)));
         assertEquals(1, buffer2.refCnt());
 
-        assertThrows(CodecException.class, () ->
-                channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer3)));
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer3));
+            }
+        });
         assertEquals(0, buffer.refCnt());
         assertEquals(0, buffer2.refCnt());
         assertEquals(0, buffer3.refCnt());
@@ -143,7 +147,12 @@ public class SctpMessageCompletionHandlerTest {
 
     @Test
     public void testBufferedBytesLimitMustBePositive() {
-        assertThrows(IllegalArgumentException.class, () -> new SctpMessageCompletionHandler(1, 1, 0));
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new SctpMessageCompletionHandler(1, 1, 0);
+            }
+        });
     }
 
     @Test
