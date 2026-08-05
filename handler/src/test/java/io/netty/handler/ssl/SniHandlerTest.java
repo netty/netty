@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -71,7 +70,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -659,16 +657,16 @@ public class SniHandlerTest {
         testWithFragmentSize(provider, 50);
     }
 
-    static Stream<Arguments> tinyFragmentData() {
-        List<Arguments> args = new ArrayList<Arguments>();
+    static List<Object[]> tinyFragmentData() {
+        List<Object[]> args = new ArrayList<Object[]>();
         for (Object provider : data()) {
             // Fragment sizes smaller than the 4-byte handshake header, so the header itself is
             // split across multiple TLS records.
             for (int size = 1; size <= 4; size++) {
-                args.add(Arguments.of(provider, size));
+                args.add(new Object[] { provider, size });
             }
         }
-        return args.stream();
+        return args;
     }
 
     @ParameterizedTest(name = "{index}: sslProvider={0}, fragmentSize={1}")
