@@ -81,15 +81,6 @@ public interface QuicTokenHandler {
             return this != INVALID_TOKEN;
         }
 
-        /**
-         * Returns {@code true} if the ODCID should be taken from the current destination connection id.
-         *
-         * @return  {@code true} if the ODCID should be taken from the current destination connection id.
-         */
-        public boolean usesDestinationConnectionIdAsOdcid() {
-            return odcidFromDestinationConnectionId;
-        }
-
         ByteBuf originalDestinationConnectionId(ByteBuf token, ByteBuf dcid) {
             if (!isValid()) {
                 throw new IllegalStateException("token is not valid");

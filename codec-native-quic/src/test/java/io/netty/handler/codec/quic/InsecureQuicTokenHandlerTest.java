@@ -55,7 +55,6 @@ public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
             QuicTokenHandler.TokenValidationResult result =
                     QuicTokenHandler.TokenValidationResult.odcidFromDestinationConnectionId();
             assertThat(result.isValid()).isTrue();
-            assertThat(result.usesDestinationConnectionIdAsOdcid()).isTrue();
             assertEquals(dcid, result.originalDestinationConnectionId(token, dcid));
         } finally {
             token.release();
@@ -89,7 +88,6 @@ public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
             QuicTokenHandler.TokenValidationResult result =
                     InsecureQuicTokenHandler.INSTANCE.validateToken(out, validAddress, dcid);
             assertThat(result.isValid()).isTrue();
-            assertThat(result.usesDestinationConnectionIdAsOdcid()).isFalse();
             assertEquals(dcid, result.originalDestinationConnectionId(out, dcid));
 
             // Use another address and check that the validate fails.
