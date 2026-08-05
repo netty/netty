@@ -71,6 +71,8 @@ RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
 
 # Prepare our own build
+ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
+ENV JAVA_HOME=/root/.sdkman/candidates/java/current
 ENV LD_LIBRARY_PATH=/opt/openssl-$OPENSSL_VERSION/lib
 
 # Cleanup
