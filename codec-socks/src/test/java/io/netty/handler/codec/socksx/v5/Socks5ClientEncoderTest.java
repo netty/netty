@@ -58,7 +58,12 @@ class Socks5ClientEncoderTest {
                 @Override
                 public void call() throws Throwable {
                     encoder.writeOutbound(new DefaultSocks5InitialRequest(
-                        Stream.generate(() -> Socks5AuthMethod.PASSWORD).limit(256).collect(Collectors.toList())));
+                        Stream.generate(new Supplier<Socks5AuthMethod>() {
+                            @Override
+                            public Socks5AuthMethod get() {
+                                return Socks5AuthMethod.PASSWORD;
+                            }
+                        }).limit(256).collect(Collectors.toList())));
                 }
             }
         ).isInstanceOf(EncoderException.class)

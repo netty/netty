@@ -22,6 +22,7 @@ import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.socksx.SocksVersion;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,7 +36,12 @@ class Socks5ServerEncoderTest {
     @Test
     public void commandResponseEncodingMustAcceptMaxLengthDstAddr() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
-        String dstAddr = Stream.generate(() -> "aaa").limit(64).collect(Collectors.joining("."));
+        String dstAddr = Stream.generate(new Supplier<String>() {
+            @Override
+            public String get() {
+                return "aaa";
+            }
+        }).limit(64).collect(Collectors.joining("."));
         assertThat(dstAddr).hasSize(255);
         assertTrue(encoder.writeOutbound(new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.SUCCESS, Socks5AddressType.DOMAIN,
