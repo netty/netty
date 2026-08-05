@@ -20,8 +20,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.socksx.SocksVersion;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,8 +38,12 @@ class Socks5ClientEncoderTest {
     public void initialRequestEncodingMustAcceptMaxNumberOfAuthMethods() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
         assertTrue(encoder.writeOutbound(new DefaultSocks5InitialRequest(
-                Stream.generate(() -> Socks5AuthMethod.PASSWORD).limit(255).collect(Collectors.toList())
-        )));
+                Stream.generate(new Supplier<Socks5AuthMethod>() {
+                    @Override
+                    public Socks5AuthMethod get() {
+                        return Socks5AuthMethod.PASSWORD;
+                    }
+                }).limit(255).collect(Collectors.toList()))));
         ByteBuf buf = encoder.readOutbound();
         assertNotNull(buf);
         buf.release();
@@ -47,10 +53,15 @@ class Socks5ClientEncoderTest {
     @Test
     public void initialRequestEncodingMustRejectTooManyAuthMethods() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
-        assertThatThrownBy(() -> encoder.writeOutbound(new DefaultSocks5InitialRequest(
-                Stream.generate(() -> Socks5AuthMethod.PASSWORD).limit(256).collect(Collectors.toList())
-        )))
-                .isInstanceOf(EncoderException.class)
+        assertThatThrownBy(
+            new ThrowableAssert.ThrowingCallable() {
+                @Override
+                public void call() throws Throwable {
+                    encoder.writeOutbound(new DefaultSocks5InitialRequest(
+                        Stream.generate(() -> Socks5AuthMethod.PASSWORD).limit(256).collect(Collectors.toList())));
+                }
+            }
+        ).isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Invalid field length");
         assertFalse(encoder.finish());
     }
@@ -77,7 +88,11 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String password() {
-                        return Stream.generate(() -> "a").limit(255).collect(Collectors.joining());
+                        StringBuilder sb = new StringBuilder(255);
+                        for (int i = 0; i < 255; i++) {
+                            sb.append("a");
+                        }
+                        return sb.toString();
                     }
                 }
         ));
@@ -97,7 +112,11 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String username() {
-                        return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
+                        StringBuilder sb = new StringBuilder(256);
+                        for (int i = 0; i < 256; i++) {
+                            sb.append("a");
+                        }
+                        return sb.toString();
                     }
                 }
         ))
@@ -109,7 +128,11 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String password() {
-                        return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
+                        StringBuilder sb = new StringBuilder(256);
+                        for (int i = 0; i < 256; i++) {
+                            sb.append("a");
+                        }
+                        return sb.toString();
                     }
                 }
         ))
@@ -180,41 +203,46 @@ class Socks5ClientEncoderTest {
     @Test
     public void commandRequestEncodingMustRejectTooLongDstAddr() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
-        assertThatThrownBy(() -> encoder.writeOutbound(new Socks5CommandRequest() {
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
             @Override
-            public DecoderResult decoderResult() {
-                return DecoderResult.SUCCESS;
-            }
+            public void call() throws Throwable {
+                encoder.writeOutbound(new Socks5CommandRequest() {
+                    @Override
+                    public DecoderResult decoderResult() {
+                        return DecoderResult.SUCCESS;
+                    }
 
-            @Override
-            public void setDecoderResult(DecoderResult result) {
-            }
+                    @Override
+                    public void setDecoderResult(DecoderResult result) {
+                    }
 
-            @Override
-            public SocksVersion version() {
-                return SocksVersion.SOCKS5;
-            }
+                    @Override
+                    public SocksVersion version() {
+                        return SocksVersion.SOCKS5;
+                    }
 
-            @Override
-            public Socks5CommandType type() {
-                return Socks5CommandType.CONNECT;
-            }
+                    @Override
+                    public Socks5CommandType type() {
+                        return Socks5CommandType.CONNECT;
+                    }
 
-            @Override
-            public Socks5AddressType dstAddrType() {
-                return Socks5AddressType.DOMAIN;
-            }
+                    @Override
+                    public Socks5AddressType dstAddrType() {
+                        return Socks5AddressType.DOMAIN;
+                    }
 
-            @Override
-            public String dstAddr() {
-                return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
-            }
+                    @Override
+                    public String dstAddr() {
+                        return Stream.generate(() -> "a").limit(256).collect(Collectors.joining());
+                    }
 
-            @Override
-            public int dstPort() {
-                return 8080;
+                    @Override
+                    public int dstPort() {
+                        return 8080;
+                    }
+                });
             }
-        }))
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Invalid field length");
         assertFalse(encoder.finish());

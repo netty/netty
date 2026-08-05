@@ -18,6 +18,7 @@ package io.netty.handler.codec.socksx.v4;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.EncoderException;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,10 +52,15 @@ class Socks4ClientEncoderTest {
 
     @Test
     public void mustRejectNulByteInUserIdWithIPv4Destination() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
-        DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
+        final DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
                 Socks4CommandType.CONNECT, "127.0.0.1", 8008, "use\0r");
-        assertThatThrownBy(() -> encoder.writeOutbound(request))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                encoder.writeOutbound(request);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Illegal character");
         assertFalse(encoder.finish());
@@ -62,21 +68,30 @@ class Socks4ClientEncoderTest {
 
     @Test
     public void mustRejectNulByteInUserIdWithDomainDestination() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
-        DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
+        final DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
                 Socks4CommandType.CONNECT, "unix://uds.sock", 8008, "use\0r");
-        assertThatThrownBy(() -> encoder.writeOutbound(request))
-                .isInstanceOf(EncoderException.class)
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                encoder.writeOutbound(request);
+            }
+        }).isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Illegal character");
         assertFalse(encoder.finish());
     }
 
     @Test
     public void mustRejectNulByteInDstAddr() {
-        EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
-        DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
+        final EmbeddedChannel encoder = new EmbeddedChannel(Socks4ClientEncoder.INSTANCE);
+        final DefaultSocks4CommandRequest request = new DefaultSocks4CommandRequest(
                 Socks4CommandType.CONNECT, "unix://uds\0.sock", 8008, "user");
-        assertThatThrownBy(() -> encoder.writeOutbound(request))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                encoder.writeOutbound(request);
+            }
+        })
                 .isInstanceOf(EncoderException.class)
                 .hasMessageContaining("Illegal character");
         assertFalse(encoder.finish());
