@@ -23,10 +23,6 @@ import io.netty.handler.codec.socksx.SocksVersion;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,16 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Socks5ClientEncoderTest {
+
     @Test
     public void initialRequestEncodingMustAcceptMaxNumberOfAuthMethods() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
-        assertTrue(encoder.writeOutbound(new DefaultSocks5InitialRequest(
-                Stream.generate(new Supplier<Socks5AuthMethod>() {
-                    @Override
-                    public Socks5AuthMethod get() {
-                        return Socks5AuthMethod.PASSWORD;
-                    }
-                }).limit(255).collect(Collectors.toList()))));
+        assertTrue(encoder.writeOutbound(
+            new DefaultSocks5InitialRequest(Socks5CommonTestUtils.generateList(Socks5AuthMethod.PASSWORD, 255))));
         ByteBuf buf = encoder.readOutbound();
         assertNotNull(buf);
         buf.release();
@@ -57,13 +49,9 @@ class Socks5ClientEncoderTest {
             new ThrowableAssert.ThrowingCallable() {
                 @Override
                 public void call() throws Throwable {
-                    encoder.writeOutbound(new DefaultSocks5InitialRequest(
-                        Stream.generate(new Supplier<Socks5AuthMethod>() {
-                            @Override
-                            public Socks5AuthMethod get() {
-                                return Socks5AuthMethod.PASSWORD;
-                            }
-                        }).limit(256).collect(Collectors.toList())));
+                    encoder.writeOutbound(
+                        new DefaultSocks5InitialRequest(Socks5CommonTestUtils.generateList(
+                            Socks5AuthMethod.PASSWORD, 256)));
                 }
             }
         ).isInstanceOf(EncoderException.class)
@@ -80,12 +68,7 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String username() {
-                        return Stream.generate(new Supplier<String>() {
-                            @Override
-                            public String get() {
-                                return "a";
-                            }
-                        }).limit(255).collect(Collectors.joining());
+                        return Socks5CommonTestUtils.generateString("a", 255);
                     }
                 }
         ));
@@ -98,11 +81,7 @@ class Socks5ClientEncoderTest {
                 new DefaultSocks5PasswordAuthRequest("user", "pass") {
                     @Override
                     public String password() {
-                        StringBuilder sb = new StringBuilder(255);
-                        for (int i = 0; i < 255; i++) {
-                            sb.append("a");
-                        }
-                        return sb.toString();
+                        return Socks5CommonTestUtils.generateString("a", 255);
                     }
                 }
         ));
@@ -125,11 +104,7 @@ class Socks5ClientEncoderTest {
                     new DefaultSocks5PasswordAuthRequest("user", "pass") {
                         @Override
                         public String username() {
-                            StringBuilder sb = new StringBuilder(256);
-                            for (int i = 0; i < 256; i++) {
-                                sb.append("a");
-                            }
-                            return sb.toString();
+                            return Socks5CommonTestUtils.generateString("a", 256);
                         }
                     }
                 );
@@ -146,11 +121,7 @@ class Socks5ClientEncoderTest {
                     new DefaultSocks5PasswordAuthRequest("user", "pass") {
                         @Override
                         public String password() {
-                            StringBuilder sb = new StringBuilder(256);
-                            for (int i = 0; i < 256; i++) {
-                                sb.append("a");
-                            }
-                            return sb.toString();
+                            return Socks5CommonTestUtils.generateString("a", 256);
                         }
                     }
                 );
@@ -165,12 +136,9 @@ class Socks5ClientEncoderTest {
     @Test
     public void commandRequestEncodingMustAcceptMaxLengthDstAddr() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ClientEncoder.DEFAULT);
-        String dstAddr = Stream.generate(new Supplier<String>() {
-            @Override
-            public String get() {
-                return "aaa";
-            }
-        }).limit(64).collect(Collectors.joining("."));
+        String dstAddr = "aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa" +
+            ".aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa" +
+            ".aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa";
         assertThat(dstAddr).hasSize(255);
         assertTrue(encoder.writeOutbound(new DefaultSocks5CommandRequest(
                 Socks5CommandType.CONNECT, Socks5AddressType.DOMAIN,
@@ -258,12 +226,7 @@ class Socks5ClientEncoderTest {
 
                     @Override
                     public String dstAddr() {
-                        return Stream.generate(new Supplier<String>() {
-                            @Override
-                            public String get() {
-                                return "a";
-                            }
-                        }).limit(256).collect(Collectors.joining());
+                        return Socks5CommonTestUtils.generateString("a", 256);
                     }
 
                     @Override

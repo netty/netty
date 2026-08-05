@@ -18,6 +18,9 @@ package io.netty.handler.codec.socksx.v5;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+import java.util.ArrayList;
+import java.util.List;
+
 final class Socks5CommonTestUtils {
     /**
      * A constructor to stop this class being constructed.
@@ -52,5 +55,21 @@ final class Socks5CommonTestUtils {
         out.finish();
 
         return encoded;
+    }
+
+    static <T> List<T> generateList(T obj, int count) {
+        List<T> list = new ArrayList<T>(count);
+        for (int i = 0; i < count; i++) {
+            list.add(obj);
+        }
+        return list;
+    }
+
+    static String generateString(String str, int count) {
+        StringBuilder sb = new StringBuilder(str.length() * count);
+        for (int i = 0; i < count; i++) {
+            sb.append(str);
+        }
+        return sb.toString();
     }
 }

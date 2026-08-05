@@ -37,12 +37,9 @@ class Socks5ServerEncoderTest {
     @Test
     public void commandResponseEncodingMustAcceptMaxLengthDstAddr() {
         EmbeddedChannel encoder = new EmbeddedChannel(Socks5ServerEncoder.DEFAULT);
-        String dstAddr = Stream.generate(new Supplier<String>() {
-            @Override
-            public String get() {
-                return "aaa";
-            }
-        }).limit(64).collect(Collectors.joining("."));
+        String dstAddr = "aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa" +
+            ".aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa" +
+            ".aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa.aaa";
         assertThat(dstAddr).hasSize(255);
         assertTrue(encoder.writeOutbound(new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.SUCCESS, Socks5AddressType.DOMAIN,
@@ -130,12 +127,7 @@ class Socks5ServerEncoderTest {
 
                     @Override
                     public String bndAddr() {
-                        return Stream.generate(new Supplier<String>() {
-                            @Override
-                            public String get() {
-                                return "a";
-                            }
-                        }).limit(256).collect(Collectors.joining());
+                        return Socks5CommonTestUtils.generateString("a", 256);
                     }
 
                     @Override
