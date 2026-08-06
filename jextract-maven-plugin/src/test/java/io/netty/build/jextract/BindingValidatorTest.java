@@ -143,6 +143,106 @@ class BindingValidatorTest {
     }
 
     @Test
+    void allowsTheSameSymbolAcrossKindsWithinOneBinding() {
+        // One binding listing the same name as both a struct and a typedef writes a single file, so
+        // there is nothing to clobber, unlike two bindings claiming it.
+        final Binding one = binding("a.h", "Aaa");
+        one.setStructs(singletonList("shared_t"));
+        one.setTypedefs(singletonList("shared_t"));
+
+        assertDoesNotThrow(() -> BindingValidator.validate(singletonList(one)));
+    }
+
+    @Test
+    void rejectsCaseVariantStructsWithinOneBinding() {
+        // Sock and sock are two different C symbols, so jextract emits Sock.java AND sock.java, one
+        // file on a case-insensitive filesystem, so they clobber even within a single binding.
+        final Binding one = binding("a.h", "Aaa");
+        one.setStructs(Arrays.asList("Sock", "sock"));
+
+        assertThrows(JextractException.class, () -> BindingValidator.validate(singletonList(one)));
+    }
+
+    @Test
+    void allowsAFunctionNamedLikeAnotherBindingsClass() {
+        // Functions become static members of the header class, not standalone files, so a function
+        // sharing a name with another binding's <className> does not collide on disk.
+        final Binding one = binding("a.h", "Socket");
+        final Binding two = binding("b.h", "Other");
+        two.setFunctions(singletonList("Socket"));
+
+        assertDoesNotThrow(() -> BindingValidator.validate(Arrays.asList(one, two)));
+    }
+
+    @Test
+    void rejectsTypeSymbolCollidingWithAnotherBindingsHeaderClass() {
+        // A struct file is <symbol>.java in the same package as the header classes, so a struct named
+        // like some binding's <className> would clobber that class's file.
+        final Binding one = binding("a.h", "Socket");
+        final Binding two = binding("b.h", "Other");
+        two.setStructs(singletonList("Socket"));
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> BindingValidator.validate(Arrays.asList(one, two)));
+        assertTrue(e.getMessage().contains("Socket"), e.getMessage());
+        assertTrue(e.getMessage().contains("Other"), e.getMessage());
+        assertTrue(e.getMessage().contains("header class"), e.getMessage());
+    }
+
+    @Test
+    void rejectsTypeSymbolCollidingWithAHeaderClassDeclaredLater() {
+        // The type-symbol binding is declared BEFORE the class it collides with. The two-pass design
+        // (every className is registered before any type symbol) must catch this independent of order.
+        final Binding one = binding("a.h", "Other");
+        one.setStructs(singletonList("Socket"));
+        final Binding two = binding("b.h", "Socket");
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> BindingValidator.validate(Arrays.asList(one, two)));
+        assertTrue(e.getMessage().contains("header class"), e.getMessage());
+    }
+
+    @Test
+    void rejectsTypeSymbolCollidingWithItsOwnHeaderClass() {
+        // Even within one binding, className Foo and struct foo both want Foo.java/foo.java (one file
+        // on a case-insensitive filesystem), so it must be rejected.
+        final Binding one = binding("a.h", "Foo");
+        one.setStructs(singletonList("foo"));
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> BindingValidator.validate(singletonList(one)));
+        assertTrue(e.getMessage().contains("header class"), e.getMessage());
+    }
+
+    @Test
+    void rejectsDuplicateClassNameDifferingOnlyInCase() {
+        // Dup.java and dup.java are the same file on the generating filesystem.
+        final JextractException e = assertThrows(JextractException.class,
+                () -> BindingValidator.validate(Arrays.asList(
+                        binding("a.h", "Dup"), binding("b.h", "dup"))));
+        assertTrue(e.getMessage().contains("Duplicate <className>"), e.getMessage());
+        assertTrue(e.getMessage().contains("a.h"), e.getMessage());
+        assertTrue(e.getMessage().contains("b.h"), e.getMessage());
+    }
+
+    @Test
+    void rejectsSharedStructDifferingOnlyInCase() {
+        final Binding one = binding("a.h", "Aaa");
+        one.setStructs(singletonList("Sockaddr"));
+        final Binding two = binding("b.h", "Bbb");
+        two.setStructs(singletonList("sockaddr"));
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> BindingValidator.validate(Arrays.asList(one, two)));
+        assertTrue(e.getMessage().contains("clobber"), e.getMessage());
+        assertTrue(e.getMessage().contains("Aaa"), e.getMessage());
+        assertTrue(e.getMessage().contains("Bbb"), e.getMessage());
+        // The diagnostic keeps the author's original casing rather than the normalized key.
+        assertTrue(e.getMessage().contains("Sockaddr") || e.getMessage().contains("sockaddr"),
+                e.getMessage());
+    }
+
+    @Test
     void rejectsBlankSymbolEntryUpFront() {
         // A blank <struct>/<function>/etc. must fail during validation, before any jextract runs,
         // and name the offending binding.

@@ -17,6 +17,7 @@ package io.netty.build.jextract;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
@@ -77,27 +78,36 @@ final class BindingValidator {
      * Rejects incomplete or conflicting {@code <binding>} entries. Maven does not enforce
      * {@code required = true} on fields of nested config objects, so a {@code <binding>} missing
      * {@code <header>} or {@code <className>} reaches us and must be rejected here with an actionable
-     * message. We additionally reject two kinds of silent-clobber:
+     * message.
+     *
+     * <p>Every binding generates files into one shared {@code targetPackage} directory: a
+     * {@code <className>.java} for the header class, plus a <em>standalone</em> {@code <symbol>.java}
+     * for each requested {@code <struct>}/{@code <typedef>}/{@code <union>} (jextract names the type
+     * file after the bare C symbol, not the header class). They all share a single on-disk namespace,
+     * so we reject any pair that would resolve to the same file:
      *
      * <ul>
-     *   <li>duplicate {@code <className>}, two bindings would write the same header-class file;</li>
-     *   <li>the same {@code <struct>}/{@code <typedef>}/{@code <union>} requested by more than one
-     *       binding, jextract emits a <em>standalone</em> type file named after the C symbol (e.g.
-     *       {@code sockaddr_in.java}), not after the header class, so two bindings sharing a type
-     *       into the same {@code targetPackage} would overwrite each other's copy of that file, and
-     *       the survivor back-references whichever binding ran last.</li>
+     *   <li>two bindings with the same {@code <className>};</li>
+     *   <li>the same struct/typedef/union requested by two different bindings;</li>
+     *   <li>a struct/typedef/union whose name equals a binding's {@code <className>}, the type file
+     *       would clobber the header-class file, even within the same binding.</li>
      * </ul>
+     *
+     * <p>Names are compared <em>case-insensitively</em>: the files land on the generating machine's
+     * filesystem (macOS and Windows are case-insensitive), where {@code Socket.java} and
+     * {@code socket.java} are the same file. Comparison uses the trimmed name, matching what
+     * {@link JextractCommand} passes to jextract.
      *
      * @param bindings the configured bindings, in declaration order
      * @throws JextractException a {@link JextractException.Category#BUILD_FAILURE} if any binding is
      *                           incomplete or would clobber another
      */
     static void validate(final List<Binding> bindings) throws JextractException {
-        // Keyed by the (unique) className, the binding's identity in diagnostics. classNameToHeader
-        // maps it to its header so a duplicate can name both offending headers; typeSymbolToClassName
-        // maps a standalone-type symbol to the binding that first claimed it.
-        final Map<String, String> classNameToHeader = new HashMap<>();
-        final Map<String, String> typeSymbolToClassName = new HashMap<>();
+        // A single map from normalized (trimmed, lower-cased) file name to the thing that claims it, so
+        // a collision between any two generated files is caught regardless of kind. Header classes are
+        // registered first, so a later type symbol matching a class always reports the class as the
+        // prior claim; the standalone type symbols are registered in the second pass.
+        final Map<String, Claim> byFileName = new HashMap<>();
         for (final Binding binding : bindings) {
             final String header = binding.header();
             final String className = binding.className();
@@ -109,59 +119,120 @@ final class BindingValidator {
                 throw JextractExceptions.buildFailure(
                         "The <binding> for header '" + header + "' is missing a non-empty <className>.");
             }
-            // Two bindings that share a className write to the same generated file, silently
-            // clobbering each other. Reject that up front, naming both headers.
-            final String previousHeader = classNameToHeader.putIfAbsent(className, header);
-            if (previousHeader != null) {
+            final Claim incoming = Claim.headerClass(className.trim(), header);
+            final Claim previous = byFileName.putIfAbsent(key(className), incoming);
+            if (previous != null) {
+                // Only header classes are registered in this pass, so previous is another binding's class.
                 throw JextractExceptions.buildFailure(
-                        "Duplicate <className> '" + className + "' requested by headers '"
-                                + previousHeader + "' and '" + header
-                                + "'; each binding must generate a distinct class.");
+                        "Duplicate <className> '" + incoming.display + "' requested by headers '"
+                                + previous.header + "' and '" + header + "'; each binding must generate a "
+                                + "distinct class (names are compared case-insensitively).");
             }
+        }
+        for (final Binding binding : bindings) {
+            final String className = binding.className().trim();
             rejectBlankSymbols(className, "function", binding.functions());
             rejectBlankSymbols(className, "struct", binding.structs());
             rejectBlankSymbols(className, "constant", binding.constants());
             rejectBlankSymbols(className, "typedef", binding.typedefs());
             rejectBlankSymbols(className, "union", binding.unions());
             rejectBlankSymbols(className, "var", binding.vars());
-            rejectSharedTypeSymbols(typeSymbolToClassName, "struct", binding.structs(), className);
-            rejectSharedTypeSymbols(typeSymbolToClassName, "typedef", binding.typedefs(), className);
-            rejectSharedTypeSymbols(typeSymbolToClassName, "union", binding.unions(), className);
+            registerTypeSymbols(byFileName, "struct", binding.structs(), className);
+            registerTypeSymbols(byFileName, "typedef", binding.typedefs(), className);
+            registerTypeSymbols(byFileName, "union", binding.unions(), className);
         }
     }
 
     /**
-     * Records each standalone-type symbol against the binding ({@code className}) that requested it and
-     * fails if another binding already claimed it. jextract writes these type files under the shared
-     * {@code targetPackage} keyed only by the C symbol name (the kind, struct/typedef/union, does not
-     * appear in the file name), so a clash on the bare name is what actually clobbers on disk.
+     * Registers each standalone-type symbol against the file it would generate and fails on any clash.
+     * A symbol already claimed by the <em>same</em> binding is tolerated (it writes one file, so there
+     * is no clobber); a clash with a different binding's type symbol, or with any header class (even the
+     * declaring binding's own), is a silent overwrite and is rejected.
      *
      * <p>Deliberately conservative for typedefs: a <em>primitive</em> typedef (e.g.
-     * {@code typedef int prim_t}) is inlined by jextract and emits no standalone {@code prim_t.java},
-     * so two bindings sharing one would not actually collide. We reject it anyway, the plugin cannot
-     * know a symbol's kind without parsing the header, and a false rejection (refusing a config that
-     * would have worked) is far safer than a silent overwrite.
+     * {@code typedef int prim_t}) is inlined by jextract and emits no standalone {@code prim_t.java}, so
+     * it would not actually collide. We reject it anyway, the plugin cannot know a symbol's kind without
+     * parsing the header, and a false rejection is far safer than a silent overwrite.
      */
-    private static void rejectSharedTypeSymbols(final Map<String, String> seen, final String kind,
-                                                @Nullable final List<String> symbols, final String className)
+    private static void registerTypeSymbols(final Map<String, Claim> byFileName, final String kind,
+                                            @Nullable final List<String> symbols, final String owner)
             throws JextractException {
         if (symbols == null) {
             return;
         }
         for (final String symbol : symbols) {
             if (StringUtils.isBlank(symbol)) {
-                continue; // JextractCommand rejects blanks; skip here so the message stays focused.
+                continue; // rejectBlankSymbols already failed on this; skip so the message stays focused.
             }
-            final String previousClassName = seen.putIfAbsent(symbol, className);
-            // A binding may list the same symbol twice (it writes one file, so there is no clobber);
-            // only a symbol already claimed by a *different* binding (className) is a clash.
-            if (previousClassName != null && !previousClassName.equals(className)) {
+            final Claim incoming = Claim.typeSymbol(symbol.trim(), owner);
+            final Claim existing = byFileName.get(key(symbol));
+            if (existing == null) {
+                byFileName.put(key(symbol), incoming);
+                continue;
+            }
+            if (existing.headerClass) {
                 throw JextractExceptions.buildFailure(
-                        "Type '" + symbol + "' (<" + kind + ">) is requested by bindings '"
-                                + previousClassName + "' and '" + className + "'; jextract writes a single "
-                                + symbol + ".java into the shared package, so they would clobber each "
-                                + "other. Request each struct/typedef/union from at most one binding.");
+                        "The <" + kind + "> '" + incoming.display + "' requested by binding '" + owner
+                                + "' collides with the header class of binding '" + existing.owner
+                                + "'; jextract writes both as " + existing.display + ".java into the shared "
+                                + "package (file names are compared case-insensitively), so they would "
+                                + "clobber each other. Change the <className> of binding '" + existing.owner
+                                + "' or the conflicting <" + kind + "> name in binding '" + owner
+                                + "' so they no longer map to the same generated file.");
             }
+            if (!existing.owner.equals(owner)) {
+                throw JextractExceptions.buildFailure(
+                        "Type '" + incoming.display + "' (<" + kind + ">) is requested by bindings '"
+                                + existing.owner + "' and '" + owner + "'; jextract writes a single "
+                                + incoming.display + ".java into the shared package, so they would clobber "
+                                + "each other. Request each struct/typedef/union from at most one binding.");
+            }
+            // Same binding: tolerate only an exact repeat (one file). A name differing only in case is
+            // a second, distinct symbol whose file collides on a case-insensitive filesystem.
+            if (!existing.display.equals(incoming.display)) {
+                throw JextractExceptions.buildFailure(
+                        "Binding '" + owner + "' requests '" + existing.display + "' and '"
+                                + incoming.display + "' (<" + kind + ">), which differ only in case; "
+                                + "jextract writes both as " + incoming.display + ".java into the shared "
+                                + "package (file names are compared case-insensitively), so they would "
+                                + "clobber each other. Drop or change one of these <" + kind + "> entries "
+                                + "so they no longer map to the same generated file.");
+            }
+            // Exact repeat, possibly under another kind; one file, no clobber.
+        }
+    }
+
+    /** The shared file-name key: trimmed and lower-cased, matching the case-insensitive target FS. */
+    private static String key(final String name) {
+        return name.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * One claim on a generated file name: either a binding's header class ({@code <className>.java}) or
+     * a standalone type file ({@code <symbol>.java}). {@link #display} keeps the original case for
+     * diagnostics; {@link #owner} is the {@code <className>} of the declaring binding.
+     */
+    private static final class Claim {
+        private final boolean headerClass;
+        private final String display;
+        private final String owner;
+        @Nullable
+        private final String header;
+
+        private Claim(final boolean headerClass, final String display, final String owner,
+                      @Nullable final String header) {
+            this.headerClass = headerClass;
+            this.display = display;
+            this.owner = owner;
+            this.header = header;
+        }
+
+        static Claim headerClass(final String className, final String header) {
+            return new Claim(true, className, className, header);
+        }
+
+        static Claim typeSymbol(final String symbol, final String owner) {
+            return new Claim(false, symbol, owner, null);
         }
     }
 
