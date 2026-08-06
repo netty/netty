@@ -664,12 +664,18 @@ public final class HttpConversionUtil {
         void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http3Exception {
             // lazily created as needed
             StringBuilder cookies = null;
+            boolean hostHeaderFound = false;
+            boolean authorityFound = false;
 
             for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
                 final CharSequence name = entry.getKey();
                 final CharSequence value = entry.getValue();
                 AsciiString translatedName = translations.get(name);
                 if (translatedName != null) {
+                    if (translatedName.contentEqualsIgnoreCase(HttpHeaderNames.HOST)) {
+                        hostHeaderFound = true;
+                        authorityFound = true;
+                    }
                     output.add(translatedName, AsciiString.of(value));
                 } else if (!Http3Headers.PseudoHeaderName.isPseudoHeader(name)) {
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
@@ -691,6 +697,23 @@ public final class HttpConversionUtil {
                             cookies.append("; ");
                         }
                         cookies.append(value);
+                    } else if (contentEqualsIgnoreCase(HttpHeaderNames.HOST, name)) {
+                        // https://www.rfc-editor.org/rfc/rfc9114#section-4.3.1
+                        // the request MUST contain either an :authority pseudo-header field or a Host header field.
+                        // If both fields are present, they MUST contain the same value.
+                        // https://datatracker.ietf.org/doc/html/rfc9112#section-3.2
+                        // A server MUST respond with a 400 (Bad Request) status code to any HTTP/1.1 request message
+                        // that ... contains more than one Host header field line
+                        if (hostHeaderFound) {
+                            if (!contentEqualsIgnoreCase(output.get(HttpHeaderNames.HOST), value)) {
+                                throw streamError(streamId, Http3ErrorCode.H3_MESSAGE_ERROR,
+                                    authorityFound ? "Conflicting ':authority' and 'host' headers found" :
+                                        "Conflicting 'host' headers found", null);
+                            }
+                        } else {
+                            hostHeaderFound = true;
+                            output.add(name, value);
+                        }
                     } else {
                         output.add(name, value);
                     }
