@@ -24,7 +24,12 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -36,6 +41,8 @@ import static io.netty.handler.codec.http.HttpHeaderNames.TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.UPGRADE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -256,6 +263,67 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.addHttp3ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
         assertEquals("no", outHeaders.get("yes"));
         assertEquals("foo=bar; bax=baz", outHeaders.get(COOKIE.toString()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("matchingAuthorityAndHost")
+    public void addHttp3ToHttpHeadersDeduplicatesMatchingAuthorityAndHost(
+            String authority, List<String> hosts, boolean hostAddedFirst, String expectedHost)
+            throws Http3Exception {
+        Http3Headers inHeaders = newAuthorityAndHostHeaders(authority, hosts, hostAddedFirst);
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp3ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertEquals(1, outHeaders.getAll(HOST).size());
+        assertEquals(expectedHost, outHeaders.get(HOST));
+    }
+
+    @ParameterizedTest
+    @MethodSource("conflictingAuthorityAndHost")
+    public void addHttp3ToHttpHeadersRejectsConflictingAuthorityAndHost(
+            String authority, List<String> hosts, boolean hostAddedFirst) {
+        Http3Headers inHeaders = newAuthorityAndHostHeaders(authority, hosts, hostAddedFirst);
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        Http3Exception exception = assertThrows(Http3Exception.class, () ->
+            HttpConversionUtil.addHttp3ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, true));
+        assertEquals(Http3ErrorCode.H3_MESSAGE_ERROR, exception.errorCode());
+    }
+
+    // :authority, host, host header added first, expected value
+    private static Stream<Arguments> matchingAuthorityAndHost() {
+        return Stream.of(
+            Arguments.of("example.com", singletonList("example.com"), false, "example.com"),
+            Arguments.of("Example.COM", singletonList("example.com"), false, "Example.COM"),
+            Arguments.of("example.com", singletonList("Example.COM"), false, "example.com"),
+            Arguments.of("example.com", singletonList("example.com"), true, "example.com"),
+            Arguments.of("example.com", asList("example.com", "example.com"), false, "example.com"),
+            Arguments.of(null, asList("example.com", "example.com"), false, "example.com"));
+    }
+
+    // :authority, host, host header added first
+    private static Stream<Arguments> conflictingAuthorityAndHost() {
+        return Stream.of(
+            Arguments.of("public.example.com", singletonList("internal-admin.local"), false),
+            Arguments.of("public.example.com", singletonList("internal-admin.local"), true),
+            Arguments.of("public.example.com", asList("public.example.com", "internal-admin.local"), false),
+            Arguments.of("example.com", singletonList("example.com:4433"), false),
+            Arguments.of(null, asList("public.example.com", "internal-admin.local"), false));
+    }
+
+    private static Http3Headers newAuthorityAndHostHeaders(
+            String authority, List<String> hosts, boolean hostAddedFirst) {
+        Http3Headers headers = new DefaultHttp3Headers();
+        if (!hostAddedFirst && authority != null) {
+            headers.authority(authority);
+        }
+        for (String host : hosts) {
+            headers.add(HOST, host);
+        }
+        if (hostAddedFirst && authority != null) {
+            headers.authority(authority);
+        }
+        return headers;
     }
 
     @Test

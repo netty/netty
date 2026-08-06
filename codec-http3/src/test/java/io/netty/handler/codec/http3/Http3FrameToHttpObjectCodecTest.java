@@ -348,6 +348,24 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
+    public void testDowngradeHeadersRejectsConflictingAuthorityAndHost() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        Http3Headers headers = new DefaultHttp3Headers();
+        headers.path("/");
+        headers.method("GET");
+        headers.scheme("https");
+        headers.authority("public.example.com");
+        headers.add(HttpHeaderNames.HOST, "internal-admin.local");
+
+        // Http3RequestStreamInboundHandler#exceptionCaught consumes the Http3Exception, so the frame is
+        // dropped rather than rethrown here.
+        assertFalse(ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testDowngradeHeadersWithContentLength() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
