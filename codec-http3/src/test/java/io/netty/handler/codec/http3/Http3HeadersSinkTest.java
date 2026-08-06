@@ -19,7 +19,15 @@ package io.netty.handler.codec.http3;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Http3HeadersSinkTest {
@@ -181,6 +189,62 @@ public class Http3HeadersSinkTest {
         sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
         sink.accept(new AsciiString(HttpHeaderNames.HOST), "example.com:4433");
         sink.finish();
+    }
+
+    @ParameterizedTest
+    @MethodSource("matchingAuthorityAndHost")
+    public void testMatchingAuthorityAndHost(String authority, List<String> hosts) throws Http3Exception {
+        Http3HeadersSink sink = newRequestSink(authority, hosts);
+        sink.finish();
+    }
+
+    @ParameterizedTest
+    @MethodSource("conflictingAuthorityAndHost")
+    public void testConflictingAuthorityAndHost(String authority, List<String> hosts) {
+        Http3HeadersSink sink = newRequestSink(authority, hosts);
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    // :authority, host
+    private static Stream<Arguments> matchingAuthorityAndHost() {
+        return Stream.of(
+            Arguments.of("example.com:4433", singletonList("example.com:4433")),
+            Arguments.of("Example.COM:4433", singletonList("example.com:4433")),
+            Arguments.of("example.com:4433", asList("example.com:4433", "example.com:4433")),
+            Arguments.of(null, singletonList("example.com:4433")),
+            Arguments.of(null, asList("example.com:4433", "example.com:4433")));
+    }
+
+    // :authority, host
+    private static Stream<Arguments> conflictingAuthorityAndHost() {
+        return Stream.of(
+            Arguments.of("public.example.com", singletonList("internal-admin.local")),
+            Arguments.of("public.example.com", asList("public.example.com", "internal-admin.local")),
+            Arguments.of("example.com", singletonList("example.com:4433")),
+            Arguments.of(null, asList("public.example.com", "internal-admin.local")));
+    }
+
+    private static Http3HeadersSink newRequestSink(String authority, List<String> hosts) {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        if (authority != null) {
+            sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), authority);
+        }
+        for (String host : hosts) {
+            sink.accept(new AsciiString(HttpHeaderNames.HOST), host);
+        }
+        return sink;
+    }
+
+    @Test
+    public void testConflictingAuthorityAndHostForConnect() {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "CONNECT");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "public.example.com");
+        sink.accept(new AsciiString(HttpHeaderNames.HOST), "internal-admin.local");
+        assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
     }
 
     private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {
