@@ -180,6 +180,21 @@ class JextractCommandTest {
         assertFalse(args.contains("  socket  "), args.toString());
     }
 
+    @Test
+    void trimsClassName() {
+        // A padded <className> (e.g. "  BsdSocket  ") must reach jextract's --header-class-name trimmed.
+        final JextractCommand command = JextractCommand.builder()
+                .executable(new File("/j"))
+                .outputDirectory(new File("/o"))
+                .targetPackage("p")
+                .binding(binding("a.h", "  BsdSocket  ", singletonList("socket"), emptyList(), emptyList()))
+                .build();
+
+        final List<String> args = command.arguments();
+        assertEquals("BsdSocket", args.get(args.indexOf("--header-class-name") + 1));
+        assertFalse(args.contains("  BsdSocket  "), args.toString());
+    }
+
     // --- run() execution paths (driven directly, no GenerateMojo) --------------------------------
 
     @Test

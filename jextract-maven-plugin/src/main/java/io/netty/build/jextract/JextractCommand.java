@@ -145,7 +145,7 @@ final class JextractCommand {
             args.add("--target-package");
             args.add(targetPackage);
             args.add("--header-class-name");
-            args.add(binding.className());
+            args.add(binding.className().trim());
             addIncludes(args, "--include-function", binding.functions());
             addIncludes(args, "--include-struct", binding.structs());
             addIncludes(args, "--include-constant", binding.constants());
