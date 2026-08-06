@@ -143,4 +143,41 @@ class JextractLocatorTest {
                         .build()
                         .locate());
     }
+
+    @Test
+    void findsWindowsBatLauncherOnPath() throws Exception {
+        // On Windows the PATH launcher is jextract.bat, not the extensionless shell script.
+        final File dir = new File(tmp, "bin");
+        assertTrue(dir.mkdirs());
+        final File bat = new File(dir, "jextract.bat");
+        assertTrue(bat.createNewFile());
+        assertTrue(bat.setExecutable(true));
+
+        final File resolved = JextractLocator.builder()
+                .osName("Windows 11")
+                .pathEnv(dir.getAbsolutePath())
+                .pathSeparator(File.pathSeparator)
+                .build()
+                .locate();
+
+        assertEquals(bat, resolved);
+    }
+
+    @Test
+    void windowsDoesNotMatchExtensionlessJextractOnPath() throws Exception {
+        // The extensionless shell script cannot be exec-ed on Windows, so it must not be resolved there.
+        final File dir = new File(tmp, "bin");
+        assertTrue(dir.mkdirs());
+        final File exe = new File(dir, "jextract");
+        assertTrue(exe.createNewFile());
+        assertTrue(exe.setExecutable(true));
+
+        assertThrows(JextractException.class, () ->
+                JextractLocator.builder()
+                        .osName("Windows 11")
+                        .pathEnv(dir.getAbsolutePath())
+                        .pathSeparator(File.pathSeparator)
+                        .build()
+                        .locate());
+    }
 }

@@ -19,7 +19,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -48,13 +50,29 @@ final class JextractLocator {
         final String jextractEnv = builder.jextractEnv;
         final String pathEnv = builder.pathEnv;
         final String pathSeparator = builder.pathSeparator;
+        final List<String> launcherNames = launcherNames(builder.osName);
         // Priority order: explicit parameter, then JEXTRACT env, then PATH.
         this.sources = Arrays.asList(
                 () -> fromConfiguredPath(explicitPath,
                         "Configured jextract path is not an executable file: "),
                 () -> fromConfiguredPath(jextractEnv,
                         "JEXTRACT environment variable does not point at an executable file: "),
-                () -> searchPath(pathEnv, pathSeparator));
+                () -> searchPath(pathEnv, pathSeparator, launcherNames));
+    }
+
+    /**
+     * The launcher file name(s) to look for on the {@code PATH}, by OS. On Windows the launcher is a
+     * batch script, {@code jextract.bat}, which {@link ProcessBuilder} can exec directly. jextract also
+     * ships {@code jextract.ps1}; it could be run via {@code pwsh -File}, but we do not currently wrap
+     * the invocation that way, so the PowerShell launcher is not supported and not searched. Every other
+     * OS uses the extensionless {@code jextract} shell script. An explicit {@code <jextract>} parameter
+     * or {@code JEXTRACT} value takes a full path, so this only governs the bare-name PATH search.
+     */
+    private static List<String> launcherNames(@Nullable final String osName) {
+        if (osName != null && osName.toLowerCase(Locale.ROOT).startsWith("windows")) {
+            return Collections.singletonList("jextract.bat");
+        }
+        return Collections.singletonList("jextract");
     }
 
     /**
@@ -106,7 +124,8 @@ final class JextractLocator {
         throw JextractExceptions.executionError(invalidMessage + value);
     }
 
-    private static File searchPath(@Nullable final String pathEnv, @Nullable final String pathSeparator) {
+    private static File searchPath(@Nullable final String pathEnv, @Nullable final String pathSeparator,
+                                   final List<String> launcherNames) {
         if (StringUtils.isBlank(pathEnv) || StringUtils.isBlank(pathSeparator)) {
             return null;
         }
@@ -117,9 +136,11 @@ final class JextractLocator {
             if (dir.isEmpty()) {
                 continue;
             }
-            final File candidate = new File(dir, "jextract");
-            if (isExecutableFile(candidate)) {
-                return candidate;
+            for (final String name : launcherNames) {
+                final File candidate = new File(dir, name);
+                if (isExecutableFile(candidate)) {
+                    return candidate;
+                }
             }
         }
         return null;
@@ -142,6 +163,8 @@ final class JextractLocator {
         private String pathEnv;
         @Nullable
         private String pathSeparator;
+        @Nullable
+        private String osName;
 
         private Builder() {
         }
@@ -171,14 +194,25 @@ final class JextractLocator {
         }
 
         /**
-         * Fills the environment-derived sources ({@code JEXTRACT}, {@code PATH} and the path
-         * separator) from the real process environment. The explicit path is left untouched, set
+         * Sets the OS name (as in {@code os.name}) that selects the PATH launcher file name
+         * ({@code jextract} vs {@code jextract.bat}). {@code null} means "not Windows". Tests set this
+         * explicitly; {@link #fromSystem()} fills it from the real property.
+         */
+        Builder osName(@Nullable final String osName) {
+            this.osName = osName;
+            return this;
+        }
+
+        /**
+         * Fills the environment-derived sources ({@code JEXTRACT}, {@code PATH}, the path separator and
+         * {@code os.name}) from the real process environment. The explicit path is left untouched, set
          * it separately via {@link #explicitPath(String)}.
          */
         Builder fromSystem() {
             this.jextractEnv = System.getenv("JEXTRACT");
             this.pathEnv = System.getenv("PATH");
             this.pathSeparator = File.pathSeparator;
+            this.osName = System.getProperty("os.name");
             return this;
         }
 
