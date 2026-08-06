@@ -117,8 +117,9 @@ See [Jextract.md](Jextract.md) for the plugin configuration and the recommended 
   (and the forbidden-apis equivalent), or by adding a `generated/` entry to the shared
   `SuppressionFilter` in `netty-build-common` (a cross-artifact change). Needed before the first FFM
   module builds.
-- **Java version.** FFM requires Java 25; gate the modules behind a JDK-25-activated profile (as the
-  existing `java25` profile does) so older JDKs skip them. No multi-release jar needed.
+- **Java version.** The FFM API is stable since Java 22, but these modules baseline on Java 25 to
+  match the target JDK; on the 5.0 branch they hard-require 25 directly rather than sitting behind a
+  JDK-gated profile.
 - **`module-info`** via the `io.github.dmlloyd.module-info` plugin. No `provides`: transport selection
   stays explicit (`KQueue.isAvailable() ? ... : NioIoHandler.newFactory()`), as with the other
   transports.
@@ -129,7 +130,6 @@ See [Jextract.md](Jextract.md) for the plugin configuration and the recommended 
 ## Open questions
 
 - Module naming: `transport-ffm-native-kqueue` vs `transport-ffm-bindings-kqueue`.
-- JDK gating: profile-skip on JDK < 25 vs. hard-require 25 to build.
 - Exact jextract option for pinning the SDK sysroot (may be `SDKROOT` or a clang-arg passthrough
   rather than a first-class flag).
 - `critical()` / `captureCallState` composition; benchmark before relying on it.
