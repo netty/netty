@@ -517,7 +517,7 @@ public final class OpenSsl {
 
     private static boolean doesSupportOcsp() {
         boolean supportsOcsp = false;
-        if (version() >= 0x10002000L) {
+        if (isBoringSSL() || isAWSLC()) {
             long sslCtx = -1;
             try {
                 sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_TLSV1_2, SSL.SSL_MODE_SERVER);
