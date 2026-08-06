@@ -211,8 +211,10 @@ final class StagingDirectory implements AutoCloseable {
     private static void deleteQuietly(final Path path) {
         try {
             deleteRecursively(path);
-        } catch (final IOException ignored) {
-            // Best-effort cleanup; a leftover under the git-ignored build directory is harmless.
+        } catch (final Throwable ignored) {
+            // Best-effort cleanup; a leftover under the git-ignored build directory is harmless. Catch
+            // Throwable so no cleanup failure (not just IOException) can turn an already-promoted
+            // generation into a reported failure.
         }
     }
 
