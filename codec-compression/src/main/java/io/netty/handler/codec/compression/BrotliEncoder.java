@@ -249,14 +249,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 return;
             }
             closeInitiated = true;
-            final Promise<Void> promise = ctx.newPromise();
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        finish(promise);
+                        finish(closeFuture);
                     } catch (IOException ex) {
-                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+                        closeFuture.setFailure(new IllegalStateException("Failed to finish encoding", ex));
                     }
                 }
             });
