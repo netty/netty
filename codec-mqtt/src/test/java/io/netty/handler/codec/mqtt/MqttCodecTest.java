@@ -34,6 +34,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -1515,6 +1517,83 @@ public class MqttCodecTest {
             assertEquals("a\u0000b", ((MqttConnectMessage) msg).payload().clientIdentifier());
         } finally {
             ReferenceCountUtil.release(msg);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(MqttVersion.class)
+    public void encodeConnectMessageWithNulInClientIdIsRejected(MqttVersion version) {
+        final MqttConnectMessage message = MqttMessageBuilders.connect()
+                .clientId("client\u0000id")
+                .protocolVersion(version)
+                .cleanSession(true)
+                .keepAlive(KEEP_ALIVE_SECONDS)
+                .build();
+        assertThrows(MqttIdentifierRejectedException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @EnumSource(MqttVersion.class)
+    public void encodeConnectMessageWithNulInWillTopicIsRejected(MqttVersion version) {
+        final MqttConnectMessage message = MqttMessageBuilders.connect()
+                .clientId(CLIENT_ID)
+                .protocolVersion(version)
+                .willFlag(true)
+                .willQoS(MqttQoS.AT_LEAST_ONCE)
+                .willTopic("will\u0000topic")
+                .willMessage(WILL_MESSAGE.getBytes(CharsetUtil.UTF_8))
+                .cleanSession(true)
+                .keepAlive(KEEP_ALIVE_SECONDS)
+                .build();
+        assertThrows(MqttIdentifierRejectedException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @EnumSource(MqttVersion.class)
+    public void encodeConnectMessageWithNulInUserNameIsRejected(MqttVersion version) {
+        final MqttConnectMessage message = MqttMessageBuilders.connect()
+                .clientId(CLIENT_ID)
+                .protocolVersion(version)
+                .username("user\u0000name")
+                .password(PASSWORD_BYTES)
+                .cleanSession(true)
+                .keepAlive(KEEP_ALIVE_SECONDS)
+                .build();
+        assertThrows(MqttIdentifierRejectedException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                MqttEncoder.doEncode(ctx, message);
+            }
+        });
+    }
+
+    @Test
+    public void encodePublishMessageWithNulInTopicIsRejected() {
+        MqttFixedHeader fixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_LEAST_ONCE, false, 0);
+        MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader("home/\u0000/sensor", 1);
+        ByteBuf payload = ALLOCATOR.buffer();
+        payload.writeBytes("data".getBytes(CharsetUtil.UTF_8));
+        final MqttPublishMessage message = new MqttPublishMessage(fixedHeader, variableHeader, payload);
+        try {
+            assertThrows(MqttIdentifierRejectedException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    MqttEncoder.doEncode(ctx, message);
+                }
+            });
+        } finally {
+            payload.release();
         }
     }
 }

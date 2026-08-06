@@ -178,6 +178,14 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 //
                 //            See https://github.com/netty/netty/issues/5372
 
+                if (thiz.endpointIdentificationAlgorithm != null && !thiz.endpointIdentificationAlgorithm.isEmpty() &&
+                        !useExtendedTrustManager(manager)) {
+                    throw new UnsupportedOperationException(
+                            "Endpoint identification algorithm '" + thiz.endpointIdentificationAlgorithm + "' is " +
+                            "configured but the trust manager does not support extended trust manager verification. " +
+                            "Please provide an X509ExtendedTrustManager or use the SslProvider.JDK.");
+                }
+
                 setVerifyCallback(ctx, engines, manager);
             } catch (Exception e) {
                 if (keyMaterialProvider != null) {
