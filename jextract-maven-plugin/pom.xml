@@ -46,8 +46,8 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <!-- Coordinates for the Maven APIs we compile against. -->
-    <mavenPlugin.api.version>3.9.9</mavenPlugin.api.version>
-    <mavenPlugin.tools.version>3.13.1</mavenPlugin.tools.version>
+    <mavenPlugin.api.version>3.9.16</mavenPlugin.api.version>
+    <mavenPlugin.tools.version>3.15.2</mavenPlugin.tools.version>
   </properties>
 
   <dependencies>
