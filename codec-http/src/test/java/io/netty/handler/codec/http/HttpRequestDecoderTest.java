@@ -716,7 +716,7 @@ public class HttpRequestDecoderTest {
     // HTTP_1_1 condition, so it was silently skipped for HTTP/1.0 when
     // useRfc9112TransferEncoding is disabled. See HttpObjectDecoder#readHeaders.
     @Test
-    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112Disabled() {
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112Disabled() throws Exception {
         String requestStr = "GET /some/path HTTP/1.0\r\n" +
                 "Transfer-Encoding: chunked, identity\r\n" +
                 "Content-Length: 1\r\n" +
@@ -737,7 +737,7 @@ public class HttpRequestDecoderTest {
     // Companion to the test above: confirms the fix isn't tied to identity being a no-op
     // by using a real trailing encoding (gzip) instead.
     @Test
-    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112DisabledNonNoOpEncoding() {
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112DisabledNonNoOpEncoding() throws Exception {
         String requestStr = "GET /some/path HTTP/1.0\r\n" +
                 "Transfer-Encoding: chunked, gzip\r\n" +
                 "Content-Length: 1\r\n" +
