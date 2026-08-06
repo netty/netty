@@ -1321,20 +1321,35 @@ public abstract class SSLEngineTest {
 
     private static void writeAndVerifyReceived(ByteBuf message, Channel sendChannel, CountDownLatch receiverLatch,
                                                MessageReceiver receiver) throws Exception {
-        List<ByteBuf> dataCapture = null;
+        ByteBuf buf = null;
         try {
-            assertTrue(sendChannel.writeAndFlush(message).await(10, TimeUnit.SECONDS));
-            receiverLatch.await(5, TimeUnit.SECONDS);
-            message.resetReaderIndex();
+            assertTrue(sendChannel.writeAndFlush(message.duplicate())
+                    .await(10, TimeUnit.SECONDS));
+            receiverLatch.await(10, TimeUnit.SECONDS);
             assertFalse(receiver.messages.isEmpty());
-            dataCapture = new ArrayList<ByteBuf>();
-            receiver.messages.drainTo(dataCapture);
-            assertEquals(message, dataCapture.get(0));
+
+            buf = Unpooled.buffer();
+            ByteBuf buffer = receiver.messages.take();
+            for (;;) {
+                buf.writeBytes(buffer);
+                buffer.release();
+                if (buf.readableBytes() < message.readableBytes()) {
+                    buffer = receiver.messages.poll(1, TimeUnit.SECONDS);
+                    if (buffer == null) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            assertEquals(message, buf);
         } finally {
-            if (dataCapture != null) {
-                for (ByteBuf data : dataCapture) {
+            if (buf != null) {
+                buf.release();
+                for (ByteBuf data : receiver.messages) {
                     data.release();
                 }
+                receiver.messages.clear();
             }
         }
     }
