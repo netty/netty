@@ -712,6 +712,49 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0(requestStr);
     }
 
+    // Regression: the chunked-must-be-last check was nested inside a protocolVersion() ==
+    // HTTP_1_1 condition, so it was silently skipped for HTTP/1.0 when
+    // useRfc9112TransferEncoding is disabled. See HttpObjectDecoder#readHeaders.
+    @Test
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112Disabled() {
+        String requestStr = "GET /some/path HTTP/1.0\r\n" +
+                "Transfer-Encoding: chunked, identity\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        HttpDecoderConfig config = new HttpDecoderConfig().setUseRfc9112TransferEncoding(false);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
+        assertTrue(channel.writeInbound(
+                Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertTrue(request.decoderResult().isFailure(),
+                "expected 'chunked must be last' to be enforced regardless of HTTP version "
+                        + "when Transfer-Encoding is legitimately present (useRfc9112TransferEncoding=false)");
+        channel.finishAndReleaseAll();
+    }
+
+    // Companion to the test above: confirms the fix isn't tied to identity being a no-op
+    // by using a real trailing encoding (gzip) instead.
+    @Test
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112DisabledNonNoOpEncoding() {
+        String requestStr = "GET /some/path HTTP/1.0\r\n" +
+                "Transfer-Encoding: chunked, gzip\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        HttpDecoderConfig config = new HttpDecoderConfig().setUseRfc9112TransferEncoding(false);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
+        assertTrue(channel.writeInbound(
+                Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertTrue(request.decoderResult().isFailure(),
+                "expected 'chunked must be last' to be enforced regardless of the specific "
+                        + "trailing encoding value, matching the identity-trailing case above");
+        channel.finishAndReleaseAll();
+    }
+
     @Test
     public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() throws Exception {
         testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
