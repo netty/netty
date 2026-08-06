@@ -113,7 +113,7 @@ jobs:
             cache-windows-maven-
 
       - name: Set up TestLens
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
+        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
@@ -257,7 +257,9 @@ jobs:
             cache-maven-al2023-
 
       - name: Set up TestLens
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
+        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
+        with:
+          working-directory: netty
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
@@ -338,7 +340,7 @@ jobs:
         run: brew bundle
 
       - name: Set up TestLens
-        uses: testlens-app/setup-testlens@3f82d2dc6cd5c03f02ce5f7885a21195d85f8d14 # Pin 1.9.3
+        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true && ./mvnw -B -ntp --file pom.xml package -Pboringssl -pl transport-native-kqueue
