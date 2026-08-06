@@ -849,24 +849,29 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         if (HttpUtil.isTransferEncodingChunked(message)) {
             this.chunked = true;
+            // The "chunked must be the last encoding" rule (RFC 9112 6.1) is not specific to
+            // HTTP/1.1 -- it applies to any message that carries a Transfer-Encoding header at
+            // all. This validation must not be gated on protocolVersion(), since a decoder
+            // configured with useRfc9112TransferEncoding(false) (see HttpDecoderConfig) can
+            // still reach this point for HTTP/1.0 and other non-1.1 messages, and the ordering
+            // requirement applies to those just as much as it does to HTTP/1.1.
+            // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
+            Iterator<? extends CharSequence> encodingIt =
+                    message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
+            CharSequence v = null;
+            while (encodingIt.hasNext()) {
+                v = encodingIt.next();
+            }
+            final int vLen = v.length();
+            final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
+            // We only need to validate if we have more then the chunked value length contained as otherwise
+            // we know it is only chunked.
+            if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
+                    HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
+                    throw new IllegalArgumentException(
+                            "chunked must be the last encoding present in the Transfer-Encoding header");
+            }
             if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                Iterator<? extends CharSequence> encodingIt =
-                        message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
-                // Validate that chunked is the last encoding.
-                // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
-                CharSequence v = null;
-                while (encodingIt.hasNext()) {
-                    v = encodingIt.next();
-                }
-                final int vLen = v.length();
-                final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
-                // We only need to validate if we have more then the chunked value length contained as otherwise
-                // we know it is only chunked.
-                if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
-                        HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
-                        throw new IllegalArgumentException(
-                                "chunked must be the last encoding present in the Transfer-Encoding header");
-                }
                 if (!contentLengthFields.isEmpty()) {
                     handleTransferEncodingChunkedWithContentLength(message);
                 }
@@ -918,8 +923,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      *     </li>
      * </ul>
      * <p>
-     * <strong>Note:</strong> This method is only called for {@code HTTP/1.1} requests. Earlier HTTP protocol versions
-     * do not support the {@code Transfer-Encoding} header, and will reject requests that include it.
+     * <strong>Note:</strong> This method is only called for {@code HTTP/1.1} requests. Under the
+     * default configuration, earlier HTTP protocol versions carrying a {@code Transfer-Encoding}
+     * header are rejected before reaching this point. However, if
+     * {@link HttpDecoderConfig#setUseRfc9112TransferEncoding(boolean)} is set to {@code false}
+     * (see above), that rejection does not happen — a non-{@code HTTP/1.1} message can then
+     * legitimately carry {@code Transfer-Encoding} without being rejected for it, though this
+     * method specifically remains {@code HTTP/1.1}-only and is not invoked for such messages.
      */
     @SuppressWarnings("unused")
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
