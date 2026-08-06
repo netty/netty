@@ -106,6 +106,17 @@ public interface MpscIntQueue {
     int size();
 
     /**
+     * Return the fixed capacity of this queue.
+     */
+    int capacity();
+
+    /**
+     * Reset the queue and fill with {@code count} values: 0, stride, 2*stride, ...
+     * Must only be called when no producers or consumers are active (single-threaded context).
+     */
+    void resetAndFill(int count, int stride);
+
+    /**
      * This implementation is based on MpscAtomicUnpaddedArrayQueue from JCTools.
      */
     final class MpscAtomicIntegerArrayQueue extends AtomicIntegerArray implements MpscIntQueue {
@@ -264,7 +275,7 @@ public interface MpscIntQueue {
             Objects.requireNonNull(op, "op");
             ObjectUtil.checkPositiveOrZero(limit, "limit");
             if (limit == 0) {
-                return 0;
+                return initial;
             }
             int result = initial;
 
@@ -306,6 +317,28 @@ public interface MpscIntQueue {
                 }
             }
             return size < 0 ? 0 : size > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) size;
+        }
+
+        @Override
+        public int capacity() {
+            return mask + 1;
+        }
+
+        @Override
+        public void resetAndFill(int count, int stride) {
+            final int mask = this.mask;
+            int offset = 0;
+            for (int i = 0; i < count; i++) {
+                lazySet(i & mask, offset);
+                offset += stride;
+            }
+            int capacity = mask + 1;
+            for (int i = count; i < capacity; i++) {
+                lazySet(i & mask, emptyValue);
+            }
+            CONSUMER_INDEX.lazySet(this, 0);
+            PRODUCER_LIMIT.lazySet(this, mask + 1);
+            PRODUCER_INDEX.set(this, count);
         }
     }
 }

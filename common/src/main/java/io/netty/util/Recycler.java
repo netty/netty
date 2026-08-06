@@ -32,6 +32,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.PlatformDependent.newFixedMpmcQueue;
+import static io.netty.util.internal.PlatformDependent.newFixedMpscQueue;
 import static io.netty.util.internal.PlatformDependent.newMpscQueue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -134,6 +135,11 @@ public abstract class Recycler<T> {
      * (similar to what {@link EnhancedHandle#unguardedRecycle(Object)} does).<br>
      */
     protected Recycler(int maxCapacity, boolean unguarded) {
+        this(maxCapacity, unguarded, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Recycler(int maxCapacity, boolean unguarded, boolean exclusiveGet) {
         if (maxCapacity <= 0) {
             maxCapacity = 0;
         } else {
@@ -142,8 +148,10 @@ public abstract class Recycler<T> {
         threadLocalPool = null;
         if (maxCapacity == 0) {
             localPool = (LocalPool<?, T>) NOOP_LOCAL_POOL;
+        } else if (exclusiveGet && unguarded) {
+            localPool = new UnguardedLocalPool<>(maxCapacity, true);
         } else {
-            localPool = unguarded? new UnguardedLocalPool<>(maxCapacity) : new GuardedLocalPool<>(maxCapacity);
+            localPool = unguarded ? new UnguardedLocalPool<>(maxCapacity) : new GuardedLocalPool<>(maxCapacity);
         }
     }
 
@@ -479,6 +487,11 @@ public abstract class Recycler<T> {
             handle = maxCapacity == 0? null : new LocalPoolHandle<>(this);
         }
 
+        UnguardedLocalPool(int maxCapacity, boolean exclusiveGet) {
+            super(maxCapacity, exclusiveGet);
+            handle = maxCapacity == 0? null : new LocalPoolHandle<>(this);
+        }
+
         UnguardedLocalPool(Thread owner, int maxCapacity, int ratioInterval, int chunkSize) {
             super(owner, maxCapacity, ratioInterval, chunkSize);
             handle = new LocalPoolHandle<>(this);
@@ -508,14 +521,17 @@ public abstract class Recycler<T> {
         private int ratioCounter;
 
         LocalPool(int maxCapacity) {
-            // if there's no capacity, we need to never allocate pooled objects.
-            // if there's capacity, because there is a shared pool, we always pool them, since we cannot trust the
-            // thread unsafe ratio counter.
+            this(maxCapacity, false);
+        }
+
+        @SuppressWarnings("unchecked")
+        LocalPool(int maxCapacity, boolean exclusiveGet) {
             this.ratioInterval = maxCapacity == 0? -1 : 0;
             this.owner = null;
             batch = null;
             batchSize = 0;
-            pooledHandles = createExternalMcPool(maxCapacity);
+            pooledHandles = exclusiveGet ? (MessagePassingQueue<H>) newFixedMpscQueue(maxCapacity)
+                    : createExternalMcPool(maxCapacity);
             ratioCounter = 0;
         }
 

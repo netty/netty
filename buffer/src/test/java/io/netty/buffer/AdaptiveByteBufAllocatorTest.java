@@ -277,9 +277,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         // Thread-local magazines require FastThreadLocalThread
         // (allocate() checks currentThreadWillCleanupFastThreadLocals)
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
-        long purgePolls = threadLocal ?
-                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL :
-                AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_SHARED;
+        // Both thread-local and shared-stripe magazines use ThreadLocalSizeClassedChunkCache,
+        // so the purge poll constant is the same for both paths.
+        long purgePolls = AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL;
         Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
         if (threadLocal) {
             FastThreadLocalThread.runWithFastThreadLocal(test);
