@@ -77,6 +77,14 @@ aarch64 are both LP64), so the output is identical across them and one no-classi
 suffices. A CI check (below) regenerates on both arches and asserts byte-identical output; a future
 non-LP64 architecture would need its own binding set.
 
+**libc implementations (Linux).** macOS ships a single system libc, but Linux does not: glibc and musl
+can differ in struct layouts, type sizes, and symbol availability, and jextract reads whichever libc's
+headers are installed. A binding set is therefore valid for one libc as well as one OS, so on Linux
+"per-OS" is really "per-OS-and-libc." Two options: generate a separate set per libc (a musl variant
+alongside glibc), or pin glibc as the supported target and treat musl as out of scope until there is
+demand. Either way the pinned toolchain recorded in the provenance manifest must capture the libc on
+Linux, so a glibc-vs-musl difference surfaces as a reviewable diff rather than silent drift.
+
 ## Hand-written code: errno capture
 
 jextract does not build its downcall handles with `Linker.Option.captureCallState("errno")`, so the
