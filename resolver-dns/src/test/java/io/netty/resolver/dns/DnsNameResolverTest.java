@@ -261,7 +261,7 @@ public class DnsNameResolverTest {
         DOMAINS_PUNYCODE.put("müller.de", "xn--mller-kva.de");
     }
 
-    private static final Set<String> DOMAINS_ALL;
+    static final Set<String> DOMAINS_ALL;
 
     static {
         Set<String> all = new HashSet<String>(DOMAINS.size() + DOMAINS_PUNYCODE.size());
@@ -393,7 +393,13 @@ public class DnsNameResolverTest {
     private static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
                                                       DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
                                                       TestDnsServer dnsServer) {
-        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
+        return newResolver(strategy, decodeToUnicode, dnsServerAddressStreamProvider, dnsServer, group.next());
+    }
+
+    static DnsNameResolverBuilder newResolver(DnsNameResolverChannelStrategy strategy, boolean decodeToUnicode,
+                                                      DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+                                                      TestDnsServer dnsServer, EventLoop eventLoop) {
+        DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop)
                 .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
                 .datagramChannelType(NioDatagramChannel.class)
                 .maxQueriesPerResolve(1)
@@ -2173,7 +2179,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static final class TestRecursiveCacheDnsQueryLifecycleObserverFactory
+    static final class TestRecursiveCacheDnsQueryLifecycleObserverFactory
             implements DnsQueryLifecycleObserverFactory {
         final Queue<TestDnsQueryLifecycleObserver> observers =
                 new ConcurrentLinkedQueue<TestDnsQueryLifecycleObserver>();
