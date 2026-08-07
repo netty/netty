@@ -849,7 +849,7 @@
     <logging.logLevel>warn</logging.logLevel>
     <log4j2.version>2.25.3</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
-    <junit.version>5.12.1</junit.version>
+    <junit.version>5.14.3</junit.version>
     <jazzer.version>0.30.0</jazzer.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
