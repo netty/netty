@@ -46,6 +46,8 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.StringUtil;
@@ -85,6 +87,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
     private short opsId = Short.MIN_VALUE;
+    private IntObjectHashMap<WriteOperation> writeOperations;
 
     private long pollInId;
     private long pollOutId;
@@ -200,6 +203,57 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             id = opsId++;
         }
         return id;
+    }
+
+    /**
+     * Returns an operation id that is not owned by a pending write CQE, or {@code 0} when all write-operation ids
+     * are in use.
+     */
+    protected final short nextWriteOperationId() {
+        for (int attempts = 0; attempts < 65535; ++attempts) {
+            short id = nextOpsId();
+            if (writeOperations == null || !writeOperations.containsKey(id)) {
+                return id;
+            }
+        }
+        return 0;
+    }
+
+    final void retainWriteOperation(short id, byte opCode, ReferenceCounted... references) {
+        if (writeOperations == null) {
+            writeOperations = new IntObjectHashMap<>();
+        }
+        WriteOperation operation = new WriteOperation();
+        operation.retain(opCode, references);
+        writeOperations.put(id, operation);
+    }
+
+    final void rollbackWriteOperation(short id, byte opCode) {
+        WriteOperation operation = writeOperation(id, opCode);
+        if (operation != null) {
+            writeOperations.remove(id);
+            operation.rollback();
+        }
+    }
+
+    final void completeWriteOperation(short id, byte opCode, int flags) {
+        WriteOperation operation = writeOperation(id, opCode);
+        if (operation != null) {
+            operation.complete(flags);
+            if (operation.isDone()) {
+                writeOperations.remove(id);
+            }
+        }
+    }
+
+    private WriteOperation writeOperation(short id, byte opCode) {
+        if (writeOperations == null) {
+            return null;
+        }
+        WriteOperation operation = writeOperations.get(id);
+        // Only the op that submitted this id owns it. A completion for an op whose id was never handed out by
+        // nextWriteOperationId() must not terminate an unrelated in-flight operation that shares the value.
+        return operation != null && operation.opCode() == opCode ? operation : null;
     }
 
     public final boolean isOpen() {
@@ -394,8 +448,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         } else {
             numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteSingle(msg);
         }
-        // Ensure we never overflow
-        assert numOutstandingWrites > 0;
+        // Ensure we never overflow. A zero return means that all write-operation ids are in use and the write
+        // submission is deferred until a terminal CQE releases one.
+        assert numOutstandingWrites >= 0;
         return numOutstandingWrites;
     }
 
@@ -972,13 +1027,19 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data  the data that was passed when submitting the op.
          */
         private void writeComplete(byte op, int res, int flags, short data) {
+            completeWriteOperation(data, op, flags);
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.
                 freeMsgHdrArray();
                 if (res > 0) {
                     // Connect complete!
-                    outboundBuffer().removeBytes(res);
+                    // The completion may arrive after close() or shutdownOutput() already dropped the
+                    // outbound buffer, in which case there is nothing left to remove.
+                    ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
+                    if (channelOutboundBuffer != null) {
+                        channelOutboundBuffer.removeBytes(res);
+                    }
 
                     // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
                     connectComplete(op, 0, flags, data);
@@ -1134,12 +1195,20 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                         int fd = fd().intValue();
                         IoRegistration registration = registration();
-                        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
-                                hdr.address(), hdr.idx());
-                        connectId = registration.submit(ops);
-                        if (connectId == 0) {
-                            // Directly release the memory if submitting failed.
+                        short opsId = nextWriteOperationId();
+                        if (opsId == 0) {
                             freeMsgHdrArray();
+                            submitConnect(inetSocketAddress);
+                        } else {
+                            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
+                                    hdr.address(), opsId);
+                            retainWriteOperation(opsId, ops.opcode(), initialData);
+                            connectId = registration.submit(ops);
+                            if (connectId == 0) {
+                                rollbackWriteOperation(opsId, ops.opcode());
+                                // Directly release the memory if submitting failed.
+                                freeMsgHdrArray();
+                            }
                         }
                     } else {
                         submitConnect(inetSocketAddress);

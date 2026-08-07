@@ -35,9 +35,11 @@ import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
@@ -117,6 +119,28 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSendZcRetainsBufferWhenLocalCloseRacesPrimaryCqe(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferRetainedWhenLocalCloseRacesPrimaryCqe(bootstrap, false);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testSendmsgZcRetainsBuffersWhenLocalCloseRacesPrimaryCqe(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferRetainedWhenLocalCloseRacesPrimaryCqe(bootstrap, true);
+            }
+        });
+    }
+
     private enum Close {
         REMOTE,
         LOCAL,
@@ -180,13 +204,9 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     if (cause != null) {
                         fail(cause);
                     }
-                    // The buffer should still have a reference count of 1 as we did not receive the second notification
-                    // yet as the remote peer did not start reading and did not close the socket yet.
-                    if (multiple) {
-                        assertEquals(numBuffers, buffer.refCnt());
-                    } else {
-                        assertEquals(numBuffers, buffer.refCnt());
-                    }
+                    // This is the primary CQE with IORING_CQE_F_MORE. The zero-copy references must remain live
+                    // until the following IORING_CQE_F_NOTIF, because the peer has neither acknowledged nor closed.
+                    assertEquals(numBuffers, buffer.refCnt());
 
                     switch (remoteClose) {
                         case REMOTE:
@@ -213,14 +233,110 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     }
 
                     // Wait till the buffer was finally released, which should be done in a timely fashion.
-                    while (buffer.refCnt() != 0) {
-                        Thread.sleep(50);
-                    }
+                    assertTrue(awaitRefCntZero(channel, buffer, 5, TimeUnit.SECONDS),
+                            "zero-copy buffer was not released in time");
+                    // The notification releases the retained zero-copy reference exactly once.
+                    assertEquals(0, buffer.refCnt());
                 } finally {
                     // Close the channel now
                     channel.close().sync();
                 }
             }
         }
+    }
+
+    private static void testBufferRetainedWhenLocalCloseRacesPrimaryCqe(Bootstrap cb, boolean multiple)
+            throws Throwable {
+        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
+
+        try (ServerSocket serverSocket = new ServerSocket()) {
+            serverSocket.bind(new InetSocketAddress(0));
+            Channel channel = cb.connect(serverSocket.getLocalSocketAddress()).sync().channel();
+            try (Socket socket = serverSocket.accept()) {
+                final AtomicReference<ByteBuf> firstBufferRef = new AtomicReference<>();
+                final AtomicReference<ByteBuf> secondBufferRef = new AtomicReference<>();
+                final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+                final AtomicInteger firstRefCntAfterClose = new AtomicInteger(-1);
+                final AtomicInteger secondRefCntAfterClose = new AtomicInteger(-1);
+                final CountDownLatch localCloseIssued = new CountDownLatch(1);
+
+                // Submit the write and close in one event-loop task. CQEs cannot be reaped until the task returns,
+                // so the assertion below observes the window where the kernel still owns the submitted memory.
+                channel.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            ByteBuf first = channel.alloc().directBuffer(1024 * 1024);
+                            first.writeZero(first.capacity());
+                            firstBufferRef.set(first);
+                            if (multiple) {
+                                ByteBuf second = channel.alloc().directBuffer(1024 * 1024);
+                                second.writeZero(second.capacity());
+                                secondBufferRef.set(second);
+                                channel.write(first);
+                                channel.writeAndFlush(second);
+                            } else {
+                                channel.writeAndFlush(first);
+                            }
+                            channel.close();
+                            firstRefCntAfterClose.set(first.refCnt());
+                            if (multiple) {
+                                secondRefCntAfterClose.set(secondBufferRef.get().refCnt());
+                            }
+                        } catch (Throwable cause) {
+                            causeRef.set(cause);
+                        } finally {
+                            localCloseIssued.countDown();
+                        }
+                    }
+                });
+
+                assertTrue(localCloseIssued.await(5, TimeUnit.SECONDS), "local close was not issued");
+                Throwable cause = causeRef.get();
+                if (cause != null) {
+                    fail(cause);
+                }
+
+                ByteBuf first = firstBufferRef.get();
+                assertTrue(firstRefCntAfterClose.get() > 0,
+                        "local close must keep SEND_ZC memory live before its notification CQE");
+                if (multiple) {
+                    ByteBuf second = secondBufferRef.get();
+                    assertTrue(secondRefCntAfterClose.get() > 0,
+                            "local close must keep SENDMSG_ZC memory live before its notification CQE");
+                }
+                socket.close();
+
+                assertTrue(channel.closeFuture().await(5, TimeUnit.SECONDS), "channel did not close in time");
+                assertTrue(awaitRefCntZero(channel, first, 5, TimeUnit.SECONDS),
+                        "SEND_ZC memory was not released by its terminal CQE");
+                assertEquals(0, first.refCnt(), "SEND_ZC memory was not released by its terminal CQE");
+                if (multiple) {
+                    ByteBuf second = secondBufferRef.get();
+                    assertTrue(awaitRefCntZero(channel, second, 5, TimeUnit.SECONDS),
+                            "SENDMSG_ZC memory was not released by its terminal CQE");
+                    assertEquals(0, second.refCnt(), "SENDMSG_ZC memory was not released by its terminal CQE");
+                }
+            } finally {
+                channel.close().sync();
+            }
+        }
+    }
+
+    private static boolean awaitRefCntZero(Channel channel, ByteBuf buffer, long timeout, TimeUnit unit)
+            throws InterruptedException {
+        CountDownLatch released = new CountDownLatch(1);
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (buffer.refCnt() == 0) {
+                    released.countDown();
+                } else {
+                    channel.eventLoop().schedule(this, 10, TimeUnit.MILLISECONDS);
+                }
+            }
+        });
+        return released.await(timeout, unit);
     }
 }

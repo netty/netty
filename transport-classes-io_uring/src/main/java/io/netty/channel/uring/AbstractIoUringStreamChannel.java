@@ -30,6 +30,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -38,6 +39,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -270,8 +272,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
 
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
             try {
-                in.forEachFlushedMessage(filterWriteMultiple(iovArray));
+                in.forEachFlushedMessage(filterWriteMultiple(collector));
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
                 return scheduleWriteSingle(in.current());
@@ -279,19 +282,25 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             long iovArrayAddress = iovArray.memoryAddress(offset);
             int iovArrayLength = iovArray.count() - offset;
             // Should not use sendmsg_zc, just use normal writev.
-            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+            short opsId = nextWriteOperationId();
+            if (opsId == 0) {
+                return 0;
+            }
+            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, opsId);
 
             byte opCode = ops.opcode();
+            retainWriteOperation(opsId, opCode, collector.references());
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                rollbackWriteOperation(opsId, opCode);
                 return 0;
             }
             return 1;
         }
 
-        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArray iovArray) {
-           return iovArray;
+        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArrayReferenceCollector collector) {
+           return collector;
         }
 
         @Override
@@ -316,14 +325,24 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ByteBuf buf = (ByteBuf) msg;
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
                 int length = buf.readableBytes();
-                short opsid = nextOpsId();
+                short opsid = nextWriteOperationId();
+                if (opsid == 0) {
+                    return 0;
+                }
 
                 ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
             }
             byte opCode = ops.opcode();
+            // A splice does not go through nextWriteOperationId() and picks its own data to tell its two stages
+            // apart, so it never takes part in the write-operation bookkeeping.
+            short opsId = ops.data();
+            if (msg instanceof ByteBuf) {
+                retainWriteOperation(opsId, opCode, (ByteBuf) msg);
+            }
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                rollbackWriteOperation(opsId, opCode);
                 return 0;
             }
             return 1;
@@ -372,11 +391,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             long address = IoUring.memoryAddress(buf) + buf.readerIndex();
             int length = buf.readableBytes();
-            IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
+            short opsId = nextWriteOperationId();
+            if (opsId == 0) {
+                return 0;
+            }
+            IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsId);
             byte opCode = ops.opcode();
+            retainWriteOperation(opsId, opCode, buf);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                rollbackWriteOperation(opsId, opCode);
                 // Submission only fails when the registration is no longer valid (channel is
                 // being deregistered). unregistered() will release fileRegionChunkBuf and the
                 // outbound buffer will release the FileRegion, so nothing to clean up here --
@@ -429,9 +454,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 IoRegistration registration = registration();
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
+                short opsId = nextOpsId();
 
                 IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
-                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
+                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), opsId);
                 readId = registration.submit(ops);
                 readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
@@ -470,9 +496,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 IoRegistration registration = registration();
                 int fd = fd().intValue();
+                short opsId = nextOpsId();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
                         fd, flags, ioPrio, recvFlags, 0,
-                        0, nextOpsId(), bgId
+                        0, opsId, bgId
                 );
                 readId = registration.submit(ops);
                 readOpCode = Native.IORING_OP_RECV;
@@ -677,6 +704,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 writeOpCode = 0;
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            if (channelOutboundBuffer == null) {
+                // The completion may arrive after close() or shutdownOutput() already dropped the
+                // outbound buffer, in which case there is nothing left to complete.
+                releaseFileRegionChunkBuf();
+                return true;
+            }
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
@@ -837,6 +870,37 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         public void close() {
             // NOOP
+        }
+    }
+
+    static final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
+        private final IovArray iovArray;
+        private ReferenceCounted[] references = new ReferenceCounted[4];
+        private int count;
+
+        IovArrayReferenceCollector(IovArray iovArray) {
+            this.iovArray = iovArray;
+        }
+
+        @Override
+        public boolean processMessage(Object msg) throws Exception {
+            int previousCount = iovArray.count();
+            boolean processed = iovArray.processMessage(msg);
+            if (iovArray.count() != previousCount) {
+                add((ByteBuf) msg);
+            }
+            return processed;
+        }
+
+        ReferenceCounted[] references() {
+            return Arrays.copyOf(references, count);
+        }
+
+        private void add(ByteBuf buffer) {
+            if (count == references.length) {
+                references = Arrays.copyOf(references, count << 1);
+            }
+            references[count++] = buffer;
         }
     }
 }
