@@ -34,11 +34,23 @@ compiled library. The platform-varying artifact becomes the jextract-generated J
 
 | JNI module | FFM module | Contents |
 |---|---|---|
-| `transport-native-unix-common` | `transport-ffm-unix-common` | OS-agnostic hand-written support. Currently only the errno capture-state helper (see below). |
+| `transport-native-unix-common` | `netty-native` | OS-agnostic, hand-written support and the single funnel for restricted native-access calls. Currently only the errno capture-state helper (see below). Holds no per-OS or per-arch code. |
 | `transport-native-kqueue` | `transport-ffm-native-kqueue` | Committed jextract output for macOS, the provenance manifest, and the per-OS errno-capture call sites. No C headers. |
 | `transport-classes-kqueue` | `transport-ffm-classes-kqueue` | Hand-written kqueue transport: `IoHandler`, channels, configs. |
 
 Linux follows the same shape (`transport-ffm-{native,classes}-epoll`, likewise `io_uring`).
+
+**`netty-native` is the native-access funnel, not where platform code lives.** It holds only
+OS-agnostic hand-written plumbing: the errno capture-state helper today, and going forward the shared
+code that constructs the FFM downcall handles and performs the `Linker` lookups. Because `netty-native`
+builds the downcall handles itself (to add `captureCallState` for errno, see below), the restricted
+`Linker` calls live there and not in the per-OS bindings, which only invoke the resulting handles
+(invocation is not restricted). That is what lets a consumer enable native access once, with
+`--enable-native-access=netty-native`. The name omits `transport` deliberately, native SSL funnels
+through the same module and is not a transport. The committed per-OS bindings and their call sites stay
+in their own per-OS modules (`transport-ffm-native-kqueue`, `transport-ffm-native-epoll`, ...); that
+separation is the dependency-isolation mechanism (see "One module per OS" below) and `netty-native`
+must not absorb it.
 
 **Dependency direction.** The JNI native jar is a runtime-only, per-arch classifier the user selects.
 The FFM bindings are Java types the transport calls, so `transport-ffm-classes-kqueue` has a plain
@@ -70,7 +82,7 @@ jextract does not build its downcall handles with `Linker.Option.captureCallStat
 generated `socket`/`bind`/etc. methods cannot read errno atomically (a separate read is racy). Until
 jextract can emit capture-state handles, errno-sensitive calls are hand-written:
 
-- An OS-agnostic helper in `transport-ffm-unix-common` decorates a generated `FunctionDescriptor` with
+- An OS-agnostic helper in `netty-native` decorates a generated `FunctionDescriptor` with
   `captureCallState` and owns the cached errno `VarHandle`. It runs once per symbol at handle
   construction, not per call.
 - Per-OS typed call sites in the bindings module invoke the resulting `static final MethodHandle`.
@@ -123,8 +135,9 @@ See [Jextract.md](Jextract.md) for the plugin configuration and the recommended 
 - **`module-info`** via the `io.github.dmlloyd.module-info` plugin. No `provides`: transport selection
   stays explicit (`KQueue.isAvailable() ? ... : NioIoHandler.newFactory()`), as with the other
   transports.
-- **Runtime flags** for consumers and the testsuite: `--enable-native-access=ALL-UNNAMED` plus the
-  usual `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`.
+- **Runtime flags** for consumers and the testsuite: `--enable-native-access=netty-native` (the single
+  module that performs the restricted calls, since it builds the downcall handles) plus the usual
+  `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`.
 - **Aggregation.** Add the modules to the root `<modules>`, the BOM, and the `all` aggregator.
 
 ## Open questions
