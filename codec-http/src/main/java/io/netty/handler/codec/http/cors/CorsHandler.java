@@ -193,7 +193,9 @@ public class CorsHandler implements ChannelInboundHandler, ChannelOutboundHandle
     }
 
     private static void setVaryHeader(final HttpResponse response) {
-        response.headers().set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
+        if (!response.headers().containsValue(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN, true)) {
+            response.headers().add(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
+        }
     }
 
     private static void setAnyOrigin(final HttpResponse response) {
