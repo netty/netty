@@ -45,8 +45,9 @@ OS-agnostic hand-written plumbing: the errno capture-state helper today, and goi
 code that constructs the FFM downcall handles and performs the `Linker` lookups. Because `netty-native`
 builds the downcall handles itself (to add `captureCallState` for errno, see below), the restricted
 `Linker` calls live there and not in the per-OS bindings, which only invoke the resulting handles
-(invocation is not restricted). That is what lets a consumer enable native access once, with
-`--enable-native-access=netty-native`. The name omits `transport` deliberately, native SSL funnels
+(invocation is not restricted). That is what lets a consumer grant native access to one module,
+`--enable-native-access=netty-native`, instead of enumerating every FFM transport and the SSL module.
+The name omits `transport` deliberately, native SSL funnels
 through the same module and is not a transport. The committed per-OS bindings and their call sites stay
 in their own per-OS modules (`transport-ffm-native-kqueue`, `transport-ffm-native-epoll`, ...); that
 separation is the dependency-isolation mechanism (see "One module per OS" below) and `netty-native`
@@ -135,9 +136,11 @@ See [Jextract.md](Jextract.md) for the plugin configuration and the recommended 
 - **`module-info`** via the `io.github.dmlloyd.module-info` plugin. No `provides`: transport selection
   stays explicit (`KQueue.isAvailable() ? ... : NioIoHandler.newFactory()`), as with the other
   transports.
-- **Runtime flags** for consumers and the testsuite: `--enable-native-access=netty-native` (the single
-  module that performs the restricted calls, since it builds the downcall handles) plus the usual
-  `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`.
+- **Runtime flags** for consumers and the testsuite: `--enable-native-access` for the module that
+  performs the restricted calls (`netty-native`, since it builds the downcall handles) plus the usual
+  `--add-opens java.base/sun.nio.ch=ALL-UNNAMED`. On the module path that target is the named module,
+  `--enable-native-access=netty-native`; on the classpath the modules are unnamed, so it stays
+  `--enable-native-access=ALL-UNNAMED`.
 - **Aggregation.** Add the modules to the root `<modules>`, the BOM, and the `all` aggregator.
 
 ## Open questions
