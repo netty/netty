@@ -596,8 +596,8 @@ public final class MqttDecoder extends ByteToMessageDecoder {
         final String decodedClientIdValue = decodedClientId.value;
         final MqttVersion mqttVersion = MqttVersion.fromProtocolNameAndLevel(mqttConnectVariableHeader.name(),
                 (byte) mqttConnectVariableHeader.version());
-        if (!isValidClientId(mqttVersion, maxClientIdLength, decodedClientIdValue)) {
-            throw new MqttIdentifierRejectedException("invalid clientIdentifier: " + decodedClientIdValue);
+        if (!isValidClientId(mqttVersion, maxClientIdLength, decodedClientIdValue, !strictUtf8Validation)) {
+            throw new MqttIdentifierRejectedException("invalid clientIdentifier");
         }
         int numberOfBytesConsumed = decodedClientId.numberOfBytesConsumed;
 
