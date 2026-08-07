@@ -99,6 +99,59 @@ class StagingDirectoryTest {
         assertTrue(Files.exists(backup.resolve("Old.java")), "close() must not delete the preserved backup");
     }
 
+    @Test
+    void rollbackRunsWhenTheForwardMoveThrowsUnchecked() throws Exception {
+        final Path committed = committedPackageWith("Old.java");
+        final StagingDirectory staging = staging();
+        // move 1 (destination -> backup) runs for real; the forward move 2 throws an unchecked
+        // exception, which must still trigger the rollback rather than skip it.
+        final int[] move = {0};
+        staging.setMover((from, to) -> {
+            if (++move[0] == 2) {
+                throw new IllegalStateException("unchecked forward move failure");
+            }
+            Files.move(from, to, StandardCopyOption.ATOMIC_MOVE);
+        });
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> staging.promoteTo(PACKAGE, manifest()));
+        assertEquals("unchecked forward move failure", e.getCause().getMessage());
+        assertTrue(Files.exists(committed.resolve("Old.java")),
+                "the previous tree must be restored even when the forward move fails unchecked");
+    }
+
+    @Test
+    void backupPreservedWhenTheRollbackMoveThrowsUnchecked() throws Exception {
+        committedPackageWith("Old.java");
+        final StagingDirectory staging = staging();
+        // move 1 (destination -> backup) succeeds; the forward move 2 fails and the rollback move 3
+        // throws an unchecked exception, so the backup must be preserved rather than deleted by close().
+        final int[] move = {0};
+        staging.setMover((from, to) -> {
+            move[0]++;
+            if (move[0] == 1) {
+                Files.move(from, to, StandardCopyOption.ATOMIC_MOVE);
+                return;
+            }
+            if (move[0] == 2) {
+                throw new IOException("forward move failed");
+            }
+            throw new IllegalStateException("unchecked rollback move failure");
+        });
+
+        final JextractException e = assertThrows(JextractException.class,
+                () -> staging.promoteTo(PACKAGE, manifest()));
+        assertTrue(e.getMessage().contains("preserved in"), e.getMessage());
+        assertEquals("forward move failed", e.getCause().getMessage());
+        assertEquals(1, e.getCause().getSuppressed().length);
+        assertEquals("unchecked rollback move failure", e.getCause().getSuppressed()[0].getMessage());
+
+        final Path backup = new File(tmp, "target").toPath().resolve("jextract-promote-backup");
+        assertTrue(Files.exists(backup.resolve("Old.java")), "the backup must hold the previous tree");
+        staging.close();
+        assertTrue(Files.exists(backup.resolve("Old.java")), "close() must not delete the preserved backup");
+    }
+
     // --- helpers -----------------------------------------------------------------------------
 
     /** A staging directory holding one freshly generated file in {@link #PACKAGE}. */

@@ -179,7 +179,10 @@ final class StagingDirectory implements AutoCloseable {
         mover.move(destination, backup);
         try {
             mover.move(generated, destination);
-        } catch (final IOException swapFailed) {
+        } catch (final Throwable swapFailed) {
+            // Destination is already moved to backup, so any failure here (not just IOException) must
+            // trigger the rollback; otherwise the previous committed tree is left only in the backup and
+            // close() would then delete it, losing the sources.
             rollBack(backup, destination, swapFailed);
         }
         // The promotion has succeeded once the new tree is in place; removing the backup is best-effort
@@ -188,16 +191,19 @@ final class StagingDirectory implements AutoCloseable {
     }
 
     /**
-     * Restores {@code destination} from {@code backup} after a failed forward move, then rethrows the
-     * original {@code swapFailed} so the report names the real cause. If the rollback itself fails the
-     * backup holds the only copy of the previous committed tree, so mark it to keep {@link #close()}
-     * from deleting it, attach the rollback failure as suppressed, and point the user at it.
+     * Restores {@code destination} from {@code backup} after a failed forward move and reports the
+     * failure with the original as its cause. The forward move can fail with more than an
+     * {@link IOException} (an unchecked exception from the mover, say), so this accepts any
+     * {@link Throwable}; that is the point, no forward-move failure may skip the rollback. If the
+     * rollback move itself fails for any reason the backup holds the only copy of the previous committed
+     * tree, so mark it to keep {@link #close()} from deleting it, attach the rollback failure as
+     * suppressed, and point the user at it.
      */
-    private void rollBack(final Path backup, final Path destination, final IOException swapFailed)
-            throws IOException, JextractException {
+    private void rollBack(final Path backup, final Path destination, final Throwable swapFailed)
+            throws JextractException {
         try {
             mover.move(backup, destination);
-        } catch (final IOException rollbackFailed) {
+        } catch (final Throwable rollbackFailed) {
             backupPreserved = true;
             swapFailed.addSuppressed(rollbackFailed);
             throw JextractExceptions.executionError(
@@ -205,7 +211,8 @@ final class StagingDirectory implements AutoCloseable {
                     + destination + " are preserved in " + backup + ". Restore them from there (or with git) "
                     + "and rerun.", swapFailed);
         }
-        throw swapFailed;
+        throw JextractExceptions.executionError(
+                "Could not promote generated sources into " + destination, swapFailed);
     }
 
     private static void deleteQuietly(final Path path) {
