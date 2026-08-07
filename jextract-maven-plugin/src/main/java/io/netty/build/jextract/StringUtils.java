@@ -33,6 +33,6 @@ final class StringUtils {
      * "source not configured" checks, and for rejecting empty {@code --include-*} symbols.
      */
     static boolean isBlank(@Nullable final String value) {
-        return value == null || value.trim().isEmpty();
+        return value == null || value.isBlank();
     }
 }
