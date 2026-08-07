@@ -65,7 +65,6 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jetbrains.annotations.VisibleForTesting;
 
 import java.lang.reflect.Method;
 import java.net.IDN;
@@ -149,7 +148,7 @@ public class DnsNameResolver extends InetNameResolver {
             "io.netty.resolver.dns.resolveLocalhostWithoutDns";
 
     /** The runtime value of {@link #RESOLVE_LOCALHOST_WITHOUT_DNS_PROPERTY}. */
-    @VisibleForTesting
+    // Visible for testing only
     static boolean resolveLocalhostWithoutDns;
 
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;

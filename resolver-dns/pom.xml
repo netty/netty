@@ -73,10 +73,6 @@
       <artifactId>apacheds-protocol-dns</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
-    </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
