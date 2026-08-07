@@ -22,12 +22,12 @@ import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
-import org.jctools.queues.SpscLinkedQueue;
+import org.jctools.queues.SpscUnboundedArrayQueue;
 import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
-import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import org.jctools.queues.atomic.SpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.unpadded.MpscAtomicUnpaddedArrayQueue;
 import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
@@ -1319,8 +1319,9 @@ public final class PlatformDependent {
      * Create a new {@link Queue} which is safe to use for single producer (one thread!) and a single
      * consumer (one thread!).
      */
-    public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
+    public static <T> Queue<T> newChunkedSpscQueue(final int chunkSize) {
+        return hasUnsafe() ? new SpscUnboundedArrayQueue<T>(chunkSize)
+                : new SpscUnboundedAtomicArrayQueue<T>(chunkSize);
     }
 
     /**
