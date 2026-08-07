@@ -154,8 +154,11 @@ See [Jextract.md](Jextract.md) for the plugin configuration and the recommended 
 ## Open questions
 
 - Module naming: `transport-ffm-native-kqueue` vs `transport-ffm-bindings-kqueue`.
-- Exact jextract option for pinning the SDK sysroot (may be `SDKROOT` or a clang-arg passthrough
-  rather than a first-class flag).
+- Pinning the SDK sysroot so jextract always reads a fixed SDK's headers, which reproducible output
+  depends on. The mechanism is not yet confirmed: likely the `SDKROOT` environment variable that
+  `xcrun`/clang honor, or passing `-isysroot`/`--sysroot` through jextract's clang-argument passthrough,
+  as jextract has no first-class flag for it. To be resolved before the CI diff gate is relied on; not
+  addressed in this PR.
 - `critical()` / `captureCallState` composition; benchmark before relying on it.
 
 ## Prerequisites for the first FFM module (not yet done)
