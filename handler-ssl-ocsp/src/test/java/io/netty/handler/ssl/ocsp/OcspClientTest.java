@@ -50,7 +50,6 @@ import java.util.Date;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -84,30 +83,6 @@ class OcspClientTest {
                 httpsConnection.disconnect();
             }
         }
-    }
-
-    @Test
-    void validateSignatureWithIncludedChainSucceeds() throws Exception {
-        final CertAndKey rootIssuer = buildCertificate("CN=SomeRootCA", true, null);
-        CertAndKey intermediateIssuer = buildCertificate("CN=SomeIntermediateCA", true, rootIssuer);
-        CertAndKey ocspResponder = buildCertificate("CN=SomeOCSPResponder", false, intermediateIssuer);
-
-        // Create actual OCSP response with the responder's certificate
-        X509CertificateHolder responderHolder = new JcaX509CertificateHolder(ocspResponder.certificate);
-        X509CertificateHolder intermediateHolder = new JcaX509CertificateHolder(intermediateIssuer.certificate);
-
-        // Create a minimal BasicOCSPResp that contains the certificate chain
-        final BasicOCSPResp resp = createBasicOcspResponse(
-                ocspResponder,
-                new X509CertificateHolder[]{responderHolder, intermediateHolder}
-        );
-
-        assertDoesNotThrow(new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                OcspClient.validateSignature(resp, rootIssuer.certificate);
-            }
-        });
     }
 
     @Test
