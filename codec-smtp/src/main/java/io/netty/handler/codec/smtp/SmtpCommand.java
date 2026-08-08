@@ -72,6 +72,7 @@ public final class SmtpCommand {
     private final AsciiString name;
 
     private SmtpCommand(AsciiString name) {
+        SmtpUtils.validateSMTPParameter(name);
         this.name = name;
     }
 
