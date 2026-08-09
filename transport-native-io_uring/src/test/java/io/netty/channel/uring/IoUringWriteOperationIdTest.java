@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringWriteOperationIdTest {
@@ -58,6 +59,49 @@ public class IoUringWriteOperationIdTest {
                     assertEquals(1, zeroCopyData.refCnt());
                 } finally {
                     zeroCopyData.release();
+                }
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void terminalCompletionRecyclesTheWriteOperationId() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    short id = channel.nextWriteOperationId();
+                    channel.retainWriteOperation(id, Native.IORING_OP_SEND, buffer);
+                    channel.completeWriteOperation(id, Native.IORING_OP_SEND, 0);
+
+                    assertEquals(1, buffer.refCnt());
+                    assertEquals(id, channel.nextWriteOperationId());
+                } finally {
+                    buffer.release();
+                }
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void anIdOwnedByAnotherAllocatorNeverEntersTheFreeList() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    // The datagram sendmsg path registers MsgHdrMemoryArray indices, which start at 0. Recycling
+                    // one would hand out 0, the value reserved for "no id".
+                    channel.retainUnpooledWriteOperation((short) 0, Native.IORING_OP_SENDMSG, buffer);
+                    channel.completeWriteOperation((short) 0, Native.IORING_OP_SENDMSG, 0);
+
+                    assertEquals(1, buffer.refCnt());
+                    assertNotEquals(0, channel.nextWriteOperationId());
+                } finally {
+                    buffer.release();
                 }
             }
         });

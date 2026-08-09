@@ -50,6 +50,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
+import java.util.Arrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -86,8 +87,18 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
+    // Every non-zero short, as 0 is reserved for "no id".
+    private static final int MAX_WRITE_OPERATION_IDS = 65535;
+
     private short opsId = Short.MIN_VALUE;
+
+    // Write-operation ids are allocated from their own sequence and recycled through freeWriteOperationIds once a
+    // terminal CQE releases them, so an allocation never has to search for a free value.
+    private short writeOpsId = Short.MIN_VALUE;
     private IntObjectHashMap<WriteOperation> writeOperations;
+    private short[] freeWriteOperationIds;
+    private int freeWriteOperationIdCount;
+    private int issuedWriteOperationIds;
 
     private long pollInId;
     private long pollOutId;
@@ -206,32 +217,55 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     /**
-     * Returns an operation id that is not owned by a pending write CQE, or {@code 0} when all write-operation ids
-     * are in use.
+     * Returns a write-operation id that no in-flight write owns, or {@code 0} when every id is held by a write that
+     * has not seen its terminal CQE yet. Released ids come back through a free list, so this does not search.
      */
     protected final short nextWriteOperationId() {
-        for (int attempts = 0; attempts < 65535; ++attempts) {
-            short id = nextOpsId();
-            if (writeOperations == null || !writeOperations.containsKey(id)) {
-                return id;
-            }
+        if (freeWriteOperationIdCount > 0) {
+            return freeWriteOperationIds[--freeWriteOperationIdCount];
         }
-        return 0;
+        if (issuedWriteOperationIds == MAX_WRITE_OPERATION_IDS) {
+            // The sequence has handed out every id and none of them came back, so there is nothing to submit with.
+            return 0;
+        }
+        ++issuedWriteOperationIds;
+        short id = writeOpsId++;
+        // We use 0 for "none".
+        if (id == 0) {
+            id = writeOpsId++;
+        }
+        return id;
     }
 
+    /**
+     * Registers a write whose id came from {@link #nextWriteOperationId()}. The id is recycled once the terminal CQE
+     * arrives.
+     */
     final void retainWriteOperation(short id, byte opCode, ReferenceCounted... references) {
+        retainWriteOperation(id, opCode, true, references);
+    }
+
+    /**
+     * Registers a write whose id is owned by another allocator, such as the {@link MsgHdrMemoryArray} index used by
+     * the datagram sendmsg path. That id must not enter the free list.
+     */
+    final void retainUnpooledWriteOperation(short id, byte opCode, ReferenceCounted... references) {
+        retainWriteOperation(id, opCode, false, references);
+    }
+
+    private void retainWriteOperation(short id, byte opCode, boolean recyclableId, ReferenceCounted... references) {
         if (writeOperations == null) {
             writeOperations = new IntObjectHashMap<>();
         }
         WriteOperation operation = new WriteOperation();
-        operation.retain(opCode, references);
+        operation.retain(opCode, recyclableId, references);
         writeOperations.put(id, operation);
     }
 
     final void rollbackWriteOperation(short id, byte opCode) {
         WriteOperation operation = writeOperation(id, opCode);
         if (operation != null) {
-            writeOperations.remove(id);
+            removeWriteOperation(id, operation);
             operation.rollback();
         }
     }
@@ -241,9 +275,22 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (operation != null) {
             operation.complete(flags);
             if (operation.isDone()) {
-                writeOperations.remove(id);
+                removeWriteOperation(id, operation);
             }
         }
+    }
+
+    private void removeWriteOperation(short id, WriteOperation operation) {
+        writeOperations.remove(id);
+        if (!operation.hasRecyclableId()) {
+            return;
+        }
+        if (freeWriteOperationIds == null) {
+            freeWriteOperationIds = new short[8];
+        } else if (freeWriteOperationIdCount == freeWriteOperationIds.length) {
+            freeWriteOperationIds = Arrays.copyOf(freeWriteOperationIds, freeWriteOperationIdCount << 1);
+        }
+        freeWriteOperationIds[freeWriteOperationIdCount++] = id;
     }
 
     private WriteOperation writeOperation(short id, byte opCode) {

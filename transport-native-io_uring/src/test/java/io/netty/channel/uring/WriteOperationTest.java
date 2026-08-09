@@ -30,7 +30,7 @@ class WriteOperationTest {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
 
-        operation.retain(Native.IORING_OP_SEND, buffer);
+        operation.retain(Native.IORING_OP_SEND, true, buffer);
 
         assertEquals(Native.IORING_OP_SEND, operation.opCode());
         assertEquals(2, buffer.refCnt());
@@ -48,7 +48,7 @@ class WriteOperationTest {
         ByteBuf first = Unpooled.buffer();
         ByteBuf second = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
-        operation.retain(Native.IORING_OP_SENDMSG_ZC, first, second);
+        operation.retain(Native.IORING_OP_SENDMSG_ZC, true, first, second);
 
         operation.complete(Native.IORING_CQE_F_MORE);
 
@@ -70,7 +70,7 @@ class WriteOperationTest {
     void rollbackReleasesExactlyOnce() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
-        operation.retain(Native.IORING_OP_SEND, buffer);
+        operation.retain(Native.IORING_OP_SEND, true, buffer);
 
         // A failed submission never produces a CQE, so the rollback is the only release.
         operation.rollback();

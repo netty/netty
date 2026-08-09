@@ -19,10 +19,11 @@ import io.netty.util.ReferenceCounted;
 
 final class WriteOperation {
     private byte opCode;
+    private boolean recyclableId;
     private ReferenceCounted[] references;
     private boolean done;
 
-    void retain(byte opCode, ReferenceCounted... references) {
+    void retain(byte opCode, boolean recyclableId, ReferenceCounted... references) {
         if (this.references != null || done) {
             throw new IllegalStateException("operation already completed or retained");
         }
@@ -30,7 +31,16 @@ final class WriteOperation {
             reference.retain();
         }
         this.opCode = opCode;
+        this.recyclableId = recyclableId;
         this.references = references;
+    }
+
+    /**
+     * Whether the id this operation was registered under belongs to the channel's write-operation sequence and can
+     * go back on its free list once the terminal CQE arrives.
+     */
+    boolean hasRecyclableId() {
+        return recyclableId;
     }
 
     /**
