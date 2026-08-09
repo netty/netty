@@ -474,6 +474,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-transport-ffm-kqueue</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <scope>compile</scope>
     </dependency>
