@@ -2218,7 +2218,7 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
