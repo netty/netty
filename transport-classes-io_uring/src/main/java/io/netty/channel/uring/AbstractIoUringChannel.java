@@ -47,10 +47,8 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
-import java.util.Arrays;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -64,6 +62,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.Arrays;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -87,15 +86,20 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
-    // Every non-zero short, as 0 is reserved for "no id".
-    private static final int MAX_WRITE_OPERATION_IDS = 65535;
+    // Ids index the slot array, so they run from 1 (0 is reserved for "no id") to Short.MAX_VALUE. That is the
+    // same bound scheduleWrite(...) already puts on the number of outstanding writes.
+    private static final int MAX_WRITE_OPERATION_IDS = Short.MAX_VALUE;
 
     private short opsId = Short.MIN_VALUE;
 
-    // Write-operation ids are allocated from their own sequence and recycled through freeWriteOperationIds once a
-    // terminal CQE releases them, so an allocation never has to search for a free value.
-    private short writeOpsId = Short.MIN_VALUE;
-    private IntObjectHashMap<WriteOperation> writeOperations;
+    // Write operations live in a slot array indexed by the id submitted as the SQE's user_data. Ids are dense and
+    // come back through freeWriteOperationIds once a terminal CQE releases them, so neither allocating an id nor
+    // resolving a completion has to search.
+    private WriteOperation[] writeOperations;
+    // Ids submitted by an allocator this class does not own, such as the MsgHdrMemoryArray index used by the
+    // datagram sendmsg path, live in a separate slot array so their namespace can overlap the pooled one above
+    // without either array mistaking a foreign id for one of its own.
+    private WriteOperation[] unpooledWriteOperations;
     private short[] freeWriteOperationIds;
     private int freeWriteOperationIdCount;
     private int issuedWriteOperationIds;
@@ -225,16 +229,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             return freeWriteOperationIds[--freeWriteOperationIdCount];
         }
         if (issuedWriteOperationIds == MAX_WRITE_OPERATION_IDS) {
-            // The sequence has handed out every id and none of them came back, so there is nothing to submit with.
+            // Every id has been handed out and none came back, so there is nothing to submit with.
             return 0;
         }
-        ++issuedWriteOperationIds;
-        short id = writeOpsId++;
-        // We use 0 for "none".
-        if (id == 0) {
-            id = writeOpsId++;
-        }
-        return id;
+        // 0 is reserved for "no id", so ids start at 1. They are dense, which lets the slot array be indexed by
+        // the id itself.
+        return (short) ++issuedWriteOperationIds;
     }
 
     /**
@@ -242,49 +242,63 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * arrives.
      */
     final void retainWriteOperation(short id, byte opCode, ReferenceCounted... references) {
-        retainWriteOperation(id, opCode, true, references);
+        writeOperations = retainWriteOperation(writeOperations, id, opCode, references);
     }
 
     /**
      * Registers a write whose id is owned by another allocator, such as the {@link MsgHdrMemoryArray} index used by
-     * the datagram sendmsg path. That id must not enter the free list.
+     * the datagram sendmsg path. That id lives in its own slot array and never enters the free list.
      */
     final void retainUnpooledWriteOperation(short id, byte opCode, ReferenceCounted... references) {
-        retainWriteOperation(id, opCode, false, references);
+        unpooledWriteOperations = retainWriteOperation(unpooledWriteOperations, id, opCode, references);
     }
 
-    private void retainWriteOperation(short id, byte opCode, boolean recyclableId, ReferenceCounted... references) {
-        if (writeOperations == null) {
-            writeOperations = new IntObjectHashMap<>();
+    private static WriteOperation[] retainWriteOperation(WriteOperation[] operations, short id, byte opCode,
+                                                         ReferenceCounted... references) {
+        assert id >= 0;
+        if (operations == null) {
+            operations = new WriteOperation[Math.max(id + 1, 4)];
+        } else if (id >= operations.length) {
+            operations = Arrays.copyOf(operations, Math.max(id + 1, operations.length << 1));
         }
-        WriteOperation operation = new WriteOperation();
-        operation.retain(opCode, recyclableId, references);
-        writeOperations.put(id, operation);
+        WriteOperation operation = operations[id];
+        if (operation == null) {
+            // The slot keeps its operation once allocated, so a write only pays for this on the first use of an id.
+            operation = operations[id] = new WriteOperation();
+        }
+        operation.retain(opCode, references);
+        return operations;
     }
 
     final void rollbackWriteOperation(short id, byte opCode) {
-        WriteOperation operation = writeOperation(id, opCode);
+        WriteOperation operation = writeOperation(writeOperations, id, opCode);
         if (operation != null) {
-            removeWriteOperation(id, operation);
+            operation.rollback();
+            recycleWriteOperationId(id);
+            return;
+        }
+        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        if (operation != null) {
             operation.rollback();
         }
     }
 
     final void completeWriteOperation(short id, byte opCode, int flags) {
-        WriteOperation operation = writeOperation(id, opCode);
+        WriteOperation operation = writeOperation(writeOperations, id, opCode);
         if (operation != null) {
             operation.complete(flags);
             if (operation.isDone()) {
-                removeWriteOperation(id, operation);
+                recycleWriteOperationId(id);
             }
+            return;
+        }
+        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        if (operation != null) {
+            operation.complete(flags);
         }
     }
 
-    private void removeWriteOperation(short id, WriteOperation operation) {
-        writeOperations.remove(id);
-        if (!operation.hasRecyclableId()) {
-            return;
-        }
+    private void recycleWriteOperationId(short id) {
         if (freeWriteOperationIds == null) {
             freeWriteOperationIds = new short[8];
         } else if (freeWriteOperationIdCount == freeWriteOperationIds.length) {
@@ -293,14 +307,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         freeWriteOperationIds[freeWriteOperationIdCount++] = id;
     }
 
-    private WriteOperation writeOperation(short id, byte opCode) {
-        if (writeOperations == null) {
+    private static WriteOperation writeOperation(WriteOperation[] operations, short id, byte opCode) {
+        if (operations == null || id < 0 || id >= operations.length) {
             return null;
         }
-        WriteOperation operation = writeOperations.get(id);
-        // Only the op that submitted this id owns it. A completion for an op whose id was never handed out by
-        // nextWriteOperationId() must not terminate an unrelated in-flight operation that shares the value.
-        return operation != null && operation.opCode() == opCode ? operation : null;
+        WriteOperation operation = operations[id];
+        // Write user_data is not allocated from a single namespace. The splice stages submit fixed values and the
+        // domain-socket fd-passing sendmsg submits its MsgHdrMemory index, and neither is registered here, so both
+        // can land on an occupied slot. Matching the opcode keeps such a completion from terminating what it finds.
+        return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
     }
 
     public final boolean isOpen() {

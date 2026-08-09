@@ -19,28 +19,30 @@ import io.netty.util.ReferenceCounted;
 
 final class WriteOperation {
     private byte opCode;
-    private boolean recyclableId;
     private ReferenceCounted[] references;
     private boolean done;
 
-    void retain(byte opCode, boolean recyclableId, ReferenceCounted... references) {
-        if (this.references != null || done) {
-            throw new IllegalStateException("operation already completed or retained");
+    /**
+     * Takes ownership of the references a submitted SQE handed to the kernel. Instances live in the channel's slot
+     * array and are reused, so this also clears the state left by the previous operation in the slot.
+     */
+    void retain(byte opCode, ReferenceCounted... references) {
+        if (this.references != null) {
+            throw new IllegalStateException("slot still owned by an operation that has not completed");
         }
         for (ReferenceCounted reference : references) {
             reference.retain();
         }
         this.opCode = opCode;
-        this.recyclableId = recyclableId;
         this.references = references;
+        this.done = false;
     }
 
     /**
-     * Whether the id this operation was registered under belongs to the channel's write-operation sequence and can
-     * go back on its free list once the terminal CQE arrives.
+     * Whether this slot currently holds an operation that has not been released yet.
      */
-    boolean hasRecyclableId() {
-        return recyclableId;
+    boolean isActive() {
+        return references != null;
     }
 
     /**
