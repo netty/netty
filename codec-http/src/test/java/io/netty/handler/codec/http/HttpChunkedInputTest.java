@@ -139,7 +139,6 @@ public class HttpChunkedInputTest {
             input.close();
             assertEquals(0, lastHttpContent.refCnt());
         } finally {
-            releaseIfNeeded(lastHttpContent);
             channel.finishAndReleaseAll();
         }
     }
@@ -160,7 +159,7 @@ public class HttpChunkedInputTest {
             input.close();
             assertEquals(1, lastHttpContent.refCnt());
         } finally {
-            releaseIfNeeded(lastHttpContent);
+            lastHttpContent.release();
             channel.finishAndReleaseAll();
         }
     }
@@ -170,14 +169,10 @@ public class HttpChunkedInputTest {
         LastHttpContent lastHttpContent = new DefaultLastHttpContent(Unpooled.buffer(1).writeByte(1));
         HttpChunkedInput input = new HttpChunkedInput(new TestChunkedInput(false, true), lastHttpContent);
 
-        try {
-            assertThrows(IOException.class, input::close);
-            assertEquals(0, lastHttpContent.refCnt());
-            assertThrows(IOException.class, input::close);
-            assertEquals(0, lastHttpContent.refCnt());
-        } finally {
-            releaseIfNeeded(lastHttpContent);
-        }
+        assertThrows(IOException.class, input::close);
+        assertEquals(0, lastHttpContent.refCnt());
+        assertThrows(IOException.class, input::close);
+        assertEquals(0, lastHttpContent.refCnt());
     }
 
     private static void check(ChunkedInput<?>... inputs) {
@@ -262,12 +257,6 @@ public class HttpChunkedInputTest {
         @Override
         public long progress() {
             return 0;
-        }
-    }
-
-    private static void releaseIfNeeded(LastHttpContent lastHttpContent) {
-        if (lastHttpContent.refCnt() > 0) {
-            lastHttpContent.release();
         }
     }
 }
