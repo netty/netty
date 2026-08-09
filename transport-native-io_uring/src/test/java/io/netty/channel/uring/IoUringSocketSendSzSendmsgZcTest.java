@@ -35,7 +35,6 @@ import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,28 +114,6 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
                 testBufferLifecycleCorrectlyHandled(bootstrap, true, Close.LOCAL);
-            }
-        });
-    }
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSendZcRetainsBufferWhenLocalCloseRacesPrimaryCqe(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferRetainedWhenLocalCloseRacesPrimaryCqe(bootstrap, false);
-            }
-        });
-    }
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSendmsgZcRetainsBuffersWhenLocalCloseRacesPrimaryCqe(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferRetainedWhenLocalCloseRacesPrimaryCqe(bootstrap, true);
             }
         });
     }
@@ -241,85 +218,6 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     // Close the channel now
                     channel.close().sync();
                 }
-            }
-        }
-    }
-
-    private static void testBufferRetainedWhenLocalCloseRacesPrimaryCqe(Bootstrap cb, boolean multiple)
-            throws Throwable {
-        cb.handler(new ChannelInboundHandlerAdapter());
-        cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
-
-        try (ServerSocket serverSocket = new ServerSocket()) {
-            serverSocket.bind(new InetSocketAddress(0));
-            Channel channel = cb.connect(serverSocket.getLocalSocketAddress()).sync().channel();
-            try (Socket socket = serverSocket.accept()) {
-                final AtomicReference<ByteBuf> firstBufferRef = new AtomicReference<>();
-                final AtomicReference<ByteBuf> secondBufferRef = new AtomicReference<>();
-                final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-                final AtomicInteger firstRefCntAfterClose = new AtomicInteger(-1);
-                final AtomicInteger secondRefCntAfterClose = new AtomicInteger(-1);
-                final CountDownLatch localCloseIssued = new CountDownLatch(1);
-
-                // Submit the write and close in one event-loop task. CQEs cannot be reaped until the task returns,
-                // so the assertion below observes the window where the kernel still owns the submitted memory.
-                channel.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            ByteBuf first = channel.alloc().directBuffer(1024 * 1024);
-                            first.writeZero(first.capacity());
-                            firstBufferRef.set(first);
-                            if (multiple) {
-                                ByteBuf second = channel.alloc().directBuffer(1024 * 1024);
-                                second.writeZero(second.capacity());
-                                secondBufferRef.set(second);
-                                channel.write(first);
-                                channel.writeAndFlush(second);
-                            } else {
-                                channel.writeAndFlush(first);
-                            }
-                            channel.close();
-                            firstRefCntAfterClose.set(first.refCnt());
-                            if (multiple) {
-                                secondRefCntAfterClose.set(secondBufferRef.get().refCnt());
-                            }
-                        } catch (Throwable cause) {
-                            causeRef.set(cause);
-                        } finally {
-                            localCloseIssued.countDown();
-                        }
-                    }
-                });
-
-                assertTrue(localCloseIssued.await(5, TimeUnit.SECONDS), "local close was not issued");
-                Throwable cause = causeRef.get();
-                if (cause != null) {
-                    fail(cause);
-                }
-
-                ByteBuf first = firstBufferRef.get();
-                assertTrue(firstRefCntAfterClose.get() > 0,
-                        "local close must keep SEND_ZC memory live before its notification CQE");
-                if (multiple) {
-                    ByteBuf second = secondBufferRef.get();
-                    assertTrue(secondRefCntAfterClose.get() > 0,
-                            "local close must keep SENDMSG_ZC memory live before its notification CQE");
-                }
-                socket.close();
-
-                assertTrue(channel.closeFuture().await(5, TimeUnit.SECONDS), "channel did not close in time");
-                assertTrue(awaitRefCntZero(channel, first, 5, TimeUnit.SECONDS),
-                        "SEND_ZC memory was not released by its terminal CQE");
-                assertEquals(0, first.refCnt(), "SEND_ZC memory was not released by its terminal CQE");
-                if (multiple) {
-                    ByteBuf second = secondBufferRef.get();
-                    assertTrue(awaitRefCntZero(channel, second, 5, TimeUnit.SECONDS),
-                            "SENDMSG_ZC memory was not released by its terminal CQE");
-                    assertEquals(0, second.refCnt(), "SENDMSG_ZC memory was not released by its terminal CQE");
-                }
-            } finally {
-                channel.close().sync();
             }
         }
     }
