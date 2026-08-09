@@ -19,13 +19,20 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.unix.IovArray;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringIovArrayReferenceCollectorTest {
+
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
 
     @Test
     public void capturesOnlyBuffersAddedToIovArray() throws Exception {
