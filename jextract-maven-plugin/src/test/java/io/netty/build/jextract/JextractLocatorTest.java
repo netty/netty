@@ -24,6 +24,7 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class JextractLocatorTest {
 
@@ -110,7 +111,8 @@ class JextractLocatorTest {
     void throwsWhenExplicitPathIsNotExecutable() throws Exception {
         final File notExec = new File(tmp, "jextract");
         assertTrue(notExec.createNewFile());
-        assertTrue(notExec.setExecutable(false));
+        assumeTrue(notExec.setExecutable(false) && !notExec.canExecute(),
+                "platform cannot represent a non-executable file (e.g. Windows NTFS)");
 
         final JextractException e = assertThrows(JextractException.class, () ->
                 JextractLocator.builder()
@@ -124,7 +126,8 @@ class JextractLocatorTest {
     void throwsWhenJextractEnvIsNotExecutable() throws Exception {
         final File notExec = new File(tmp, "jextract");
         assertTrue(notExec.createNewFile());
-        assertTrue(notExec.setExecutable(false));
+        assumeTrue(notExec.setExecutable(false) && !notExec.canExecute(),
+                "platform cannot represent a non-executable file (e.g. Windows NTFS)");
 
         final JextractException e = assertThrows(JextractException.class, () ->
                 JextractLocator.builder()
