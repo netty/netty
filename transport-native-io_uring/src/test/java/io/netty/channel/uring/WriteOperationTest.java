@@ -42,15 +42,15 @@ class WriteOperationTest {
     }
 
     @Test
-    void retainForShutdownIsIdempotent() {
+    void retainReferencesIsIdempotent() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
 
-        operation.retainForShutdown();
+        operation.retainReferences();
         assertEquals(2, buffer.refCnt());
 
-        operation.retainForShutdown();
+        operation.retainReferences();
         assertEquals(2, buffer.refCnt());
 
         operation.complete(0);
@@ -62,7 +62,7 @@ class WriteOperationTest {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
-        operation.retainForShutdown();
+        operation.retainReferences();
         assertEquals(2, buffer.refCnt());
 
         operation.complete(0);
@@ -93,7 +93,7 @@ class WriteOperationTest {
         ByteBuf second = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SENDMSG_ZC, new ReferenceCounted[] {first, second}, 2);
-        operation.retainForShutdown();
+        operation.retainReferences();
         assertEquals(2, first.refCnt());
         assertEquals(2, second.refCnt());
 
@@ -114,11 +114,36 @@ class WriteOperationTest {
     }
 
     @Test
+    void zeroCopyMoreCompletionWithoutRetainDoesNotReleaseUntilNotification() {
+        ByteBuf first = Unpooled.buffer();
+        ByteBuf second = Unpooled.buffer();
+        WriteOperation operation = new WriteOperation();
+        operation.record(Native.IORING_OP_SENDMSG_ZC, new ReferenceCounted[] {first, second}, 2);
+
+        operation.complete(Native.IORING_CQE_F_MORE);
+
+        // Not retained, so the operation still only holds the outbound buffer's own reference: the primary
+        // completion must not touch refCnt, and must not finish the operation, until the notification arrives.
+        assertFalse(operation.isDone());
+        assertEquals(1, first.refCnt());
+        assertEquals(1, second.refCnt());
+
+        operation.complete(Native.IORING_CQE_F_NOTIF);
+        operation.complete(Native.IORING_CQE_F_NOTIF);
+
+        assertTrue(operation.isDone());
+        assertEquals(1, first.refCnt());
+        assertEquals(1, second.refCnt());
+        first.release();
+        second.release();
+    }
+
+    @Test
     void rollbackAfterShutdownRetainReleasesExactlyOnce() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
-        operation.retainForShutdown();
+        operation.retainReferences();
 
         // A failed submission never produces a CQE, so the rollback is the only release.
         operation.rollback();
@@ -157,7 +182,7 @@ class WriteOperationTest {
         // copied the contents into its own backing array instead of storing the array instance directly.
         references[0] = replacement;
 
-        operation.retainForShutdown();
+        operation.retainReferences();
         assertEquals(2, first.refCnt());
         assertEquals(1, replacement.refCnt());
         assertEquals(2, second.refCnt());

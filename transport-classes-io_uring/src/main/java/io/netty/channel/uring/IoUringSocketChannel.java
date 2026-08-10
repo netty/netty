@@ -185,12 +185,12 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
             if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
-                return handleWriteCompleteZeroCopy(op, res, flags);
+                return handleWriteCompleteZeroCopy(op, res, flags, data);
             }
             return super.writeComplete0(op, res, flags, data, outstanding);
         }
 
-        private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags) {
+        private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags, short data) {
             if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
                 return true;
             }
@@ -201,9 +201,14 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 return true;
             }
             if (res >= 0) {
-                // The kernel may still own the memory when IORING_CQE_F_MORE is set, but the retained
-                // WriteOperation holds it alive until the notification, so the buffers can be removed here
-                // either way. A partial write is reported as a partial write.
+                if ((flags & Native.IORING_CQE_F_MORE) != 0) {
+                    // The kernel still owns the memory until the follow-up IORING_CQE_F_NOTIF arrives. Retain the
+                    // write operation's references now, before removeBytes(...) below drops the outbound buffer's
+                    // own reference, so the buffer stays alive across that gap instead of being freed out from
+                    // under the still-pending notification.
+                    retainWriteOperationReferences(data, op);
+                }
+                // A partial write is reported as a partial write.
                 channelOutboundBuffer.removeBytes(res);
                 return true;
             }

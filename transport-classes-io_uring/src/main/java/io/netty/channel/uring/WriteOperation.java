@@ -72,18 +72,22 @@ final class WriteOperation {
     }
 
     /**
-     * Retains every reference this in-flight operation holds so a shutdown can release the outbound buffer's own
-     * reference without the kernel completion racing it. A no-op once already retained, or when the slot is not
-     * currently active, so callers may call this repeatedly without double-retaining.
+     * Retains every reference this in-flight operation holds so a caller can release the outbound buffer's own
+     * reference without a kernel completion racing it. Used both when a shutdown drops the outbound buffer early
+     * and when a zero-copy send's primary completion arrives with {@code IORING_CQE_F_MORE} set, meaning the
+     * kernel still owns the memory until the follow-up {@code IORING_CQE_F_NOTIF}. A no-op once already retained,
+     * or when the slot is not currently active, so callers may call this repeatedly without double-retaining.
+     * {@code retained} is set before the loop so that a reference whose {@code retain()} throws still leaves the
+     * references retained so far eligible for release by {@link #finish()} instead of leaking them.
      */
-    void retainForShutdown() {
+    void retainReferences() {
         if (!isActive() || retained) {
             return;
         }
+        retained = true;
         for (int i = 0; i < count; i++) {
             references[i].retain();
         }
-        retained = true;
     }
 
     /**

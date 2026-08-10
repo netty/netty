@@ -474,9 +474,61 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             return;
         }
         for (WriteOperation operation : operations) {
-            if (operation != null) {
-                operation.retainForShutdown();
+            if (operation == null) {
+                continue;
             }
+            // A failure retaining one slot's references (e.g. a reference already released elsewhere) must not
+            // stop the remaining slots from being retained, otherwise a completion racing the shutdown could still
+            // find the outbound buffer's now-dropped reference on those later slots.
+            try {
+                operation.retainReferences();
+            } catch (Throwable cause) {
+                logger.warn("Failed to retain in-flight write operation before shutdown", cause);
+            }
+        }
+    }
+
+    /**
+     * Retains the references held by the write operation identified by {@code id} and {@code opCode}, if any is
+     * still active. Used when a zero-copy send's primary completion arrives with {@code IORING_CQE_F_MORE} set: the
+     * kernel still owns the memory until the follow-up {@code IORING_CQE_F_NOTIF}, so the slot's references must be
+     * retained before the outbound buffer drops its own reference.
+     */
+    final void retainWriteOperationReferences(short id, byte opCode) {
+        WriteOperation operation = writeOperation(writeOperations, id, opCode);
+        if (operation != null) {
+            operation.retainReferences();
+            return;
+        }
+        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        if (operation != null) {
+            operation.retainReferences();
+        }
+    }
+
+    /**
+     * Rolls back every write operation still occupying a slot and empties both slot arrays. Once the channel is
+     * deregistered, no further completion will ever arrive for those operations, so any references a shutdown
+     * retained on them would otherwise leak forever.
+     */
+    private void releaseWriteOperations() {
+        releaseWriteOperations(writeOperations);
+        releaseWriteOperations(unpooledWriteOperations);
+    }
+
+    private static void releaseWriteOperations(WriteOperation[] operations) {
+        if (operations == null) {
+            return;
+        }
+        for (int i = 0; i < operations.length; i++) {
+            WriteOperation operation = operations[i];
+            if (operation == null) {
+                continue;
+            }
+            if (operation.isActive()) {
+                operation.rollback();
+            }
+            operations[i] = null;
         }
     }
 
@@ -679,6 +731,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
+            releaseWriteOperations();
 
             // Check if we need to notify about the deregistration.
             if (deregisterPromise != null) {
