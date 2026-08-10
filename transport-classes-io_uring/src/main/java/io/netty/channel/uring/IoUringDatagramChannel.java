@@ -639,7 +639,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
             short opsId = ops.data();
             // The id is the MsgHdrMemoryArray index, which that array allocates and recycles itself.
-            retainUnpooledWriteOperation(opsId, ops.opcode(), data);
+            recordUnpooledWriteOperation(opsId, ops.opcode(), data);
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.

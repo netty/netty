@@ -19,11 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -43,13 +45,17 @@ public class IoUringIovArrayReferenceCollectorTest {
         try {
             iovArray.maxCount(2);
             AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector(iovArray);
+                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+            collector.reset(iovArray);
 
             assertTrue(collector.processMessage(first));
             assertTrue(collector.processMessage(second));
             assertFalse(collector.processMessage(third));
 
-            assertArrayEquals(new ByteBuf[] { first, second }, collector.references());
+            assertEquals(2, collector.referencesCount());
+            ReferenceCounted[] references = collector.referencesArray();
+            assertSame(first, references[0]);
+            assertSame(second, references[1]);
         } finally {
             first.release();
             second.release();
@@ -65,11 +71,13 @@ public class IoUringIovArrayReferenceCollectorTest {
         buffer.addComponents(true, Unpooled.directBuffer().writeZero(1), Unpooled.directBuffer().writeZero(1));
         try {
             AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector(iovArray);
+                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+            collector.reset(iovArray);
 
             assertFalse(collector.processMessage(buffer));
 
-            assertArrayEquals(new ByteBuf[] { buffer }, collector.references());
+            assertEquals(1, collector.referencesCount());
+            assertSame(buffer, collector.referencesArray()[0]);
         } finally {
             buffer.release();
             iovArray.release();
@@ -84,16 +92,51 @@ public class IoUringIovArrayReferenceCollectorTest {
         try {
             iovArray.maxBytes(1);
             AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector(iovArray);
+                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+            collector.reset(iovArray);
 
             assertTrue(collector.processMessage(first));
             assertFalse(collector.processMessage(second));
 
-            assertArrayEquals(new ByteBuf[] { first }, collector.references());
+            assertEquals(1, collector.referencesCount());
+            assertSame(first, collector.referencesArray()[0]);
         } finally {
             first.release();
             second.release();
             iovArray.release();
+        }
+    }
+
+    @Test
+    public void reusingCollectorDropsPreviousWritesReferences() throws Exception {
+        IovArray firstIovArray = new IovArray(3);
+        IovArray secondIovArray = new IovArray(1);
+        ByteBuf first = Unpooled.directBuffer().writeZero(1);
+        ByteBuf second = Unpooled.directBuffer().writeZero(1);
+        ByteBuf third = Unpooled.directBuffer().writeZero(1);
+        ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
+        try {
+            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
+                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+
+            collector.reset(firstIovArray);
+            assertTrue(collector.processMessage(first));
+            assertTrue(collector.processMessage(second));
+            assertTrue(collector.processMessage(third));
+            assertEquals(3, collector.referencesCount());
+
+            collector.reset(secondIovArray);
+            assertTrue(collector.processMessage(fourth));
+
+            assertEquals(1, collector.referencesCount());
+            assertSame(fourth, collector.referencesArray()[0]);
+        } finally {
+            first.release();
+            second.release();
+            third.release();
+            fourth.release();
+            firstIovArray.release();
+            secondIovArray.release();
         }
     }
 }

@@ -44,19 +44,21 @@ public class IoUringWriteOperationIdTest {
                 ByteBuf zeroCopyData = Unpooled.buffer(1).writeByte(1);
                 short id = channel.nextWriteOperationId();
                 try {
-                    channel.retainWriteOperation(id, Native.IORING_OP_SEND_ZC, zeroCopyData);
-                    assertEquals(2, zeroCopyData.refCnt());
+                    channel.recordWriteOperation(id, Native.IORING_OP_SEND_ZC, zeroCopyData);
+                    assertEquals(1, zeroCopyData.refCnt());
 
                     // A splice picks its own data to tell its two stages apart and never allocates from
                     // nextWriteOperationId(), so its completion can carry an id that a zero-copy send owns.
                     channel.completeWriteOperation(id, Native.IORING_OP_SPLICE, 0);
-                    assertEquals(2, zeroCopyData.refCnt());
+                    assertEquals(1, zeroCopyData.refCnt());
                     channel.rollbackWriteOperation(id, Native.IORING_OP_SPLICE);
-                    assertEquals(2, zeroCopyData.refCnt());
+                    assertEquals(1, zeroCopyData.refCnt());
 
-                    // The owning op still terminates it.
+                    // The owning op still terminates it. It was never retained (no shutdown raced it), so the
+                    // terminal CQE leaves the reference count untouched.
                     channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
                     assertEquals(1, zeroCopyData.refCnt());
+                    assertEquals(id, channel.nextWriteOperationId());
                 } finally {
                     zeroCopyData.release();
                 }
@@ -73,7 +75,7 @@ public class IoUringWriteOperationIdTest {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
                     short id = channel.nextWriteOperationId();
-                    channel.retainWriteOperation(id, Native.IORING_OP_SEND, buffer);
+                    channel.recordWriteOperation(id, Native.IORING_OP_SEND, buffer);
                     channel.completeWriteOperation(id, Native.IORING_OP_SEND, 0);
 
                     assertEquals(1, buffer.refCnt());
@@ -95,7 +97,7 @@ public class IoUringWriteOperationIdTest {
                 try {
                     // The datagram sendmsg path registers MsgHdrMemoryArray indices, which start at 0. Recycling
                     // one would hand out 0, the value reserved for "no id".
-                    channel.retainUnpooledWriteOperation((short) 0, Native.IORING_OP_SENDMSG, buffer);
+                    channel.recordUnpooledWriteOperation((short) 0, Native.IORING_OP_SENDMSG, buffer);
                     channel.completeWriteOperation((short) 0, Native.IORING_OP_SENDMSG, 0);
 
                     assertEquals(1, buffer.refCnt());

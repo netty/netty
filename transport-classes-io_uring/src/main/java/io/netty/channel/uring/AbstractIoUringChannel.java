@@ -239,35 +239,50 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     /**
      * Registers a write whose id came from {@link #nextWriteOperationId()}. The id is recycled once the terminal CQE
-     * arrives.
+     * arrives. This does not retain {@code reference}; the outbound buffer keeps ownership of it until either the
+     * write completes normally or a shutdown retains it up front so it survives a completion racing the shutdown.
      */
-    final void retainWriteOperation(short id, byte opCode, ReferenceCounted... references) {
-        writeOperations = retainWriteOperation(writeOperations, id, opCode, references);
+    final void recordWriteOperation(short id, byte opCode, ReferenceCounted reference) {
+        writeOperations = ensureWriteOperationCapacity(writeOperations, id);
+        writeOperationSlot(writeOperations, id).record(opCode, reference);
+    }
+
+    /**
+     * Registers a write of multiple references whose id came from {@link #nextWriteOperationId()}. Takes ownership
+     * of {@code references} without copying it; the caller must not reuse or mutate the array afterwards.
+     */
+    final void recordWriteOperation(short id, byte opCode, ReferenceCounted[] references, int count) {
+        writeOperations = ensureWriteOperationCapacity(writeOperations, id);
+        writeOperationSlot(writeOperations, id).record(opCode, references, count);
     }
 
     /**
      * Registers a write whose id is owned by another allocator, such as the {@link MsgHdrMemoryArray} index used by
      * the datagram sendmsg path. That id lives in its own slot array and never enters the free list.
      */
-    final void retainUnpooledWriteOperation(short id, byte opCode, ReferenceCounted... references) {
-        unpooledWriteOperations = retainWriteOperation(unpooledWriteOperations, id, opCode, references);
+    final void recordUnpooledWriteOperation(short id, byte opCode, ReferenceCounted reference) {
+        unpooledWriteOperations = ensureWriteOperationCapacity(unpooledWriteOperations, id);
+        writeOperationSlot(unpooledWriteOperations, id).record(opCode, reference);
     }
 
-    private static WriteOperation[] retainWriteOperation(WriteOperation[] operations, short id, byte opCode,
-                                                         ReferenceCounted... references) {
+    private static WriteOperation[] ensureWriteOperationCapacity(WriteOperation[] operations, short id) {
         assert id >= 0;
         if (operations == null) {
-            operations = new WriteOperation[Math.max(id + 1, 4)];
-        } else if (id >= operations.length) {
-            operations = Arrays.copyOf(operations, Math.max(id + 1, operations.length << 1));
+            return new WriteOperation[Math.max(id + 1, 4)];
         }
+        if (id >= operations.length) {
+            return Arrays.copyOf(operations, Math.max(id + 1, operations.length << 1));
+        }
+        return operations;
+    }
+
+    private static WriteOperation writeOperationSlot(WriteOperation[] operations, short id) {
         WriteOperation operation = operations[id];
         if (operation == null) {
             // The slot keeps its operation once allocated, so a write only pays for this on the first use of an id.
             operation = operations[id] = new WriteOperation();
         }
-        operation.retain(opCode, references);
-        return operations;
+        return operation;
     }
 
     final void rollbackWriteOperation(short id, byte opCode) {
@@ -427,6 +442,41 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // This one was never registered just use a syscall to close.
             socket.close();
             ioUringUnsafe().unregistered();
+        }
+    }
+
+    /**
+     * Retains every in-flight write's references before handing off to {@link #doShutdownOutput0()}, so a write
+     * completion that races the shutdown still finds a live reference to release instead of one the outbound
+     * buffer already dropped.
+     */
+    @Override
+    protected final void doShutdownOutput() throws Exception {
+        retainInflightWrites();
+        doShutdownOutput0();
+    }
+
+    /**
+     * Performs the actual output shutdown. Overridden by subclasses that support it; {@link #doShutdownOutput()}
+     * always retains in-flight writes first.
+     */
+    protected void doShutdownOutput0() throws Exception {
+        super.doShutdownOutput();
+    }
+
+    private void retainInflightWrites() {
+        retainInflightWrites(writeOperations);
+        retainInflightWrites(unpooledWriteOperations);
+    }
+
+    private static void retainInflightWrites(WriteOperation[] operations) {
+        if (operations == null) {
+            return;
+        }
+        for (WriteOperation operation : operations) {
+            if (operation != null) {
+                operation.retainForShutdown();
+            }
         }
     }
 
@@ -1264,7 +1314,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         } else {
                             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                                     hdr.address(), opsId);
-                            retainWriteOperation(opsId, ops.opcode(), initialData);
+                            recordWriteOperation(opsId, ops.opcode(), initialData);
                             connectId = registration.submit(ops);
                             if (connectId == 0) {
                                 rollbackWriteOperation(opsId, ops.opcode());

@@ -111,7 +111,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void doShutdownOutput() throws Exception {
+    protected final void doShutdownOutput0() throws Exception {
         socket.shutdown(false, true);
     }
 
@@ -262,6 +262,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
         private ByteBuf fileRegionChunkBuf;
 
+        // Reused across the channel's lifetime so a writev only pays for growing the backing reference array,
+        // not for a fresh collector and array on every call.
+        private final IovArrayReferenceCollector iovArrayReferenceCollector = new IovArrayReferenceCollector();
+
+        protected final IovArrayReferenceCollector iovArrayReferenceCollector() {
+            return iovArrayReferenceCollector;
+        }
+
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert writeId == 0;
@@ -272,7 +280,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
 
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            IovArrayReferenceCollector collector = iovArrayReferenceCollector;
+            collector.reset(iovArray);
             try {
                 in.forEachFlushedMessage(filterWriteMultiple(collector));
             } catch (Exception e) {
@@ -289,7 +298,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, opsId);
 
             byte opCode = ops.opcode();
-            retainWriteOperation(opsId, opCode, collector.references());
+            recordWriteOperation(opsId, opCode, collector.referencesArray(), collector.referencesCount());
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
@@ -337,7 +346,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // apart, so it never takes part in the write-operation bookkeeping.
             short opsId = ops.data();
             if (msg instanceof ByteBuf) {
-                retainWriteOperation(opsId, opCode, (ByteBuf) msg);
+                recordWriteOperation(opsId, opCode, (ByteBuf) msg);
             }
             writeId = registration.submit(ops);
             writeOpCode = opCode;
@@ -397,7 +406,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsId);
             byte opCode = ops.opcode();
-            retainWriteOperation(opsId, opCode, buf);
+            recordWriteOperation(opsId, opCode, buf);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
@@ -874,12 +883,18 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     static final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
-        private final IovArray iovArray;
+        private IovArray iovArray;
         private ReferenceCounted[] references = new ReferenceCounted[4];
         private int count;
 
-        IovArrayReferenceCollector(IovArray iovArray) {
+        /**
+         * Points this collector at {@code iovArray} and drops the previous run's references. The backing array is
+         * kept so a collector reused across writev calls only grows it, never reallocates it, once it has seen the
+         * widest write so far.
+         */
+        void reset(IovArray iovArray) {
             this.iovArray = iovArray;
+            count = 0;
         }
 
         @Override
@@ -892,8 +907,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return processed;
         }
 
-        ReferenceCounted[] references() {
-            return Arrays.copyOf(references, count);
+        ReferenceCounted[] referencesArray() {
+            return references;
+        }
+
+        int referencesCount() {
+            return count;
         }
 
         private void add(ByteBuf buffer) {

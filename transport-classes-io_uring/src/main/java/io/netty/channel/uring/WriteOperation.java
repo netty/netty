@@ -18,31 +18,81 @@ package io.netty.channel.uring;
 import io.netty.util.ReferenceCounted;
 
 final class WriteOperation {
+    private static final ReferenceCounted[] EMPTY_REFERENCES = new ReferenceCounted[0];
+
     private byte opCode;
-    private ReferenceCounted[] references;
+    private ReferenceCounted[] references = EMPTY_REFERENCES;
+    private int count;
+    private boolean active;
+    private boolean retained;
     private boolean done;
 
     /**
-     * Takes ownership of the references a submitted SQE handed to the kernel. Instances live in the channel's slot
-     * array and are reused, so this also clears the state left by the previous operation in the slot.
+     * Records the reference a submitted SQE handed to the kernel without retaining it: the outbound buffer already
+     * owns the reference until its own completion path releases it. Instances live in the channel's slot array and
+     * are reused, so this also clears the state left by the previous operation in the slot. The backing array is
+     * kept across reuses of the slot, so recording a single reference only allocates on the first use of the id.
      */
-    void retain(byte opCode, ReferenceCounted... references) {
-        if (this.references != null) {
+    void record(byte opCode, ReferenceCounted reference) {
+        if (isActive()) {
             throw new IllegalStateException("slot still owned by an operation that has not completed");
         }
-        for (ReferenceCounted reference : references) {
-            reference.retain();
+        if (references.length < 1) {
+            references = new ReferenceCounted[1];
         }
+        references[0] = reference;
+        count = 1;
         this.opCode = opCode;
-        this.references = references;
-        this.done = false;
+        active = true;
+        retained = false;
+        done = false;
     }
 
     /**
-     * Whether this slot currently holds an operation that has not been released yet.
+     * Records the references a submitted multi-buffer SQE handed to the kernel, copying them into this operation's
+     * own backing array. The caller is free to reuse or mutate {@code references} once this call returns; this
+     * matters because zero-copy sends keep a slot alive across a primary CQE and its later
+     * {@code IORING_CQE_F_NOTIF}, during which a reused collector array could otherwise be overwritten by the next
+     * write. Instances live in the channel's slot array and are reused, so the backing array is kept across reuses
+     * of the slot: recording only allocates the first time a slot needs to grow to fit a wider write.
+     */
+    void record(byte opCode, ReferenceCounted[] references, int count) {
+        if (isActive()) {
+            throw new IllegalStateException("slot still owned by an operation that has not completed");
+        }
+        if (this.references.length < count) {
+            this.references = new ReferenceCounted[count];
+        }
+        System.arraycopy(references, 0, this.references, 0, count);
+        this.count = count;
+        this.opCode = opCode;
+        active = true;
+        retained = false;
+        done = false;
+    }
+
+    /**
+     * Retains every reference this in-flight operation holds so a shutdown can release the outbound buffer's own
+     * reference without the kernel completion racing it. A no-op once already retained, or when the slot is not
+     * currently active, so callers may call this repeatedly without double-retaining.
+     */
+    void retainForShutdown() {
+        if (!isActive() || retained) {
+            return;
+        }
+        for (int i = 0; i < count; i++) {
+            references[i].retain();
+        }
+        retained = true;
+    }
+
+    /**
+     * Whether this slot currently holds an operation that has not been released yet. This tracks occupancy of the
+     * slot, not the number of references it holds: a submitted SQE that ended up with zero references (e.g. a
+     * multi-buffer write whose buffers were all empty) still occupies the slot until its completion arrives.
      */
     boolean isActive() {
-        return references != null;
+        return active;
     }
 
     /**
@@ -57,29 +107,33 @@ final class WriteOperation {
 
     void complete(int cqeFlags) {
         if ((cqeFlags & Native.IORING_CQE_F_NOTIF) != 0 || (cqeFlags & Native.IORING_CQE_F_MORE) == 0) {
-            release();
+            finish();
         }
     }
 
     void rollback() {
-        release();
+        finish();
     }
 
     boolean isDone() {
         return done;
     }
 
-    private void release() {
+    private void finish() {
         if (done) {
             return;
         }
         done = true;
-        ReferenceCounted[] references = this.references;
-        this.references = null;
-        if (references != null) {
-            for (ReferenceCounted reference : references) {
-                reference.release();
+        active = false;
+        boolean release = retained;
+        retained = false;
+        int finishedCount = count;
+        count = 0;
+        for (int i = 0; i < finishedCount; i++) {
+            if (release) {
+                references[i].release();
             }
+            references[i] = null;
         }
     }
 }

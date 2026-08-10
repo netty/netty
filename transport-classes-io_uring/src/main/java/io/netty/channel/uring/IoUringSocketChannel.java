@@ -86,7 +86,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     }
                     IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                     byte opCode = ops.opcode();
-                    retainWriteOperation(opsId, opCode, buf);
+                    recordWriteOperation(opsId, opCode, buf);
                     writeId = registration().submit(ops);
                     writeOpCode = opCode;
                     if (writeId == 0) {
@@ -112,7 +112,8 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
                 IovArray iovArray = handler.iovArray();
                 int offset = iovArray.count();
-                IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+                IovArrayReferenceCollector collector = iovArrayReferenceCollector();
+                collector.reset(iovArray);
                 // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
                 // buffers.
                 iovArray.maxCount(Native.MAX_SKB_FRAGS);
@@ -147,7 +148,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 }
                 IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
                 byte opCode = ops.opcode();
-                retainWriteOperation(opsId, opCode, collector.references());
+                recordWriteOperation(opsId, opCode, collector.referencesArray(), collector.referencesCount());
                 writeId = registration().submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {

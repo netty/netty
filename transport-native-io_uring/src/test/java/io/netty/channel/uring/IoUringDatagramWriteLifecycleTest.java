@@ -79,9 +79,11 @@ public class IoUringDatagramWriteLifecycleTest {
             assertTrue(closeIssued.await(5, TimeUnit.SECONDS), "local close was not issued");
             ByteBuf buffer = bufferRef.get();
             assertNotNull(buffer, "datagram buffer was not allocated");
-            // WRITE_SCHEDULED is set, so close() parks in delayedClose and leaves the flushed DatagramPacket
-            // in the outbound buffer. That reference plus the one the sendmsg holds makes two.
-            assertEquals(2, refCntAfterClose.get(), "close must keep sendmsg memory live before its terminal CQE");
+            // sendmsg no longer retains its own reference at submission time; the outbound buffer's
+            // reference is the only one alive. WRITE_SCHEDULED is set, so close() parks in delayedClose
+            // instead of releasing the outbound buffer, keeping the flushed DatagramPacket alive until
+            // the terminal CQE arrives.
+            assertEquals(1, refCntAfterClose.get(), "close must keep sendmsg memory live before its terminal CQE");
 
             assertTrue(channel.closeFuture().await(5, TimeUnit.SECONDS), "channel did not close in time");
             assertTrue(awaitRefCntZero(channel, buffer, 5, TimeUnit.SECONDS),
