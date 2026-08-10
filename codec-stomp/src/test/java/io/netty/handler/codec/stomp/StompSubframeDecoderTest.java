@@ -140,6 +140,25 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
+    public void testFrameChunkedIncomplete() {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 100));
+
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
+        // Let's truncate the buffer so we don't have anything complete after the header.
+        incoming.writerIndex(incoming.writerIndex() - 2);
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+
+        // There is nothing complete to read.
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testMultipleFramesDecoding() {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
