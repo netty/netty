@@ -29,6 +29,7 @@ import io.netty.handler.stream.ChunkedStream;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -175,11 +176,22 @@ public class HttpChunkedInputTest {
     @Test
     public void testCloseReleasesUnsentLastHttpContentWhenInputCloseThrows() throws Exception {
         LastHttpContent lastHttpContent = new DefaultLastHttpContent(Unpooled.buffer(1).writeByte(1));
-        HttpChunkedInput input = new HttpChunkedInput(new TestChunkedInput(false, true), lastHttpContent);
+        final HttpChunkedInput input = new HttpChunkedInput(
+            new TestChunkedInput(false, true), lastHttpContent);
 
-        assertThrows(IOException.class, input::close);
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                input.close();
+            }
+        });
         assertEquals(0, lastHttpContent.refCnt());
-        assertThrows(IOException.class, input::close);
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                input.close();
+            }
+        });
         assertEquals(0, lastHttpContent.refCnt());
     }
 
