@@ -189,16 +189,25 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                     resetDecoder();
             }
         } catch (Exception e) {
-            if (lastContent != null) {
-                lastContent.release();
-                lastContent = null;
-            }
+            releaseLastContentIfNeeded();
 
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
             checkpoint(State.BAD_FRAME);
         }
+    }
+
+    private void releaseLastContentIfNeeded() {
+        if (lastContent != null) {
+            lastContent.release();
+            lastContent = null;
+        }
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        releaseLastContentIfNeeded();
     }
 
     private StompCommand readCommand(ByteBuf in) {
