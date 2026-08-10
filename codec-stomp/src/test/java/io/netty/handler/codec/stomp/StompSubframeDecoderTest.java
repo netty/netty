@@ -18,7 +18,6 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,6 +136,25 @@ public class StompSubframeDecoderTest {
         content.release();
 
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testFrameChunkedIncomplete() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 100));
+
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
+        // Let's truncate the buffer so we don't have anything complete after the header.
+        incoming.writerIndex(incoming.writerIndex() - 2);
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+
+        // There is nothing complete to read.
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
