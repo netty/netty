@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.17.Final-SNAPSHOT</version>
+  <version>4.2.18.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -765,6 +765,7 @@
     <junit.version>5.14.3</junit.version>
     <junit.platform.version>1.14.0</junit.platform.version>
     <jazzer.version>0.30.0</jazzer.version>
+    <jctools.version>4.0.6</jctools.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
@@ -955,7 +956,7 @@
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.11.1</version>
+        <version>1.11.2</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1023,7 +1024,12 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>4.0.6</version>
+        <version>${jctools.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jctools</groupId>
+        <artifactId>jctools-core-jdk11</artifactId>
+        <version>${jctools.version}</version>
       </dependency>
 
       <!-- Annotations for IDE integration and analysis -->
@@ -2012,12 +2018,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>

@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.17.Final-SNAPSHOT</version>
+    <version>4.2.18.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-resolver-dns</artifactId>
@@ -72,6 +72,10 @@
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-protocol-dns</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
     </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
