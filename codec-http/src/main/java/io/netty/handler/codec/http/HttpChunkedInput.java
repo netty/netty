@@ -60,7 +60,7 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
      * chunk.
      * @param input {@link ChunkedInput} containing data to write
      * @param lastHttpContent {@link LastHttpContent} that will be written as the terminating chunk. Use this for
-     *            training headers.
+     *            trailing headers. Ownership is transferred to this {@link HttpChunkedInput}.
      */
     public HttpChunkedInput(ChunkedInput<ByteBuf> input, LastHttpContent lastHttpContent) {
         this.input = input;
@@ -79,7 +79,14 @@ public class HttpChunkedInput implements ChunkedInput<HttpContent> {
 
     @Override
     public void close() throws Exception {
-        input.close();
+        try {
+            input.close();
+        } finally {
+            if (!sentLastChunk) {
+                sentLastChunk = true;
+                lastHttpContent.release();
+            }
+        }
     }
 
     @Deprecated
