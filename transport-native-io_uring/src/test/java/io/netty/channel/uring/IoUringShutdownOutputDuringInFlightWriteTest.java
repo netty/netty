@@ -131,7 +131,6 @@ public class IoUringShutdownOutputDuringInFlightWriteTest {
 
             assertTrue(awaitRefCntZero(clientChannel, buffer, 5, TimeUnit.SECONDS),
                     "write buffer was not released after its terminal completion");
-            assertEquals(0, buffer.refCnt(), "write buffer was not released after its terminal completion");
 
             assertTrue(clientChannel.close().await(5, TimeUnit.SECONDS),
                     "channel did not close within the timeout after shutdownOutput() raced an "
