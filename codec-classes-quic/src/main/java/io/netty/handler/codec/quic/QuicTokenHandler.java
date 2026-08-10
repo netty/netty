@@ -54,6 +54,9 @@ public interface QuicTokenHandler {
         /**
          * Returns a result that indicates the token is valid and the ODCID should be taken from the token suffix
          * starting at the specified offset.
+         * <p>
+         * This is typically used for tokens from Retry packets; see
+         * {@link QuicTokenHandler#validateToken(ByteBuf, InetSocketAddress, ByteBuf)}.
          *
          * @param offset    the start index of the ODCID in the token.
          * @return          the validation result.
@@ -65,6 +68,9 @@ public interface QuicTokenHandler {
         /**
          * Returns a result that indicates the token is valid and the ODCID should be taken from the current
          * destination connection id of the Initial packet.
+         * <p>
+         * This is typically used for tokens from NEW_TOKEN frames; see
+         * {@link QuicTokenHandler#validateToken(ByteBuf, InetSocketAddress, ByteBuf)}.
          *
          * @return  the validation result.
          */
@@ -110,9 +116,13 @@ public interface QuicTokenHandler {
     boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address);
 
     /**
-     * Validate the token and return the offset, {@code -1} is returned if the token is not valid.
+     * Validate the token and return the offset, {@code -1} is returned if the token is not valid. The returned offset
+     * identifies where the ODCID starts in the token. Implementations that support tokens from NEW_TOKEN frames should
+     * override {@link #validateToken(ByteBuf, InetSocketAddress, ByteBuf)}.
      *
-     * @param token     the {@link ByteBuf} that contains the token. The ownership is not transferred.
+     * @param token     the {@link ByteBuf} that contains the token. The caller retains ownership of the buffer:
+     *                  implementations must not release it and must retain, duplicate or copy it before using it after
+     *                  this method returns.
      * @param address   the {@link InetSocketAddress} of the sender.
      * @return          the start index after the token or {@code -1} if the token was not valid.
      */
@@ -120,10 +130,29 @@ public interface QuicTokenHandler {
 
     /**
      * Validate the token and return a structured result that determines how the ODCID should be derived.
+     * <p>
+     * RFC 9000 distinguishes tokens sent in Retry packets from tokens sent in NEW_TOKEN frames, and requires token
+     * construction to let the server identify how the token was provided to the client; see RFC 9000 Sections 8.1.1,
+     * 8.1.2 and 8.1.3.
+     * <p>
+     * A token from a Retry packet, as described in RFC 9000 Section 8.1.2 and carried by the Retry packet in
+     * Section 17.2.5, validates the same connection attempt after the server selected a new connection id. In this
+     * case the result should identify the original destination connection id from the client's first Initial packet.
+     * Use {@link TokenValidationResult#odcidFromToken(int)} if the token stores that connection id as a suffix, which
+     * is the convention used by the legacy {@link #validateToken(ByteBuf, InetSocketAddress)} method.
+     * <p>
+     * A token from a NEW_TOKEN frame, as described in RFC 9000 Section 8.1.3, validates a future connection attempt.
+     * No Retry packet has been sent for that new attempt, so the original destination connection id is the destination
+     * connection id of the current Initial packet as described in RFC 9000 Section 7.2. Use
+     * {@link TokenValidationResult#odcidFromDestinationConnectionId()} for this case.
      *
-     * @param token     the {@link ByteBuf} that contains the token. The ownership is not transferred.
+     * @param token     the {@link ByteBuf} that contains the token. The caller retains ownership of the buffer:
+     *                  implementations must not release it and must retain, duplicate or copy it before using it after
+     *                  this method returns.
      * @param address   the {@link InetSocketAddress} of the sender.
-     * @param dcid      the destination connection id of the current Initial packet. The ownership is not transferred.
+     * @param dcid      the destination connection id of the current Initial packet. The caller retains ownership of the
+     *                  buffer: implementations must not release it and must retain, duplicate or copy it before using
+     *                  it after this method returns.
      * @return          the validation result.
      */
     default TokenValidationResult validateToken(ByteBuf token, InetSocketAddress address, ByteBuf dcid) {
