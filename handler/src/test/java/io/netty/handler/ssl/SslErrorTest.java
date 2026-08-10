@@ -42,7 +42,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.security.auth.x500.X500Principal;
@@ -221,6 +220,30 @@ public class SslErrorTest {
             return new TrustManager[] { new X509ExtendedTrustManager() {
 
                 @Override
+                public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+                        throws CertificateException {
+                    throw exception;
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+                        throws CertificateException {
+                    throw exception;
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                        throws CertificateException {
+                    throw exception;
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                        throws CertificateException {
+                    throw exception;
+                }
+
+                @Override
                 public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
                         throws CertificateException {
                     throw exception;
@@ -228,30 +251,6 @@ public class SslErrorTest {
 
                 @Override
                 public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
-                        throws CertificateException {
-                    throw exception;
-                }
-
-                @Override
-                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                        throws CertificateException {
-                    throw exception;
-                }
-
-                @Override
-                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                        throws CertificateException {
-                    throw exception;
-                }
-
-                @Override
-                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
-                        throws CertificateException {
-                    throw exception;
-                }
-
-                @Override
-                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
                         throws CertificateException {
                     throw exception;
                 }
