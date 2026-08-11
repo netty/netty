@@ -10,7 +10,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
+ * License for the specific language governing permissions and limitationsx
  * under the License.
  */
 package io.netty.handler.codec.compression;
@@ -165,8 +165,11 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         }
 
         if (writer != null) {
+            writer.closeFuture.addHandler(promise);
             writer.close();
             this.writer = null;
+        } else {
+            promise.setSuccess(null);
         }
     }
 
@@ -183,6 +186,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     private static final class Writer implements WritableByteChannel {
 
+        private final Promise<Void> closeFuture;
         private ByteBuf writableBuffer;
         private final BrotliEncoderChannel brotliEncoderChannel;
         private final ChannelHandlerContext ctx;
@@ -192,6 +196,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         private Writer(Encoder.Parameters parameters, ChannelHandlerContext ctx) throws IOException {
             brotliEncoderChannel = new BrotliEncoderChannel(this, parameters);
             this.ctx = ctx;
+            this.closeFuture = ctx.newPromise();
         }
 
         private void encode(ByteBuf msg, boolean preferDirect) throws Exception {
@@ -244,14 +249,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 return;
             }
             closeInitiated = true;
-            final Promise<Void> promise = ctx.newPromise();
             ctx.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        finish(promise);
+                        finish(closeFuture);
                     } catch (IOException ex) {
-                        promise.setFailure(new IllegalStateException("Failed to finish encoding", ex));
+                        closeFuture.setFailure(new IllegalStateException("Failed to finish encoding", ex));
                     }
                 }
             });
