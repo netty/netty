@@ -895,25 +895,43 @@ final class AdaptivePoolingAllocator {
             // available for pollChunk). This preserves a warm cache for the next burst.
         }
 
-        // Called from releaseSegment (Signal B, shared path under tryWriteLock):
-        // chunk may be in exhausted OR reusable list
-        void signalFullyFreeShared(SizeClassedChunk chunk) {
-            if (totalCount() <= purgeRetentionFloor) {
-                // Below floor: move to reusable if in exhausted (it has capacity now)
-                if (chunk.cacheListState == SizeClassedChunk.CACHE_EXHAUSTED) {
-                    removeFromExhausted(chunk);
-                    addToReusable(chunk);
-                }
+        // Called from releaseSegment on the external (cross-thread) path.
+        // Mirrors mimalloc's freeBlockMt → tryWriteLock → freeLocal pattern:
+        // attempt the stripe lock, and if acquired, process both Signal A and Signal B.
+        // If the lock is contended (allocation in progress), skip — the allocation
+        // path handles transitions during pollChunk/runPurgeScan.
+        void tryProcessExternalReturn(SizeClassedChunk chunk) {
+            if (stripeLock == null) {
+                return; // thread-local cache, cross-thread return — deferred to purge
+            }
+            long stamp = stripeLock.tryWriteLock();
+            if (stamp == 0) {
                 return;
             }
-            // Above floor: evict
-            if (chunk.cacheListState == SizeClassedChunk.CACHE_EXHAUSTED) {
-                removeFromExhausted(chunk);
-            } else {
-                removeFromReusable(chunk);
+            try {
+                int cls = chunk.cacheListState;
+                if (cls == SizeClassedChunk.CACHE_EXHAUSTED) {
+                    // Signal A: chunk gained capacity. Move to reusable.
+                    if (chunk.hasRemainingCapacity()) {
+                        removeFromExhausted(chunk);
+                        if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
+                            detachFromCache(chunk);
+                            chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                        } else {
+                            addToReusable(chunk);
+                        }
+                    }
+                } else if (cls == SizeClassedChunk.CACHE_REUSABLE) {
+                    // Signal B: check if all segments returned.
+                    if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
+                        removeFromReusable(chunk);
+                        detachFromCache(chunk);
+                        chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                    }
+                }
+            } finally {
+                stripeLock.unlockWrite(stamp);
             }
-            detachFromCache(chunk);
-            chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
         }
 
         @Override
@@ -1926,8 +1944,11 @@ final class AdaptivePoolingAllocator {
                 int state = this.state;
                 if (state != AVAILABLE) {
                     deallocateIfNeeded(state);
-                } else if (sizeAfterOffer == segments) {
-                    tryRetireFromSharedCache();
+                } else {
+                    ThreadLocalSizeClassedChunkCache cache = owningCache;
+                    if (cache != null) {
+                        cache.tryProcessExternalReturn(this);
+                    }
                 }
             }
         }
@@ -1941,24 +1962,6 @@ final class AdaptivePoolingAllocator {
                 cache.moveToReusable(this);
             } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
                 cache.signalFullyFree(this);
-            }
-        }
-
-        private void tryRetireFromSharedCache() {
-            ThreadLocalSizeClassedChunkCache cache = owningCache;
-            if (cache == null || cache.stripeLock == null) {
-                return;
-            }
-            long stamp = cache.stripeLock.tryWriteLock();
-            if (stamp == 0) {
-                return;
-            }
-            try {
-                if (cacheListState != CACHE_NONE) {
-                    cache.signalFullyFreeShared(this);
-                }
-            } finally {
-                cache.stripeLock.unlockWrite(stamp);
             }
         }
 
