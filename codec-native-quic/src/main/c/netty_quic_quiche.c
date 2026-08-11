@@ -1061,6 +1061,7 @@ static void log_to_java(const char *line, void *argp) {
         return;
     }
     (*env)->CallVoidMethod(env, quiche_logger, quiche_logger_class_log, message);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, message);
 }
 
 static void netty_quiche_enable_debug_logging(JNIEnv* env, jclass clazz, jobject logger) {
