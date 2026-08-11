@@ -1024,36 +1024,28 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
-    /**
-     * It skips any whitespace char and return the number of skipped bytes.
-     */
-    private static int skipWhiteSpaces(byte[] hex, int start, int length) {
-        for (int i = 0; i < length; i++) {
-            if (!isWhitespace(hex[start + i])) {
-                return i;
-            }
-        }
-        return length;
-    }
-
     private static int getChunkSize(byte[] hex, int start, int length) {
-        // trim the leading bytes of white spaces, if any
-        final int skipped = skipWhiteSpaces(hex, start, length);
-        if (skipped == length) {
-            // empty case
-            throw new NumberFormatException();
+        if (length == 0) { // Empty case - not allowed
+            throw new NumberFormatException("Empty chunk size");
         }
-        start += skipped;
-        length -= skipped;
         long result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
             if (digit == -1) {
-                // uncommon path
-                final byte b = hex[start + i];
-                if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
-                    if (i == 0) {
-                        // empty case
+                // Uncommon path:
+                // We must either hit the chunk header line (implicit CRLF from the header line parser),
+                // or a ';' character for chunk-extensions, or the "bad whitespace" allowed to precede ';'.
+                byte b = hex[start + i];
+                int j = 0;
+                while (b == HttpConstants.SP || b == HttpConstants.HT) { // Skip BWS
+                    int index = i + (++j);
+                    if (index >= length) {
+                        throw new NumberFormatException("Invalid chunk size; expected extensions");
+                    }
+                    b = hex[start + index];
+                }
+                if (b == ';') {
+                    if (i == 0) { // Empty case - not allowed
                         throw new NumberFormatException("Empty chunk size");
                     }
                     return (int) result;
