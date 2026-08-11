@@ -194,18 +194,23 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             }
             writeId = 0;
             writeOpCode = 0;
+            if ((flags & Native.IORING_CQE_F_MORE) != 0) {
+                // Per io_uring_enter(2) (IORING_OP_SEND_ZC): "Even errored requests may generate a notification,
+                // and the user must check for IORING_CQE_F_MORE rather than relying on the result." So whenever
+                // F_MORE is set on this primary CQE, the kernel still owns the memory until the follow-up
+                // IORING_CQE_F_NOTIF arrives, regardless of whether res reports success or an error. Retain here,
+                // before any release below (removeBytes(...) dropping the outbound buffer's own reference on
+                // success, or handleWriteError(...) failing the flushed write on error), so the buffer stays
+                // alive across that gap instead of being freed out from under the still-pending notification.
+                // retainReferences() is idempotent and a no-op once the slot is no longer active, so this composes
+                // safely with a shutdown that already retained (or released) this slot.
+                retainWriteOperationReferences(data, op);
+            }
             ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
             if (channelOutboundBuffer == null) {
                 return true;
             }
             if (res >= 0) {
-                if ((flags & Native.IORING_CQE_F_MORE) != 0) {
-                    // The kernel still owns the memory until the follow-up IORING_CQE_F_NOTIF arrives. Retain the
-                    // write operation's references now, before removeBytes(...) below drops the outbound buffer's
-                    // own reference, so the buffer stays alive across that gap instead of being freed out from
-                    // under the still-pending notification.
-                    retainWriteOperationReferences(data, op);
-                }
                 // A partial write is reported as a partial write.
                 channelOutboundBuffer.removeBytes(res);
                 return true;
