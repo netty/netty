@@ -245,7 +245,7 @@ static jobjectArray stackToArray(JNIEnv *e, const STACK_OF(CRYPTO_BUFFER)* stack
         (*e)->SetObjectArrayElement(e, array, i, bArray);
         // Delete the local reference as we not know how long the chain is and local references are otherwise
         // only freed once jni method returns.
-        (*e)->DeleteLocalRef(e, bArray);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, bArray);
         bArray = NULL;
     }
     return array;
@@ -589,10 +589,12 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
             for (int i = 0; i < len; i++) {
                 jstring methodString = (*e)->NewStringUTF(e, SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, i)));
                 if (methodString == NULL) {
+                    NETTY_JNI_UTIL_DELETE_LOCAL(e, authMethods);
                     // Out of memory
                     return 0;
                 }
                 (*e)->SetObjectArrayElement(e, authMethods, i, methodString);
+                NETTY_JNI_UTIL_DELETE_LOCAL(e, methodString);
             }
 
             // TODO: Consider filling these somehow.
@@ -608,11 +610,20 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
         // SSL.getTask(ssl) and run it.
         NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, certificateTaskClass, certificateTaskClassWeak, done);
         jobject task = (*e)->NewObject(e, certificateTaskClass, certificateTaskClassInitMethod, (jlong) ssl, types, issuers, authMethods, arg);
+
         NETTY_JNI_UTIL_DELETE_LOCAL(e, certificateTaskClass);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, types);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, issuers);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, authMethods);
+
         if (task == NULL) {
             return 0;
         }
-        if ((ssl_task = netty_boringssl_ssl_task_new(e, task)) == NULL) {
+
+        ssl_task = netty_boringssl_ssl_task_new(e, task);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, task);
+
+        if (ssl_task == NULL) {
             return 0;
         }
 
@@ -865,6 +876,13 @@ void quic_SSL_info_callback(const SSL *ssl, int type, int value) {
         // Execute the java callback
         (*e)->CallVoidMethod(e, handshakeCompleteCallback, handshakeCompleteCallbackMethod,
                  (jlong) ssl, session_id, cipher, version, peerCert, certChain, creationTime, timeout, alpnSelected, sessionReused);
+
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, session_id);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, cipher);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, version);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, peerCert);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, certChain);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, alpnSelected);
     }
 }
 
@@ -900,6 +918,8 @@ int quic_tlsext_servername_callback(SSL *ssl, int *out_alert, void *arg) {
     }
 
     jlong result = (*e)->CallLongMethod(e, servernameCallback, servernameCallbackMethod, (jlong) ssl, servername);
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, servername);
 
     if ((*e)->ExceptionCheck(e) == JNI_TRUE) {
         // Some exception was thrown. Let's fail.
@@ -947,6 +967,8 @@ void keylog_callback(const SSL* ssl, const char* line) {
 
     // Execute the java callback
     (*e)->CallVoidMethod(e, keylogCallback, keylogCallbackMethod, (jlong) ssl, keyString);
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, keyString);
 }
 
 // Always return 0 as we serialize the session / params to byte[] and so no take ownership.
@@ -998,6 +1020,8 @@ int new_session_callback(SSL *ssl, SSL_SESSION *session) {
     // Execute the java callback
     (*e)->CallVoidMethod(e, sessionCallback, sessionCallbackMethod, (jlong) ssl, (jlong) SSL_SESSION_get_time(session), (jlong) SSL_SESSION_get_timeout(session), sessionBytes, singleUse, peerParamsBytes);
 
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, sessionBytes);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, peerParamsBytes);
     return 0;
 }
 
@@ -1412,6 +1436,8 @@ static int netty_boringssl_tlsext_ticket_key_cb(SSL *s, unsigned char key_name[1
     } else { /* retrieve session */
         jbyteArray name = to_byte_array(env, (uint8_t*) key_name, 16);
         jbyteArray key = (jbyteArray) (*env)->CallObjectMethod(env, sessionTicketCallback, sessionTicketCallbackMethod, name);
+
+        NETTY_JNI_UTIL_DELETE_LOCAL(env, name);
 
         if (key != NULL) {
             int keyLen = (*env)->GetArrayLength(env, key);
