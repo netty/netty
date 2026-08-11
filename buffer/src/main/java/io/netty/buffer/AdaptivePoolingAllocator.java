@@ -668,15 +668,18 @@ final class AdaptivePoolingAllocator {
         }
 
         private void stripeWidePurge(int triggeringSizeClassIndex) {
-            if (magazines == null) {
-                return;
+            if (magazines != null) {
+                purgeSiblingCaches(magazines, triggeringSizeClassIndex);
             }
-            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                if (i != triggeringSizeClassIndex) {
-                    Magazine sibling = magazines[i];
-                    if (sibling != null) {
-                        sibling.chunkCache.tickPurge();
-                    }
+        }
+    }
+
+    private static void purgeSiblingCaches(Magazine[] magazines, int triggeringSizeClassIndex) {
+        for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+            if (i != triggeringSizeClassIndex) {
+                Magazine sibling = magazines[i];
+                if (sibling != null) {
+                    sibling.tickCachePurge();
                 }
             }
         }
@@ -707,14 +710,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private void stripeWidePurge(int triggeringSizeClassIndex) {
-            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                if (i != triggeringSizeClassIndex) {
-                    Magazine sibling = magazines[i];
-                    if (sibling != null) {
-                        sibling.chunkCache.tickPurge();
-                    }
-                }
-            }
+            purgeSiblingCaches(magazines, triggeringSizeClassIndex);
         }
 
         Magazine getOrCreateMagazine(int sizeClassIndex) {
@@ -1385,6 +1381,10 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        void tickCachePurge() {
+            chunkCache.tickPurge();
+        }
+
         boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
@@ -1944,7 +1944,11 @@ final class AdaptivePoolingAllocator {
                 int state = this.state;
                 if (state != AVAILABLE) {
                     deallocateIfNeeded(state);
-                } else {
+                } else if (sizeAfterOffer == 1 || sizeAfterOffer == segments) {
+                    // Only attempt the stripe lock on transition boundaries:
+                    // sizeAfterOffer == 1: first segment return (Signal A candidate)
+                    // sizeAfterOffer == segments: all segments returned (Signal B candidate)
+                    // Mid-lifecycle returns (2..segments-1) skip entirely.
                     ThreadLocalSizeClassedChunkCache cache = owningCache;
                     if (cache != null) {
                         cache.tryProcessExternalReturn(this);
