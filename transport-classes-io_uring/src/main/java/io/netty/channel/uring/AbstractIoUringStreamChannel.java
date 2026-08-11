@@ -699,7 +699,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
                 // We only want to reset these if IORING_CQE_F_NOTIF is not set.
                 // If it's set we know this is only an extra notification for a write but we already handled
@@ -722,7 +722,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
+                // Only zero-copy writes are ever handed an id outside the short range, and a splice is not one
+                // of them: IoUringFileRegion picks SPLICE_TO_PIPE / SPLICE_TO_SOCKET as its own data to tell
+                // its two stages apart, so narrowing here can not drop any bits.
+                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, (short) data);
             }
 
             if (current instanceof FileRegion) {

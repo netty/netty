@@ -148,7 +148,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;

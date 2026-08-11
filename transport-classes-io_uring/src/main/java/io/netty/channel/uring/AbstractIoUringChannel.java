@@ -47,6 +47,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.StringUtil;
@@ -103,6 +104,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private short[] freeWriteOperationIds;
     private int freeWriteOperationIdCount;
     private int issuedWriteOperationIds;
+
+    // Only ever holds values above MAX_WRITE_OPERATION_IDS. Such a value does not survive a round-trip through
+    // short, so IoUringIoHandler.canUseFastPath(...) always rejects it and the submission takes the slow path,
+    // which preserves the full user_data. No new protocol is needed to carry it.
+    // The counter only grows and its values are never recycled, so a fallback id can never collide with a live
+    // one without any probing (same reasoning as PendingOpMap.nextToken(): exhausting the positive long space
+    // would take thousands of years at ten million allocations per second).
+    private long nextOverflowWriteOperationId = ((long) MAX_WRITE_OPERATION_IDS) + 1;
+    // Never allocated before the short pool runs dry, so the common path never touches a map.
+    private LongObjectHashMap<WriteOperation> overflowWriteOperations;
 
     private long pollInId;
     private long pollOutId;
@@ -238,22 +249,49 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     /**
-     * Registers a write whose id came from {@link #nextWriteOperationId()}. The id is recycled once the terminal CQE
-     * arrives. This does not retain {@code reference}; the outbound buffer keeps ownership of it until either the
-     * write completes normally or a shutdown retains it up front so it survives a completion racing the shutdown.
+     * Returns a write-operation id for a zero-copy write. Reuses the short id pool via
+     * {@link #nextWriteOperationId()} while it has room; once every short id is held by an in-flight write
+     * (proven by {@code freeWriteOperationIdCount == 0 && issuedWriteOperationIds == MAX_WRITE_OPERATION_IDS},
+     * already tracked by {@link #nextWriteOperationId()} — no probing needed), falls back to a long id outside the
+     * short range so the write still gets submitted instead of being deferred. Never returns 0.
      */
-    final void recordWriteOperation(short id, byte opCode, ReferenceCounted reference) {
-        writeOperations = ensureWriteOperationCapacity(writeOperations, id);
-        writeOperationSlot(writeOperations, id).record(opCode, reference);
+    final long nextZeroCopyWriteOperationId() {
+        short id = nextWriteOperationId();
+        if (id != 0) {
+            return id;
+        }
+        return nextOverflowWriteOperationId++;
     }
 
     /**
-     * Registers a write of multiple references whose id came from {@link #nextWriteOperationId()}. Takes ownership
-     * of {@code references} without copying it; the caller must not reuse or mutate the array afterwards.
+     * Registers a write whose id came from {@link #nextWriteOperationId()} or {@link #nextZeroCopyWriteOperationId()}.
+     * The id is recycled once the terminal CQE arrives. This does not retain {@code reference}; the outbound buffer
+     * keeps ownership of it until either the write completes normally or a shutdown retains it up front so it
+     * survives a completion racing the shutdown.
      */
-    final void recordWriteOperation(short id, byte opCode, ReferenceCounted[] references, int count) {
-        writeOperations = ensureWriteOperationCapacity(writeOperations, id);
-        writeOperationSlot(writeOperations, id).record(opCode, references, count);
+    final void recordWriteOperation(long id, byte opCode, ReferenceCounted reference) {
+        if (id > MAX_WRITE_OPERATION_IDS) {
+            overflowWriteOperationSlot(id).record(opCode, reference);
+            return;
+        }
+        short slot = (short) id;
+        writeOperations = ensureWriteOperationCapacity(writeOperations, slot);
+        writeOperationSlot(writeOperations, slot).record(opCode, reference);
+    }
+
+    /**
+     * Registers a write of multiple references whose id came from {@link #nextWriteOperationId()} or
+     * {@link #nextZeroCopyWriteOperationId()}. Takes ownership of {@code references} without copying it; the caller
+     * must not reuse or mutate the array afterwards.
+     */
+    final void recordWriteOperation(long id, byte opCode, ReferenceCounted[] references, int count) {
+        if (id > MAX_WRITE_OPERATION_IDS) {
+            overflowWriteOperationSlot(id).record(opCode, references, count);
+            return;
+        }
+        short slot = (short) id;
+        writeOperations = ensureWriteOperationCapacity(writeOperations, slot);
+        writeOperationSlot(writeOperations, slot).record(opCode, references, count);
     }
 
     /**
@@ -285,29 +323,75 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return operation;
     }
 
-    final void rollbackWriteOperation(short id, byte opCode) {
-        WriteOperation operation = writeOperation(writeOperations, id, opCode);
-        if (operation != null) {
-            operation.rollback();
-            recycleWriteOperationId(id);
+    /**
+     * The slot of an id handed out by {@link #nextZeroCopyWriteOperationId()} after the short pool ran dry. The map
+     * is created on first use so a channel that never exhausts its ids never pays for it.
+     */
+    private WriteOperation overflowWriteOperationSlot(long id) {
+        if (overflowWriteOperations == null) {
+            overflowWriteOperations = new LongObjectHashMap<WriteOperation>(2);
+        }
+        WriteOperation operation = overflowWriteOperations.get(id);
+        if (operation == null) {
+            operation = new WriteOperation();
+            overflowWriteOperations.put(id, operation);
+        }
+        return operation;
+    }
+
+    private WriteOperation overflowWriteOperation(long id, byte opCode) {
+        if (overflowWriteOperations == null) {
+            return null;
+        }
+        WriteOperation operation = overflowWriteOperations.get(id);
+        return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
+    }
+
+    final void rollbackWriteOperation(long id, byte opCode) {
+        if (id > MAX_WRITE_OPERATION_IDS) {
+            WriteOperation overflow = overflowWriteOperation(id, opCode);
+            if (overflow != null) {
+                overflow.rollback();
+                // Overflow ids are never recycled, so the entry has to go or the map grows without bound.
+                overflowWriteOperations.remove(id);
+            }
             return;
         }
-        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        short slot = (short) id;
+        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
+        if (operation != null) {
+            operation.rollback();
+            recycleWriteOperationId(slot);
+            return;
+        }
+        operation = writeOperation(unpooledWriteOperations, slot, opCode);
         if (operation != null) {
             operation.rollback();
         }
     }
 
-    final void completeWriteOperation(short id, byte opCode, int flags) {
-        WriteOperation operation = writeOperation(writeOperations, id, opCode);
-        if (operation != null) {
-            operation.complete(flags);
-            if (operation.isDone()) {
-                recycleWriteOperationId(id);
+    final void completeWriteOperation(long id, byte opCode, int flags) {
+        if (id > MAX_WRITE_OPERATION_IDS) {
+            WriteOperation overflow = overflowWriteOperation(id, opCode);
+            if (overflow != null) {
+                overflow.complete(flags);
+                if (overflow.isDone()) {
+                    // Overflow ids are never recycled, so the entry has to go or the map grows without bound.
+                    overflowWriteOperations.remove(id);
+                }
             }
             return;
         }
-        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        short slot = (short) id;
+        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
+        if (operation != null) {
+            operation.complete(flags);
+            if (operation.isDone()) {
+                recycleWriteOperationId(slot);
+            }
+            return;
+        }
+        operation = writeOperation(unpooledWriteOperations, slot, opCode);
         if (operation != null) {
             operation.complete(flags);
         }
@@ -467,7 +551,26 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void retainInflightWrites() {
         retainInflightWrites(writeOperations);
         retainInflightWrites(unpooledWriteOperations);
+        retainInflightOverflowWrites();
         ioUringUnsafe().retainInflightWriteOperations();
+    }
+
+    /**
+     * Same sweep as {@link #retainInflightWrites(WriteOperation[])} for the writes whose id had to fall back out of
+     * the short range. A write parked here is in flight just like one in a slot array, so leaving it out would hand
+     * a completion racing the shutdown a reference the outbound buffer already dropped.
+     */
+    private void retainInflightOverflowWrites() {
+        if (overflowWriteOperations == null) {
+            return;
+        }
+        for (WriteOperation operation : overflowWriteOperations.values()) {
+            try {
+                operation.retainReferences();
+            } catch (Throwable cause) {
+                logger.warn("Failed to retain in-flight write operation before shutdown", cause);
+            }
+        }
     }
 
     private static void retainInflightWrites(WriteOperation[] operations) {
@@ -495,13 +598,21 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * kernel still owns the memory until the follow-up {@code IORING_CQE_F_NOTIF}, so the slot's references must be
      * retained before the outbound buffer drops its own reference.
      */
-    final void retainWriteOperationReferences(short id, byte opCode) {
-        WriteOperation operation = writeOperation(writeOperations, id, opCode);
+    final void retainWriteOperationReferences(long id, byte opCode) {
+        if (id > MAX_WRITE_OPERATION_IDS) {
+            WriteOperation overflow = overflowWriteOperation(id, opCode);
+            if (overflow != null) {
+                overflow.retainReferences();
+            }
+            return;
+        }
+        short slot = (short) id;
+        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
         if (operation != null) {
             operation.retainReferences();
             return;
         }
-        operation = writeOperation(unpooledWriteOperations, id, opCode);
+        operation = writeOperation(unpooledWriteOperations, slot, opCode);
         if (operation != null) {
             operation.retainReferences();
         }
@@ -515,7 +626,33 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void releaseWriteOperations() {
         releaseWriteOperations(writeOperations);
         releaseWriteOperations(unpooledWriteOperations);
+        releaseOverflowWriteOperations();
         ioUringUnsafe().releaseInflightWriteOperations();
+    }
+
+    /**
+     * Same rollback as {@link #releaseWriteOperations(WriteOperation[])} for the overflow map. Emptying it also
+     * keeps the map from outliving the writes it tracked, which matters here because overflow ids are never
+     * recycled.
+     */
+    private void releaseOverflowWriteOperations() {
+        if (overflowWriteOperations == null) {
+            return;
+        }
+        for (WriteOperation operation : overflowWriteOperations.values()) {
+            if (operation.isActive()) {
+                operation.rollback();
+            }
+        }
+        overflowWriteOperations.clear();
+    }
+
+    /**
+     * The number of write operations currently parked in the overflow map. Only used to assert that completions and
+     * rollbacks drop their entry.
+     */
+    final int overflowWriteOperationCount() {
+        return overflowWriteOperations == null ? 0 : overflowWriteOperations.size();
     }
 
     private static void releaseWriteOperations(WriteOperation[] operations) {
@@ -661,13 +798,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+         * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteMultiple(ChannelOutboundBuffer in);
 
         /**
          * Schedule the write of a single message and returns the number of
-         * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
+         * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteSingle(Object msg);
 
@@ -697,13 +834,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            short data = (short) event.userData();
+            // Only the write completions may carry an id that fell back out of the short range, so they are the
+            // only ones handed the untruncated user_data. Narrowing it here would silently corrupt such an id.
+            long userData = event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
-                    readComplete(op, res, flags, data);
+                    readComplete(op, res, flags, (short) userData);
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -712,16 +851,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SPLICE:
                 case Native.IORING_OP_SEND_ZC:
                 case Native.IORING_OP_SENDMSG_ZC:
-                    writeComplete(op, res, flags, data);
+                    writeComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_POLL_ADD:
-                    pollAddComplete(res, flags, data);
+                    pollAddComplete(res, flags, (short) userData);
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
-                    cancelComplete0(op, res, flags, data);
+                    cancelComplete0(op, res, flags, (short) userData);
                     break;
                 case Native.IORING_OP_CONNECT:
-                    connectComplete(op, res, flags, data);
+                    connectComplete(op, res, flags, (short) userData);
 
                     // once the connect was completed we can also free some resources that are not needed anymore.
                     freeMsgHdrArray();
@@ -1213,7 +1352,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param flags the flags.
          * @param data  the data that was passed when submitting the op.
          */
-        private void writeComplete(byte op, int res, int flags, short data) {
+        private void writeComplete(byte op, int res, int flags, long data) {
             completeWriteOperation(data, op, flags);
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
@@ -1229,7 +1368,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
 
                     // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    connectComplete(op, 0, flags, data);
+                    // The TCP Fast Open sendmsg allocates from the short pool, so narrowing is lossless here.
+                    connectComplete(op, 0, flags, (short) data);
                 } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
                     // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
                     // In this case, our TCP connection will be established normally, but no data was transmitted at
@@ -1238,7 +1378,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     submitConnect((InetSocketAddress) requestedRemoteAddress);
                 } else {
                     // There was an error, handle it as a normal connect error.
-                    connectComplete(op, res, flags, data);
+                    connectComplete(op, res, flags, (short) data);
                 }
                 return;
             }
@@ -1275,7 +1415,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data          the data that was passed when submitting the op.
          * @param outstanding   the outstanding write completions.
          */
-        abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
+        abstract boolean writeComplete0(byte op, int res, int flags, long data, int outstanding);
 
         /**
          * Called once a cancel was completed.

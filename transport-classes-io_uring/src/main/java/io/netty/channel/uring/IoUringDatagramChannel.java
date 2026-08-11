@@ -538,10 +538,13 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
+            // data is the MsgHdrMemoryArray index that scheduleSendmsg(...) submitted, so it is always within
+            // [0, sendmsgHdrs.capacity()) (256) and never uses the overflow id range. Narrowing to int is safe.
+            int idx = (int) data;
             // Reset the id as this write was completed and so don't need to be cancelled later.
-            sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
-            sendmsgResArray[data] = res;
+            sendmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
+            sendmsgResArray[idx] = res;
             // Store the result so we can handle it as soon as we have no outstanding writes anymore.
             if (outstanding == 0) {
                 // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer

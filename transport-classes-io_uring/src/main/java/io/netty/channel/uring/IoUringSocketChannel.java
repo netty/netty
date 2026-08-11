@@ -80,10 +80,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 int length = buf.readableBytes();
                 if (((IoUringSocketChannelConfig) config()).shouldWriteZeroCopy(length)) {
                     long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                    short opsId = nextWriteOperationId();
-                    if (opsId == 0) {
-                        return 0;
-                    }
+                    // No exhaustion guard needed: nextZeroCopyWriteOperationId() falls back to an id outside the
+                    // short range once the short id pool is exhausted, so it never returns 0.
+                    long opsId = nextZeroCopyWriteOperationId();
                     IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                     byte opCode = ops.opcode();
                     recordWriteOperation(opsId, opCode, buf);
@@ -142,10 +141,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 MsgHdrMemory hdr = msgHdrArray.nextHdr();
                 assert hdr != null;
                 hdr.set(iovArrayAddress, iovArrayLength);
-                short opsId = nextWriteOperationId();
-                if (opsId == 0) {
-                    return 0;
-                }
+                // No exhaustion guard needed: nextZeroCopyWriteOperationId() falls back to an id outside the
+                // short range once the short id pool is exhausted, so it never returns 0.
+                long opsId = nextZeroCopyWriteOperationId();
                 IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
                 byte opCode = ops.opcode();
                 recordWriteOperation(opsId, opCode, collector.referencesArray(), collector.referencesCount());
@@ -183,14 +181,14 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
                 return handleWriteCompleteZeroCopy(op, res, flags, data);
             }
             return super.writeComplete0(op, res, flags, data, outstanding);
         }
 
-        private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags, short data) {
+        private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags, long data) {
             if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
                 return true;
             }
