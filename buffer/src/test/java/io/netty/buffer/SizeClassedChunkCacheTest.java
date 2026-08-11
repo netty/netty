@@ -51,7 +51,6 @@ public class SizeClassedChunkCacheTest {
     }
 
     private static SizeClassedChunk fullChunk() {
-        // All segments available → purge ages it.
         SizeClassedChunk chunk = mock(SizeClassedChunk.class);
         when(chunk.remainingCapacity()).thenReturn(4096);
         when(chunk.capacity()).thenReturn(4096);
@@ -60,255 +59,154 @@ public class SizeClassedChunkCacheTest {
         return chunk;
     }
 
-    // --- purge: selection ---
+    // --- Two-list structure: basic operations ---
 
     @Test
-    void purgeSelectsFirstChunkWithCapacity() {
+    void offerChunkCategorizesByCapacity() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
-        SizeClassedChunk noCap = chunkWithoutCapacity();
+        cache.offerChunk(chunkWithCapacity());
+        cache.offerChunk(chunkWithoutCapacity());
+        cache.offerChunk(chunkWithCapacity());
+
+        assertEquals(2, cache.reusableCount);
+        assertEquals(1, cache.exhaustedCount);
+    }
+
+    @Test
+    void offerChunkNeverRejects() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        // Offer far more than any cap would allow
+        for (int i = 0; i < 200; i++) {
+            assertTrue(cache.offerChunk(chunkWithCapacity()));
+        }
+        assertEquals(200, cache.reusableCount);
+    }
+
+    // --- pollChunk: O(1) from reusable list ---
+
+    @Test
+    void pollChunkTakesFromReusableList() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
         SizeClassedChunk cap = chunkWithCapacity();
-        cache.offerChunk(noCap);
+        cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(cap);
 
-        assertSame(cap, cache.forcePurge());
+        SizeClassedChunk polled = cache.pollChunk(256);
+        assertSame(cap, polled);
+        assertEquals(1, cache.exhaustedCount);
+        assertEquals(0, cache.reusableCount);
     }
 
     @Test
-    void purgeReturnsNullWhenCacheIsEmpty() {
+    void pollChunkReturnsNullWhenEmpty() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-        assertNull(cache.forcePurge());
+        assertNull(cache.pollChunk(256));
     }
 
     @Test
-    void purgeReturnsNullWhenNoChunkHasCapacity() {
+    void pollChunkReturnsNullWhenOnlyExhaustedChunks() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
         cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(chunkWithoutCapacity());
 
-        assertNull(cache.forcePurge());
+        assertNull(cache.pollChunk(256));
     }
 
-    // --- purge: epoch aging and eviction ---
+    // --- pollChunk fallback: exhausted chunks that gained capacity ---
 
     @Test
-    void fullChunkAgesEachPurgeAndIsEvictedPastThresholdThreadLocal() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
-            cache.offerChunk(chunkWithoutCapacity());
-        }
-        SizeClassedChunk workingSet = chunkWithCapacity();
-        cache.offerChunk(workingSet);
-        SizeClassedChunk idle = fullChunk();
-        cache.offerChunk(idle);
-
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD; i++) {
-            SizeClassedChunk polled = cache.forcePurge();
-            assertSame(workingSet, polled);
-            cache.offerChunk(workingSet);
-            assertEquals(i + 1, idle.purgeEpoch);
-            verify(idle, never()).recycleOrDeallocate(null, 0);
-        }
-        SizeClassedChunk polled = cache.forcePurge();
-        assertSame(workingSet, polled);
-        verify(idle).recycleOrDeallocate(null, 0);
-    }
-
-    @Test
-    void nonFullChunkDoesNotAge() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        SizeClassedChunk chunk = chunkWithCapacity();
-        cache.offerChunk(chunk);
-
-        cache.forcePurge();
-        assertEquals(0, chunk.purgeEpoch);
-    }
-
-    @Test
-    void selectedFullChunkHasEpochReset() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        SizeClassedChunk chunk = fullChunk();
-        cache.offerChunk(chunk);
-
-        SizeClassedChunk selected = cache.forcePurge();
-        assertSame(chunk, selected);
-        assertEquals(0, selected.purgeEpoch);
-    }
-
-    // --- scanForCapacity: fallback ---
-
-    @Test
-    void scanForCapacityFallbackFindsChunkThatGainedCapacity() {
+    void pollChunkFallbackFindsExhaustedChunkThatGainedCapacity() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
+        assertEquals(1, cache.exhaustedCount);
 
-        // Purge: no capacity, nothing selected
-        assertNull(cache.forcePurge());
-
-        // External segment return gives the chunk capacity
+        // Simulate external segment return
         when(chunk.hasRemainingCapacity()).thenReturn(true);
 
         assertSame(chunk, cache.pollChunk(256));
+        assertEquals(0, cache.exhaustedCount);
     }
 
-    // --- thread-local only: capacity-first ordering ---
+    // --- forcePurge: runs scan + returns reusable chunk ---
 
     @Test
-    void purgeMovesCapacityChunksBeforeNoCapacityChunks() {
+    void forcePurgeDetectsCapacityGainOnExhaustedChunks() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
-        cache.offerChunk(chunkWithoutCapacity());
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithoutCapacity());
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithCapacity());
+        SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        assertEquals(1, cache.exhaustedCount);
+        assertEquals(0, cache.reusableCount);
 
-        // Purge selects one capacity chunk, partitions the rest: [cap, cap | noCap, noCap]
-        SizeClassedChunk selected = cache.forcePurge();
-        assertNotNull(selected);
-        assertTrue(selected.hasRemainingCapacity());
+        // Simulate external return giving capacity
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
 
-        // Both remaining capacity chunks come out before any no-capacity chunk
-        assertTrue(cache.pollChunk(256).hasRemainingCapacity());
-        assertTrue(cache.pollChunk(256).hasRemainingCapacity());
-        assertNull(cache.pollChunk(256));
-    }
-
-    @Test
-    void scanForCapacityUsesO1FastPathAfterPurge() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithoutCapacity());
-
-        // Purge partitions: [cap | noCap], selects one cap
-        assertNotNull(cache.forcePurge());
-
-        // Next poll hits the O(1) fast path — capacity chunk is at head
-        SizeClassedChunk fast = cache.pollChunk(256);
-        assertNotNull(fast);
-        assertTrue(fast.hasRemainingCapacity());
-    }
-
-    // --- thread-local only: ring buffer mechanics ---
-
-    @Test
-    void offerGrowsRingWhenFull() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        // Initial ring size is 8 — offer 9 to trigger growth
-        for (int i = 0; i < 9; i++) {
-            cache.offerChunk(chunkWithCapacity());
-        }
-
-        // Purge selects one, 8 remain — all should be retrievable
-        assertNotNull(cache.forcePurge());
-        for (int i = 0; i < 8; i++) {
-            assertNotNull(cache.pollChunk(256));
-        }
-        assertNull(cache.pollChunk(256));
-    }
-
-    @Test
-    void purgeHandlesWrappedRingCorrectly() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        // Fill with 4, purge (linearizes to head=0), consume 3 to advance head
-        for (int i = 0; i < 4; i++) {
-            cache.offerChunk(chunkWithCapacity());
-        }
-        cache.forcePurge();
-        cache.pollChunk(256);
-        cache.pollChunk(256);
-        cache.pollChunk(256);
-
-        // Offer more — tail wraps around past the array end
-        cache.offerChunk(chunkWithoutCapacity());
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithoutCapacity());
-        cache.offerChunk(chunkWithCapacity());
-
-        // Purge with wrapped ring should still partition correctly
-        SizeClassedChunk selected = cache.forcePurge();
-        assertNotNull(selected);
-        assertTrue(selected.hasRemainingCapacity());
-
-        // Remaining capacity chunk at head
-        SizeClassedChunk next = cache.pollChunk(256);
-        if (next != null) {
-            assertTrue(next.hasRemainingCapacity());
-        }
-    }
-
-    @Test
-    void wrappedRingCompactionLeavesNoStaleReferences() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        // Fill 6 slots of the initial ring (size=8), purge, drain to advance head
-        for (int i = 0; i < 6; i++) {
-            cache.offerChunk(chunkWithCapacity());
-        }
-        cache.forcePurge();
-        while (cache.pollChunk(256) != null) {
-            // drain
-        }
-        assertTrue(cache.head > 0, "head should have advanced past 0");
-
-        // Offer 4 chunks — wraps past the array boundary
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(chunkWithCapacity());
-        cache.offerChunk(fullChunk());
-        cache.offerChunk(fullChunk());
-        assertTrue(cache.tail < cache.head,
-                "ring should wrap: tail=" + cache.tail + " < head=" + cache.head);
-
-        // Purge partitions on the wrapped ring
         SizeClassedChunk polled = cache.forcePurge();
-        assertNotNull(polled);
-
-        // Verify the backing array: exactly count non-null entries, no stale refs
-        int nonNull = 0;
-        for (int i = 0; i < cache.chunks.length; i++) {
-            if (cache.chunks[i] != null) {
-                nonNull++;
-            }
-        }
-        assertEquals(cache.count, nonNull,
-                "backing array should have exactly count=" + cache.count
-                        + " non-null entries, but found " + nonNull);
+        assertSame(chunk, polled);
     }
 
-    // --- bursty traffic: idle chunks are eventually evicted ---
+    // --- Eviction: fully-free chunks above retention floor ---
 
     @Test
-    void cacheEvictsExcessIdleChunksAfterBurst() {
+    void purgeEvictsFullyFreeChunksAboveFloor() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        int floor = cache.purgeRetentionFloor;
+
+        // Fill to floor with working-set chunks
+        for (int i = 0; i < floor; i++) {
+            cache.offerChunk(chunkWithCapacity());
+        }
+
+        // Add excess fully-free chunk
+        SizeClassedChunk idle = fullChunk();
+        cache.offerChunk(idle);
+
+        // Purge should evict the fully-free chunk (above floor)
+        cache.tickPurge();
+        verify(idle).recycleOrDeallocate(null, 0);
+    }
+
+    @Test
+    void purgeKeepsFullyFreeChunksAtOrBelowFloor() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        // Add just one fully-free chunk — below retention floor
+        SizeClassedChunk idle = fullChunk();
+        cache.offerChunk(idle);
+
+        cache.tickPurge();
+        verify(idle, never()).recycleOrDeallocate(null, 0);
+    }
+
+    @Test
+    void cacheEvictsExcessFullyFreeChunksAfterBurst() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         int floor = cache.purgeRetentionFloor;
         int excess = 10;
 
+        // Working set at floor
         SizeClassedChunk workingSet = chunkWithCapacity();
         cache.offerChunk(workingSet);
         for (int i = 0; i < floor - 1; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
+
+        // Excess fully-free chunks
         SizeClassedChunk[] excessChunks = new SizeClassedChunk[excess];
         for (int i = 0; i < excess; i++) {
             excessChunks[i] = fullChunk();
             cache.offerChunk(excessChunks[i]);
         }
 
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1; i++) {
-            SizeClassedChunk polled = cache.forcePurge();
-            assertSame(workingSet, polled);
-            cache.offerChunk(workingSet);
-        }
+        // Single purge should evict all excess
+        cache.tickPurge();
 
         for (SizeClassedChunk chunk : excessChunks) {
             verify(chunk, atLeastOnce()).recycleOrDeallocate(null, 0);
@@ -316,74 +214,93 @@ public class SizeClassedChunkCacheTest {
         verify(workingSet, never()).recycleOrDeallocate(null, 0);
     }
 
-    // --- epoch aging with working set ---
-    // Scan resets epoch on pick (the chunk is being used). Partition sub-ordering puts
-    // epoch=0 (recently used) at head, epoch>0 (idle) behind. Scan prefers head, so
-    // idle chunks age undisturbed behind the working set.
+    // --- Active chunk should not be evicted ---
 
     @Test
-    void excessFullChunksAgeWhileWorkingSetIsPreferredThreadLocal() {
+    void activeChunkWithCapacityIsNotEvicted() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
-        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
-            cache.offerChunk(chunkWithoutCapacity());
-        }
-        SizeClassedChunk workingSet = chunkWithCapacity();
-        cache.offerChunk(workingSet);
-        int excess = 3;
-        SizeClassedChunk[] idleChunks = new SizeClassedChunk[excess];
-        for (int i = 0; i < excess; i++) {
-            idleChunks[i] = fullChunk();
-            cache.offerChunk(idleChunks[i]);
-        }
-
-        for (int i = 0; i < AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 1; i++) {
-            SizeClassedChunk polled = cache.forcePurge();
-            assertSame(workingSet, polled, "cycle " + i + ": scan should prefer working-set chunk");
-            cache.offerChunk(workingSet);
-        }
-
-        for (SizeClassedChunk idle : idleChunks) {
-            verify(idle, atLeastOnce()).recycleOrDeallocate(null, 0);
-        }
-        verify(workingSet, never()).recycleOrDeallocate(null, 0);
-    }
-
-    // --- full-but-active chunk must not be prematurely evicted ---
-    // A chunk that is polled every purge cycle but whose buffers are short-lived
-    // (all segments return before next purge) looks "full" (remaining == capacity)
-    // at purge time. Purge must not treat it as idle.
-
-    @Test
-    void activeChunkWithShortLivedBuffersShouldNotBeEvicted() {
-        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
-
-        // Pad above retention floor so eviction is allowed
+        // Pad above retention floor
         for (int i = 0; i < cache.purgeRetentionFloor; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
 
-        // Full chunk: remaining==capacity>0, has capacity.
-        // Simulates short-lived buffers: chunk polled, used, all segments return before next purge.
-        SizeClassedChunk active = fullChunk();
+        // Active chunk: has capacity but is NOT fully free
+        SizeClassedChunk active = chunkWithCapacity();
         cache.offerChunk(active);
 
-        int cycles = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD + 2;
-        for (int cycle = 0; cycle < cycles; cycle++) {
+        // Poll and re-offer multiple times
+        for (int cycle = 0; cycle < 10; cycle++) {
             SizeClassedChunk polled = cache.forcePurge();
-            assertSame(active, polled, "cycle " + cycle + ": chunk should be polled, not evicted");
-            assertEquals(0, polled.purgeEpoch,
-                    "cycle " + cycle + ": actively-used chunk epoch should be reset");
+            assertSame(active, polled, "cycle " + cycle + ": active chunk should be polled");
             cache.offerChunk(active);
         }
 
+        verify(active, never()).recycleOrDeallocate(null, 0);
         verify(active, never()).markToDeallocate();
     }
 
-    // --- free: draining all chunks (thread-local) ---
+    // --- Signal A: exhausted → reusable via releaseSegment ---
 
     @Test
-    void pollChunkCannotDrainNoCapChunksThreadLocal() {
+    void signalAMovesExhaustedToReusable() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        assertEquals(1, cache.exhaustedCount);
+        assertEquals(0, cache.reusableCount);
+        assertEquals(SizeClassedChunk.CACHE_EXHAUSTED, chunk.cacheListState);
+
+        // Simulate Signal A: inline call from releaseSegment
+        cache.moveToReusable(chunk);
+
+        assertEquals(0, cache.exhaustedCount);
+        assertEquals(1, cache.reusableCount);
+        assertEquals(SizeClassedChunk.CACHE_REUSABLE, chunk.cacheListState);
+    }
+
+    // --- Signal B: reusable → eviction ---
+
+    @Test
+    void signalBEvictsAboveFloor() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        // Fill above retention floor
+        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
+            cache.offerChunk(chunkWithCapacity());
+        }
+
+        SizeClassedChunk chunk = chunkWithCapacity();
+        cache.offerChunk(chunk);
+        int countBefore = cache.reusableCount;
+
+        // Simulate Signal B: inline call from releaseSegment
+        cache.signalFullyFree(chunk);
+
+        assertEquals(countBefore - 1, cache.reusableCount);
+        verify(chunk).recycleOrDeallocate(null, 0);
+    }
+
+    @Test
+    void signalBKeepsAtFloor() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        // Only one chunk — at or below floor
+        SizeClassedChunk chunk = chunkWithCapacity();
+        cache.offerChunk(chunk);
+
+        cache.signalFullyFree(chunk);
+
+        // Chunk stays in reusable list
+        assertEquals(1, cache.reusableCount);
+        verify(chunk, never()).recycleOrDeallocate(null, 0);
+    }
+
+    // --- free: draining all chunks ---
+
+    @Test
+    void pollChunkCannotDrainExhaustedChunks() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         cache.offerChunk(chunkWithCapacity());
@@ -399,14 +316,12 @@ public class SizeClassedChunkCacheTest {
             }
         }
 
-        // pollChunk uses scanForCapacity which skips noCap chunks — they're stuck.
-        // This is why free() is needed instead of a pollChunk drain loop.
-        assertEquals(2, cache.count);
-        verify(cache.chunks[cache.head], never()).markToDeallocate();
+        assertEquals(2, drained);
+        assertEquals(2, cache.exhaustedCount);
     }
 
     @Test
-    void freeDrainsAllChunksIncludingNoCapThreadLocal() {
+    void freeDrainsAllChunks() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         SizeClassedChunk cap1 = chunkWithCapacity();

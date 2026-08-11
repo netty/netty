@@ -128,9 +128,6 @@ final class AdaptivePoolingAllocator {
     static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
             "io.netty.allocator.chunkPurgePollsThreadLocal", 16L));
 
-    static final int CHUNK_PURGE_THRESHOLD = Math.max(1, SystemPropertyUtil.getInt(
-            "io.netty.allocator.chunkPurgeThreshold", 3));
-
     /**
      * Per-size-class upper bound (in bytes) on the thread-local chunk cache.
      */
@@ -655,6 +652,10 @@ final class AdaptivePoolingAllocator {
                     buf = mag.newBuffer();
                 }
                 if (mag.allocate(size, maxCapacity, buf, reallocate)) {
+                    if (mag.purgeFired && sizeClassIndex < SIZE_CLASSES_COUNT) {
+                        mag.purgeFired = false;
+                        stripeWidePurge(sizeClassIndex);
+                    }
                     return buf;
                 }
                 if (!reallocate) {
@@ -663,6 +664,20 @@ final class AdaptivePoolingAllocator {
                 return null;
             } finally {
                 l.unlockWrite(stamp);
+            }
+        }
+
+        private void stripeWidePurge(int triggeringSizeClassIndex) {
+            if (magazines == null) {
+                return;
+            }
+            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+                if (i != triggeringSizeClassIndex) {
+                    Magazine sibling = magazines[i];
+                    if (sibling != null) {
+                        sibling.chunkCache.tickPurge();
+                    }
+                }
             }
         }
     }
@@ -684,7 +699,22 @@ final class AdaptivePoolingAllocator {
             }
             boolean success = mag.allocate(size, maxCapacity, buf, reallocate);
             assert success : "Thread-local allocation must always succeed";
+            if (mag.purgeFired) {
+                mag.purgeFired = false;
+                stripeWidePurge(sizeClassIndex);
+            }
             return buf;
+        }
+
+        private void stripeWidePurge(int triggeringSizeClassIndex) {
+            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+                if (i != triggeringSizeClassIndex) {
+                    Magazine sibling = magazines[i];
+                    if (sibling != null) {
+                        sibling.chunkCache.tickPurge();
+                    }
+                }
+            }
         }
 
         Magazine getOrCreateMagazine(int sizeClassIndex) {
@@ -728,31 +758,6 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    // Cached chunks are detached from magazines: no readInitInto can happen, so segment count
-    // can only grow (external releaseSegment returns) and never shrink. Once a chunk reaches
-    // full capacity (hasFullCapacity), it stays idle while in the cache.
-    //
-    // Epoch-based aging invariants (both caches):
-    //
-    // 1. CLASSIFICATION: purge scans all chunks. Idle (hasFullCapacity) → epoch++.
-    //    Non-idle → epoch = 0. Only idle chunks can accumulate epoch.
-    //
-    // 2. EVICTION: idle chunks with epoch > CHUNK_PURGE_THRESHOLD are evicted (markToDeallocate).
-    //    Eviction is immediate — all segments are in, no outstanding references.
-    //    Non-idle chunks are never evicted (deallocation would be deferred, not immediate).
-    //    Evicted chunks are offered to the stripe's recycled pool for cross-size-class reuse.
-    //
-    // 3. SCAN RESET: scanForCapacity resets purgeEpoch = 0 on the chunk it picks. The scan
-    //    knows the chunk is being used. The chunk gets allocated from, becomes non-idle, and
-    //    the next purge resets its epoch anyway (non-idle → 0). The scan reset covers the case
-    //    where all segments return before the next purge (short-lived buffers).
-    //
-    // 4. CONVERGENCE: idle chunks that are never picked by scan age undisturbed across
-    //    purge cycles. After CHUNK_PURGE_THRESHOLD + 1 consecutive cycles of being idle and
-    //    unpolled, they are evicted. Chunks picked by scan get epoch reset — aging interrupted.
-    //    Partition orders [epoch=0 | 0<epoch<T | epoch>=T | noCap]. Scan takes
-    //    from head (epoch=0 first). Chunks with epoch>=threshold are placed at the back of
-    //    the hasCap zone so scan doesn't reach them — they age to threshold+1 and get evicted.
     abstract static class SizeClassedChunkCache implements ChunkCache {
         @Override
         public abstract SizeClassedChunk pollChunk(int size);
@@ -762,123 +767,160 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * Ring buffer cache for thread-local chunk reuse (SPSC — only the owner thread accesses it).
+     * Two-list chunk cache for thread-local chunk reuse (SPSC — only the owner thread accesses it).
      *
-     * <p>Logical layout after purge:
-     * <pre>
-     *   head                          tail
-     *   v                             v
-     *   [..., notEmpty, notEmpty, ..., empty, empty, ..., null, ...]
-     *        |--- notEmptyCount ---|--- emptyCount --|
-     *        |------------ count ------------------|
-     * </pre>
+     * <p>Chunks are organized into two intrusive doubly-linked lists based on their state:
+     * <ul>
+     *   <li><b>Exhausted</b> (mimalloc: full page queue): chunks with no free segments.</li>
+     *   <li><b>Reusable</b> (mimalloc: regular page queue): chunks with some free segments.
+     *       {@link #pollChunk} takes from here, O(1). Fully-free chunks below the retention
+     *       floor also stay here — they have capacity and are available for allocation.</li>
+     * </ul>
      *
-     * <p>Physical layout when the ring wraps:
-     * <pre>
-     *   0         tail          head          length
-     *   v         v             v             v
-     *   [...tail] [  unused  ]  [head................]
-     *             ^             |--- content wraps ---|
-     *             wrap point
-     * </pre>
+     * <p>Transitions between lists happen inline on the owner thread's release path
+     * (zero CAS, zero volatile writes — just plain field reads and pointer manipulation):
+     * <ul>
+     *   <li><b>Signal A</b> (exhausted → reusable): first segment return on a cached chunk.
+     *       Mimalloc analog: {@code pageUnfull} (full → regular).</li>
+     *   <li><b>Signal B</b> (reusable → eviction): all segments returned, above retention floor.
+     *       Mimalloc analog: {@code pageRetire}. Chunk is immediately evicted and its backing
+     *       buffer offered to the {@link SizeClassChunkRecycler} for cross-size-class reuse.</li>
+     * </ul>
      *
-     * <p><b>scanForCapacity</b> — O(1) fast path takes from head while {@code notEmptyCount > 0}:
-     * <pre>
-     *   before: notEmptyCount=2, count=5
-     *   [NE, NE, E, E, E, _, _, _]
-     *    ^head            ^tail
-     *
-     *   after: returns NE, notEmptyCount=1, count=4
-     *   [_,  NE, E, E, E, _, _, _]
-     *        ^head        ^tail
-     * </pre>
-     * Fallback when {@code notEmptyCount == 0}: linear scan of the empty zone for chunks
-     * that gained capacity from external segment returns.
-     *
-     * <p><b>offerChunk</b> — write at tail, grow (double + linearize) if full:
-     * <pre>
-     *   before: count=4
-     *   [_,  NE, E, E, E, _, _, _]
-     *        ^head        ^tail
-     *
-     *   after: count=5
-     *   [_,  NE, E, E, E, X, _, _]
-     *        ^head           ^tail
-     * </pre>
-     *
-     * <p><b>runPurgeScan</b> (triggered by the per-magazine allocation counter) —
-     * two passes. Pass 1: age idle chunks (full → epoch++, non-full → epoch=0), evict
-     * past threshold, compact survivors (nulls stale slots inline). Pass 2: partition
-     * hasCap to front / noCap to back, then three-way Dutch-flag within hasCap into
-     * [epoch=0 | 0&lt;epoch&lt;threshold | epoch&gt;=threshold]. Chunks with epoch&gt;=threshold
-     * are placed at the back of hasCap so scan doesn't reach them — they age to
-     * threshold+1 and get evicted. Never selects — selection is always
-     * {@code scanForCapacity}.
-     *
-     * <p>Case 1 — no eviction, an empty chunk gained capacity externally (common):
-     * <pre>
-     *   before (E* gained capacity since last purge):
-     *   [NE, NE, E*, E, _, _, _, _]
-     *    ^head            ^tail
-     *    notEmptyCount=2
-     *
-     *   pass 1: age idle chunks. None past threshold. No compaction needed.
-     *   pass 2 (partition): E* now has capacity → placed in notEmpty zone.
-     *
-     *   after:
-     *   [NE, NE, E*, E, _, _, _, _]
-     *    ^head            ^tail
-     *    notEmptyCount=3
-     * </pre>
-     *
-     * <p>Case 2 — eviction (uncommon, burst wind-down):
-     * <pre>
-     *   before (ring wraps, IDLE* = idle past threshold):
-     *   [E, NE, _,  IDLE*, NE, E, E, NE]
-     *          ^tail ^head
-     *
-     *   pass 1: IDLE* evicted (markToDeallocate), survivors compacted, stale slots nulled.
-     *   [_, _, _,  NE, E, E, NE, E]
-     *     ^tail    ^head
-     *              |--- kept=6 ---|
-     *
-     *   pass 2 (partition): [epoch=0 hasCap | 0&lt;epoch&lt;T hasCap | epoch&gt;=T hasCap | noCap].
-     *   [_, _, _,  NE, NE, E, E, E]
-     *     ^tail    ^head
-     *              notEmptyCount=2, count=6
-     * </pre>
-     * Idle chunks ({@code remainingCapacity == capacity}) age via purgeEpoch and are evicted
-     * past threshold. Evicted chunks are offered to the stripe's recycled pool.
+     * <p>The cache never rejects chunks ({@code offerChunk} always returns true). Cache size
+     * tracks the working set naturally. Idle chunks are detected inline via Signal B and
+     * evicted immediately. The {@link SizeClassChunkRecycler} serves as the shared pool for
+     * recycling backing buffers across size classes.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
-        SizeClassedChunk[] chunks; // package-private for testing
-        int head;
-        int tail;
-        int count;
-        int notEmptyCount;
+        private SizeClassedChunk exhaustedHead;
+        private SizeClassedChunk reusableHead;
+        int exhaustedCount;
+        int reusableCount;
 
         SizeClassChunkRecycler chunkRecycler;
         int sizeClassIndex;
-        final int maxCachedChunks;
         final int purgeRetentionFloor;
 
         ThreadLocalSizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
-            chunks = new SizeClassedChunk[8];
             this.chunkRecycler = chunkRecycler;
             this.sizeClassIndex = sizeClassIndex;
-            maxCachedChunks = Math.max(1, THREAD_LOCAL_CACHE_MAX_BYTES / chunkSize);
-            purgeRetentionFloor = Math.min(maxCachedChunks, Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize));
+            purgeRetentionFloor = Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize);
+        }
+
+        private int totalCount() {
+            return exhaustedCount + reusableCount;
+        }
+
+        // --- Intrusive doubly-linked list operations ---
+
+        private void addToExhausted(SizeClassedChunk chunk) {
+            chunk.cacheListState = SizeClassedChunk.CACHE_EXHAUSTED;
+            chunk.prevInCache = null;
+            chunk.nextInCache = exhaustedHead;
+            if (exhaustedHead != null) {
+                exhaustedHead.prevInCache = chunk;
+            }
+            exhaustedHead = chunk;
+            exhaustedCount++;
+            chunk.owningCache = this;
+        }
+
+        private void addToReusable(SizeClassedChunk chunk) {
+            chunk.cacheListState = SizeClassedChunk.CACHE_REUSABLE;
+            chunk.prevInCache = null;
+            chunk.nextInCache = reusableHead;
+            if (reusableHead != null) {
+                reusableHead.prevInCache = chunk;
+            }
+            reusableHead = chunk;
+            reusableCount++;
+            chunk.owningCache = this;
+        }
+
+        private void removeFromExhausted(SizeClassedChunk chunk) {
+            if (chunk.prevInCache != null) {
+                chunk.prevInCache.nextInCache = chunk.nextInCache;
+            } else {
+                exhaustedHead = chunk.nextInCache;
+            }
+            if (chunk.nextInCache != null) {
+                chunk.nextInCache.prevInCache = chunk.prevInCache;
+            }
+            chunk.prevInCache = null;
+            chunk.nextInCache = null;
+            exhaustedCount--;
+        }
+
+        private void removeFromReusable(SizeClassedChunk chunk) {
+            if (chunk.prevInCache != null) {
+                chunk.prevInCache.nextInCache = chunk.nextInCache;
+            } else {
+                reusableHead = chunk.nextInCache;
+            }
+            if (chunk.nextInCache != null) {
+                chunk.nextInCache.prevInCache = chunk.prevInCache;
+            }
+            chunk.prevInCache = null;
+            chunk.nextInCache = null;
+            reusableCount--;
+        }
+
+        private void detachFromCache(SizeClassedChunk chunk) {
+            chunk.cacheListState = SizeClassedChunk.CACHE_NONE;
+            chunk.owningCache = null;
+        }
+
+        // Called from releaseSegment (Signal A): exhausted → reusable
+        void moveToReusable(SizeClassedChunk chunk) {
+            removeFromExhausted(chunk);
+            addToReusable(chunk);
+        }
+
+        // Called from releaseSegment (Signal B): reusable → eviction (if above floor)
+        void signalFullyFree(SizeClassedChunk chunk) {
+            if (totalCount() > purgeRetentionFloor) {
+                removeFromReusable(chunk);
+                detachFromCache(chunk);
+                chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+            }
+            // At or below floor: chunk stays in reusable list (it has full capacity,
+            // available for pollChunk). This preserves a warm cache for the next burst.
         }
 
         @Override
         SizeClassedChunk forcePurge() {
             runPurgeScan();
-            return scanForCapacity();
+            return pollChunkInternal();
         }
 
         @Override
         public SizeClassedChunk pollChunk(int size) {
-            return scanForCapacity();
+            return pollChunkInternal();
+        }
+
+        private SizeClassedChunk pollChunkInternal() {
+            if (reusableHead != null) {
+                SizeClassedChunk chunk = reusableHead;
+                removeFromReusable(chunk);
+                detachFromCache(chunk);
+                return chunk;
+            }
+            return scanExhaustedForCapacity();
+        }
+
+        private SizeClassedChunk scanExhaustedForCapacity() {
+            SizeClassedChunk cur = exhaustedHead;
+            while (cur != null) {
+                SizeClassedChunk next = cur.nextInCache;
+                if (cur.hasRemainingCapacity()) {
+                    removeFromExhausted(cur);
+                    detachFromCache(cur);
+                    return cur;
+                }
+                cur = next;
+            }
+            return null;
         }
 
         @Override
@@ -886,189 +928,72 @@ final class AdaptivePoolingAllocator {
             runPurgeScan();
         }
 
-        private SizeClassedChunk scanForCapacity() {
-            if (notEmptyCount > 0) {
-                SizeClassedChunk chunk = chunks[head];
-                assert chunk.hasRemainingCapacity();
-                chunk.purgeEpoch = 0;
-                chunks[head] = null;
-                head = (head + 1) & (chunks.length - 1);
-                count--;
-                notEmptyCount--;
-                return chunk;
-            }
-            return scanForCapacityFallback();
-        }
-
-        private SizeClassedChunk scanForCapacityFallback() {
-            int mask = chunks.length - 1;
-            int emptyCount = count - notEmptyCount;
-            int pos = (head + notEmptyCount) & mask;
-            for (int i = 0; i < emptyCount; i++) {
-                SizeClassedChunk chunk = chunks[pos];
-                if (chunk.hasRemainingCapacity()) {
-                    chunk.purgeEpoch = 0;
-                    int lastIdx = (tail - 1) & mask;
-                    chunks[pos] = chunks[lastIdx];
-                    chunks[lastIdx] = null;
-                    tail = lastIdx;
-                    count--;
-                    return chunk;
-                }
-                pos = (pos + 1) & mask;
-            }
-            return null;
-        }
-
         private void runPurgeScan() {
-            int mask = chunks.length - 1;
-            int kept = 0;
-            int survivors = count;
-            for (int i = 0; i < count; i++) {
-                int readIdx = (head + i) & mask;
-                SizeClassedChunk chunk = chunks[readIdx];
-                if (chunk.purgeEpoch > 0) {
-                    assert chunk.hasFullCapacity();
-                    chunk.purgeEpoch++;
-                    if (chunk.purgeEpoch > CHUNK_PURGE_THRESHOLD && survivors > purgeRetentionFloor) {
-                        chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
-                        chunks[readIdx] = null;
-                        survivors--;
-                        continue;
-                    }
-                } else if (chunk.hasFullCapacity()) {
-                    chunk.purgeEpoch = 1;
+            // Sweep exhausted list: detect chunks that gained capacity via external returns
+            SizeClassedChunk cur = exhaustedHead;
+            while (cur != null) {
+                SizeClassedChunk next = cur.nextInCache;
+                if (cur.hasRemainingCapacity()) {
+                    removeFromExhausted(cur);
+                    addToReusable(cur);
                 }
-                int writeIdx = (head + kept) & mask;
-                if (writeIdx != readIdx) {
-                    chunks[writeIdx] = chunk;
-                    chunks[readIdx] = null;
-                }
-                kept++;
+                cur = next;
             }
-            tail = (head + kept) & mask;
-            count = kept;
-            partition(kept);
-        }
 
-        private void partition(int size) {
-            int mask = chunks.length - 1;
-            // Pass 1: hasCapacity to front, noCapacity to back.
-            int lo = 0;
-            int hi = size - 1;
-            while (lo <= hi) {
-                int loIdx = (head + lo) & mask;
-                if (chunks[loIdx].hasRemainingCapacity()) {
-                    lo++;
-                } else {
-                    int hiIdx = (head + hi) & mask;
-                    SizeClassedChunk tmp = chunks[loIdx];
-                    chunks[loIdx] = chunks[hiIdx];
-                    chunks[hiIdx] = tmp;
-                    hi--;
+            // Sweep reusable list: evict fully-free chunks above retention floor.
+            // No epoch aging — Signal B handles inline eviction for same-thread returns.
+            // This sweep catches cross-thread returns that made chunks fully free.
+            int total = totalCount();
+            cur = reusableHead;
+            while (cur != null && total > purgeRetentionFloor) {
+                SizeClassedChunk next = cur.nextInCache;
+                if (cur.hasFullCapacity()) {
+                    removeFromReusable(cur);
+                    detachFromCache(cur);
+                    cur.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                    total--;
                 }
-            }
-            notEmptyCount = lo;
-            // Pass 2: three-way Dutch-flag within notEmpty:
-            //   [epoch=0 | 0<epoch<threshold | epoch>=threshold]
-            //
-            // Epoch=0 (recently used) at head — scan picks these first.
-            // Epoch>=threshold (about to be evicted) at back — scan doesn't reach them,
-            // so they age one more cycle to threshold+1 and get evicted.
-            //
-            // This ordering guarantees convergence regardless of count/polls ratio.
-            // Without it (e.g., a simple epoch=0/epoch>0 split with mid++), when
-            // count/polls == threshold the groups rotate perfectly and max epoch never
-            // exceeds threshold — eviction stalls at threshold * polls chunks.
-            int elo = 0;
-            int emid = 0;
-            int ehi = lo - 1;
-            while (emid <= ehi) {
-                int emidIdx = (head + emid) & mask;
-                SizeClassedChunk c = chunks[emidIdx];
-                if (c.purgeEpoch == 0) {
-                    if (elo != emid) {
-                        int eloIdx = (head + elo) & mask;
-                        chunks[emidIdx] = chunks[eloIdx];
-                        chunks[eloIdx] = c;
-                    }
-                    elo++;
-                    emid++;
-                } else if (c.purgeEpoch < CHUNK_PURGE_THRESHOLD) {
-                    emid++;
-                } else {
-                    int ehiIdx = (head + ehi) & mask;
-                    chunks[emidIdx] = chunks[ehiIdx];
-                    chunks[ehiIdx] = c;
-                    ehi--;
-                }
+                cur = next;
             }
         }
 
         @Override
         public boolean offerChunk(Chunk chunk) {
-            if (count >= maxCachedChunks) {
-                return false;
+            SizeClassedChunk sc = (SizeClassedChunk) chunk;
+            if (sc.hasRemainingCapacity()) {
+                addToReusable(sc);
+            } else {
+                addToExhausted(sc);
             }
-            if (count == chunks.length) {
-                SizeClassedChunk[] newChunks = new SizeClassedChunk[chunks.length * 2];
-                for (int i = 0; i < count; i++) {
-                    newChunks[i] = chunks[(head + i) & (chunks.length - 1)];
-                }
-                chunks = newChunks;
-                head = 0;
-                tail = count;
-            }
-            chunks[tail] = (SizeClassedChunk) chunk;
-            tail = (tail + 1) & (chunks.length - 1);
-            count++;
             return true;
         }
 
         @Override
-        public String toString() {
-            int mask = chunks.length - 1;
-            StringBuilder sb = new StringBuilder();
-            sb.append("ThreadLocalCache[head=").append(head)
-                    .append(", tail=").append(tail)
-                    .append(", count=").append(count)
-                    .append(", notEmpty=").append(notEmptyCount)
-                    .append(", length=").append(chunks.length)
-                    .append("]\n  ");
-            for (int i = 0; i < count; i++) {
-                if (i > 0) {
-                    sb.append(", ");
-                }
-                if (i == notEmptyCount) {
-                    sb.append("| ");
-                }
-                SizeClassedChunk c = chunks[(head + i) & mask];
-                String region = i < notEmptyCount ? "notEmpty" : "empty";
-                String actual = c == null ? "null" :
-                        c.hasRemainingCapacity() ? "hasCap" : "noCap";
-                sb.append('[').append(region).append(':').append(actual)
-                        .append(",ep=").append(c == null ? -1 : c.purgeEpoch).append(']');
-            }
-            return sb.toString();
+        public void free() {
+            freeList(exhaustedHead);
+            exhaustedHead = null;
+            exhaustedCount = 0;
+            freeList(reusableHead);
+            reusableHead = null;
+            reusableCount = 0;
         }
 
-        @Override
-        public void free() {
-            int mask = chunks.length - 1;
-            for (int i = 0; i < count; i++) {
-                int idx = (head + i) & mask;
-                chunks[idx].markToDeallocate();
-                chunks[idx] = null;
+        private static void freeList(SizeClassedChunk head) {
+            SizeClassedChunk cur = head;
+            while (cur != null) {
+                SizeClassedChunk next = cur.nextInCache;
+                cur.cacheListState = SizeClassedChunk.CACHE_NONE;
+                cur.owningCache = null;
+                cur.prevInCache = null;
+                cur.nextInCache = null;
+                cur.markToDeallocate();
+                cur = next;
             }
-            head = 0;
-            tail = 0;
-            count = 0;
-            notEmptyCount = 0;
         }
 
         @Override
         public boolean isEmpty() {
-            return count == 0;
+            return totalCount() == 0;
         }
     }
 
@@ -1375,6 +1300,7 @@ final class AdaptivePoolingAllocator {
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
+        boolean purgeFired;
 
         // Size-classed magazine constructor (both thread-local and shared-stripe)
         Magazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
@@ -1408,6 +1334,7 @@ final class AdaptivePoolingAllocator {
             if (purgeTickThreshold > 0 && ++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
                 chunkCache.tickPurge();
+                purgeFired = true;
             }
         }
 
@@ -1811,7 +1738,15 @@ final class AdaptivePoolingAllocator {
         MpscIntQueue externalFreeList;
         private IntStack localFreeList;
         private final Thread ownerThread;
-        int purgeEpoch;
+
+        // Intrusive doubly-linked list pointers for cache membership
+        static final int CACHE_NONE = 0;
+        static final int CACHE_EXHAUSTED = 1;
+        static final int CACHE_REUSABLE = 2;
+        SizeClassedChunk prevInCache;
+        SizeClassedChunk nextInCache;
+        int cacheListState;
+        ThreadLocalSizeClassedChunkCache owningCache;
 
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
                          SizeClassChunkController controller) {
@@ -1949,6 +1884,27 @@ final class AdaptivePoolingAllocator {
                 int state = this.state;
                 if (state != AVAILABLE) {
                     updateStateOnLocalReleaseSegment(state, localFreeList);
+                } else {
+                    // Signal detection: check if this chunk is in the cache and needs a list transition.
+                    // magazine == null means the chunk has been released from its magazine and is in the cache.
+                    // cacheListState tells us which list it's in; we only act on transitions.
+                    int cls = cacheListState;
+                    if (cls == CACHE_EXHAUSTED) {
+                        // Signal A: chunk gained capacity (first segment return while in cache).
+                        // The cache will move us to the reusable list.
+                        ThreadLocalSizeClassedChunkCache cache = owningCache;
+                        if (cache != null) {
+                            cache.moveToReusable(this);
+                        }
+                    } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
+                        // Signal B: all segments returned via owner thread. Evict if above
+                        // retention floor. Plain int comparison — no volatile reads.
+                        // Cross-thread returns that bypass localFreeList are caught by purge.
+                        ThreadLocalSizeClassedChunkCache cache = owningCache;
+                        if (cache != null) {
+                            cache.signalFullyFree(this);
+                        }
+                    }
                 }
             } else {
                 boolean segmentReturned = externalFreeList.offer(startIndex);

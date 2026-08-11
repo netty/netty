@@ -273,14 +273,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void purgeScanShouldEvictIdleChunks(boolean threadLocal) throws Exception {
-        // Thread-local magazines require FastThreadLocalThread
-        // (allocate() checks currentThreadWillCleanupFastThreadLocals)
+    void idleChunksAreEvictedAfterRelease(boolean threadLocal) throws Exception {
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
-        // Both thread-local and shared-stripe magazines use ThreadLocalSizeClassedChunkCache,
-        // so the purge poll constant is the same for both paths.
-        long purgePolls = AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL;
-        Runnable test = () -> assertPurgeScanEvictsIdleChunks(allocator, purgePolls);
+        Runnable test = () -> assertIdleChunksEvictedAfterRelease(allocator);
         if (threadLocal) {
             FastThreadLocalThread.runWithFastThreadLocal(test);
         } else {
@@ -288,36 +283,30 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
-    private static void assertPurgeScanEvictsIdleChunks(AdaptiveByteBufAllocator allocator, long purgePolls) {
+    private static void assertIdleChunksEvictedAfterRelease(AdaptiveByteBufAllocator allocator) {
         ByteBuf probe = allocator.heapBuffer(256);
         long chunkSize = allocator.usedHeapMemory();
         int buffersPerChunk = (int) (chunkSize / 256);
         probe.release();
 
-        int totalChunks = (int) Math.max(purgePolls, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
+        // Create a burst: allocate many chunks' worth of buffers
+        int totalChunks = Math.max(16, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
         int totalBuffers = totalChunks * buffersPerChunk;
         List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
             bufs.add(allocator.heapBuffer(256));
         }
+        long memoryDuringBurst = allocator.usedHeapMemory();
 
+        // Release all buffers. With inline Signal B detection, fully-free chunks
+        // above the retention floor are evicted immediately during release.
         for (ByteBuf buf : bufs) {
             buf.release();
         }
         bufs.clear();
-        long memoryAfterRelease = allocator.usedHeapMemory();
 
-        int threshold = AdaptivePoolingAllocator.CHUNK_PURGE_THRESHOLD;
-        // Account for pollChunk calls burned during setup (one per chunk created)
-        // and partition shuffle: with N notEmpty and P polls, each chunk is polled
-        // P/N of the time. Epochs advance at rate 1-P/N per cycle. Need enough cycles
-        // for the slowest chunk to reach threshold.
-        int setupPolls = totalChunks;
-        int notEmpty = totalChunks - AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE;
-        double advanceRate = 1.0 - (double) purgePolls / notEmpty;
-        int cyclesNeeded = advanceRate > 0 ? (int) Math.ceil((threshold + 1) / advanceRate) + 2 : threshold + 2;
-        int pollsNeeded = setupPolls + (int) (cyclesNeeded * purgePolls);
-        for (int poll = 0; poll < pollsNeeded; poll++) {
+        // Do a few allocation cycles to trigger purge for cross-thread return detection
+        for (int poll = 0; poll < 20; poll++) {
             for (int i = 0; i < buffersPerChunk; i++) {
                 bufs.add(allocator.heapBuffer(256));
             }
@@ -327,10 +316,10 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             bufs.clear();
         }
 
-        long memoryAfterPurge = allocator.usedHeapMemory();
-        assertTrue(memoryAfterPurge < memoryAfterRelease,
-                "Memory should decrease after purge scans evict idle chunks. " +
-                "Before purge: " + memoryAfterRelease + ", after purge: " + memoryAfterPurge);
+        long memoryAfterSettled = allocator.usedHeapMemory();
+        assertTrue(memoryAfterSettled < memoryDuringBurst,
+                "Memory should decrease after burst release. " +
+                "During burst: " + memoryDuringBurst + ", after settled: " + memoryAfterSettled);
     }
 
     private static void shuffle(SplittableRandom rng, Object array) {
