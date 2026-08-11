@@ -826,7 +826,6 @@ final class AdaptivePoolingAllocator {
             }
             exhaustedHead = chunk;
             exhaustedCount++;
-            chunk.owningCache = this;
         }
 
         private void addToReusable(SizeClassedChunk chunk) {
@@ -838,7 +837,6 @@ final class AdaptivePoolingAllocator {
             }
             reusableHead = chunk;
             reusableCount++;
-            chunk.owningCache = this;
         }
 
         private void removeFromExhausted(SizeClassedChunk chunk) {
@@ -871,7 +869,6 @@ final class AdaptivePoolingAllocator {
 
         private void detachFromCache(SizeClassedChunk chunk) {
             chunk.cacheListState = SizeClassedChunk.CACHE_NONE;
-            chunk.owningCache = null;
         }
 
         // Called from releaseSegment (Signal A): exhausted → reusable
@@ -1025,7 +1022,6 @@ final class AdaptivePoolingAllocator {
             while (cur != null) {
                 SizeClassedChunk next = cur.nextInCache;
                 cur.cacheListState = SizeClassedChunk.CACHE_NONE;
-                cur.owningCache = null;
                 cur.prevInCache = null;
                 cur.nextInCache = null;
                 cur.markToDeallocate();
@@ -1793,7 +1789,7 @@ final class AdaptivePoolingAllocator {
         SizeClassedChunk prevInCache;
         SizeClassedChunk nextInCache;
         int cacheListState;
-        ThreadLocalSizeClassedChunkCache owningCache;
+        final ThreadLocalSizeClassedChunkCache owningCache;
 
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
                          SizeClassChunkController controller) {
@@ -1802,6 +1798,7 @@ final class AdaptivePoolingAllocator {
             segments = controller.chunkSize / segmentSize;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
+            owningCache = (ThreadLocalSizeClassedChunkCache) magazine.chunkCache;
             if (ownerThread == null) {
                 externalFreeList = controller.createFreeList();
                 localFreeList = null;
@@ -1823,6 +1820,7 @@ final class AdaptivePoolingAllocator {
             segments = controller.chunkSize / segmentSize;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
+            owningCache = (ThreadLocalSizeClassedChunkCache) magazine.chunkCache;
             if (ownerThread != null) {
                 if (recycledLocalFreeList != null && recycledLocalFreeList.capacity() >= segments) {
                     localFreeList = recycledLocalFreeList;
