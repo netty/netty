@@ -139,15 +139,8 @@ public final class GenerateMojo extends AbstractMojo {
             return;
         }
 
-        // Every internal step raises the framework-agnostic JextractException; this method owns the
-        // sole translation into the Maven exception taxonomy, so the collaborators stay Maven-free and
-        // the mapping lives in exactly one place (rethrowAsMojo).
         try {
-            // Validate the whole configuration up front so a bad <binding> fails fast with an
-            // actionable message rather than leaving a partially regenerated tree.
             BindingValidator.validateTargetPackage(targetPackage);
-            // Use the trimmed value everywhere downstream: the command and the staging path both
-            // consume targetPackage raw, and validation only checked the trimmed form.
             targetPackage = targetPackage.trim();
             BindingValidator.validate(bindings);
 
@@ -169,10 +162,7 @@ public final class GenerateMojo extends AbstractMojo {
         getLog().info("Generating " + bindings.size() + " FFM binding(s) into package "
                 + targetPackage + " using " + executable);
 
-        // Generate into a staging directory and promote atomically once every binding succeeds. A
-        // mid-run jextract failure therefore never leaves the committed source tree half-regenerated,
-        // and promotion prunes the previously generated output for the target package so a removed or
-        // renamed <binding> leaves no orphaned committed files.
+        final LicenseHeader header = LicenseHeader.bundled();
         try (StagingDirectory staging = StagingDirectory.create(buildDirectory, outputDirectory)) {
             for (final Binding binding : bindings) {
                 final JextractCommand command = buildCommand(executable, staging.directory(), binding);
@@ -180,6 +170,8 @@ public final class GenerateMojo extends AbstractMojo {
                 getLog().debug(command.toString());
                 command.run(processStarter, timeoutSeconds);
             }
+
+            header.prependToFilesIn(staging.directory());
             staging.promoteTo(targetPackage,
                     ProvenanceManifest.forCurrentOs(jextractVersion.trim(), sdk));
         }
