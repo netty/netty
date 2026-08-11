@@ -50,10 +50,11 @@ import java.net.ConnectException;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1204,8 +1205,7 @@ public class LocalChannelTest {
         final int maxMessagesPerRead = 2;
         final int connections = 5;
         final CountDownLatch queuedConnections = new CountDownLatch(connections);
-        final CountDownLatch acceptedConnections = new CountDownLatch(connections);
-        final List<Integer> messagesPerReadComplete = new ArrayList<Integer>();
+        final BlockingQueue<Integer> messagesPerReadComplete = new LinkedBlockingQueue<Integer>();
         final List<ChannelFuture> connectFutures = new ArrayList<ChannelFuture>();
 
         Bootstrap cb = new Bootstrap();
@@ -1237,7 +1237,6 @@ public class LocalChannelTest {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         messagesRead++;
-                        acceptedConnections.countDown();
                         ctx.fireChannelRead(msg);
                     }
 
@@ -1263,16 +1262,14 @@ public class LocalChannelTest {
             }
 
             assertTrue(queuedConnections.await(5, SECONDS));
-            sc.eventLoop().submit(() -> { }).sync();
 
             sc.config().setAutoRead(true);
-            assertTrue(acceptedConnections.await(5, SECONDS));
+            assertEquals(maxMessagesPerRead, messagesPerReadComplete.take());
+            assertEquals(maxMessagesPerRead, messagesPerReadComplete.take());
+            assertEquals(connections - 2 * maxMessagesPerRead, messagesPerReadComplete.take());
             for (ChannelFuture connectFuture : connectFutures) {
                 connectFuture.sync();
             }
-            sc.eventLoop().submit(() -> { }).sync();
-
-            assertEquals(Arrays.asList(2, 2, 1), messagesPerReadComplete);
         } finally {
             for (ChannelFuture connectFuture : connectFutures) {
                 closeChannel(connectFuture.channel());
