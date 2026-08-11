@@ -115,6 +115,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.SSL_OP_NO_TLSv1_3
     };
 
+    // Numeric protocol versions as returned by SSL_version() (see SSL#getVersionInt(long)). These are not the
+    // SSL.SSL_PROTOCOL_* bitmask flags but the raw values OpenSSL uses to identify the negotiated protocol.
+    private static final int SSL2_VERSION = 0x0002;
+    private static final int SSL3_VERSION = 0x0300;
+    private static final int TLS1_VERSION = 0x0301;
+    private static final int TLS1_1_VERSION = 0x0302;
+    private static final int TLS1_2_VERSION = 0x0303;
+    private static final int TLS1_3_VERSION = 0x0304;
+
     /**
      * Depends upon tcnative ... only use if tcnative is available!
      */
@@ -2022,7 +2031,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return NEED_WRAP;
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
-        session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), SSL.getVersion(ssl),
+        session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), protocolVersion(),
                 SSL.getPeerCertificate(ssl), SSL.getPeerCertChain(ssl),
                 SSL.getTime(ssl) * 1000L, parentContext.sessionTimeout() * 1000L);
         selectApplicationProtocol();
@@ -2089,11 +2098,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return null;
         }
 
-        String version = SSL.getVersion(ssl);
-        return toJavaCipherSuite(openSslCipherSuite, version);
+        return toJavaCipherSuite(openSslCipherSuite, SSL.getVersionInt(ssl));
     }
 
-    private String toJavaCipherSuite(String openSslCipherSuite, String version) {
+    private String toJavaCipherSuite(String openSslCipherSuite, int version) {
         if (openSslCipherSuite == null) {
             return null;
         }
@@ -2102,20 +2110,53 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     /**
-     * Converts the protocol version string returned by {@link SSL#getVersion(long)} to protocol family string.
+     * Returns the negotiated protocol version as one of the {@link SslProtocols} {@code String}s.
+     * <p>
+     * This uses {@link SSL#getVersionInt(long)} and maps the returned numeric version to an interned
+     * {@link SslProtocols} constant, so no new {@code String} is allocated on the (performance sensitive)
+     * handshake path. For a version that can't be mapped it falls back to {@link SSL#getVersion(long)}.
      */
-    private static String toJavaCipherSuitePrefix(String protocolVersion) {
-        final char c;
-        if (protocolVersion == null || protocolVersion.isEmpty()) {
-            c = 0;
-        } else {
-            c = protocolVersion.charAt(0);
-        }
+    private String protocolVersion() {
+        String version = toJavaProtocolVersion(SSL.getVersionInt(ssl));
+        return version != null ? version : SSL.getVersion(ssl);
+    }
 
-        switch (c) {
-            case 'T':
+    /**
+     * Maps the numeric protocol version returned by {@link SSL#getVersionInt(long)} to the matching interned
+     * {@link SslProtocols} constant, or {@code null} if the version is not known.
+     */
+    private static String toJavaProtocolVersion(int version) {
+        switch (version) {
+            case TLS1_3_VERSION:
+                return SslProtocols.TLS_v1_3;
+            case TLS1_2_VERSION:
+                return SslProtocols.TLS_v1_2;
+            case TLS1_1_VERSION:
+                return SslProtocols.TLS_v1_1;
+            case TLS1_VERSION:
+                return SslProtocols.TLS_v1;
+            case SSL3_VERSION:
+                return SslProtocols.SSL_v3;
+            case SSL2_VERSION:
+                return SslProtocols.SSL_v2;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Converts the numeric protocol version returned by {@link SSL#getVersionInt(long)} to the cipher suite
+     * protocol family prefix.
+     */
+    private static String toJavaCipherSuitePrefix(int protocolVersion) {
+        switch (protocolVersion) {
+            case TLS1_VERSION:
+            case TLS1_1_VERSION:
+            case TLS1_2_VERSION:
+            case TLS1_3_VERSION:
                 return "TLS";
-            case 'S':
+            case SSL2_VERSION:
+            case SSL3_VERSION:
                 return "SSL";
             default:
                 return "UNKNOWN";
@@ -2652,7 +2693,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // did not set it earlier via setSessionDetails(...)
                         this.creationTime = lastAccessed = creationTime;
                     }
-                    this.cipher = toJavaCipherSuite(cipher, protocol);
+                    this.cipher = toJavaCipherSuite(cipher, SSL.getVersionInt(ssl));
                     this.protocol = protocol;
                     try {
                         String groupName = SSL.getGroupName(ssl);
@@ -2814,7 +2855,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (protocol == null) {
                 synchronized (ReferenceCountedOpenSslEngine.this) {
                     if (!destroyed) {
-                        protocol = SSL.getVersion(ssl);
+                        protocol = protocolVersion();
                     } else {
                         protocol = StringUtil.EMPTY_STRING;
                     }
