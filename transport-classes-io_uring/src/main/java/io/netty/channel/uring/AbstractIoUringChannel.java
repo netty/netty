@@ -467,6 +467,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void retainInflightWrites() {
         retainInflightWrites(writeOperations);
         retainInflightWrites(unpooledWriteOperations);
+        ioUringUnsafe().retainInflightWriteOperations();
     }
 
     private static void retainInflightWrites(WriteOperation[] operations) {
@@ -514,6 +515,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void releaseWriteOperations() {
         releaseWriteOperations(writeOperations);
         releaseWriteOperations(unpooledWriteOperations);
+        ioUringUnsafe().releaseInflightWriteOperations();
     }
 
     private static void releaseWriteOperations(WriteOperation[] operations) {
@@ -668,6 +670,26 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteSingle(Object msg);
+
+        /**
+         * Retains the references held by write operations that are tracked outside the channel-level slot arrays.
+         * Called after {@link AbstractIoUringChannel#doShutdownOutput()} retained every slot, so a completion that
+         * races the shutdown still finds a live reference to release. The base implementation is a no-op; subclasses
+         * that track an in-flight write operation of their own override it.
+         */
+        protected void retainInflightWriteOperations() {
+            // no-op
+        }
+
+        /**
+         * Rolls back write operations that are tracked outside the channel-level slot arrays. Called from
+         * {@link #unregistered()} after both slot arrays were released: no further completion will ever arrive once
+         * the channel is deregistered, so references a shutdown retained would otherwise leak. The base
+         * implementation is a no-op; subclasses that track an in-flight write operation of their own override it.
+         */
+        protected void releaseInflightWriteOperations() {
+            // no-op
+        }
 
         @Override
         public final void handle(IoRegistration registration, IoEvent ioEvent) {

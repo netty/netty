@@ -168,6 +168,45 @@ class WriteOperationTest {
     }
 
     @Test
+    void finishedOperationIsDoneAndNoLongerActive() {
+        ByteBuf buffer = Unpooled.buffer();
+        WriteOperation operation = new WriteOperation();
+        operation.record(Native.IORING_OP_SEND, buffer);
+
+        assertTrue(operation.isActive());
+        assertFalse(operation.isDone());
+
+        operation.complete(0);
+
+        assertFalse(operation.isActive());
+        assertTrue(operation.isDone());
+        buffer.release();
+    }
+
+    @Test
+    void completeAndRollbackAfterFinishDoNotReleaseAgain() {
+        ByteBuf buffer = Unpooled.buffer();
+        WriteOperation operation = new WriteOperation();
+        operation.record(Native.IORING_OP_SEND, buffer);
+        operation.retainReferences();
+        assertEquals(2, buffer.refCnt());
+
+        operation.complete(0);
+        assertEquals(1, buffer.refCnt());
+
+        // A slot that already finished must swallow any further terminal completion or rollback: the references it
+        // held were released exactly once and are no longer owned by this operation.
+        operation.complete(0);
+        operation.rollback();
+        operation.complete(Native.IORING_CQE_F_NOTIF);
+
+        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
+        assertEquals(1, buffer.refCnt());
+        buffer.release();
+    }
+
+    @Test
     void arrayOverloadCopiesPassedInArraySoCallerCanReuseIt() {
         ByteBuf first = Unpooled.buffer();
         ByteBuf second = Unpooled.buffer();

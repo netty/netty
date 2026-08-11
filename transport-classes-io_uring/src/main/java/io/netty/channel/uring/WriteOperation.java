@@ -25,7 +25,6 @@ final class WriteOperation {
     private int count;
     private boolean active;
     private boolean retained;
-    private boolean done;
 
     /**
      * Records the reference a submitted SQE handed to the kernel without retaining it: the outbound buffer already
@@ -45,7 +44,6 @@ final class WriteOperation {
         this.opCode = opCode;
         active = true;
         retained = false;
-        done = false;
     }
 
     /**
@@ -68,7 +66,6 @@ final class WriteOperation {
         this.opCode = opCode;
         active = true;
         retained = false;
-        done = false;
     }
 
     /**
@@ -119,15 +116,19 @@ final class WriteOperation {
         finish();
     }
 
+    /**
+     * Whether this slot no longer holds an operation, which is exactly the inverse of {@link #isActive()}: an
+     * operation is done once its terminal completion or its rollback released the slot. A slot that was never
+     * recorded into is reported as done as well, as there is nothing left to wait for in either case.
+     */
     boolean isDone() {
-        return done;
+        return !isActive();
     }
 
     private void finish() {
-        if (done) {
+        if (!active) {
             return;
         }
-        done = true;
         active = false;
         boolean release = retained;
         retained = false;

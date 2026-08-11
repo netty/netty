@@ -262,6 +262,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
         private ByteBuf fileRegionChunkBuf;
 
+        // The one non-zero-copy write this channel can have in flight. Those writes are gated by
+        // WRITE_SCHEDULED and every schedule path asserts writeId == 0, so at most one of them is outstanding
+        // at a time and a single slot replaces the id allocation, free list, slot array and opcode matching the
+        // zero-copy and datagram paths still need. Zero-copy is the exception: its notifications arrive in TCP
+        // ack order, so several of its operations can be waiting at once and IoUringSocketChannel keeps using
+        // the channel-level slot array for them.
+        final WriteOperation writeOperation = new WriteOperation();
+
         // Reused across the channel's lifetime so a writev only pays for growing the backing reference array,
         // not for a fresh collector and array on every call.
         private final IovArrayReferenceCollector iovArrayReferenceCollector = new IovArrayReferenceCollector();
@@ -291,18 +299,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             long iovArrayAddress = iovArray.memoryAddress(offset);
             int iovArrayLength = iovArray.count() - offset;
             // Should not use sendmsg_zc, just use normal writev.
-            short opsId = nextWriteOperationId();
-            if (opsId == 0) {
-                return 0;
-            }
-            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, opsId);
+            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
 
             byte opCode = ops.opcode();
-            recordWriteOperation(opsId, opCode, collector.referencesArray(), collector.referencesCount());
+            // record(...) copies the collector's references into the slot, so the collector stays reusable.
+            writeOperation.record(opCode, collector.referencesArray(), collector.referencesCount());
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                rollbackWriteOperation(opsId, opCode);
+                writeOperation.rollback();
                 return 0;
             }
             return 1;
@@ -334,24 +339,19 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ByteBuf buf = (ByteBuf) msg;
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
                 int length = buf.readableBytes();
-                short opsid = nextWriteOperationId();
-                if (opsid == 0) {
-                    return 0;
-                }
-
-                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
+                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             }
             byte opCode = ops.opcode();
-            // A splice does not go through nextWriteOperationId() and picks its own data to tell its two stages
-            // apart, so it never takes part in the write-operation bookkeeping.
-            short opsId = ops.data();
+            // A splice picks its own data to tell its two stages apart and the IoUringFileRegion owns its
+            // buffers, so it never takes part in the write-operation bookkeeping.
             if (msg instanceof ByteBuf) {
-                recordWriteOperation(opsId, opCode, (ByteBuf) msg);
+                writeOperation.record(opCode, (ByteBuf) msg);
             }
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                rollbackWriteOperation(opsId, opCode);
+                // A no-op for the splice above, which never recorded anything.
+                writeOperation.rollback();
                 return 0;
             }
             return 1;
@@ -400,17 +400,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             long address = IoUring.memoryAddress(buf) + buf.readerIndex();
             int length = buf.readableBytes();
-            short opsId = nextWriteOperationId();
-            if (opsId == 0) {
-                return 0;
-            }
-            IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsId);
+            IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             byte opCode = ops.opcode();
-            recordWriteOperation(opsId, opCode, buf);
+            writeOperation.record(opCode, buf);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                rollbackWriteOperation(opsId, opCode);
+                writeOperation.rollback();
                 // Submission only fails when the registration is no longer valid (channel is
                 // being deregistered). unregistered() will release fileRegionChunkBuf and the
                 // outbound buffer will release the FileRegion, so nothing to clean up here --
@@ -711,6 +707,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
                 writeId = 0;
                 writeOpCode = 0;
+                // Terminates the single non-zero-copy slot. A splice or any other completion that never went
+                // through it finds it inactive, which makes this a no-op, and the WRITE_SCHEDULED gate means
+                // the slot this does terminate is always the one this completion owns.
+                writeOperation.complete(flags);
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (channelOutboundBuffer == null) {
@@ -796,7 +796,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
+        protected void retainInflightWriteOperations() {
+            writeOperation.retainReferences();
+        }
+
+        @Override
+        protected void releaseInflightWriteOperations() {
+            if (writeOperation.isActive()) {
+                writeOperation.rollback();
+            }
+        }
+
+        @Override
         public void unregistered() {
+            // Rolls the single slot back through releaseInflightWriteOperations() before the chunk buffer is
+            // dropped below, so a reference a shutdown retained on that buffer is released first.
             super.unregistered();
             assert readBuffer == null;
             releaseFileRegionChunkBuf();

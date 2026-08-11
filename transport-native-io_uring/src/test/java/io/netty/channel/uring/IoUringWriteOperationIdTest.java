@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -74,9 +75,11 @@ public class IoUringWriteOperationIdTest {
             public void run(IoUringSocketChannel channel) {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
+                    // Only the zero-copy, TCP Fast Open and datagram paths allocate from this id space; a plain
+                    // stream write is tracked by IoUringStreamUnsafe's single slot and never takes an id.
                     short id = channel.nextWriteOperationId();
-                    channel.recordWriteOperation(id, Native.IORING_OP_SEND, buffer);
-                    channel.completeWriteOperation(id, Native.IORING_OP_SEND, 0);
+                    channel.recordWriteOperation(id, Native.IORING_OP_SEND_ZC, buffer);
+                    channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
 
                     assertEquals(1, buffer.refCnt());
                     assertEquals(id, channel.nextWriteOperationId());
@@ -107,6 +110,74 @@ public class IoUringWriteOperationIdTest {
                 }
             }
         });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void shutdownRetainsTheStreamWriteUntilItsCompletionReleasesItOnce() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                AbstractIoUringStreamChannel.IoUringStreamUnsafe unsafe = streamUnsafe(channel);
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    unsafe.writeOperation.record(Native.IORING_OP_SEND, buffer);
+                    assertEquals(1, buffer.refCnt());
+
+                    // doShutdownOutput() reaches the single slot through this hook before it drops the
+                    // outbound buffer's own reference.
+                    unsafe.retainInflightWriteOperations();
+                    assertEquals(2, buffer.refCnt());
+
+                    // Retaining twice must not stack references; a shutdown may race a zero-copy retain.
+                    unsafe.retainInflightWriteOperations();
+                    assertEquals(2, buffer.refCnt());
+
+                    unsafe.writeOperation.complete(0);
+                    assertEquals(1, buffer.refCnt());
+                    assertFalse(unsafe.writeOperation.isActive());
+
+                    // A completion carrying an id the slot does not own must not release anything again.
+                    unsafe.writeOperation.complete(0);
+                    assertEquals(1, buffer.refCnt());
+                } finally {
+                    buffer.release();
+                }
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void deregistrationReleasesAStreamWriteThatWillNeverSeeItsCompletion() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                AbstractIoUringStreamChannel.IoUringStreamUnsafe unsafe = streamUnsafe(channel);
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    unsafe.writeOperation.record(Native.IORING_OP_WRITEV, buffer);
+                    unsafe.retainInflightWriteOperations();
+                    assertEquals(2, buffer.refCnt());
+
+                    // No completion arrives once the channel is deregistered, so what the shutdown retained
+                    // has to come back here instead of leaking.
+                    unsafe.releaseInflightWriteOperations();
+                    assertEquals(1, buffer.refCnt());
+                    assertFalse(unsafe.writeOperation.isActive());
+                } finally {
+                    buffer.release();
+                }
+            }
+        });
+    }
+
+    /**
+     * The non-zero-copy stream write tracker lives on the unsafe, not on the channel, because it is only
+     * correct for the paths gated by {@code WRITE_SCHEDULED}.
+     */
+    private static AbstractIoUringStreamChannel.IoUringStreamUnsafe streamUnsafe(IoUringSocketChannel channel) {
+        return (AbstractIoUringStreamChannel.IoUringStreamUnsafe) channel.unsafe();
     }
 
     private interface BookkeepingTask {
