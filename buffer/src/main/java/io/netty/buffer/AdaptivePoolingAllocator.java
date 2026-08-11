@@ -589,7 +589,7 @@ final class AdaptivePoolingAllocator {
                 recycler = Magazine.AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex, null, recycler);
+            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex, null, recycler, lock);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -728,7 +728,7 @@ final class AdaptivePoolingAllocator {
         private Magazine createMagazine(int sizeClassIndex) {
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
             Magazine mag = new Magazine(allocator, strategy,
-                                       chunkRecycler, sizeClassIndex, Thread.currentThread(), null);
+                                       chunkRecycler, sizeClassIndex, Thread.currentThread(), null, null);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -801,10 +801,17 @@ final class AdaptivePoolingAllocator {
         SizeClassChunkRecycler chunkRecycler;
         int sizeClassIndex;
         final int purgeRetentionFloor;
+        final StampedLock stripeLock; // null for thread-local, non-null for shared stripes
 
         ThreadLocalSizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
+            this(chunkSize, chunkRecycler, sizeClassIndex, null);
+        }
+
+        ThreadLocalSizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler,
+                                         int sizeClassIndex, StampedLock stripeLock) {
             this.chunkRecycler = chunkRecycler;
             this.sizeClassIndex = sizeClassIndex;
+            this.stripeLock = stripeLock;
             purgeRetentionFloor = Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize);
         }
 
@@ -877,7 +884,7 @@ final class AdaptivePoolingAllocator {
             addToReusable(chunk);
         }
 
-        // Called from releaseSegment (Signal B): reusable → eviction (if above floor)
+        // Called from releaseSegment (Signal B, thread-local): reusable → eviction (if above floor)
         void signalFullyFree(SizeClassedChunk chunk) {
             if (totalCount() > purgeRetentionFloor) {
                 removeFromReusable(chunk);
@@ -886,6 +893,27 @@ final class AdaptivePoolingAllocator {
             }
             // At or below floor: chunk stays in reusable list (it has full capacity,
             // available for pollChunk). This preserves a warm cache for the next burst.
+        }
+
+        // Called from releaseSegment (Signal B, shared path under tryWriteLock):
+        // chunk may be in exhausted OR reusable list
+        void signalFullyFreeShared(SizeClassedChunk chunk) {
+            if (totalCount() <= purgeRetentionFloor) {
+                // Below floor: move to reusable if in exhausted (it has capacity now)
+                if (chunk.cacheListState == SizeClassedChunk.CACHE_EXHAUSTED) {
+                    removeFromExhausted(chunk);
+                    addToReusable(chunk);
+                }
+                return;
+            }
+            // Above floor: evict
+            if (chunk.cacheListState == SizeClassedChunk.CACHE_EXHAUSTED) {
+                removeFromExhausted(chunk);
+            } else {
+                removeFromReusable(chunk);
+            }
+            detachFromCache(chunk);
+            chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
         }
 
         @Override
@@ -1119,8 +1147,9 @@ final class AdaptivePoolingAllocator {
                     allocator.chunkAllocator, allocator.chunkRegistry, segmentSize, chunkSize);
         }
 
-        ChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
-            return new ThreadLocalSizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex);
+        ChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
+                                    StampedLock stripeLock) {
+            return new ThreadLocalSizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex, stripeLock);
         }
     }
 
@@ -1305,14 +1334,14 @@ final class AdaptivePoolingAllocator {
         // Size-classed magazine constructor (both thread-local and shared-stripe)
         Magazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
                  SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
-                 Thread ownerThread, AdaptiveRecycler bufRecycler) {
+                 Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock) {
             this.allocator = allocator;
             this.ownerThread = ownerThread;
             this.sizeClassIndex = sizeClassIndex;
             this.chunkRecycler = chunkRecycler;
             this.bufRecycler = bufRecycler;
             this.chunkController = strategy.createController(allocator);
-            this.chunkCache = strategy.createChunkCache(chunkRecycler, sizeClassIndex);
+            this.chunkCache = strategy.createChunkCache(chunkRecycler, sizeClassIndex, stripeLock);
             this.purgeTickThreshold = (int) Math.min(Integer.MAX_VALUE,
                     CHUNK_PURGE_POLLS_THREAD_LOCAL * (strategy.chunkSize / strategy.segmentSize));
         }
@@ -1885,35 +1914,51 @@ final class AdaptivePoolingAllocator {
                 if (state != AVAILABLE) {
                     updateStateOnLocalReleaseSegment(state, localFreeList);
                 } else {
-                    // Signal detection: check if this chunk is in the cache and needs a list transition.
-                    // magazine == null means the chunk has been released from its magazine and is in the cache.
-                    // cacheListState tells us which list it's in; we only act on transitions.
                     int cls = cacheListState;
-                    if (cls == CACHE_EXHAUSTED) {
-                        // Signal A: chunk gained capacity (first segment return while in cache).
-                        // The cache will move us to the reusable list.
-                        ThreadLocalSizeClassedChunkCache cache = owningCache;
-                        if (cache != null) {
-                            cache.moveToReusable(this);
-                        }
-                    } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
-                        // Signal B: all segments returned via owner thread. Evict if above
-                        // retention floor. Plain int comparison — no volatile reads.
-                        // Cross-thread returns that bypass localFreeList are caught by purge.
-                        ThreadLocalSizeClassedChunkCache cache = owningCache;
-                        if (cache != null) {
-                            cache.signalFullyFree(this);
-                        }
+                    if (cls != CACHE_NONE) {
+                        detectCacheTransition(cls, localFreeList);
                     }
                 }
             } else {
-                boolean segmentReturned = externalFreeList.offer(startIndex);
-                assert segmentReturned;
+                int sizeAfterOffer = externalFreeList.offerAndGetSize(startIndex);
+                assert sizeAfterOffer >= 0 : "externalFreeList full";
                 // implicit StoreLoad barrier from MPSC offer()
                 int state = this.state;
                 if (state != AVAILABLE) {
                     deallocateIfNeeded(state);
+                } else if (sizeAfterOffer == segments) {
+                    tryRetireFromSharedCache();
                 }
+            }
+        }
+
+        private void detectCacheTransition(int cls, IntStack localFreeList) {
+            ThreadLocalSizeClassedChunkCache cache = owningCache;
+            if (cache == null) {
+                return;
+            }
+            if (cls == CACHE_EXHAUSTED) {
+                cache.moveToReusable(this);
+            } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
+                cache.signalFullyFree(this);
+            }
+        }
+
+        private void tryRetireFromSharedCache() {
+            ThreadLocalSizeClassedChunkCache cache = owningCache;
+            if (cache == null || cache.stripeLock == null) {
+                return;
+            }
+            long stamp = cache.stripeLock.tryWriteLock();
+            if (stamp == 0) {
+                return;
+            }
+            try {
+                if (cacheListState != CACHE_NONE) {
+                    cache.signalFullyFreeShared(this);
+                }
+            } finally {
+                cache.stripeLock.unlockWrite(stamp);
             }
         }
 
