@@ -409,10 +409,9 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (encoding == null) {
             encoding = IDENTITY;
         }
-        final EmbeddedChannel compressor = newContentCompressor(ctx, encoding);
-        if (compressor != null) {
-            boolean success = false;
-            try {
+        EmbeddedChannel compressor = newContentCompressor(ctx, encoding);
+        try {
+            if (compressor != null) {
                 CharSequence targetContentEncoding = getTargetContentEncoding(encoding);
                 if (IDENTITY.contentEqualsIgnoreCase(targetContentEncoding)) {
                     headers.remove(CONTENT_ENCODING);
@@ -424,15 +423,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 // this content-length will not be correct. Instead of queuing messages or delaying sending
                 // header frames...just remove the content-length header
                 headers.remove(CONTENT_LENGTH);
-                success = true;
-            } finally {
-                if (!success) {
-                    compressor.finishAndReleaseAll();
-                }
+            }
+
+            EmbeddedChannel result = compressor;
+            compressor = null;
+            return result;
+        } finally {
+            if (compressor != null) {
+                compressor.finishAndReleaseAll();
             }
         }
-
-        return compressor;
     }
 
     /**
