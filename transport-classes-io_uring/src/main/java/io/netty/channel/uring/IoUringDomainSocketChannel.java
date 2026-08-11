@@ -158,8 +158,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
-                        // The completion may arrive after close() or shutdownOutput() already dropped the
-                        // outbound buffer, in which case there is nothing left to remove.
+                        // The completion may arrive after close() or shutdownOutput() dropped the buffer.
                         ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
                         if (channelOutboundBuffer != null) {
                             channelOutboundBuffer.remove();

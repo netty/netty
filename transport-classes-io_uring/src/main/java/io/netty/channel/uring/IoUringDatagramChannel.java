@@ -553,8 +553,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 sendmsgHdrs.clear();
                 ChannelOutboundBuffer outboundBuffer = outboundBuffer();
                 if (outboundBuffer == null) {
-                    // The completion may arrive after close() already dropped the outbound
-                    // buffer, in which case there is nothing left to complete.
+                    // The completion may arrive after close() already dropped the outbound buffer.
                     return true;
                 }
                 for (int i = 0; i < numWritten; i++) {

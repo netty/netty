@@ -80,8 +80,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 int length = buf.readableBytes();
                 if (((IoUringSocketChannelConfig) config()).shouldWriteZeroCopy(length)) {
                     long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                    // No exhaustion guard needed: nextZeroCopyWriteOperationId() falls back to an id outside the
-                    // short range once the short id pool is exhausted, so it never returns 0.
                     long opsId = nextZeroCopyWriteOperationId();
                     IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                     byte opCode = ops.opcode();
@@ -141,8 +139,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 MsgHdrMemory hdr = msgHdrArray.nextHdr();
                 assert hdr != null;
                 hdr.set(iovArrayAddress, iovArrayLength);
-                // No exhaustion guard needed: nextZeroCopyWriteOperationId() falls back to an id outside the
-                // short range once the short id pool is exhausted, so it never returns 0.
                 long opsId = nextZeroCopyWriteOperationId();
                 IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
                 byte opCode = ops.opcode();
@@ -195,15 +191,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             writeId = 0;
             writeOpCode = 0;
             if ((flags & Native.IORING_CQE_F_MORE) != 0) {
-                // Per io_uring_enter(2) (IORING_OP_SEND_ZC): "Even errored requests may generate a notification,
-                // and the user must check for IORING_CQE_F_MORE rather than relying on the result." So whenever
-                // F_MORE is set on this primary CQE, the kernel still owns the memory until the follow-up
-                // IORING_CQE_F_NOTIF arrives, regardless of whether res reports success or an error. Retain here,
-                // before any release below (removeBytes(...) dropping the outbound buffer's own reference on
-                // success, or handleWriteError(...) failing the flushed write on error), so the buffer stays
-                // alive across that gap instead of being freed out from under the still-pending notification.
-                // retainReferences() is idempotent and a no-op once the slot is no longer active, so this composes
-                // safely with a shutdown that already retained (or released) this slot.
+                // Even errored requests may generate a notification, so the kernel still owns the memory
+                // until the follow-up IORING_CQE_F_NOTIF arrives. Retain before any release below.
+                // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
                 retainWriteOperationReferences(data, op);
             }
             ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
@@ -211,7 +201,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 return true;
             }
             if (res >= 0) {
-                // A partial write is reported as a partial write.
                 channelOutboundBuffer.removeBytes(res);
                 return true;
             }

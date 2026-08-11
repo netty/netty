@@ -43,10 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Verifies that {@link Channel#close()} completes when {@link DuplexChannel#shutdownOutput()}
- * is called while a write SQE for that channel is still in-flight: the write completion (and,
- * for zero-copy writes, its follow-up notification) must be consumed without leaving the
- * channel's write-tracking state stuck, otherwise {@code close()} never completes.
+ * A write CQE (and, for zero-copy, its follow-up notification) that lands after the outbound buffer is gone
+ * must still be consumed, otherwise the channel's write-tracking state stays stuck and close() never completes.
  */
 public class IoUringShutdownOutputDuringInFlightWriteTest {
 
@@ -55,13 +53,8 @@ public class IoUringShutdownOutputDuringInFlightWriteTest {
         ZERO_COPY
     }
 
-    // The client's channelActive() submits the write SQE and then calls shutdownOutput() in the
-    // same event-loop task. shutdownOutput() synchronously nulls out the outboundBuffer (see
-    // AbstractChannel.AbstractUnsafe#shutdownOutput(...)), and that always happens before the
-    // write's CQE can be reaped,
-    // since CQE reaping only resumes once the current task returns control to the event loop.
-    // AUTO_READ=false on the peer and a large WRITE_SIZE are just auxiliary devices that keep the
-    // write from completing synchronously on submission, widening the window further.
+    // A payload this large, together with AUTO_READ=false on the peer, keeps the write from completing
+    // synchronously on submission, widening the window in which its CQE is still outstanding.
     private static final int WRITE_SIZE = 1024 * 1024;
 
     @BeforeAll

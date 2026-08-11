@@ -145,8 +145,6 @@ public class WriteOperationIdOverflowTest {
                     shutdownOutput(channel);
                     assertEquals(2, buffer.refCnt());
 
-                    // No completion arrives once the channel is deregistered, so what the shutdown retained has
-                    // to come back here instead of leaking.
                     ((AbstractIoUringChannel.AbstractUringUnsafe) channel.unsafe()).unregistered();
                     assertEquals(1, buffer.refCnt());
                     assertEquals(0, channel.overflowWriteOperationCount());
@@ -157,9 +155,6 @@ public class WriteOperationIdOverflowTest {
         });
     }
 
-    /**
-     * Drains the short id pool so the next zero-copy allocation has to fall back.
-     */
     private static void exhaustShortIds(IoUringSocketChannel channel) {
         for (int i = 1; i <= Short.MAX_VALUE; i++) {
             channel.nextWriteOperationId();
@@ -173,10 +168,8 @@ public class WriteOperationIdOverflowTest {
         return id;
     }
 
-    /**
-     * Runs the shutdown that retains every in-flight write. The channel is not connected here, so the actual
-     * {@code shutdown(2)} that follows the retain fails; the retain itself is what this exercises.
-     */
+    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
+    // is what this exercises.
     private static void shutdownOutput(IoUringSocketChannel channel) {
         try {
             channel.doShutdownOutput();
@@ -189,10 +182,8 @@ public class WriteOperationIdOverflowTest {
         void run(IoUringSocketChannel channel);
     }
 
-    /**
-     * The write-operation bookkeeping is event-loop state, and an {@link IoUringSocketChannel} can only be
-     * closed once it is registered, so the task runs on a real event loop.
-     */
+    // The bookkeeping is event-loop state and the channel can only be closed once registered, so the task
+    // runs on a real event loop.
     private static void runOnEventLoop(final BookkeepingTask task) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         final IoUringSocketChannel channel = new IoUringSocketChannel();

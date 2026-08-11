@@ -122,8 +122,7 @@ class WriteOperationTest {
 
         operation.complete(Native.IORING_CQE_F_MORE);
 
-        // Not retained, so the operation still only holds the outbound buffer's own reference: the primary
-        // completion must not touch refCnt, and must not finish the operation, until the notification arrives.
+        // Not retained, so the primary completion must leave refCnt alone and must not finish the operation.
         assertFalse(operation.isDone());
         assertEquals(1, first.refCnt());
         assertEquals(1, second.refCnt());
@@ -194,8 +193,6 @@ class WriteOperationTest {
         operation.complete(0);
         assertEquals(1, buffer.refCnt());
 
-        // A slot that already finished must swallow any further terminal completion or rollback: the references it
-        // held were released exactly once and are no longer owned by this operation.
         operation.complete(0);
         operation.rollback();
         operation.complete(Native.IORING_CQE_F_NOTIF);
@@ -216,9 +213,7 @@ class WriteOperationTest {
 
         operation.record(Native.IORING_OP_WRITEV, references, 2);
 
-        // Mutating the array the operation was handed must not be visible through the operation: the array is
-        // reused by callers such as a channel-lifetime IovArrayReferenceCollector, so the operation must have
-        // copied the contents into its own backing array instead of storing the array instance directly.
+        // Callers such as the channel-lifetime IovArrayReferenceCollector reuse this array between writes.
         references[0] = replacement;
 
         operation.retainReferences();

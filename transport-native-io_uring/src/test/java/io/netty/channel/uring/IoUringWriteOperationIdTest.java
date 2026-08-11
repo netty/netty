@@ -55,8 +55,7 @@ public class IoUringWriteOperationIdTest {
                     channel.rollbackWriteOperation(id, Native.IORING_OP_SPLICE);
                     assertEquals(1, zeroCopyData.refCnt());
 
-                    // The owning op still terminates it. It was never retained (no shutdown raced it), so the
-                    // terminal CQE leaves the reference count untouched.
+                    // It was never retained (no shutdown raced it), so the terminal CQE leaves refCnt untouched.
                     channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
                     assertEquals(1, zeroCopyData.refCnt());
                     assertEquals(id, channel.nextWriteOperationId());
@@ -75,8 +74,6 @@ public class IoUringWriteOperationIdTest {
             public void run(IoUringSocketChannel channel) {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
-                    // Only the zero-copy, TCP Fast Open and datagram paths allocate from this id space; a plain
-                    // stream write is tracked by IoUringStreamUnsafe's single slot and never takes an id.
                     short id = channel.nextWriteOperationId();
                     channel.recordWriteOperation(id, Native.IORING_OP_SEND_ZC, buffer);
                     channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
@@ -160,8 +157,6 @@ public class IoUringWriteOperationIdTest {
                     unsafe.retainInflightWriteOperations();
                     assertEquals(2, buffer.refCnt());
 
-                    // No completion arrives once the channel is deregistered, so what the shutdown retained
-                    // has to come back here instead of leaking.
                     unsafe.releaseInflightWriteOperations();
                     assertEquals(1, buffer.refCnt());
                     assertFalse(unsafe.writeOperation.isActive());
@@ -172,10 +167,6 @@ public class IoUringWriteOperationIdTest {
         });
     }
 
-    /**
-     * The non-zero-copy stream write tracker lives on the unsafe, not on the channel, because it is only
-     * correct for the paths gated by {@code WRITE_SCHEDULED}.
-     */
     private static AbstractIoUringStreamChannel.IoUringStreamUnsafe streamUnsafe(IoUringSocketChannel channel) {
         return (AbstractIoUringStreamChannel.IoUringStreamUnsafe) channel.unsafe();
     }
@@ -184,10 +175,8 @@ public class IoUringWriteOperationIdTest {
         void run(IoUringSocketChannel channel);
     }
 
-    /**
-     * The write-operation bookkeeping is event-loop state, and an {@link IoUringSocketChannel} can only be
-     * closed once it is registered, so the task runs on a real event loop.
-     */
+    // The bookkeeping is event-loop state and the channel can only be closed once registered, so the task
+    // runs on a real event loop.
     private static void runOnEventLoop(final BookkeepingTask task) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         final IoUringSocketChannel channel = new IoUringSocketChannel();

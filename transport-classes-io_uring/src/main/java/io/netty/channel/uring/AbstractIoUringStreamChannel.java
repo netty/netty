@@ -263,15 +263,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private ByteBuf fileRegionChunkBuf;
 
         // The one non-zero-copy write this channel can have in flight. Those writes are gated by
-        // WRITE_SCHEDULED and every schedule path asserts writeId == 0, so at most one of them is outstanding
-        // at a time and a single slot replaces the id allocation, free list, slot array and opcode matching the
-        // zero-copy and datagram paths still need. Zero-copy is the exception: its notifications arrive in TCP
-        // ack order, so several of its operations can be waiting at once and IoUringSocketChannel keeps using
-        // the channel-level slot array for them.
+        // WRITE_SCHEDULED and every schedule path asserts writeId == 0, so at most one is outstanding at a time.
+        // Zero-copy is the exception: its notifications arrive in TCP ack order, so several operations can be
+        // waiting at once and IoUringSocketChannel keeps using the channel-level slot array for them.
         final WriteOperation writeOperation = new WriteOperation();
 
-        // Reused across the channel's lifetime so a writev only pays for growing the backing reference array,
-        // not for a fresh collector and array on every call.
         private final IovArrayReferenceCollector iovArrayReferenceCollector = new IovArrayReferenceCollector();
 
         protected final IovArrayReferenceCollector iovArrayReferenceCollector() {
@@ -707,24 +703,19 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
                 writeId = 0;
                 writeOpCode = 0;
-                // Terminates the single non-zero-copy slot. A splice or any other completion that never went
-                // through it finds it inactive, which makes this a no-op, and the WRITE_SCHEDULED gate means
-                // the slot this does terminate is always the one this completion owns.
+                // A completion that never went through the slot finds it inactive, which makes this a no-op.
                 writeOperation.complete(flags);
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (channelOutboundBuffer == null) {
-                // The completion may arrive after close() or shutdownOutput() already dropped the
-                // outbound buffer, in which case there is nothing left to complete.
+                // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
                 releaseFileRegionChunkBuf();
                 return true;
             }
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                // Only zero-copy writes are ever handed an id outside the short range, and a splice is not one
-                // of them: IoUringFileRegion picks SPLICE_TO_PIPE / SPLICE_TO_SOCKET as its own data to tell
-                // its two stages apart, so narrowing here can not drop any bits.
+                // A splice picks its own data to tell its two stages apart, so narrowing here can not drop bits.
                 return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, (short) data);
             }
 
@@ -905,9 +896,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private int count;
 
         /**
-         * Points this collector at {@code iovArray} and drops the previous run's references. The backing array is
-         * kept so a collector reused across writev calls only grows it, never reallocates it, once it has seen the
-         * widest write so far.
+         * Points this collector at {@code iovArray} and drops the previous references, keeping the array for reuse.
          */
         void reset(IovArray iovArray) {
             this.iovArray = iovArray;

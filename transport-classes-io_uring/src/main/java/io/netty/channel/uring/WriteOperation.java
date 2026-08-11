@@ -17,6 +17,11 @@ package io.netty.channel.uring;
 
 import io.netty.util.ReferenceCounted;
 
+/**
+ * A slot tracking the references a submitted SQE handed to the kernel. Recording does not retain: the outbound buffer
+ * owns them until the write completes or {@link #retainReferences()} takes over. Slots are reused, and the backing
+ * array is kept across reuses, so only the first use of a slot allocates.
+ */
 final class WriteOperation {
     private static final ReferenceCounted[] EMPTY_REFERENCES = new ReferenceCounted[0];
 
@@ -26,12 +31,6 @@ final class WriteOperation {
     private boolean active;
     private boolean retained;
 
-    /**
-     * Records the reference a submitted SQE handed to the kernel without retaining it: the outbound buffer already
-     * owns the reference until its own completion path releases it. Instances live in the channel's slot array and
-     * are reused, so this also clears the state left by the previous operation in the slot. The backing array is
-     * kept across reuses of the slot, so recording a single reference only allocates on the first use of the id.
-     */
     void record(byte opCode, ReferenceCounted reference) {
         if (isActive()) {
             throw new IllegalStateException("slot still owned by an operation that has not completed");
@@ -47,12 +46,8 @@ final class WriteOperation {
     }
 
     /**
-     * Records the references a submitted multi-buffer SQE handed to the kernel, copying them into this operation's
-     * own backing array. The caller is free to reuse or mutate {@code references} once this call returns; this
-     * matters because zero-copy sends keep a slot alive across a primary CQE and its later
-     * {@code IORING_CQE_F_NOTIF}, during which a reused collector array could otherwise be overwritten by the next
-     * write. Instances live in the channel's slot array and are reused, so the backing array is kept across reuses
-     * of the slot: recording only allocates the first time a slot needs to grow to fit a wider write.
+     * Copies {@code references} so the caller may reuse the array: a zero-copy slot stays alive from its primary CQE
+     * until the follow-up {@code IORING_CQE_F_NOTIF}, during which a reused collector array would be overwritten.
      */
     void record(byte opCode, ReferenceCounted[] references, int count) {
         if (isActive()) {
@@ -69,13 +64,8 @@ final class WriteOperation {
     }
 
     /**
-     * Retains every reference this in-flight operation holds so a caller can release the outbound buffer's own
-     * reference without a kernel completion racing it. Used both when a shutdown drops the outbound buffer early
-     * and when a zero-copy send's primary completion arrives with {@code IORING_CQE_F_MORE} set, meaning the
-     * kernel still owns the memory until the follow-up {@code IORING_CQE_F_NOTIF}. A no-op once already retained,
-     * or when the slot is not currently active, so callers may call this repeatedly without double-retaining.
-     * {@code retained} is set before the loop so that a reference whose {@code retain()} throws still leaves the
-     * references retained so far eligible for release by {@link #finish()} instead of leaking them.
+     * NOOP once retained or while the slot is inactive. {@code retained} is set before the loop so a {@code retain()}
+     * that throws still leaves the already-retained references to {@link #finish()} instead of leaking them.
      */
     void retainReferences() {
         if (!isActive() || retained) {
@@ -88,24 +78,19 @@ final class WriteOperation {
     }
 
     /**
-     * Whether this slot currently holds an operation that has not been released yet. This tracks occupancy of the
-     * slot, not the number of references it holds: a submitted SQE that ended up with zero references (e.g. a
-     * multi-buffer write whose buffers were all empty) still occupies the slot until its completion arrives.
+     * Whether this slot is occupied. A submitted SQE that ended up with zero references still occupies it.
      */
     boolean isActive() {
         return active;
     }
 
-    /**
-     * The opcode of the SQE that owns this operation. Write completions are keyed by the submitted
-     * {@code user_data}, which is not allocated from a single namespace: the splice stages and the
-     * domain-socket fd-passing sendmsg pick their own values. Matching the opcode as well keeps such a
-     * completion from terminating an unrelated operation that happens to share the id.
-     */
     byte opCode() {
         return opCode;
     }
 
+    /**
+     * Releases the slot on the terminal CQE: a notification, or any completion without {@code IORING_CQE_F_MORE}.
+     */
     void complete(int cqeFlags) {
         if ((cqeFlags & Native.IORING_CQE_F_NOTIF) != 0 || (cqeFlags & Native.IORING_CQE_F_MORE) == 0) {
             finish();
@@ -116,11 +101,6 @@ final class WriteOperation {
         finish();
     }
 
-    /**
-     * Whether this slot no longer holds an operation, which is exactly the inverse of {@link #isActive()}: an
-     * operation is done once its terminal completion or its rollback released the slot. A slot that was never
-     * recorded into is reported as done as well, as there is nothing left to wait for in either case.
-     */
     boolean isDone() {
         return !isActive();
     }
