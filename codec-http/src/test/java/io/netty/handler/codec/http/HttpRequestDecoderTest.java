@@ -1129,6 +1129,50 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @ParameterizedTest(name = "[{index}] '{arguments}'")
+    @ValueSource(strings = {
+        "",
+        "5 ",
+        " 5",
+        "5 c",
+        "5 x",
+        "5 c;foo=bar",
+        "  5 c",
+        "  5 x",
+        "  5 c;foo=bar",
+    })
+    public void mustRejectChunkSizeWithIllegalWhitespaceOrExtraTokens(String chunkSizeLine) {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+            "Host: example\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "\r\n" +
+            chunkSizeLine + "\r\n" +
+            "GPOST\r\n" +
+            "0\r\n" +
+            "\r\n" +
+            "GET /smuggled HTTP/1.1\r\n" +
+            "Host: example\r\n" +
+            "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        // The request headers parse fine.
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertThat(request.protocolVersion()).isEqualTo(HttpVersion.HTTP_1_1);
+        assertThat(request.method()).isEqualTo(HttpMethod.POST);
+
+        // But the malformed chunk-size line must be rejected, not truncated at the whitespace.
+        HttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isFailure());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("chunk size");
+        content.release();
+
+        // Nothing after the failed chunk may be surfaced as a second, smuggled request.
+        assertFalse(channel.finish());
+    }
+
     @Test
     public void testOrderOfHeadersWithContentLength() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
