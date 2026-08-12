@@ -142,6 +142,14 @@ public class DefaultHttp2HeadersDecoderTest {
     }
 
     @Test
+    public void illegalHeaderValuesMustFailValidation() throws Exception {
+        verifyValidationFails(new DefaultHttp2HeadersDecoder(), encode(b("headername"), b("fo\no")));
+        verifyValidationFails(new DefaultHttp2HeadersDecoder(true), encode(b("headername"), b("fo\no")));
+        verifyValidationFails(new DefaultHttp2HeadersDecoder(true, MAX_HEADER_LIST_SIZE),
+            encode(b("headername"), b("fo\no")));
+    }
+
+    @Test
     public void decodingTrailersTeHeaderMustNotFailValidation() throws Exception {
         // The TE header is expressly allowed to have the value "trailers".
         ByteBuf buf = null;
