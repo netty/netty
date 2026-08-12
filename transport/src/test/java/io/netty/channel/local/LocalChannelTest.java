@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,6 +33,7 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -1243,12 +1245,17 @@ public class LocalChannelTest {
                 });
 
         sb.group(sharedGroup)
-                .channelFactory(() -> new LocalServerChannel() {
+                .channelFactory(new ChannelFactory<ServerChannel>() {
                     @Override
-                    protected LocalChannel newLocalChannel(LocalChannel peer) {
-                        LocalChannel child = super.newLocalChannel(peer);
-                        queuedConnections.countDown();
-                        return child;
+                    public ServerChannel newChannel() {
+                        return new LocalServerChannel() {
+                            @Override
+                            protected LocalChannel newLocalChannel(LocalChannel peer) {
+                                LocalChannel child = super.newLocalChannel(peer);
+                                queuedConnections.countDown();
+                                return child;
+                            }
+                        };
                     }
                 })
                 .option(ChannelOption.AUTO_READ, false)
