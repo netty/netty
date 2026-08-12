@@ -133,7 +133,9 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         // We are only validating values... so start at 1 and go until end.
         for (int i = 1; i < pseudoHeaders.length; i += 2) {
             // pseudoHeaders names are only set internally so they are assumed to be valid.
-            checkNotNullArrayParam(pseudoHeaders[i], i, "pseudoHeaders");
+            AsciiString value = pseudoHeaders[i];
+            checkNotNullArrayParam(value, i, "pseudoHeaders");
+            defaultHttp2ValueValidator().validate(value);
         }
 
         boolean seenNonPseudoHeader = false;
@@ -147,7 +149,9 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
                 throw new IllegalArgumentException(
                      "otherHeaders name at index " + i + " is a pseudo header that appears after non-pseudo headers.");
             }
-            checkNotNullArrayParam(otherHeaders[i + 1], i + 1, "otherHeaders");
+            AsciiString value = otherHeaders[i + 1];
+            checkNotNullArrayParam(value, i + 1, "otherHeaders");
+            defaultHttp2ValueValidator().validate(value);
         }
     }
 
