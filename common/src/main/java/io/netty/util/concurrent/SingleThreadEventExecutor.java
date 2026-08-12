@@ -1187,14 +1187,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
-    /**
-     * Returns {@code true} if no worker thread has ever been started for this executor
-     * (still in {@link #ST_NOT_STARTED}).
-     */
-    final boolean isNeverStarted() {
-        return thread == null && state == ST_NOT_STARTED;
-    }
-
     private boolean ensureThreadStarted(int oldState) {
         // Never-started shutdown (#17135):
         // - quietPeriod == 0: terminate immediately without creating a worker.
