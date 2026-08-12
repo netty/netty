@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -54,6 +55,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultPromise, WaitNode> WAITERS_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, WaitNode.class, "waiters");
     private static final Object SUCCESS = new Object();
     private static final Object UNCANCELLABLE = new Object();
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(
@@ -72,9 +76,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private GenericFutureListener<? extends Future<?>> listener;
     private DefaultFutureListeners listeners;
     /**
-     * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
+     * The stack of threads that are blocked in one of the {@code await*()} methods, or {@code null} if there is none.
+     * <p>
+     * Threading - lock-free, updated via {@link #WAITERS_UPDATER}. Blocking on {@link LockSupport} rather than on the
+     * monitor of this promise keeps virtual threads out of {@link Object#wait()}, which is what they used to end up
+     * in. That matters for two reasons. Up to Java 23 a virtual thread that waits on a monitor pins its carrier for
+     * the whole wait, so a handful of blocking awaits can starve the scheduler. From Java 24 on it no longer pins,
+     * but the wait still inflates the monitor - {@link Object#wait()} always does, contended or not - and an inflated
+     * monitor is backed by native memory that is handed back only later on by the monitor deflation thread.
      */
-    private short waiters;
+    private volatile WaitNode waiters;
 
     /**
      * Threading - synchronized(this). We must prevent concurrent notification and FIFO listener notification if the
@@ -261,16 +272,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
-        synchronized (this) {
-            while (!isDone()) {
-                incWaiters();
-                try {
-                    wait();
-                } finally {
-                    decWaiters();
-                }
-            }
-        }
+        await0(true);
         return this;
     }
 
@@ -282,23 +284,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         checkDeadLock();
 
-        boolean interrupted = false;
-        synchronized (this) {
-            while (!isDone()) {
-                incWaiters();
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    // Interrupted while waiting.
-                    interrupted = true;
-                } finally {
-                    decWaiters();
-                }
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
+        try {
+            await0(false);
+        } catch (InterruptedException e) {
+            // Should not be raised at all.
+            throw new InternalError();
         }
 
         return this;
@@ -658,22 +648,99 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * Check if there are any waiters and if so notify these.
      * @return {@code true} if there are any listeners attached to the promise, {@code false} otherwise.
      */
-    private synchronized boolean checkNotifyWaiters() {
-        if (waiters > 0) {
-            notifyAll();
-        }
+    private boolean checkNotifyWaiters() {
+        notifyWaiters();
+        return hasListeners();
+    }
+
+    private synchronized boolean hasListeners() {
         return listener != null || listeners != null;
     }
 
-    private void incWaiters() {
-        if (waiters == Short.MAX_VALUE) {
-            throw new IllegalStateException("too many waiters: " + this);
+    /**
+     * Wake up all the threads that are blocked in one of the {@code await*()} methods.
+     * <p>
+     * This must only be called once the result was written, as the threads that are about to block check the result
+     * after they pushed themselves on the stack of waiters. Both sides write their own volatile field before they read
+     * the one of the other side, so at least one of them observes the other and no wake-up can be lost.
+     */
+    private void notifyWaiters() {
+        if (waiters == null) {
+            // Nobody is blocked and, as the result was already written, whoever is about to block will see it.
+            return;
         }
-        ++waiters;
+        WaitNode node = WAITERS_UPDATER.getAndSet(this, null);
+        while (node != null) {
+            Thread thread = node.thread;
+            if (thread != null) {
+                node.thread = null;
+                LockSupport.unpark(thread);
+            }
+            WaitNode next = node.next;
+            node.next = null; // Unlink to help GC.
+            node = next;
+        }
     }
 
-    private void decWaiters() {
-        --waiters;
+    /**
+     * Push the current thread on the stack of waiters.
+     */
+    private WaitNode addWaiter() {
+        WaitNode node = new WaitNode();
+        for (;;) {
+            WaitNode head = waiters;
+            node.next = head;
+            if (WAITERS_UPDATER.compareAndSet(this, head, node)) {
+                return node;
+            }
+        }
+    }
+
+    /**
+     * Unlink the given node from the stack of waiters, together with any other node that was already signalled.
+     * Without this, a caller that keeps timing out and awaiting again would push nodes that are never reclaimed.
+     */
+    private void removeWaiter(WaitNode node) {
+        // Clearing this first keeps notifyWaiters() from unparking a thread that already stopped waiting.
+        node.thread = null;
+        if (waiters == null) {
+            // The promise was completed and notifyWaiters() took the whole stack, so the node is gone already.
+            // This is the common case, as most waiters are released by the completion rather than by a timeout.
+            return;
+        }
+        boolean restart;
+        do {
+            restart = false;
+            WaitNode pred = null;
+            WaitNode current = waiters;
+            while (current != null) {
+                WaitNode next = current.next;
+                if (current.thread != null) {
+                    pred = current;
+                } else if (pred != null) {
+                    pred.next = next;
+                    if (pred.thread == null) {
+                        // The predecessor was signalled in the meantime and may have been unlinked itself, so the
+                        // list must be traversed again from the current head.
+                        restart = true;
+                        break;
+                    }
+                } else if (!WAITERS_UPDATER.compareAndSet(this, current, next)) {
+                    restart = true;
+                    break;
+                }
+                current = next;
+            }
+        } while (restart);
+    }
+
+    /**
+     * A thread that is blocked in one of the {@code await*()} methods. {@link #thread} is set to {@code null} once the
+     * node was signalled or the thread stopped waiting, which also marks the node for removal from the stack.
+     */
+    private static final class WaitNode {
+        volatile Thread thread = Thread.currentThread();
+        volatile WaitNode next;
     }
 
     private void rethrowIfFailed() {
@@ -686,6 +753,43 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
         }
         PlatformDependent.throwException(cause);
+    }
+
+    /**
+     * Wait for this promise to be completed, without any timeout.
+     *
+     * @param interruptable if {@code true} an {@link InterruptedException} is thrown once the waiting thread is
+     *                      interrupted, otherwise the interruption is remembered and re-applied before returning.
+     */
+    private void await0(boolean interruptable) throws InterruptedException {
+        WaitNode node = null;
+        boolean interrupted = false;
+        try {
+            while (!isDone()) {
+                if (Thread.interrupted()) {
+                    if (interruptable) {
+                        throw new InterruptedException(toString());
+                    }
+                    // The interrupted status must be cleared, otherwise park(...) would return immediately and so
+                    // turn the wait into a busy loop. It is restored again before this method returns.
+                    interrupted = true;
+                }
+                if (node == null) {
+                    // The node needs to be visible before isDone() is checked again, which is why the loop is
+                    // continued here instead of parking right away. See notifyWaiters().
+                    node = addWaiter();
+                    continue;
+                }
+                LockSupport.park(this);
+            }
+        } finally {
+            if (node != null) {
+                removeWaiter(node);
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
@@ -706,36 +810,47 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         // Start counting time from here instead of the first line of this method,
         // to avoid/postpone performance cost of System.nanoTime().
         final long startTime = System.nanoTime();
-        synchronized (this) {
-            boolean interrupted = false;
-            try {
-                long waitTime = timeoutNanos;
-                while (!isDone() && waitTime > 0) {
-                    incWaiters();
-                    try {
-                        wait(waitTime / 1000000, (int) (waitTime % 1000000));
-                    } catch (InterruptedException e) {
-                        if (interruptable) {
-                            throw e;
-                        } else {
-                            interrupted = true;
-                        }
-                    } finally {
-                        decWaiters();
-                    }
-                    // Check isDone() in advance, try to avoid calculating the elapsed time later.
-                    if (isDone()) {
-                        return true;
-                    }
-                    // Calculate the elapsed time here instead of in the while condition,
-                    // try to avoid performance cost of System.nanoTime() in the first loop of while.
-                    waitTime = timeoutNanos - (System.nanoTime() - startTime);
+        WaitNode node = null;
+        boolean interrupted = false;
+        try {
+            long waitTime = timeoutNanos;
+            for (;;) {
+                if (isDone()) {
+                    return true;
                 }
-                return isDone();
-            } finally {
-                if (interrupted) {
-                    Thread.currentThread().interrupt();
+                // The interrupt is checked before the remaining time is, otherwise an interrupt that arrives just as
+                // the deadline expires would be reported as a plain timeout and the caller of get(...) would see a
+                // TimeoutException instead of an InterruptedException.
+                if (Thread.interrupted()) {
+                    if (interruptable) {
+                        throw new InterruptedException(toString());
+                    }
+                    // See await0(boolean) for why the interrupted status is cleared here.
+                    interrupted = true;
                 }
+                if (waitTime <= 0) {
+                    return isDone();
+                }
+                if (node == null) {
+                    // See await0(boolean) for why isDone() must be re-checked once the node is visible.
+                    node = addWaiter();
+                    continue;
+                }
+                LockSupport.parkNanos(this, waitTime);
+                // Check isDone() in advance, try to avoid calculating the elapsed time later.
+                if (isDone()) {
+                    return true;
+                }
+                // Calculate the elapsed time here instead of in the while condition,
+                // try to avoid performance cost of System.nanoTime() in the first loop of while.
+                waitTime = timeoutNanos - (System.nanoTime() - startTime);
+            }
+        } finally {
+            if (node != null) {
+                removeWaiter(node);
+            }
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
     }
