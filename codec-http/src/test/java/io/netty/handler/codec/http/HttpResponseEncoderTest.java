@@ -414,7 +414,33 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testInitHttpMessageHeaderEncodingFailureReleasesBuffer() throws Exception {
+    public void testInitHttpMessageHeaderSanitizationFailureDoesNotCorruptState() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
+        final DefaultHttpResponse invalidResponse = new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT, new ReadOnlyHttpHeaders(false));
+
+        EncoderException e = assertThrows(EncoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeOutbound(invalidResponse);
+            }
+        });
+        assertInstanceOf(UnsupportedOperationException.class, e.getCause());
+
+        assertEncoderStillUsable(channel);
+        assertFalse(channel.finish());
+    }
+
+    private static void assertEncoderStillUsable(EmbeddedChannel channel) {
+        assertTrue(channel.writeOutbound(
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
+        ByteBuf buffer = channel.readOutbound();
+        assertEquals("HTTP/1.1 200 OK\r\n\r\n", buffer.toString(CharsetUtil.US_ASCII));
+        buffer.release();
+    }
+
+    @Test
+    public void testInitHttpMessageHeaderEncodingFailureReleasesBufferAndPreservesState() throws Exception {
         final TrackingFailingAllocator allocator = new TrackingFailingAllocator();
         final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         channel.config().setAllocator(allocator);
@@ -432,6 +458,7 @@ public class HttpResponseEncoderTest {
         assertInstanceOf(OutOfMemoryError.class, e.getCause().getCause());
 
         assertAllTrackedBuffersReleased(allocator);
+        assertEncoderStillUsable(channel);
         channel.finishAndReleaseAll();
     }
 

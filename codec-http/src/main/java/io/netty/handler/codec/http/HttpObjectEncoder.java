@@ -521,16 +521,17 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         try {
             // Encode the message.
             encodeInitialLine(buf, m);
-            state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
+            final int nextState = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
 
-            sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
+            sanitizeHeadersBeforeEncode(m, nextState == ST_CONTENT_ALWAYS_EMPTY);
 
             encodeHeaders(m.headers(), buf);
             ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                     HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
+            state = nextState;
             success = true;
             return buf;
         } finally {
