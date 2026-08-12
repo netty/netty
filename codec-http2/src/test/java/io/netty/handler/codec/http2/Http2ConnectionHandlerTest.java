@@ -314,6 +314,26 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void channelWritabilityChangedShouldNotReenterFlush() throws Exception {
+        when(channel.isActive()).thenReturn(false);
+        when(channel.isWritable()).thenReturn(true);
+        handler = newHandler();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                handler.channelWritabilityChanged(ctx);
+                return null;
+            }
+        }).when(ctx).flush();
+
+        handler.flush(ctx);
+
+        verify(remoteFlow).writePendingBytes();
+        verify(ctx).flush();
+        verify(remoteFlow).channelWritabilityChanged();
+    }
+
+    @Test
     public void serverReceivingInvalidClientPrefaceStringShouldHandleException() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
