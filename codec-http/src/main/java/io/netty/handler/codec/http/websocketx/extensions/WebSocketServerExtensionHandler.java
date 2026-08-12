@@ -33,6 +33,8 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -53,7 +55,8 @@ import java.util.Queue;
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler</tt>.
  */
 public class WebSocketServerExtensionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
-
+    private static final int DEFAULT_MAX_PIPELINE_DEPTH = 128;
+    private final int maxPipelineDepth;
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
     private final Queue<List<WebSocketServerExtension>> validExtensions = new ArrayDeque<>(4);
@@ -66,6 +69,21 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      *      with fallback configuration.
      */
     public WebSocketServerExtensionHandler(WebSocketServerExtensionHandshaker... extensionHandshakers) {
+        this(DEFAULT_MAX_PIPELINE_DEPTH, extensionHandshakers);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param maxPipelineDepth
+     *      The maximum number of pipelined upgrade requests.
+     * @param extensionHandshakers
+     *      The extension handshaker in priority order. A handshaker could be repeated many times
+     *      with fallback configuration.
+     */
+    public WebSocketServerExtensionHandler(
+        int maxPipelineDepth, WebSocketServerExtensionHandshaker... extensionHandshakers) {
+        this.maxPipelineDepth = ObjectUtil.checkPositive(maxPipelineDepth, "maxPipelineDepth");
         this.extensionHandshakers = Arrays.asList(checkNonEmpty(extensionHandshakers, "extensionHandshakers"));
     }
 
@@ -119,6 +137,12 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      * It already call {@code super.channelRead(ctx, request)} before returning.
      */
     protected void onHttpRequestChannelRead(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+        if (maxPipelineDepth <= validExtensions.size()) {
+            ReferenceCountUtil.release(request);
+            ctx.close();
+            throw new IllegalStateException("maxPipelineDepth exceeded: " + maxPipelineDepth);
+        }
+
         List<WebSocketServerExtension> validExtensionsList = null;
 
         if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
