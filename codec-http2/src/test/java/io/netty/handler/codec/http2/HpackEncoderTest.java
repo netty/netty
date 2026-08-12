@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -207,10 +208,16 @@ public class HpackEncoderTest {
     @Test
     public void testSanitization() throws Http2Exception {
         final int headerValueSize = 300;
-        StringBuilder actualHeaderValueBuilder = new StringBuilder();
-        StringBuilder expectedHeaderValueBuilder = new StringBuilder();
+        // Prefix the header values with a legal character.
+        // The first value character has different rules than the rest.
+        StringBuilder actualHeaderValueBuilder = new StringBuilder("a");
+        StringBuilder expectedHeaderValueBuilder = new StringBuilder("a");
 
         for (int i = 0; i < headerValueSize; i++) {
+            if (i <= 255 && HttpHeaderValidationUtil.validateValidHeaderValue("a" + ((char) i)) != -1) {
+                // This is not a legal header value character. Skip it.
+                continue;
+            }
             actualHeaderValueBuilder.append((char) i); // Use the index as the code point value of the character.
             if (i <= 255) {
                 expectedHeaderValueBuilder.append((char) i);
