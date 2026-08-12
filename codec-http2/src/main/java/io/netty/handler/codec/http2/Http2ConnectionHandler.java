@@ -80,6 +80,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private FutureListener<Void> closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
+    private boolean inFlush;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -190,6 +191,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void flush(ChannelHandlerContext ctx) {
+        inFlush = true;
         try {
             // Trigger pending writes in the remote flow controller.
             encoder.flowController().writePendingBytes();
@@ -198,6 +200,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             onError(ctx, true, e);
         } catch (Throwable cause) {
             onError(ctx, true, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
+        } finally {
+            inFlush = false;
         }
     }
 
@@ -469,7 +473,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Writability is expected to change while we are writing. We cannot allow this event to trigger reentering
         // the allocation and write loop. Reentering the event loop will lead to over or illegal allocation.
         try {
-            if (ctx.channel().isWritable()) {
+            if (ctx.channel().isWritable() && !inFlush) {
                 flush(ctx);
             }
             encoder.flowController().channelWritabilityChanged();
