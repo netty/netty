@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
@@ -41,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -331,6 +334,48 @@ public class Http2ConnectionHandlerTest {
         verify(remoteFlow).writePendingBytes();
         verify(ctx).flush();
         verify(remoteFlow).channelWritabilityChanged();
+    }
+
+    /**
+     * A large body must fully drain even when the channel briefly becomes unwritable while it is being written
+     * and then flips back to writable synchronously during {@code flush()}. That writable transition re-enters
+     * {@link Http2ConnectionHandler#channelWritabilityChanged(ChannelHandlerContext)} while the flush is still in
+     * progress; the handler must not recurse (which livelocks), but it must still write the frames that were
+     * queued in the remote flow controller. Dropping the reentrant flush strands the tail of the body forever.
+     */
+    @Test
+    public void largeWriteDrainsFullyWhenWritabilityTogglesDuringFlush() throws Exception {
+        // Small watermarks so writing ~1 KiB flips the channel unwritable, and EmbeddedChannel draining the
+        // outbound buffer during flush() flips it back to writable synchronously (ChannelOutboundBuffer.remove
+        // fires the event inline), re-entering flush().
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
+
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .server(false)
+                .frameListener(new Http2FrameAdapter())
+                .validateHeaders(false)
+                .gracefulShutdownTimeoutMillis(0)
+                .build();
+
+        channel.connect(new InetSocketAddress(0));
+        channel.pipeline().addLast(handler);
+        channel.pipeline().fireChannelActive();
+        // Discard the connection preface + SETTINGS the handler wrote on activation.
+        channel.releaseOutbound();
+
+        ChannelHandlerContext ctx = channel.pipeline().context(handler);
+        handler.encoder().writeHeaders(ctx, 3, new DefaultHttp2Headers(), 0, false, ctx.newPromise());
+
+        // Larger than the write high-watermark but within the default 65535-byte flow-control window, so only
+        // channel writability (not flow control) gates the write.
+        final int size = 60 * 1024;
+        ByteBuf data = Unpooled.buffer(size).writeZero(size);
+        Promise<Void> dataPromise = ctx.newPromise();
+        handler.encoder().writeData(ctx, 3, data, 0, false, dataPromise);
+        handler.flush(ctx);
+        assertTrue(dataPromise.isSuccess());
+        channel.finishAndReleaseAll();
     }
 
     @Test
