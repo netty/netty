@@ -43,22 +43,22 @@ public class IoUringWriteOperationIdTest {
             @Override
             public void run(IoUringSocketChannel channel) {
                 ByteBuf zeroCopyData = Unpooled.buffer(1).writeByte(1);
-                short id = channel.nextWriteOperationId();
+                short id = channel.writeTracker.nextId();
                 try {
-                    channel.recordWriteOperation(id, Native.IORING_OP_SEND_ZC, zeroCopyData);
+                    channel.writeTracker.record(id, Native.IORING_OP_SEND_ZC, zeroCopyData);
                     assertEquals(1, zeroCopyData.refCnt());
 
                     // A splice picks its own data to tell its two stages apart and never allocates from
-                    // nextWriteOperationId(), so its completion can carry an id that a zero-copy send owns.
-                    channel.completeWriteOperation(id, Native.IORING_OP_SPLICE, 0);
+                    // writeTracker.nextId(), so its completion can carry an id that a zero-copy send owns.
+                    channel.writeTracker.complete(id, Native.IORING_OP_SPLICE, 0);
                     assertEquals(1, zeroCopyData.refCnt());
-                    channel.rollbackWriteOperation(id, Native.IORING_OP_SPLICE);
+                    channel.writeTracker.abandon(id, Native.IORING_OP_SPLICE);
                     assertEquals(1, zeroCopyData.refCnt());
 
                     // It was never retained (no shutdown raced it), so the terminal CQE leaves refCnt untouched.
-                    channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
+                    channel.writeTracker.complete(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
                     assertEquals(1, zeroCopyData.refCnt());
-                    assertEquals(id, channel.nextWriteOperationId());
+                    assertEquals(id, channel.writeTracker.nextId());
                 } finally {
                     zeroCopyData.release();
                 }
@@ -74,12 +74,12 @@ public class IoUringWriteOperationIdTest {
             public void run(IoUringSocketChannel channel) {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
-                    short id = channel.nextWriteOperationId();
-                    channel.recordWriteOperation(id, Native.IORING_OP_SEND_ZC, buffer);
-                    channel.completeWriteOperation(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
+                    short id = channel.writeTracker.nextId();
+                    channel.writeTracker.record(id, Native.IORING_OP_SEND_ZC, buffer);
+                    channel.writeTracker.complete(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
 
                     assertEquals(1, buffer.refCnt());
-                    assertEquals(id, channel.nextWriteOperationId());
+                    assertEquals(id, channel.writeTracker.nextId());
                 } finally {
                     buffer.release();
                 }
@@ -97,11 +97,11 @@ public class IoUringWriteOperationIdTest {
                 try {
                     // The datagram sendmsg path registers MsgHdrMemoryArray indices, which start at 0. Recycling
                     // one would hand out 0, the value reserved for "no id".
-                    channel.recordUnpooledWriteOperation((short) 0, Native.IORING_OP_SENDMSG, buffer);
-                    channel.completeWriteOperation((short) 0, Native.IORING_OP_SENDMSG, 0);
+                    channel.writeTracker.recordForeign((short) 0, Native.IORING_OP_SENDMSG, buffer);
+                    channel.writeTracker.complete((short) 0, Native.IORING_OP_SENDMSG, 0);
 
                     assertEquals(1, buffer.refCnt());
-                    assertNotEquals(0, channel.nextWriteOperationId());
+                    assertNotEquals(0, channel.writeTracker.nextId());
                 } finally {
                     buffer.release();
                 }
@@ -115,27 +115,26 @@ public class IoUringWriteOperationIdTest {
         runOnEventLoop(new BookkeepingTask() {
             @Override
             public void run(IoUringSocketChannel channel) {
-                AbstractIoUringStreamChannel.IoUringStreamUnsafe unsafe = streamUnsafe(channel);
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
-                    unsafe.writeOperation.record(Native.IORING_OP_SEND, buffer);
+                    channel.writeTracker.recordStream(Native.IORING_OP_SEND, buffer);
                     assertEquals(1, buffer.refCnt());
 
                     // doShutdownOutput() reaches the single slot through this hook before it drops the
                     // outbound buffer's own reference.
-                    unsafe.retainInflightWriteOperations();
+                    channel.writeTracker.retainAll();
                     assertEquals(2, buffer.refCnt());
 
                     // Retaining twice must not stack references; a shutdown may race a zero-copy retain.
-                    unsafe.retainInflightWriteOperations();
+                    channel.writeTracker.retainAll();
                     assertEquals(2, buffer.refCnt());
 
-                    unsafe.writeOperation.complete(0);
+                    channel.writeTracker.completeStream(0);
                     assertEquals(1, buffer.refCnt());
-                    assertFalse(unsafe.writeOperation.isActive());
+                    assertFalse(channel.writeTracker.isStreamActive());
 
                     // A completion carrying an id the slot does not own must not release anything again.
-                    unsafe.writeOperation.complete(0);
+                    channel.writeTracker.completeStream(0);
                     assertEquals(1, buffer.refCnt());
                 } finally {
                     buffer.release();
@@ -150,25 +149,20 @@ public class IoUringWriteOperationIdTest {
         runOnEventLoop(new BookkeepingTask() {
             @Override
             public void run(IoUringSocketChannel channel) {
-                AbstractIoUringStreamChannel.IoUringStreamUnsafe unsafe = streamUnsafe(channel);
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
-                    unsafe.writeOperation.record(Native.IORING_OP_WRITEV, buffer);
-                    unsafe.retainInflightWriteOperations();
+                    channel.writeTracker.recordStream(Native.IORING_OP_WRITEV, buffer);
+                    channel.writeTracker.retainAll();
                     assertEquals(2, buffer.refCnt());
 
-                    unsafe.releaseInflightWriteOperations();
+                    channel.writeTracker.releaseAll();
                     assertEquals(1, buffer.refCnt());
-                    assertFalse(unsafe.writeOperation.isActive());
+                    assertFalse(channel.writeTracker.isStreamActive());
                 } finally {
                     buffer.release();
                 }
             }
         });
-    }
-
-    private static AbstractIoUringStreamChannel.IoUringStreamUnsafe streamUnsafe(IoUringSocketChannel channel) {
-        return (AbstractIoUringStreamChannel.IoUringStreamUnsafe) channel.unsafe();
     }
 
     private interface BookkeepingTask {

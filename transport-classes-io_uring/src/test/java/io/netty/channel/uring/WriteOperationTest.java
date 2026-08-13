@@ -68,7 +68,7 @@ class WriteOperationTest {
         operation.complete(0);
         operation.complete(0);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertEquals(1, buffer.refCnt());
         buffer.release();
     }
@@ -82,7 +82,7 @@ class WriteOperationTest {
         operation.complete(0);
         operation.complete(0);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertEquals(1, buffer.refCnt());
         buffer.release();
     }
@@ -99,14 +99,14 @@ class WriteOperationTest {
 
         operation.complete(Native.IORING_CQE_F_MORE);
 
-        assertFalse(operation.isDone());
+        assertTrue(operation.isActive());
         assertEquals(2, first.refCnt());
         assertEquals(2, second.refCnt());
 
         operation.complete(Native.IORING_CQE_F_NOTIF);
         operation.complete(Native.IORING_CQE_F_NOTIF);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertEquals(1, first.refCnt());
         assertEquals(1, second.refCnt());
         first.release();
@@ -123,14 +123,14 @@ class WriteOperationTest {
         operation.complete(Native.IORING_CQE_F_MORE);
 
         // Not retained, so the primary completion must leave refCnt alone and must not finish the operation.
-        assertFalse(operation.isDone());
+        assertTrue(operation.isActive());
         assertEquals(1, first.refCnt());
         assertEquals(1, second.refCnt());
 
         operation.complete(Native.IORING_CQE_F_NOTIF);
         operation.complete(Native.IORING_CQE_F_NOTIF);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertEquals(1, first.refCnt());
         assertEquals(1, second.refCnt());
         first.release();
@@ -138,17 +138,17 @@ class WriteOperationTest {
     }
 
     @Test
-    void rollbackAfterShutdownRetainReleasesExactlyOnce() {
+    void abandonAfterShutdownRetainReleasesExactlyOnce() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
         operation.retainReferences();
 
-        // A failed submission never produces a CQE, so the rollback is the only release.
-        operation.rollback();
-        operation.rollback();
+        // A failed submission never produces a CQE, so the abandon is the only release.
+        operation.abandon();
+        operation.abandon();
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertEquals(1, buffer.refCnt());
         buffer.release();
     }
@@ -163,7 +163,7 @@ class WriteOperationTest {
 
         operation.complete(0);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
     }
 
     @Test
@@ -173,12 +173,12 @@ class WriteOperationTest {
         operation.record(Native.IORING_OP_SEND, buffer);
 
         assertTrue(operation.isActive());
-        assertFalse(operation.isDone());
+        assertTrue(operation.isActive());
 
         operation.complete(0);
 
         assertFalse(operation.isActive());
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         buffer.release();
     }
 
@@ -194,10 +194,10 @@ class WriteOperationTest {
         assertEquals(1, buffer.refCnt());
 
         operation.complete(0);
-        operation.rollback();
+        operation.abandon();
         operation.complete(Native.IORING_CQE_F_NOTIF);
 
-        assertTrue(operation.isDone());
+        assertFalse(operation.isActive());
         assertFalse(operation.isActive());
         assertEquals(1, buffer.refCnt());
         buffer.release();
@@ -221,7 +221,7 @@ class WriteOperationTest {
         assertEquals(1, replacement.refCnt());
         assertEquals(2, second.refCnt());
 
-        operation.rollback();
+        operation.abandon();
         assertEquals(1, first.refCnt());
         assertEquals(1, second.refCnt());
 

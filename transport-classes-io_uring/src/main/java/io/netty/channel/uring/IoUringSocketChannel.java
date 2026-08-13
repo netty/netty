@@ -80,14 +80,14 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 int length = buf.readableBytes();
                 if (((IoUringSocketChannelConfig) config()).shouldWriteZeroCopy(length)) {
                     long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                    long opsId = nextZeroCopyWriteOperationId();
+                    long opsId = writeTracker.nextZeroCopyId();
                     IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                     byte opCode = ops.opcode();
-                    recordWriteOperation(opsId, opCode, buf);
+                    writeTracker.record(opsId, opCode, buf);
                     writeId = registration().submit(ops);
                     writeOpCode = opCode;
                     if (writeId == 0) {
-                        rollbackWriteOperation(opsId, opCode);
+                        writeTracker.abandon(opsId, opCode);
                         return 0;
                     }
                     return 1;
@@ -139,14 +139,14 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 MsgHdrMemory hdr = msgHdrArray.nextHdr();
                 assert hdr != null;
                 hdr.set(iovArrayAddress, iovArrayLength);
-                long opsId = nextZeroCopyWriteOperationId();
+                long opsId = writeTracker.nextZeroCopyId();
                 IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
                 byte opCode = ops.opcode();
-                recordWriteOperation(opsId, opCode, collector.referencesArray(), collector.referencesCount());
+                writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
                 writeId = registration().submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
-                    rollbackWriteOperation(opsId, opCode);
+                    writeTracker.abandon(opsId, opCode);
                     return 0;
                 }
                 return 1;
@@ -194,7 +194,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 // Even errored requests may generate a notification, so the kernel still owns the memory
                 // until the follow-up IORING_CQE_F_NOTIF arrives. Retain before any release below.
                 // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
-                retainWriteOperationReferences(data, op);
+                writeTracker.retainReferences(data, op);
             }
             ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
             if (channelOutboundBuffer == null) {

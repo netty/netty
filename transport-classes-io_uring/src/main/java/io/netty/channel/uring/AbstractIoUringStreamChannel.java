@@ -262,12 +262,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
         private ByteBuf fileRegionChunkBuf;
 
-        // The one non-zero-copy write this channel can have in flight. Those writes are gated by
-        // WRITE_SCHEDULED and every schedule path asserts writeId == 0, so at most one is outstanding at a time.
-        // Zero-copy is the exception: its notifications arrive in TCP ack order, so several operations can be
-        // waiting at once and IoUringSocketChannel keeps using the channel-level slot array for them.
-        final WriteOperation writeOperation = new WriteOperation();
-
         private final IovArrayReferenceCollector iovArrayReferenceCollector = new IovArrayReferenceCollector();
 
         protected final IovArrayReferenceCollector iovArrayReferenceCollector() {
@@ -299,11 +293,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             byte opCode = ops.opcode();
             // record(...) copies the collector's references into the slot, so the collector stays reusable.
-            writeOperation.record(opCode, collector.referencesArray(), collector.referencesCount());
+            writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                writeOperation.rollback();
+                writeTracker.abandonStream();
                 return 0;
             }
             return 1;
@@ -340,13 +334,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             byte opCode = ops.opcode();
             // A splice picks its own data to tell its two stages apart, so it never enters the channel-level
             // slot array used for zero-copy writes. It still has to occupy this single slot though: the file and
-            // pipe descriptors it splices between have to outlive the SQE, and retainInflightWriteOperations()
+            // pipe descriptors it splices between have to outlive the SQE, and writeTracker.retainAll()
             // only retains what was recorded here.
-            writeOperation.record(opCode, (ReferenceCounted) msg);
+            writeTracker.recordStream(opCode, (ReferenceCounted) msg);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                writeOperation.rollback();
+                writeTracker.abandonStream();
                 return 0;
             }
             return 1;
@@ -397,11 +391,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             int length = buf.readableBytes();
             IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             byte opCode = ops.opcode();
-            writeOperation.record(opCode, buf);
+            writeTracker.recordStream(opCode, buf);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                writeOperation.rollback();
+                writeTracker.abandonStream();
                 // Submission only fails when the registration is no longer valid (channel is
                 // being deregistered). unregistered() will release fileRegionChunkBuf and the
                 // outbound buffer will release the FileRegion, so nothing to clean up here --
@@ -703,7 +697,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 writeId = 0;
                 writeOpCode = 0;
                 // A completion that never went through the slot finds it inactive, which makes this a no-op.
-                writeOperation.complete(flags);
+                writeTracker.completeStream(flags);
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (channelOutboundBuffer == null) {
@@ -789,20 +783,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void retainInflightWriteOperations() {
-            writeOperation.retainReferences();
-        }
-
-        @Override
-        protected void releaseInflightWriteOperations() {
-            if (writeOperation.isActive()) {
-                writeOperation.rollback();
-            }
-        }
-
-        @Override
         public void unregistered() {
-            // Rolls the single slot back through releaseInflightWriteOperations() before the chunk buffer is
+            // Rolls the single slot back through writeTracker.releaseAll() before the chunk buffer is
             // dropped below, so a reference a shutdown retained on that buffer is released first.
             super.unregistered();
             assert readBuffer == null;

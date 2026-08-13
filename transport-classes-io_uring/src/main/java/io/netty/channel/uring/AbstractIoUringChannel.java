@@ -46,8 +46,6 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
-import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.StringUtil;
@@ -63,7 +61,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.Arrays;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -87,29 +84,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
-    // Ids index the slot array, so they run from 1 (0 is reserved for "no id") to Short.MAX_VALUE, the same bound
-    // scheduleWrite(...) already puts on the number of outstanding writes.
-    private static final int MAX_WRITE_OPERATION_IDS = Short.MAX_VALUE;
-
     private short opsId = Short.MIN_VALUE;
 
-    // Write operations live in a slot array indexed by the id submitted as the SQE's user_data. Ids are dense and
-    // come back through freeWriteOperationIds, so neither allocating an id nor resolving a completion has to search.
-    private WriteOperation[] writeOperations;
-    // Ids from an allocator this class does not own, such as the MsgHdrMemoryArray index used by the datagram
-    // sendmsg path. A separate array lets that namespace overlap the pooled one above.
-    private WriteOperation[] unpooledWriteOperations;
-    private short[] freeWriteOperationIds;
-    private int freeWriteOperationIdCount;
-    private int issuedWriteOperationIds;
-
-    // Only ever holds values above MAX_WRITE_OPERATION_IDS. Such a value does not survive a round-trip through
-    // short, so IoUringIoHandler.canUseFastPath(...) rejects it and the slow path preserves the full user_data.
-    // The counter only grows and never recycles, so a fallback id can never collide with a live one (same
-    // reasoning as PendingOpMap.nextToken()).
-    private long nextOverflowWriteOperationId = ((long) MAX_WRITE_OPERATION_IDS) + 1;
-    // Never allocated before the short pool runs dry, so the common path never touches a map.
-    private LongObjectHashMap<WriteOperation> overflowWriteOperations;
+    // Owns every in-flight write operation this channel is tracking -- the pooled slot array, the overflow map,
+    // the foreign slot array, and the single stream slot. See WriteOperationTracker for the four namespaces.
+    final WriteOperationTracker writeTracker = new WriteOperationTracker();
 
     private long pollInId;
     private long pollOutId;
@@ -225,178 +204,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             id = opsId++;
         }
         return id;
-    }
-
-    /**
-     * Returns a write-operation id that no in-flight write owns, or {@code 0} when every id is held by a write that
-     * has not seen its terminal CQE yet. Released ids come back through a free list, so this does not search.
-     */
-    protected final short nextWriteOperationId() {
-        if (freeWriteOperationIdCount > 0) {
-            return freeWriteOperationIds[--freeWriteOperationIdCount];
-        }
-        if (issuedWriteOperationIds == MAX_WRITE_OPERATION_IDS) {
-            return 0;
-        }
-        return (short) ++issuedWriteOperationIds;
-    }
-
-    /**
-     * Returns a write-operation id for a zero-copy write, falling back to a long id outside the short range once
-     * every short id is held by an in-flight write, so the write still gets submitted instead of being deferred.
-     * Never returns 0.
-     */
-    final long nextZeroCopyWriteOperationId() {
-        short id = nextWriteOperationId();
-        if (id != 0) {
-            return id;
-        }
-        return nextOverflowWriteOperationId++;
-    }
-
-    /**
-     * Registers a write whose id came from {@link #nextWriteOperationId()} or {@link #nextZeroCopyWriteOperationId()}.
-     * The id is recycled once the terminal CQE arrives.
-     */
-    final void recordWriteOperation(long id, byte opCode, ReferenceCounted reference) {
-        if (id > MAX_WRITE_OPERATION_IDS) {
-            overflowWriteOperationSlot(id).record(opCode, reference);
-            return;
-        }
-        short slot = (short) id;
-        writeOperations = ensureWriteOperationCapacity(writeOperations, slot);
-        writeOperationSlot(writeOperations, slot).record(opCode, reference);
-    }
-
-    /**
-     * Registers a write of multiple references whose id came from {@link #nextWriteOperationId()} or
-     * {@link #nextZeroCopyWriteOperationId()}. Copies {@code references}, so the caller may reuse the array.
-     */
-    final void recordWriteOperation(long id, byte opCode, ReferenceCounted[] references, int count) {
-        if (id > MAX_WRITE_OPERATION_IDS) {
-            overflowWriteOperationSlot(id).record(opCode, references, count);
-            return;
-        }
-        short slot = (short) id;
-        writeOperations = ensureWriteOperationCapacity(writeOperations, slot);
-        writeOperationSlot(writeOperations, slot).record(opCode, references, count);
-    }
-
-    /**
-     * Registers a write whose id is owned by another allocator, such as the {@link MsgHdrMemoryArray} index used by
-     * the datagram sendmsg path. That id lives in its own slot array and never enters the free list.
-     */
-    final void recordUnpooledWriteOperation(short id, byte opCode, ReferenceCounted reference) {
-        unpooledWriteOperations = ensureWriteOperationCapacity(unpooledWriteOperations, id);
-        writeOperationSlot(unpooledWriteOperations, id).record(opCode, reference);
-    }
-
-    private static WriteOperation[] ensureWriteOperationCapacity(WriteOperation[] operations, short id) {
-        assert id >= 0;
-        if (operations == null) {
-            return new WriteOperation[Math.max(id + 1, 4)];
-        }
-        if (id >= operations.length) {
-            return Arrays.copyOf(operations, Math.max(id + 1, operations.length << 1));
-        }
-        return operations;
-    }
-
-    private static WriteOperation writeOperationSlot(WriteOperation[] operations, short id) {
-        WriteOperation operation = operations[id];
-        if (operation == null) {
-            operation = operations[id] = new WriteOperation();
-        }
-        return operation;
-    }
-
-    private WriteOperation overflowWriteOperationSlot(long id) {
-        if (overflowWriteOperations == null) {
-            overflowWriteOperations = new LongObjectHashMap<WriteOperation>(2);
-        }
-        WriteOperation operation = overflowWriteOperations.get(id);
-        if (operation == null) {
-            operation = new WriteOperation();
-            overflowWriteOperations.put(id, operation);
-        }
-        return operation;
-    }
-
-    private WriteOperation overflowWriteOperation(long id, byte opCode) {
-        if (overflowWriteOperations == null) {
-            return null;
-        }
-        WriteOperation operation = overflowWriteOperations.get(id);
-        return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
-    }
-
-    final void rollbackWriteOperation(long id, byte opCode) {
-        if (id > MAX_WRITE_OPERATION_IDS) {
-            WriteOperation overflow = overflowWriteOperation(id, opCode);
-            if (overflow != null) {
-                overflow.rollback();
-                // Overflow ids are never recycled, so the entry has to go or the map grows without bound.
-                overflowWriteOperations.remove(id);
-            }
-            return;
-        }
-        short slot = (short) id;
-        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
-        if (operation != null) {
-            operation.rollback();
-            recycleWriteOperationId(slot);
-            return;
-        }
-        operation = writeOperation(unpooledWriteOperations, slot, opCode);
-        if (operation != null) {
-            operation.rollback();
-        }
-    }
-
-    final void completeWriteOperation(long id, byte opCode, int flags) {
-        if (id > MAX_WRITE_OPERATION_IDS) {
-            WriteOperation overflow = overflowWriteOperation(id, opCode);
-            if (overflow != null) {
-                overflow.complete(flags);
-                if (overflow.isDone()) {
-                    overflowWriteOperations.remove(id);
-                }
-            }
-            return;
-        }
-        short slot = (short) id;
-        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
-        if (operation != null) {
-            operation.complete(flags);
-            if (operation.isDone()) {
-                recycleWriteOperationId(slot);
-            }
-            return;
-        }
-        operation = writeOperation(unpooledWriteOperations, slot, opCode);
-        if (operation != null) {
-            operation.complete(flags);
-        }
-    }
-
-    private void recycleWriteOperationId(short id) {
-        if (freeWriteOperationIds == null) {
-            freeWriteOperationIds = new short[8];
-        } else if (freeWriteOperationIdCount == freeWriteOperationIds.length) {
-            freeWriteOperationIds = Arrays.copyOf(freeWriteOperationIds, freeWriteOperationIdCount << 1);
-        }
-        freeWriteOperationIds[freeWriteOperationIdCount++] = id;
-    }
-
-    private static WriteOperation writeOperation(WriteOperation[] operations, short id, byte opCode) {
-        if (operations == null || id < 0 || id >= operations.length) {
-            return null;
-        }
-        WriteOperation operation = operations[id];
-        // Write user_data is not allocated from a single namespace. The splice stages submit fixed values and the
-        // domain-socket fd-passing sendmsg submits its MsgHdrMemory index, and neither is registered here, so both
-        // can land on an occupied slot. Matching the opcode keeps such a completion from terminating what it finds.
-        return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
     }
 
     public final boolean isOpen() {
@@ -518,7 +325,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      */
     @Override
     protected final void doShutdownOutput() throws Exception {
-        retainInflightWrites();
+        writeTracker.retainAll();
         doShutdownOutput0();
     }
 
@@ -527,112 +334,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      */
     protected void doShutdownOutput0() throws Exception {
         super.doShutdownOutput();
-    }
-
-    private void retainInflightWrites() {
-        retainInflightWrites(writeOperations);
-        retainInflightWrites(unpooledWriteOperations);
-        retainInflightOverflowWrites();
-        ioUringUnsafe().retainInflightWriteOperations();
-    }
-
-    private void retainInflightOverflowWrites() {
-        if (overflowWriteOperations == null) {
-            return;
-        }
-        for (WriteOperation operation : overflowWriteOperations.values()) {
-            try {
-                operation.retainReferences();
-            } catch (Throwable cause) {
-                logger.warn("Failed to retain in-flight write operation before shutdown", cause);
-            }
-        }
-    }
-
-    private static void retainInflightWrites(WriteOperation[] operations) {
-        if (operations == null) {
-            return;
-        }
-        for (WriteOperation operation : operations) {
-            if (operation == null) {
-                continue;
-            }
-            // One slot failing to retain must not stop the remaining slots from being retained.
-            try {
-                operation.retainReferences();
-            } catch (Throwable cause) {
-                logger.warn("Failed to retain in-flight write operation before shutdown", cause);
-            }
-        }
-    }
-
-    /**
-     * Retains the references held by the write operation identified by {@code id} and {@code opCode}, if one is
-     * still active.
-     */
-    final void retainWriteOperationReferences(long id, byte opCode) {
-        if (id > MAX_WRITE_OPERATION_IDS) {
-            WriteOperation overflow = overflowWriteOperation(id, opCode);
-            if (overflow != null) {
-                overflow.retainReferences();
-            }
-            return;
-        }
-        short slot = (short) id;
-        WriteOperation operation = writeOperation(writeOperations, slot, opCode);
-        if (operation != null) {
-            operation.retainReferences();
-            return;
-        }
-        operation = writeOperation(unpooledWriteOperations, slot, opCode);
-        if (operation != null) {
-            operation.retainReferences();
-        }
-    }
-
-    // No further completion arrives once the channel is deregistered, so references a shutdown retained on a slot
-    // would otherwise leak forever.
-    private void releaseWriteOperations() {
-        releaseWriteOperations(writeOperations);
-        releaseWriteOperations(unpooledWriteOperations);
-        releaseOverflowWriteOperations();
-        ioUringUnsafe().releaseInflightWriteOperations();
-    }
-
-    private void releaseOverflowWriteOperations() {
-        if (overflowWriteOperations == null) {
-            return;
-        }
-        for (WriteOperation operation : overflowWriteOperations.values()) {
-            if (operation.isActive()) {
-                operation.rollback();
-            }
-        }
-        overflowWriteOperations.clear();
-    }
-
-    /**
-     * The number of write operations parked in the overflow map. Only used to assert completions and rollbacks drop
-     * their entry.
-     */
-    final int overflowWriteOperationCount() {
-        return overflowWriteOperations == null ? 0 : overflowWriteOperations.size();
-    }
-
-    private static void releaseWriteOperations(WriteOperation[] operations) {
-        if (operations == null) {
-            return;
-        }
-        for (int i = 0; i < operations.length; i++) {
-            WriteOperation operation = operations[i];
-            if (operation == null) {
-                continue;
-            }
-            if (operation.isActive()) {
-                operation.rollback();
-            }
-            operations[i] = null;
-        }
     }
 
     @Override
@@ -716,7 +417,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteSingle(msg);
         }
         // A zero return means registration.submit(...) failed because the registration is no longer valid, not
-        // that write-operation ids ran out; nextZeroCopyWriteOperationId() falls back past the short id range.
+        // that write-operation ids ran out; writeTracker.nextZeroCopyId() falls back past the short id range.
         assert numOutstandingWrites >= 0;
         return numOutstandingWrites;
     }
@@ -771,22 +472,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * {@link #writeComplete(byte, int, int, long)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteSingle(Object msg);
-
-        /**
-         * Retains the references held by write operations tracked outside the channel-level slot arrays. Overridden
-         * by subclasses that track an in-flight write operation of their own.
-         */
-        protected void retainInflightWriteOperations() {
-            // NOOP
-        }
-
-        /**
-         * Rolls back write operations tracked outside the channel-level slot arrays. Called from
-         * {@link #unregistered()} after both slot arrays were released.
-         */
-        protected void releaseInflightWriteOperations() {
-            // NOOP
-        }
 
         @Override
         public final void handle(IoRegistration registration, IoEvent ioEvent) {
@@ -852,7 +537,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            releaseWriteOperations();
+            writeTracker.releaseAll();
 
             // Check if we need to notify about the deregistration.
             if (deregisterPromise != null) {
@@ -1313,7 +998,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data  the data that was passed when submitting the op.
          */
         private void writeComplete(byte op, int res, int flags, long data) {
-            completeWriteOperation(data, op, flags);
+            writeTracker.complete(data, op, flags);
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.
@@ -1482,17 +1167,17 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                         int fd = fd().intValue();
                         IoRegistration registration = registration();
-                        short opsId = nextWriteOperationId();
+                        short opsId = writeTracker.nextId();
                         if (opsId == 0) {
                             freeMsgHdrArray();
                             submitConnect(inetSocketAddress);
                         } else {
                             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                                     hdr.address(), opsId);
-                            recordWriteOperation(opsId, ops.opcode(), initialData);
+                            writeTracker.record(opsId, ops.opcode(), initialData);
                             connectId = registration.submit(ops);
                             if (connectId == 0) {
-                                rollbackWriteOperation(opsId, ops.opcode());
+                                writeTracker.abandon(opsId, ops.opcode());
                                 // Directly release the memory if submitting failed.
                                 freeMsgHdrArray();
                             }

@@ -20,7 +20,8 @@ import io.netty.util.ReferenceCounted;
 /**
  * A slot tracking the references a submitted SQE handed to the kernel. Recording does not retain: the outbound buffer
  * owns them until the write completes or {@link #retainReferences()} takes over. Slots are reused, and the backing
- * array is kept across reuses, so only the first use of a slot allocates.
+ * array is kept across reuses, so only the first use of a slot allocates. {@link #abandon()} is how a slot is ended
+ * outside of a completion CQE -- see its javadoc for the three situations that call it.
  */
 final class WriteOperation {
     private static final ReferenceCounted[] EMPTY_REFERENCES = new ReferenceCounted[0];
@@ -97,12 +98,15 @@ final class WriteOperation {
         }
     }
 
-    void rollback() {
+    /**
+     * Ends this slot without it ever seeing a completion CQE. Called in three situations: (1) submission itself
+     * failed, so the kernel never saw the SQE and no CQE will ever arrive for it; (2) deregistration discards a
+     * slot whose completion this channel can no longer observe, and {@link #retainReferences()} never ran on it,
+     * making this call a plain discard; (3) deregistration discards a slot that {@link #retainReferences()} did
+     * retain before a shutdown, in which case this call is what actually releases those references.
+     */
+    void abandon() {
         finish();
-    }
-
-    boolean isDone() {
-        return !isActive();
     }
 
     private void finish() {

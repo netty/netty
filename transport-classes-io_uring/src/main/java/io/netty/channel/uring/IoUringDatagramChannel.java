@@ -639,14 +639,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IoRegistration registration = registration();
             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
-            short opsId = ops.data();
+            short opsId = hdr.idx();
             // The id is the MsgHdrMemoryArray index, which that array allocates and recycles itself.
-            recordUnpooledWriteOperation(opsId, ops.opcode(), data);
+            writeTracker.recordForeign(opsId, ops.opcode(), data);
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
                 sendmsgHdrs.restoreNextHdr(hdr);
-                rollbackWriteOperation(opsId, ops.opcode());
+                writeTracker.abandon(opsId, ops.opcode());
                 return false;
             }
             sendmsgHdrs.setId(hdr.idx(), id);

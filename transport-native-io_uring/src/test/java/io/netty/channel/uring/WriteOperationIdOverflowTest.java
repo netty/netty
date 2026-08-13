@@ -43,9 +43,9 @@ public class WriteOperationIdOverflowTest {
             public void run(IoUringSocketChannel channel) {
                 // Ids are dense and start at 1, so the pool hands out exactly Short.MAX_VALUE of them.
                 for (int i = 1; i <= Short.MAX_VALUE; i++) {
-                    assertEquals((short) i, channel.nextWriteOperationId());
+                    assertEquals((short) i, channel.writeTracker.nextId());
                 }
-                assertEquals(0, channel.nextWriteOperationId());
+                assertEquals(0, channel.writeTracker.nextId());
             }
         });
     }
@@ -60,7 +60,7 @@ public class WriteOperationIdOverflowTest {
 
                 // A value outside the short range is what makes IoUringIoHandler.canUseFastPath(...) fail, which
                 // is how the original user_data survives the round-trip through the slow path.
-                long overflowId = channel.nextZeroCopyWriteOperationId();
+                long overflowId = channel.writeTracker.nextZeroCopyId();
                 assertTrue(overflowId > Short.MAX_VALUE, "expected an overflow id, got " + overflowId);
             }
         });
@@ -74,9 +74,9 @@ public class WriteOperationIdOverflowTest {
             public void run(IoUringSocketChannel channel) {
                 exhaustShortIds(channel);
 
-                long first = channel.nextZeroCopyWriteOperationId();
-                long second = channel.nextZeroCopyWriteOperationId();
-                long third = channel.nextZeroCopyWriteOperationId();
+                long first = channel.writeTracker.nextZeroCopyId();
+                long second = channel.writeTracker.nextZeroCopyId();
+                long third = channel.writeTracker.nextZeroCopyId();
                 assertTrue(first < second, first + " < " + second);
                 assertTrue(second < third, second + " < " + third);
             }
@@ -92,13 +92,13 @@ public class WriteOperationIdOverflowTest {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
                     long overflowId = overflowId(channel);
-                    channel.recordWriteOperation(overflowId, Native.IORING_OP_SEND_ZC, buffer);
+                    channel.writeTracker.record(overflowId, Native.IORING_OP_SEND_ZC, buffer);
                     assertEquals(1, buffer.refCnt());
 
-                    channel.completeWriteOperation(overflowId, Native.IORING_OP_SEND_ZC, 0);
+                    channel.writeTracker.complete(overflowId, Native.IORING_OP_SEND_ZC, 0);
                     assertEquals(1, buffer.refCnt());
                     // Overflow ids are never recycled, so the map has to shrink back or it grows without bound.
-                    assertEquals(0, channel.overflowWriteOperationCount());
+                    assertEquals(0, channel.writeTracker.overflowCount());
                 } finally {
                     buffer.release();
                 }
@@ -115,15 +115,15 @@ public class WriteOperationIdOverflowTest {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
                     long overflowId = overflowId(channel);
-                    channel.recordWriteOperation(overflowId, Native.IORING_OP_SEND_ZC, buffer);
+                    channel.writeTracker.record(overflowId, Native.IORING_OP_SEND_ZC, buffer);
 
                     shutdownOutput(channel);
                     assertEquals(2, buffer.refCnt());
 
-                    channel.completeWriteOperation(overflowId, Native.IORING_OP_SEND_ZC,
+                    channel.writeTracker.complete(overflowId, Native.IORING_OP_SEND_ZC,
                             Native.IORING_CQE_F_NOTIF);
                     assertEquals(1, buffer.refCnt());
-                    assertEquals(0, channel.overflowWriteOperationCount());
+                    assertEquals(0, channel.writeTracker.overflowCount());
                 } finally {
                     buffer.release();
                 }
@@ -140,14 +140,14 @@ public class WriteOperationIdOverflowTest {
                 ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
                 try {
                     long overflowId = overflowId(channel);
-                    channel.recordWriteOperation(overflowId, Native.IORING_OP_SEND_ZC, buffer);
+                    channel.writeTracker.record(overflowId, Native.IORING_OP_SEND_ZC, buffer);
 
                     shutdownOutput(channel);
                     assertEquals(2, buffer.refCnt());
 
                     ((AbstractIoUringChannel.AbstractUringUnsafe) channel.unsafe()).unregistered();
                     assertEquals(1, buffer.refCnt());
-                    assertEquals(0, channel.overflowWriteOperationCount());
+                    assertEquals(0, channel.writeTracker.overflowCount());
                 } finally {
                     buffer.release();
                 }
@@ -157,13 +157,13 @@ public class WriteOperationIdOverflowTest {
 
     private static void exhaustShortIds(IoUringSocketChannel channel) {
         for (int i = 1; i <= Short.MAX_VALUE; i++) {
-            channel.nextWriteOperationId();
+            channel.writeTracker.nextId();
         }
     }
 
     private static long overflowId(IoUringSocketChannel channel) {
         exhaustShortIds(channel);
-        long id = channel.nextZeroCopyWriteOperationId();
+        long id = channel.writeTracker.nextZeroCopyId();
         assertTrue(id > Short.MAX_VALUE, "expected an overflow id, got " + id);
         return id;
     }
