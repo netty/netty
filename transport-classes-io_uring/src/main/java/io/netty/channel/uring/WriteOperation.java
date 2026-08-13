@@ -30,7 +30,7 @@ final class WriteOperation {
     private ReferenceCounted[] references = EMPTY_REFERENCES;
     private int count;
     private boolean active;
-    private boolean retained;
+    private int retainedCount;
 
     void record(byte opCode, ReferenceCounted reference) {
         if (isActive()) {
@@ -43,7 +43,7 @@ final class WriteOperation {
         count = 1;
         this.opCode = opCode;
         active = true;
-        retained = false;
+        retainedCount = 0;
     }
 
     /**
@@ -61,20 +61,22 @@ final class WriteOperation {
         this.count = count;
         this.opCode = opCode;
         active = true;
-        retained = false;
+        retainedCount = 0;
     }
 
     /**
-     * NOOP once retained or while the slot is inactive. {@code retained} is set before the loop so a {@code retain()}
-     * that throws still leaves the already-retained references to {@link #finish()} instead of leaking them.
+     * NOOP once every reference is retained or while the slot is inactive. {@code retainedCount} only advances
+     * past an index once its {@code retain()} call actually returns, so a {@code retain()} that throws partway
+     * leaves {@link #finish()} to release exactly the references that were retained, instead of over-releasing
+     * the ones that never were.
      */
     void retainReferences() {
-        if (!isActive() || retained) {
+        if (!isActive() || retainedCount == count) {
             return;
         }
-        retained = true;
-        for (int i = 0; i < count; i++) {
+        for (int i = retainedCount; i < count; i++) {
             references[i].retain();
+            retainedCount = i + 1;
         }
     }
 
@@ -114,12 +116,12 @@ final class WriteOperation {
             return;
         }
         active = false;
-        boolean release = retained;
-        retained = false;
+        int releaseCount = retainedCount;
+        retainedCount = 0;
         int finishedCount = count;
         count = 0;
         for (int i = 0; i < finishedCount; i++) {
-            if (release) {
+            if (i < releaseCount) {
                 references[i].release();
             }
             references[i] = null;

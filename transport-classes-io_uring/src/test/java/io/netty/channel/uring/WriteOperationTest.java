@@ -22,9 +22,52 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WriteOperationTest {
+
+    /**
+     * A reference that always fails to retain, so tests can force {@link WriteOperation#retainReferences()} to
+     * throw partway through its loop. {@link #release()} asserts it is never called, since a reference this class
+     * never actually retained must never be released either.
+     */
+    private static final class ThrowsOnRetain implements ReferenceCounted {
+        @Override
+        public int refCnt() {
+            return 1;
+        }
+
+        @Override
+        public ReferenceCounted retain() {
+            throw new RuntimeException("retain failed");
+        }
+
+        @Override
+        public ReferenceCounted retain(int increment) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ReferenceCounted touch() {
+            return this;
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            throw new AssertionError("must not release a reference that was never retained");
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            throw new AssertionError("must not release a reference that was never retained");
+        }
+    }
 
     @Test
     void recordDoesNotRetain() {
@@ -138,6 +181,26 @@ class WriteOperationTest {
     }
 
     @Test
+    void retainFailurePartwayReleasesOnlyWhatWasActuallyRetained() {
+        ByteBuf first = Unpooled.buffer();
+        ReferenceCounted second = new ThrowsOnRetain();
+        WriteOperation operation = new WriteOperation();
+        operation.record(Native.IORING_OP_WRITEV, new ReferenceCounted[] {first, second}, 2);
+
+        // references[1].retain() throws, after references[0].retain() already succeeded.
+        assertThrows(RuntimeException.class, operation::retainReferences);
+        assertEquals(2, first.refCnt());
+
+        // finish() must release only the one reference that was actually retained. Releasing "second" too --
+        // which never was retained -- would be an over-release; ThrowsOnRetain.release() asserts on that.
+        operation.complete(0);
+
+        assertFalse(operation.isActive());
+        assertEquals(1, first.refCnt());
+        first.release();
+    }
+
+    @Test
     void abandonAfterShutdownRetainReleasesExactlyOnce() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
@@ -167,23 +230,21 @@ class WriteOperationTest {
     }
 
     @Test
-    void finishedOperationIsDoneAndNoLongerActive() {
+    void finishedOperationIsNoLongerActive() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
 
         assertTrue(operation.isActive());
-        assertTrue(operation.isActive());
 
         operation.complete(0);
 
-        assertFalse(operation.isActive());
         assertFalse(operation.isActive());
         buffer.release();
     }
 
     @Test
-    void completeAndRollbackAfterFinishDoNotReleaseAgain() {
+    void completeAndAbandonAfterFinishDoNotReleaseAgain() {
         ByteBuf buffer = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
         operation.record(Native.IORING_OP_SEND, buffer);
@@ -213,7 +274,7 @@ class WriteOperationTest {
 
         operation.record(Native.IORING_OP_WRITEV, references, 2);
 
-        // Callers such as the channel-lifetime IovArrayReferenceCollector reuse this array between writes.
+        // Callers such as the per-event-loop IovArrayReferenceCollector reuse this array between writes.
         references[0] = replacement;
 
         operation.retainReferences();

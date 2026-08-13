@@ -54,7 +54,8 @@ final class WriteOperationTracker {
 
     // The one non-zero-copy write a stream channel can have in flight. Reused by direct field access -- no id,
     // no array, no opcode match -- because WRITE_SCHEDULED caps a stream channel to one outstanding write.
-    // Exposed only through recordStream/completeStream/abandonStream/isStreamActive below; the field itself
+    // Exposed through recordStream/completeStream/abandonStream/isStreamActive below, and touched directly by
+    // retainAll()/abandonAll() the same way those touch the pooled/foreign/overflow namespaces; the field itself
     // never leaves this class.
     private final WriteOperation single = new WriteOperation();
 
@@ -248,8 +249,8 @@ final class WriteOperationTracker {
     }
 
     /**
-     * The number of write operations parked in the overflow map. Only used to assert completions and abandons
-     * drop their entry.
+     * The number of write operations parked in the overflow map. Test-only: no production caller, used to assert
+     * completions and abandons drop their entry.
      */
     int overflowCount() {
         return overflow == null ? 0 : overflow.size();
@@ -289,8 +290,8 @@ final class WriteOperationTracker {
     }
 
     /**
-     * Whether the stream slot is active. Test assertion only -- no production caller, same as
-     * {@link #overflowCount()}.
+     * Whether the stream slot is active. Test-only: no production caller, used to assert completions and abandons
+     * leave it inactive, same as {@link #overflowCount()}.
      */
     boolean isStreamActive() {
         return single.isActive();
@@ -305,12 +306,15 @@ final class WriteOperationTracker {
         retainArray(pooled);
         retainArray(foreign);
         retainOverflow();
-        single.retainReferences();
+        retainSingle();
     }
 
     /**
-     * Abandons every active slot across all four members and empties them. No further completion arrives once a
-     * channel is deregistered, so references a shutdown retained on a slot would otherwise leak forever.
+     * Abandons every active slot across all four members and empties them, via {@link WriteOperation#abandon()}
+     * on each: a release for a slot {@link #retainAll()} retained, a plain discard for one it never reached.
+     * Named for the former, more consequential case -- the one this method exists to guard against -- rather
+     * than the latter, more common one. No further completion arrives once a channel is deregistered, so
+     * references a shutdown retained on a slot would otherwise leak forever.
      */
     void releaseAll() {
         releaseArray(pooled);
@@ -364,9 +368,10 @@ final class WriteOperationTracker {
             return null;
         }
         WriteOperation operation = operations[id];
-        // Write user_data is not allocated from a single namespace. The splice stages submit fixed values and the
-        // domain-socket fd-passing sendmsg submits its MsgHdrMemory index, and neither is registered here, so both
-        // can land on an occupied slot. Matching the opcode keeps such a completion from terminating what it finds.
+        // Write user_data is not allocated from a single namespace. Splice registers its fixed ids in the single
+        // stream slot (see recordStream), not in this array, and the domain-socket fd-passing sendmsg submits its
+        // MsgHdrMemory index without registering it anywhere, so both can land on an occupied slot here. Matching
+        // the opcode keeps such a completion from terminating what it finds.
         return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
     }
 
@@ -406,6 +411,17 @@ final class WriteOperationTracker {
             } catch (Throwable cause) {
                 logger.warn("Failed to retain in-flight write operation before shutdown", cause);
             }
+        }
+    }
+
+    // A failure here must not stop retainAll() from returning, the same guarantee retainArray(...) and
+    // retainOverflow() above give the array/map namespaces: doShutdownOutput() still has to reach
+    // doShutdownOutput0() -- the actual shutdown(2) -- even when this slot fails to retain.
+    private void retainSingle() {
+        try {
+            single.retainReferences();
+        } catch (Throwable cause) {
+            logger.warn("Failed to retain in-flight write operation before shutdown", cause);
         }
     }
 
