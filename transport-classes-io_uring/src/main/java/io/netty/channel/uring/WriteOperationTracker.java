@@ -92,12 +92,21 @@ final class WriteOperationTracker {
      */
     void record(long id, byte opCode, ReferenceCounted reference) {
         if (id > MAX_POOLED_ID) {
-            overflowSlot(id).record(opCode, reference);
+            recordOverflow(id, opCode, reference);
             return;
         }
         short slot = (short) id;
-        pooled = ensureCapacity(pooled, slot);
+        WriteOperation[] grown = ensureCapacity(pooled, slot);
+        if (grown != pooled) {
+            pooled = grown;
+        }
         slot(pooled, slot).record(opCode, reference);
+    }
+
+    // Split out of record(...) above so the overflow path -- taken only once every pooled id is in flight --
+    // does not add to the bytecode size of the hot method and keep it eligible for inlining.
+    private void recordOverflow(long id, byte opCode, ReferenceCounted reference) {
+        overflowSlot(id).record(opCode, reference);
     }
 
     /**
@@ -106,12 +115,20 @@ final class WriteOperationTracker {
      */
     void record(long id, byte opCode, ReferenceCounted[] references, int count) {
         if (id > MAX_POOLED_ID) {
-            overflowSlot(id).record(opCode, references, count);
+            recordOverflow(id, opCode, references, count);
             return;
         }
         short slot = (short) id;
-        pooled = ensureCapacity(pooled, slot);
+        WriteOperation[] grown = ensureCapacity(pooled, slot);
+        if (grown != pooled) {
+            pooled = grown;
+        }
         slot(pooled, slot).record(opCode, references, count);
+    }
+
+    // Split out for the same reason as the single-reference overflow above: keep it out of the hot method.
+    private void recordOverflow(long id, byte opCode, ReferenceCounted[] references, int count) {
+        overflowSlot(id).record(opCode, references, count);
     }
 
     /**
@@ -119,7 +136,10 @@ final class WriteOperationTracker {
      * by the datagram sendmsg path. That id lives in its own slot array and never enters the free list.
      */
     void recordForeign(short id, byte opCode, ReferenceCounted reference) {
-        foreign = ensureCapacity(foreign, id);
+        WriteOperation[] grown = ensureCapacity(foreign, id);
+        if (grown != foreign) {
+            foreign = grown;
+        }
         slot(foreign, id).record(opCode, reference);
     }
 
@@ -133,12 +153,7 @@ final class WriteOperationTracker {
      */
     void abandon(long id, byte opCode) {
         if (id > MAX_POOLED_ID) {
-            WriteOperation op = matchingOverflow(id, opCode);
-            if (op != null) {
-                op.abandon();
-                // Overflow ids are never recycled, so the entry has to go or the map grows without bound.
-                overflow.remove(id);
-            }
+            abandonOverflow(id, opCode);
             return;
         }
         short slot = (short) id;
@@ -154,19 +169,24 @@ final class WriteOperationTracker {
         }
     }
 
+    // Split out of abandon(...) above to keep the overflow path -- the rare case where every pooled id is
+    // in flight -- out of the hot method's bytecode.
+    private void abandonOverflow(long id, byte opCode) {
+        WriteOperation op = matchingOverflow(id, opCode);
+        if (op != null) {
+            op.abandon();
+            // Overflow ids are never recycled, so the entry has to go or the map grows without bound.
+            overflow.remove(id);
+        }
+    }
+
     /**
      * Applies a completion CQE to the slot identified by {@code id}/{@code opCode}. A terminated pooled slot's id
      * is recycled back to the free list; a terminated overflow slot is removed from the map.
      */
     void complete(long id, byte opCode, int flags) {
         if (id > MAX_POOLED_ID) {
-            WriteOperation op = matchingOverflow(id, opCode);
-            if (op != null) {
-                op.complete(flags);
-                if (!op.isActive()) {
-                    overflow.remove(id);
-                }
-            }
+            completeOverflow(id, opCode, flags);
             return;
         }
         short slot = (short) id;
@@ -184,16 +204,25 @@ final class WriteOperationTracker {
         }
     }
 
+    // Split out of complete(...) above for the same reason as abandonOverflow(...): keep the rare overflow
+    // path out of the hot method's bytecode.
+    private void completeOverflow(long id, byte opCode, int flags) {
+        WriteOperation op = matchingOverflow(id, opCode);
+        if (op != null) {
+            op.complete(flags);
+            if (!op.isActive()) {
+                overflow.remove(id);
+            }
+        }
+    }
+
     /**
      * Retains the references held by the active slot identified by {@code id}/{@code opCode}, if any. Used only
      * from the shutdown path.
      */
     void retainReferences(long id, byte opCode) {
         if (id > MAX_POOLED_ID) {
-            WriteOperation op = matchingOverflow(id, opCode);
-            if (op != null) {
-                op.retainReferences();
-            }
+            retainOverflowReference(id, opCode);
             return;
         }
         short slot = (short) id;
@@ -203,6 +232,16 @@ final class WriteOperationTracker {
             return;
         }
         op = matching(foreign, slot, opCode);
+        if (op != null) {
+            op.retainReferences();
+        }
+    }
+
+    // Split out of retainReferences(...) above for the same reason as abandonOverflow(...): keep the rare
+    // overflow path out of the hot method's bytecode. Named distinctly from retainOverflow() below, which
+    // retains every overflow slot instead of matching a single id/opCode pair.
+    private void retainOverflowReference(long id, byte opCode) {
+        WriteOperation op = matchingOverflow(id, opCode);
         if (op != null) {
             op.retainReferences();
         }
@@ -283,7 +322,6 @@ final class WriteOperationTracker {
     }
 
     private static WriteOperation[] ensureCapacity(WriteOperation[] operations, short id) {
-        assert id >= 0;
         if (operations == null) {
             return new WriteOperation[Math.max(id + 1, 4)];
         }

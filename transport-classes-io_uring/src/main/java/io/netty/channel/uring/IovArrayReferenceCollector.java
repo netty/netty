@@ -54,15 +54,24 @@ final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageP
 
     @Override
     public boolean processMessage(Object msg) throws Exception {
+        int previousCount = iovArray.count();
+        boolean processed = iovArray.processMessage(msg);
+        retainIfAdded(msg, previousCount);
+        return processed;
+    }
+
+    /**
+     * Records the buffer behind {@code msg} once {@link IovArray} actually gained an entry for it. Split out of
+     * {@link #processMessage(Object)} so that method stays under HotSpot's default inline size threshold (35
+     * bytes), which it exceeded with this test inlined.
+     */
+    private void retainIfAdded(Object msg, int previousCount) {
         // A 0-byte readable buffer makes IovArray.add(...) return true without adding an entry (see
         // IovArray.add(ByteBuf, int, int)), so it never needs a slot here either -- comparing count before and
         // after is what tells such a buffer apart from one that was actually added.
-        int previousCount = iovArray.count();
-        boolean processed = iovArray.processMessage(msg);
         if (iovArray.count() != previousCount) {
             add((ByteBuf) msg);
         }
-        return processed;
     }
 
     ReferenceCounted[] referencesArray() {
