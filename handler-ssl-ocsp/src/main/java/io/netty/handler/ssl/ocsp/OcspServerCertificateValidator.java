@@ -28,6 +28,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.SystemPropertyUtil;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPException;
 import org.bouncycastle.cert.ocsp.RevokedStatus;
@@ -38,6 +39,7 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -52,6 +54,23 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
      */
     public static final AttributeKey<Boolean> OCSP_PIPELINE_ATTRIBUTE =
             AttributeKey.newInstance("io.netty.handler.ssl.ocsp.pipeline");
+
+    /**
+     * Tolerate some clock skew in the OCSP validity time. Default to 15 minutes, which is the same as the JDK.
+     */
+    private static final long CLOCK_SKEW_TOLERANCE_MILLIS = getClockSkewTolerance();
+
+    private static long getClockSkewTolerance() {
+        long defaultToleranceSeconds = TimeUnit.MINUTES.toSeconds(15);
+        long maxToleranceSeconds = TimeUnit.DAYS.toSeconds(2);
+        long configuredToleranceSeconds = SystemPropertyUtil.getLong("io.netty.handler.ssl.ocsp.clockSkew",
+            SystemPropertyUtil.getLong("com.sun.security.ocsp.clockSkew", defaultToleranceSeconds));
+        if (configuredToleranceSeconds < 0 || configuredToleranceSeconds > maxToleranceSeconds) {
+            // Ignore negative and extremely large values.
+            configuredToleranceSeconds = defaultToleranceSeconds;
+        }
+        return TimeUnit.SECONDS.toMillis(configuredToleranceSeconds);
+    }
 
     private final boolean closeAndThrowIfNotValid;
     private final boolean validateNonce;
@@ -168,11 +187,15 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             if (future.isSuccess()) {
                                 SingleResp response = future.getNow().getResponses()[0];
 
-                                Date current = new Date();
-                                Date thisUpdate = response.getThisUpdate();
-                                Date nextUpdate = response.getNextUpdate();
-                                if (thisUpdate == null || !current.after(thisUpdate) ||
-                                        (nextUpdate != null && !current.before(nextUpdate))) {
+                                Date thisUpdateDate = response.getThisUpdate();
+                                Date nextUpdateDate = response.getNextUpdate();
+                                Date thisUpdate = thisUpdateDate == null ? null :
+                                    new Date(thisUpdateDate.getTime() - CLOCK_SKEW_TOLERANCE_MILLIS);
+                                Date nextUpdate = nextUpdateDate == null ? null :
+                                    new Date(nextUpdateDate.getTime() + CLOCK_SKEW_TOLERANCE_MILLIS);
+                                Date now = new Date();
+                                if (thisUpdate == null || !now.after(thisUpdate) ||
+                                    (nextUpdate != null && !now.before(nextUpdate))) {
                                     ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
                                     return;
                                 }
@@ -188,14 +211,14 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                                 }
 
                                 ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                        new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
+                                    new OcspResponse(status, thisUpdateDate, nextUpdateDate)));
 
                                 // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
                                 // to 'true' then close the channel and throw an exception.
                                 if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
                                     // Certificate is not valid. Throw
                                     ctx.fireExceptionCaught(new OCSPException(
-                                            "Certificate not valid. Status: " + status));
+                                        "Certificate not valid. Status: " + status));
                                     ctx.close();
                                 }
                             } else {
