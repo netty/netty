@@ -84,8 +84,17 @@ final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageP
 
     private void add(ByteBuf buffer) {
         if (count == references.length) {
-            references = Arrays.copyOf(references, count << 1);
+            grow();
         }
         references[count++] = buffer;
+    }
+
+    /**
+     * Doubles the backing array once it fills up. Split out of {@link #add(ByteBuf)} so that method stays under
+     * HotSpot's default inline size threshold (35 bytes); growing is genuinely the rare branch here, since
+     * {@link #reset()} clears the array in place for reuse instead of shrinking it back down.
+     */
+    private void grow() {
+        references = Arrays.copyOf(references, count << 1);
     }
 }
