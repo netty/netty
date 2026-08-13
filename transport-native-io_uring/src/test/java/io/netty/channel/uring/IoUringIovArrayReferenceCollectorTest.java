@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -130,6 +131,46 @@ public class IoUringIovArrayReferenceCollectorTest {
 
             assertEquals(1, collector.referencesCount());
             assertSame(fourth, collector.referencesArray()[0]);
+        } finally {
+            first.release();
+            second.release();
+            third.release();
+            fourth.release();
+            firstIovArray.release();
+            secondIovArray.release();
+        }
+    }
+
+    @Test
+    public void resetClearsEntriesAboveThePreviousHighWaterMark() throws Exception {
+        IovArray firstIovArray = new IovArray(3);
+        IovArray secondIovArray = new IovArray(1);
+        ByteBuf first = Unpooled.directBuffer().writeZero(1);
+        ByteBuf second = Unpooled.directBuffer().writeZero(1);
+        ByteBuf third = Unpooled.directBuffer().writeZero(1);
+        ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
+        try {
+            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
+                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+
+            // First write fills the collector up to a high water mark of 3 entries.
+            collector.reset(firstIovArray);
+            assertTrue(collector.processMessage(first));
+            assertTrue(collector.processMessage(second));
+            assertTrue(collector.processMessage(third));
+            assertEquals(3, collector.referencesCount());
+
+            // A subsequent, smaller write must not leave the stale entries above its own count reachable:
+            // otherwise the backing array keeps those ByteBufs alive until the collector (and the channel
+            // that owns it) is garbage collected.
+            collector.reset(secondIovArray);
+            assertTrue(collector.processMessage(fourth));
+            assertEquals(1, collector.referencesCount());
+
+            ReferenceCounted[] references = collector.referencesArray();
+            assertSame(fourth, references[0]);
+            assertNull(references[1]);
+            assertNull(references[2]);
         } finally {
             first.release();
             second.release();

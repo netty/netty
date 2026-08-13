@@ -897,9 +897,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         /**
          * Points this collector at {@code iovArray} and drops the previous references, keeping the array for reuse.
+         * Nulls out the dropped entries too: otherwise a smaller write reusing the collector after a larger one
+         * would leave stale {@code ByteBuf} references reachable through the backing array until the channel (and
+         * so the collector) becomes unreachable, which risks promoting them into an old generation.
          */
         void reset(IovArray iovArray) {
             this.iovArray = iovArray;
+            Arrays.fill(references, 0, count, null);
             count = 0;
         }
 
