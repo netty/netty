@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -26,14 +25,8 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class WriteOperationTrackerTest extends AbstractWriteOperationTrackerTest {
-
-    @BeforeAll
-    public static void loadJNI() {
-        assumeTrue(IoUring.isAvailable());
-    }
 
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
@@ -132,7 +125,7 @@ public class WriteOperationTrackerTest extends AbstractWriteOperationTrackerTest
                     assertEquals(1, buffer.refCnt());
                     assertFalse(channel.writeTracker.isStreamActive());
 
-                    // A completion carrying an id the slot does not own must not release anything again.
+                    // The slot is already inactive, so a second completion for it must not release again.
                     channel.writeTracker.completeStream(0);
                     assertEquals(1, buffer.refCnt());
                 } finally {
@@ -211,15 +204,5 @@ public class WriteOperationTrackerTest extends AbstractWriteOperationTrackerTest
                 }
             }
         });
-    }
-
-    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
-    // is what this exercises.
-    private static void shutdownOutput(IoUringSocketChannel channel) {
-        try {
-            channel.doShutdownOutput();
-        } catch (Exception expected) {
-            // Not connected.
-        }
     }
 }

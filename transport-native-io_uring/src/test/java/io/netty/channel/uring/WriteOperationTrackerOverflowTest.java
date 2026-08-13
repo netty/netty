@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -25,14 +24,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class WriteOperationTrackerOverflowTest extends AbstractWriteOperationTrackerTest {
-
-    @BeforeAll
-    public static void loadJNI() {
-        assumeTrue(IoUring.isAvailable());
-    }
 
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -165,15 +158,5 @@ public class WriteOperationTrackerOverflowTest extends AbstractWriteOperationTra
         long id = channel.writeTracker.nextZeroCopyId();
         assertTrue(id > Short.MAX_VALUE, "expected an overflow id, got " + id);
         return id;
-    }
-
-    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
-    // is what this exercises.
-    private static void shutdownOutput(IoUringSocketChannel channel) {
-        try {
-            channel.doShutdownOutput();
-        } catch (Exception expected) {
-            // Not connected.
-        }
     }
 }

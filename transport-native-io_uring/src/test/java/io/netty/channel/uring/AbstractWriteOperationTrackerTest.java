@@ -16,10 +16,18 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import org.junit.jupiter.api.BeforeAll;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 // Shared by the tests that exercise WriteOperationTracker bookkeeping directly, both of which need a
 // registered channel's real event loop to run their assertions on.
 abstract class AbstractWriteOperationTrackerTest {
+
+    @BeforeAll
+    static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
 
     interface BookkeepingTask {
         void run(IoUringSocketChannel channel);
@@ -41,6 +49,16 @@ abstract class AbstractWriteOperationTrackerTest {
         } finally {
             channel.close().syncUninterruptibly();
             group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
+    // is what this exercises.
+    static void shutdownOutput(IoUringSocketChannel channel) {
+        try {
+            channel.doShutdownOutput();
+        } catch (Exception expected) {
+            // Not connected.
         }
     }
 }
