@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class WriteOperationIdOverflowTest {
+public class WriteOperationTrackerOverflowTest {
 
     @BeforeAll
     public static void loadJNI() {

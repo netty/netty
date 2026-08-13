@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringWriteOperationIdTest {
+public class WriteOperationTrackerTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -163,6 +163,65 @@ public class IoUringWriteOperationIdTest {
                 }
             }
         });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void shutdownRetainsAPooledWriteUntilItsCompletionReleasesItOnce() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    short id = channel.writeTracker.nextId();
+                    channel.writeTracker.record(id, Native.IORING_OP_SEND_ZC, buffer);
+
+                    shutdownOutput(channel);
+                    assertEquals(2, buffer.refCnt());
+
+                    channel.writeTracker.complete(id, Native.IORING_OP_SEND_ZC, Native.IORING_CQE_F_NOTIF);
+                    assertEquals(1, buffer.refCnt());
+                    // Unlike an overflow id, a pooled id is recycled back to the free list once its slot
+                    // terminates.
+                    assertEquals(id, channel.writeTracker.nextId());
+                } finally {
+                    buffer.release();
+                }
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void deregistrationReleasesAPooledWriteThatWillNeverSeeItsCompletion() throws Exception {
+        runOnEventLoop(new BookkeepingTask() {
+            @Override
+            public void run(IoUringSocketChannel channel) {
+                ByteBuf buffer = Unpooled.buffer(1).writeByte(1);
+                try {
+                    short id = channel.writeTracker.nextId();
+                    channel.writeTracker.record(id, Native.IORING_OP_SEND_ZC, buffer);
+
+                    shutdownOutput(channel);
+                    assertEquals(2, buffer.refCnt());
+
+                    ((AbstractIoUringChannel.AbstractUringUnsafe) channel.unsafe()).unregistered();
+                    assertEquals(1, buffer.refCnt());
+                } finally {
+                    buffer.release();
+                }
+            }
+        });
+    }
+
+    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
+    // is what this exercises.
+    private static void shutdownOutput(IoUringSocketChannel channel) {
+        try {
+            channel.doShutdownOutput();
+        } catch (Exception expected) {
+            // Not connected.
+        }
     }
 
     private interface BookkeepingTask {
