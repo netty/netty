@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.channel.uring.IoUringRefCntZeroAwaiter.awaitRefCntZero;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -93,21 +94,5 @@ public class IoUringDatagramWriteLifecycleTest {
             }
             group.shutdownGracefully().syncUninterruptibly();
         }
-    }
-
-    private static boolean awaitRefCntZero(Channel channel, ByteBuf buffer, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        CountDownLatch released = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (buffer.refCnt() == 0) {
-                    released.countDown();
-                } else {
-                    channel.eventLoop().schedule(this, 10, TimeUnit.MILLISECONDS);
-                }
-            }
-        });
-        return released.await(timeout, unit);
     }
 }

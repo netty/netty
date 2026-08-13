@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.channel.uring.IoUringRefCntZeroAwaiter.awaitRefCntZero;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -145,21 +146,5 @@ public class IoUringShutdownOutputDuringInFlightSpliceTest {
             clientGroup.shutdownGracefully(0, 2, TimeUnit.SECONDS).awaitUninterruptibly(5, TimeUnit.SECONDS);
             file.delete();
         }
-    }
-
-    private static boolean awaitRefCntZero(Channel channel, DefaultFileRegion region, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        CountDownLatch released = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (region.refCnt() == 0) {
-                    released.countDown();
-                } else {
-                    channel.eventLoop().schedule(this, 10, TimeUnit.MILLISECONDS);
-                }
-            }
-        });
-        return released.await(timeout, unit);
     }
 }

@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -29,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class WriteOperationTrackerTest {
+public class WriteOperationTrackerTest extends AbstractWriteOperationTrackerTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -221,29 +220,6 @@ public class WriteOperationTrackerTest {
             channel.doShutdownOutput();
         } catch (Exception expected) {
             // Not connected.
-        }
-    }
-
-    private interface BookkeepingTask {
-        void run(IoUringSocketChannel channel);
-    }
-
-    // The bookkeeping is event-loop state and the channel can only be closed once registered, so the task
-    // runs on a real event loop.
-    private static void runOnEventLoop(final BookkeepingTask task) throws Exception {
-        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
-        final IoUringSocketChannel channel = new IoUringSocketChannel();
-        try {
-            group.register(channel).sync();
-            channel.eventLoop().submit(new Runnable() {
-                @Override
-                public void run() {
-                    task.run(channel);
-                }
-            }).sync();
-        } finally {
-            channel.close().syncUninterruptibly();
-            group.shutdownGracefully().syncUninterruptibly();
         }
     }
 }
