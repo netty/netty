@@ -338,15 +338,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             }
             byte opCode = ops.opcode();
-            // A splice picks its own data to tell its two stages apart and the IoUringFileRegion owns its
-            // buffers, so it never takes part in the write-operation bookkeeping.
-            if (msg instanceof ByteBuf) {
-                writeOperation.record(opCode, (ByteBuf) msg);
-            }
+            // A splice picks its own data to tell its two stages apart, so it never enters the channel-level
+            // slot array used for zero-copy writes. It still has to occupy this single slot though: the file and
+            // pipe descriptors it splices between have to outlive the SQE, and retainInflightWriteOperations()
+            // only retains what was recorded here.
+            writeOperation.record(opCode, (ReferenceCounted) msg);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
-                // A no-op for the splice above, which never recorded anything.
                 writeOperation.rollback();
                 return 0;
             }
