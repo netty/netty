@@ -129,6 +129,10 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                         }
                     });
                 } catch (Exception e) {
+                    // A partially filled collector never reaches the record(...) call below, so nothing else
+                    // would drop the references it already gathered before the next writev on this event loop
+                    // resets it.
+                    collector.reset();
                     // This should never happen, anyway fallback to single write.
                     return scheduleWriteSingle(in.current());
                 }
@@ -143,6 +147,10 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
                 byte opCode = ops.opcode();
                 writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
+                // Drop the collector's own references now that the slot holds its own copy: this collector is a
+                // permanent, event-loop-owned object, so leaving them set would keep these buffers reachable
+                // until this event loop happens to service another writev, which may never come.
+                collector.reset();
                 writeId = registration().submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {

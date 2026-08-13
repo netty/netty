@@ -276,6 +276,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 in.forEachFlushedMessage(filterWriteMultiple(collector));
             } catch (Exception e) {
+                // A partially filled collector never reaches the record(...) call below, so nothing else would
+                // drop the references it already gathered before the next writev on this event loop resets it.
+                collector.reset();
                 // This should never happen, anyway fallback to single write.
                 return scheduleWriteSingle(in.current());
             }
@@ -287,6 +290,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             byte opCode = ops.opcode();
             // record(...) copies the collector's references into the slot, so the collector stays reusable.
             writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
+            // Drop the collector's own references now that the slot holds its own copy: this collector is a
+            // permanent, event-loop-owned object, so leaving them set would keep these buffers reachable until
+            // this event loop happens to service another writev, which may never come.
+            collector.reset();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
@@ -777,7 +784,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         public void unregistered() {
-            // Rolls the single slot back through writeTracker.releaseAll() before the chunk buffer is
+            // Abandons the single slot through writeTracker.releaseAll() before the chunk buffer is
             // dropped below, so a reference a shutdown retained on that buffer is released first.
             super.unregistered();
             assert readBuffer == null;

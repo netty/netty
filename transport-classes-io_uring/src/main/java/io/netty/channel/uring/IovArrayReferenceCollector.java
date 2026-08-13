@@ -30,8 +30,10 @@ import java.util.Arrays;
  * <p>One instance per {@link IoUringIoHandler}, matching the {@link IovArray} it wraps: the handler hands out the
  * same {@link IovArray} instance to every channel it services, so a per-channel collector would be scoped smaller
  * than the array it fills. This collector is only ever valid between a {@link #reset()} and the {@link WriteOperation}
- * record call that copies its references out -- nothing may hold onto it across a submit, since the next channel to
- * write on this event loop will {@link #reset()} it and overwrite its entries.
+ * record call that copies its references out -- the caller {@link #reset()}s it again right after that copy, so
+ * nothing may hold onto it across a submit. Without that second reset this instance, being permanently owned by
+ * the event loop rather than any one channel, would keep the previous write's buffers reachable for as long as
+ * this event loop went without servicing another write.
  */
 final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
     private final IovArray iovArray;
@@ -56,16 +58,16 @@ final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageP
     public boolean processMessage(Object msg) throws Exception {
         int previousCount = iovArray.count();
         boolean processed = iovArray.processMessage(msg);
-        retainIfAdded(msg, previousCount);
+        recordIfAdded(msg, previousCount);
         return processed;
     }
 
     /**
      * Records the buffer behind {@code msg} once {@link IovArray} actually gained an entry for it. Split out of
      * {@link #processMessage(Object)} so that method stays under HotSpot's default inline size threshold (35
-     * bytes), which it exceeded with this test inlined.
+     * bytes), which it exceeded with the {@code if} check below inlined.
      */
-    private void retainIfAdded(Object msg, int previousCount) {
+    private void recordIfAdded(Object msg, int previousCount) {
         // A 0-byte readable buffer makes IovArray.add(...) return true without adding an entry (see
         // IovArray.add(ByteBuf, int, int)), so it never needs a slot here either -- comparing count before and
         // after is what tells such a buffer apart from one that was actually added.

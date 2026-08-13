@@ -106,37 +106,6 @@ public class IovArrayReferenceCollectorTest {
     }
 
     @Test
-    public void reusingCollectorDropsPreviousWritesReferences() throws Exception {
-        IovArray iovArray = new IovArray(3);
-        ByteBuf first = Unpooled.directBuffer().writeZero(1);
-        ByteBuf second = Unpooled.directBuffer().writeZero(1);
-        ByteBuf third = Unpooled.directBuffer().writeZero(1);
-        ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
-        try {
-            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
-
-            collector.reset();
-            assertTrue(collector.processMessage(first));
-            assertTrue(collector.processMessage(second));
-            assertTrue(collector.processMessage(third));
-            assertEquals(3, collector.referencesCount());
-
-            iovArray.clear();
-            collector.reset();
-            assertTrue(collector.processMessage(fourth));
-
-            assertEquals(1, collector.referencesCount());
-            assertSame(fourth, collector.referencesArray()[0]);
-        } finally {
-            first.release();
-            second.release();
-            third.release();
-            fourth.release();
-            iovArray.release();
-        }
-    }
-
-    @Test
     public void resetClearsEntriesAboveThePreviousHighWaterMark() throws Exception {
         IovArray iovArray = new IovArray(3);
         ByteBuf first = Unpooled.directBuffer().writeZero(1);
