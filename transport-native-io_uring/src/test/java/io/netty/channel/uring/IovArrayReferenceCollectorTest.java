@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringIovArrayReferenceCollectorTest {
+public class IovArrayReferenceCollectorTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -45,9 +45,8 @@ public class IoUringIovArrayReferenceCollectorTest {
         ByteBuf third = Unpooled.directBuffer().writeZero(1);
         try {
             iovArray.maxCount(2);
-            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
-            collector.reset(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            collector.reset();
 
             assertTrue(collector.processMessage(first));
             assertTrue(collector.processMessage(second));
@@ -71,9 +70,8 @@ public class IoUringIovArrayReferenceCollectorTest {
         CompositeByteBuf buffer = Unpooled.compositeBuffer(2);
         buffer.addComponents(true, Unpooled.directBuffer().writeZero(1), Unpooled.directBuffer().writeZero(1));
         try {
-            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
-            collector.reset(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            collector.reset();
 
             assertFalse(collector.processMessage(buffer));
 
@@ -92,9 +90,8 @@ public class IoUringIovArrayReferenceCollectorTest {
         ByteBuf second = Unpooled.directBuffer().writeZero(1);
         try {
             iovArray.maxBytes(1);
-            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
-            collector.reset(iovArray);
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
+            collector.reset();
 
             assertTrue(collector.processMessage(first));
             assertFalse(collector.processMessage(second));
@@ -110,23 +107,22 @@ public class IoUringIovArrayReferenceCollectorTest {
 
     @Test
     public void reusingCollectorDropsPreviousWritesReferences() throws Exception {
-        IovArray firstIovArray = new IovArray(3);
-        IovArray secondIovArray = new IovArray(1);
+        IovArray iovArray = new IovArray(3);
         ByteBuf first = Unpooled.directBuffer().writeZero(1);
         ByteBuf second = Unpooled.directBuffer().writeZero(1);
         ByteBuf third = Unpooled.directBuffer().writeZero(1);
         ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
         try {
-            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
 
-            collector.reset(firstIovArray);
+            collector.reset();
             assertTrue(collector.processMessage(first));
             assertTrue(collector.processMessage(second));
             assertTrue(collector.processMessage(third));
             assertEquals(3, collector.referencesCount());
 
-            collector.reset(secondIovArray);
+            iovArray.clear();
+            collector.reset();
             assertTrue(collector.processMessage(fourth));
 
             assertEquals(1, collector.referencesCount());
@@ -136,34 +132,31 @@ public class IoUringIovArrayReferenceCollectorTest {
             second.release();
             third.release();
             fourth.release();
-            firstIovArray.release();
-            secondIovArray.release();
+            iovArray.release();
         }
     }
 
     @Test
     public void resetClearsEntriesAboveThePreviousHighWaterMark() throws Exception {
-        IovArray firstIovArray = new IovArray(3);
-        IovArray secondIovArray = new IovArray(1);
+        IovArray iovArray = new IovArray(3);
         ByteBuf first = Unpooled.directBuffer().writeZero(1);
         ByteBuf second = Unpooled.directBuffer().writeZero(1);
         ByteBuf third = Unpooled.directBuffer().writeZero(1);
         ByteBuf fourth = Unpooled.directBuffer().writeZero(1);
         try {
-            AbstractIoUringStreamChannel.IovArrayReferenceCollector collector =
-                    new AbstractIoUringStreamChannel.IovArrayReferenceCollector();
+            IovArrayReferenceCollector collector = new IovArrayReferenceCollector(iovArray);
 
             // First write fills the collector up to a high water mark of 3 entries.
-            collector.reset(firstIovArray);
+            collector.reset();
             assertTrue(collector.processMessage(first));
             assertTrue(collector.processMessage(second));
             assertTrue(collector.processMessage(third));
             assertEquals(3, collector.referencesCount());
 
             // A subsequent, smaller write must not leave the stale entries above its own count reachable:
-            // otherwise the backing array keeps those ByteBufs alive until the collector (and the channel
-            // that owns it) is garbage collected.
-            collector.reset(secondIovArray);
+            // otherwise the backing array keeps those ByteBufs alive until the next reset.
+            iovArray.clear();
+            collector.reset();
             assertTrue(collector.processMessage(fourth));
             assertEquals(1, collector.referencesCount());
 
@@ -176,8 +169,7 @@ public class IoUringIovArrayReferenceCollectorTest {
             second.release();
             third.release();
             fourth.release();
-            firstIovArray.release();
-            secondIovArray.release();
+            iovArray.release();
         }
     }
 }

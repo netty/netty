@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.Arrays;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -262,12 +261,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         // Chunk buffer for generic FileRegion writes. Non-null while a send is in flight.
         private ByteBuf fileRegionChunkBuf;
 
-        private final IovArrayReferenceCollector iovArrayReferenceCollector = new IovArrayReferenceCollector();
-
-        protected final IovArrayReferenceCollector iovArrayReferenceCollector() {
-            return iovArrayReferenceCollector;
-        }
-
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert writeId == 0;
@@ -278,8 +271,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
 
-            IovArrayReferenceCollector collector = iovArrayReferenceCollector;
-            collector.reset(iovArray);
+            IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
+            collector.reset();
             try {
                 in.forEachFlushedMessage(filterWriteMultiple(collector));
             } catch (Exception e) {
@@ -868,49 +861,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         public void close() {
             // NOOP
-        }
-    }
-
-    static final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
-        private IovArray iovArray;
-        private ReferenceCounted[] references = new ReferenceCounted[4];
-        private int count;
-
-        /**
-         * Points this collector at {@code iovArray} and drops the previous references, keeping the array for reuse.
-         * Nulls out the dropped entries too: otherwise a smaller write reusing the collector after a larger one
-         * would leave stale {@code ByteBuf} references reachable through the backing array until the channel (and
-         * so the collector) becomes unreachable, which risks promoting them into an old generation.
-         */
-        void reset(IovArray iovArray) {
-            this.iovArray = iovArray;
-            Arrays.fill(references, 0, count, null);
-            count = 0;
-        }
-
-        @Override
-        public boolean processMessage(Object msg) throws Exception {
-            int previousCount = iovArray.count();
-            boolean processed = iovArray.processMessage(msg);
-            if (iovArray.count() != previousCount) {
-                add((ByteBuf) msg);
-            }
-            return processed;
-        }
-
-        ReferenceCounted[] referencesArray() {
-            return references;
-        }
-
-        int referencesCount() {
-            return count;
-        }
-
-        private void add(ByteBuf buffer) {
-            if (count == references.length) {
-                references = Arrays.copyOf(references, count << 1);
-            }
-            references[count++] = buffer;
         }
     }
 }
