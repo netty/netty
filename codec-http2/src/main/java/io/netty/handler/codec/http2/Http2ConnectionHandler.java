@@ -222,7 +222,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         try {
             // Stop at the first stream that still has a flow-controlled frame queued. Frame-based, so it counts
             // zero-length frames (e.g. trailing headers) that carry no flow-control bytes.
-            return connection().forEachActiveStream(stream -> !flowController.hasFlowControlled(stream)) != null;
+            return connection().forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) {
+                    return !flowController.hasFlowControlled(stream);
+                }
+            }) != null;
         } catch (Http2Exception e) {
             return false;
         }
