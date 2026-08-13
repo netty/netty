@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -519,6 +518,67 @@ public class DefaultPromiseTest {
 
     @Test
     @Timeout(value = 30)
+    public void testCompletionDoesNotNeedTheMonitorOfThePromise() throws Exception {
+        // Awaiting no longer releases the monitor of the promise, so completing one must not require that monitor
+        // either. Otherwise a thread that awaits while holding it would keep the promise from ever being completed,
+        // and the completing thread - often an event loop - would be stuck behind it.
+        final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
+        final CountDownLatch holdsMonitor = new CountDownLatch(1);
+        final CountDownLatch keepHoldingMonitor = new CountDownLatch(1);
+        final CountDownLatch done = new CountDownLatch(1);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+
+        // Waits while holding the monitor and, once woken up, keeps holding it until this test lets go of it.
+        Thread waiter = startWaiter(() -> {
+            synchronized (promise) {
+                holdsMonitor.countDown();
+                try {
+                    promise.await();
+                    keepHoldingMonitor.await();
+                } catch (Throwable t) {
+                    error.set(t);
+                } finally {
+                    done.countDown();
+                }
+            }
+        });
+        final CountDownLatch completed = new CountDownLatch(1);
+        Thread completer = null;
+        try {
+            assertTrue(holdsMonitor.await(10, TimeUnit.SECONDS));
+            awaitBlocked(waiter);
+
+            // Completing runs on its own thread: were it to block on the monitor, this test would hang instead of
+            // failing, since a thread waiting to enter a monitor cannot be interrupted.
+            completer = startWaiter(() -> {
+                try {
+                    promise.setSuccess(null);
+                } catch (Throwable t) {
+                    error.compareAndSet(null, t);
+                } finally {
+                    completed.countDown();
+                }
+            });
+
+            assertTrue(completed.await(10, TimeUnit.SECONDS),
+                    "Completing the promise waited for the thread holding its monitor");
+            assertTrue(promise.isDone());
+
+            keepHoldingMonitor.countDown();
+            assertTrue(done.await(10, TimeUnit.SECONDS), "The waiter was not woken up");
+            assertNull(error.get());
+        } finally {
+            keepHoldingMonitor.countDown();
+            if (completer == null) {
+                release(promise, waiter);
+            } else {
+                release(promise, waiter, completer);
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30)
     public void testAwaitWithTimeoutDoesNotReturnEarly() throws Exception {
         final Promise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
         final long timeoutNanos = TimeUnit.MILLISECONDS.toNanos(100);
@@ -584,21 +644,11 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    @Timeout(value = 30)
-    public void testTimedOutWaitersAreRemoved() throws Exception {
-        final DefaultPromise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
-        for (int i = 0; i < 128; i++) {
-            assertFalse(promise.await(1, TimeUnit.MILLISECONDS));
-        }
-        assertNull(waitersOf(promise), "The nodes of the timed out waiters were not reclaimed");
-    }
-
-    @Test
     @Timeout(value = 60)
-    public void testConcurrentlyTimedOutWaitersAreRemoved() throws Exception {
-        // Several threads unlink their nodes while others walk the very same stack, which is the only way to reach
-        // the restart branches of the removal. A live waiter takes part as well: if a concurrent removal ever drops
-        // it off the stack, nothing wakes it up again and this test times out.
+    public void testConcurrentTimedWaitsDoNotLoseAWaiter() throws Exception {
+        // Several threads keep timing out and awaiting again on the same promise, so they enter and leave the wait
+        // set all the time. A waiter without a timeout takes part as well: it must still be woken up by the
+        // completion, no matter how much churn the others cause.
         final int timingOutWaiters = 6;
         for (int round = 0; round < 64; round++) {
             final DefaultPromise<Void> promise = new DefaultPromise<Void>(new RejectingEventExecutor());
@@ -636,13 +686,10 @@ public class DefaultPromiseTest {
 
                 assertTrue(timedOut.await(30, TimeUnit.SECONDS), "The timing out waiters got stuck");
                 assertNull(error.get());
-                // Only the waiter that has no timeout may be left behind, every timed out node must be unlinked.
-                assertThat(waiterCount(promise)).isLessThanOrEqualTo(1);
 
                 promise.setSuccess(null);
-                assertTrue(blockingDone.await(30, TimeUnit.SECONDS), "The waiter was dropped off the stack");
+                assertTrue(blockingDone.await(30, TimeUnit.SECONDS), "The waiter was never woken up");
                 assertNull(error.get());
-                assertNull(waitersOf(promise), "The stack was not drained on completion");
             } finally {
                 release(promise, waiters);
             }
@@ -670,24 +717,6 @@ public class DefaultPromiseTest {
         for (Thread waiter : waiters) {
             waiter.join(TimeUnit.SECONDS.toMillis(10));
         }
-    }
-
-    private static Object waitersOf(DefaultPromise<?> promise) throws Exception {
-        Field field = DefaultPromise.class.getDeclaredField("waiters");
-        field.setAccessible(true);
-        return field.get(promise);
-    }
-
-    private static int waiterCount(DefaultPromise<?> promise) throws Exception {
-        Object node = waitersOf(promise);
-        int count = 0;
-        while (node != null) {
-            count++;
-            Field next = node.getClass().getDeclaredField("next");
-            next.setAccessible(true);
-            node = next.get(node);
-        }
-        return count;
     }
 
     /**
