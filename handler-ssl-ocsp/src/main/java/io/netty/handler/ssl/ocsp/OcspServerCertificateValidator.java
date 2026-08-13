@@ -37,7 +37,6 @@ import org.bouncycastle.cert.ocsp.SingleResp;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -190,13 +189,13 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
 
                                 Date thisUpdateDate = response.getThisUpdate();
                                 Date nextUpdateDate = response.getNextUpdate();
-                                Instant thisUpdate = thisUpdateDate == null ? null :
-                                    thisUpdateDate.toInstant().minusMillis(CLOCK_SKEW_TOLERANCE_MILLIS);
-                                Instant nextUpdate = nextUpdateDate == null ? null :
-                                    nextUpdateDate.toInstant().plusMillis(CLOCK_SKEW_TOLERANCE_MILLIS);
-                                Instant now = Instant.now();
-                                if (thisUpdate == null || !now.isAfter(thisUpdate) ||
-                                    (nextUpdate != null && !now.isBefore(nextUpdate))) {
+                                Date thisUpdate = thisUpdateDate == null ? null :
+                                    new Date(thisUpdateDate.getTime() - CLOCK_SKEW_TOLERANCE_MILLIS);
+                                Date nextUpdate = nextUpdateDate == null ? null :
+                                    new Date(nextUpdateDate.getTime() + CLOCK_SKEW_TOLERANCE_MILLIS);
+                                Date now = new Date();
+                                if (thisUpdate == null || !now.after(thisUpdate) ||
+                                    (nextUpdate != null && !now.before(nextUpdate))) {
                                     ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
                                     return;
                                 }
