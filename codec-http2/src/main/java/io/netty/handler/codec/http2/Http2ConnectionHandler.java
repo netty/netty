@@ -80,6 +80,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
     private boolean inFlush;
+    private boolean flushAgain;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -190,17 +191,45 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void flush(ChannelHandlerContext ctx) {
+        if (inFlush) {
+            // Reentrant flush (e.g. from a synchronous writability change) must not recurse — that livelocks
+            // (#17256); the in-progress flush loop picks it up.
+            flushAgain = true;
+            return;
+        }
         inFlush = true;
         try {
-            // Trigger pending writes in the remote flow controller.
-            encoder.flowController().writePendingBytes();
-            ctx.flush();
+            do {
+                flushAgain = false;
+                // Trigger pending writes in the remote flow controller.
+                encoder.flowController().writePendingBytes();
+                ctx.flush();
+                // Honor any flush re-requested while we were flushing (a resumed write, or a direct flush from
+                // elsewhere in the pipeline) regardless of writability — flushing already-written data doesn't
+                // need a writable channel.
+            } while (flushAgain);
         } catch (Http2Exception e) {
             onError(ctx, true, e);
         } catch (Throwable cause) {
             onError(ctx, true, connectionError(INTERNAL_ERROR, cause, "Error flushing"));
         } finally {
             inFlush = false;
+        }
+    }
+
+    private boolean hasPendingData() {
+        final Http2RemoteFlowController flowController = encoder.flowController();
+        try {
+            // Stop at the first stream that still has a flow-controlled frame queued. Frame-based, so it counts
+            // zero-length frames (e.g. trailing headers) that carry no flow-control bytes.
+            return connection().forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) {
+                    return !flowController.hasFlowControlled(stream);
+                }
+            }) != null;
+        } catch (Http2Exception e) {
+            return false;
         }
     }
 
@@ -460,10 +489,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        // Writability is expected to change while we are writing. We cannot allow this event to trigger reentering
-        // the allocation and write loop. Reentering the event loop will lead to over or illegal allocation.
         try {
-            if (ctx.channel().isWritable() && !inFlush) {
+            // Only flush on a writability change if the flow controller has frames queued. A toggle with
+            // nothing to write (e.g. SslHandler during setup) must not flush, or the flush -> writability ->
+            // flush cycle livelocks (#17256).
+            if (ctx.channel().isWritable() && hasPendingData()) {
                 flush(ctx);
             }
             encoder.flowController().channelWritabilityChanged();
