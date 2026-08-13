@@ -78,6 +78,7 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -364,6 +365,27 @@ public class Http2ConnectionHandlerTest {
         verify(remoteFlow).writePendingBytes();
         verify(ctx).flush();
         verify(remoteFlow).channelWritabilityChanged();
+    }
+
+    @Test
+    public void closeShouldNotFlushOnWritabilityChangeWithoutPendingData() throws Exception {
+        when(channel.isWritable()).thenReturn(true);
+        handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .decoupleCloseAndGoAway(true).build();
+        handler.handlerAdded(ctx);
+        clearInvocations(ctx);
+        doAnswer(new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+                handler.channelWritabilityChanged(ctx);
+                return future;
+            }
+        }).when(ctx).close(any(ChannelPromise.class));
+
+        handler.close(ctx, promise);
+
+        verify(ctx).close(promise);
+        verify(ctx, never()).flush();
     }
 
     /**
