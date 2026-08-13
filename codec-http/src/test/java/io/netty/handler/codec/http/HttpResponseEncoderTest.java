@@ -414,14 +414,14 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testInitHttpMessageHeaderSanitizationFailureDoesNotCorruptState() {
+    public void testInitHttpMessageHeaderSanitizationFailureDoesNotCorruptState() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         final DefaultHttpResponse invalidResponse = new DefaultHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT, new ReadOnlyHttpHeaders(false));
 
         EncoderException e = assertThrows(EncoderException.class, new Executable() {
             @Override
-            public void execute() {
+            public void execute() throws Exception {
                 channel.writeOutbound(invalidResponse);
             }
         });
@@ -431,7 +431,7 @@ public class HttpResponseEncoderTest {
         assertFalse(channel.finish());
     }
 
-    private static void assertEncoderStillUsable(EmbeddedChannel channel) {
+    private static void assertEncoderStillUsable(EmbeddedChannel channel) throws Exception {
         assertTrue(channel.writeOutbound(
                 new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
         ByteBuf buffer = channel.readOutbound();
