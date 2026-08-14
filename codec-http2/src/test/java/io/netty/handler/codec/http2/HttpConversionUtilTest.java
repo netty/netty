@@ -24,6 +24,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -125,6 +127,63 @@ public class HttpConversionUtilTest {
         regularConnect.add(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text(), "websocket");
         HttpRequest regularConnectRequest = HttpConversionUtil.toHttpRequest(0, regularConnect, true);
         assertFalse(regularConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+    }
+
+    @Test
+    public void connectAuthorityFormUsesRequestTargetNotHost() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+        msg.headers().add(HOST, "attacker.example:443");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @Test
+    public void connectAuthorityFormWithMatchingHostOmitsSchemeAndPath() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+        msg.headers().add(HOST, "trusted.example:443");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @Test
+    public void connectAuthorityFormWithoutHostStillUsesRequestTarget() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "trusted.example:443@attacker.example:443",
+        "",
+        "/",
+        "http://www.example.com:80",
+        "trusted.example:443/../attacker.example"
+    })
+    public void connectAuthorityFormInvalid(String uri) {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, uri);
+        assertThrows(IllegalArgumentException.class, () -> HttpConversionUtil.toHttp2Headers(msg, true));
     }
 
     @Test
