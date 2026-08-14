@@ -16,12 +16,15 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -278,6 +281,48 @@ public class HttpConversionUtilTest {
         assertFalse(outHeaders.contains(proxyConnection));
         assertFalse(outHeaders.contains(TRANSFER_ENCODING));
         assertFalse(outHeaders.contains(UPGRADE));
+    }
+
+    @Test
+    public void toHttp3HeadersConnectUsesRequestTargetAsAuthorityIgnoringHost() {
+        // The Host header intentionally conflicts with the CONNECT authority-form request-target. HTTP/3
+        // must tunnel to the request-target, not to whatever a client claims via Host.
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
+                "trusted.example:443");
+        request.headers().add(HOST, "attacker.example:443");
+
+        Http3Headers headers = HttpConversionUtil.toHttp3Headers(request, true);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), headers.method());
+        assertEquals(new AsciiString("trusted.example:443"), headers.authority());
+        assertNull(headers.scheme());
+        assertNull(headers.path());
+        assertFalse(headers.contains(HOST));
+    }
+
+    @Test
+    public void toHttp3HeadersConnectUsesRequestTargetAsAuthorityWithoutHostHeader() {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
+                "trusted.example:443");
+
+        Http3Headers headers = HttpConversionUtil.toHttp3Headers(request, true);
+
+        assertEquals(new AsciiString("trusted.example:443"), headers.authority());
+        assertNull(headers.scheme());
+        assertNull(headers.path());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "trusted.example:443@attacker.example:443",
+        "",
+        "/",
+        "http://www.example.com:80",
+        "trusted.example:443/../attacker.example"
+    })
+    public void connectAuthorityFormInvalid(String uri) {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, uri);
+        assertThrows(IllegalArgumentException.class, () -> HttpConversionUtil.toHttp3Headers(msg, true));
     }
 
     @Test
