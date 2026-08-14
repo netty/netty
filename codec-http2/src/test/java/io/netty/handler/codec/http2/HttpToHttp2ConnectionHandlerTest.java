@@ -404,7 +404,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
-                .authority(new AsciiString("www.example-origin.org:5555")).scheme(new AsciiString("http"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));
