@@ -415,7 +415,11 @@ public class FixedChannelPool extends SimpleChannelPool {
                 }
 
                 if (future.isSuccess()) {
-                    originalPromise.setSuccess(future.getNow());
+                    Channel channel = future.getNow();
+                    if (!originalPromise.trySuccess(channel)) {
+                        // Promise was completed in the meantime (like cancelled), just release the channel again.
+                        release(channel);
+                    }
                 } else {
                     if (acquired) {
                         decrementAndRunTaskQueue();
