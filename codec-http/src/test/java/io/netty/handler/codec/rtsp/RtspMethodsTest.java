@@ -22,7 +22,9 @@ import org.junit.jupiter.api.parallel.Isolated;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Isolated("valueOfNormalizesLowercaseInputUnderTurkishLocale flips the JVM-default Locale, "
         + "which is process-global state, so the class must not run alongside the rest of the "
@@ -62,6 +64,31 @@ class RtspMethodsTest {
             assertEquals("REDIRECT", redirect.name());
         } finally {
             Locale.setDefault(original);
+        }
+    }
+
+    @Test
+    void valueOfRejectsNulPaddedCachedMethodName() {
+        assertThrows(IllegalArgumentException.class, () -> RtspMethods.valueOf("\u0000PLAY"));
+    }
+
+    @Test
+    void valueOfRejectsNulPaddedCachedMethodNameTrailing() {
+        assertThrows(IllegalArgumentException.class, () -> RtspMethods.valueOf("SETUP\u0000"));
+    }
+
+    @Test
+    void valueOfRejectsCarriageReturnPaddedCachedMethodName() {
+        assertThrows(IllegalArgumentException.class, () -> RtspMethods.valueOf("\rTEARDOWN"));
+    }
+
+    @Test
+    void valueOfDoesNotReturnCachedConstantForControlBytePaddedName() {
+        try {
+            HttpMethod result = RtspMethods.valueOf("\u0000PLAY");
+            assertNotSame(RtspMethods.PLAY, result);
+        } catch (IllegalArgumentException expected) {
+            // Correct outcome.
         }
     }
 }
