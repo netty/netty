@@ -459,30 +459,48 @@ public final class HttpConversionUtil {
         final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
-                out.path(new AsciiString(request.uri()));
-                setHttp2Scheme(inHeaders, out);
+            if (request.method().equals(HttpMethod.CONNECT)) {
+                // https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.3 defines the HTTP/1 CONNECT
+                // request-target as authority-form (host:port), which is the only valid request-target for
+                // CONNECT. Use it directly for :authority, ignoring any (potentially conflicting) Host header,
+                // and per https://datatracker.ietf.org/doc/html/rfc9113#section-8.5 omit :scheme and :path.
+
+                String authorityForm = request.uri();
+                if (authorityForm != null) {
+                    // CONNECT uses a special form of request target, unique to this method, consisting of only the
+                    // host and port number of the tunnel destination, separated by a colon per
+                    // https://www.rfc-editor.org/info/rfc9110/#name-connect
+                    if (authorityForm.isEmpty() || authorityForm.indexOf('@') >= 0 || authorityForm.indexOf('/') >= 0) {
+                        throw new IllegalArgumentException("Invalid CONNECT request target: " + authorityForm);
+                    }
+                    out.authority(new AsciiString(authorityForm));
+                }
             } else {
-                String requestTarget = request.uri();
-                out.path(toHttp2Path(requestTarget));
-                if (hasSchemeAndAuthority(requestTarget)) {
-                    URI requestTargetUri = URI.create(http2PathlessRequestTarget(requestTarget));
-                    // The absolute-form request-target authority is authoritative and takes precedence over
-                    // a (potentially conflicting) HOST header, per RFC 9112 section 3.2 and RFC 9113 section 8.3.1.
-                    String requestTargetAuthority = requestTargetUri.getAuthority();
-                    host = isNullOrEmpty(requestTargetAuthority) ? host : requestTargetAuthority;
-                    setHttp2Scheme(inHeaders, requestTargetUri, out);
+                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+                if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
+                    out.path(new AsciiString(request.uri()));
+                    setHttp2Scheme(inHeaders, out);
                 } else {
-                    int schemeEnd = schemeEnd(requestTarget);
-                    if (schemeEnd != -1) {
-                        setHttp2Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                    String requestTarget = request.uri();
+                    out.path(toHttp2Path(requestTarget));
+                    if (hasSchemeAndAuthority(requestTarget)) {
+                        URI requestTargetUri = URI.create(http2PathlessRequestTarget(requestTarget));
+                        // The absolute-form request-target authority is authoritative and takes precedence over
+                        // a (potentially conflicting) HOST header, per RFC 9112 section 3.2 and RFC 9113 section 8.3.1.
+                        String requestTargetAuthority = requestTargetUri.getAuthority();
+                        host = isNullOrEmpty(requestTargetAuthority) ? host : requestTargetAuthority;
+                        setHttp2Scheme(inHeaders, requestTargetUri, out);
                     } else {
-                        setHttp2Scheme(inHeaders, out);
+                        int schemeEnd = schemeEnd(requestTarget);
+                        if (schemeEnd != -1) {
+                            setHttp2Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                        } else {
+                            setHttp2Scheme(inHeaders, out);
+                        }
                     }
                 }
+                setHttp2Authority(host, out);
             }
-            setHttp2Authority(host, out);
             out.method(request.method().asciiName());
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
