@@ -23,6 +23,8 @@ import static io.netty.handler.codec.http3.QpackUtil.decodePrefixedInteger;
 import static io.netty.handler.codec.http3.QpackUtil.encodePrefixedInteger;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QpackUtilTest {
 
@@ -45,6 +47,17 @@ public class QpackUtilTest {
     }
 
     @Test
+    public void decodesValueEncodedOnPrefixOnly() throws Exception {
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] { 10 });
+        try {
+            assertEquals(10, QpackUtil.decodePrefixedInteger(in, 5));
+            assertEquals(0, in.readableBytes());
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
     public void encodeDecodeRoundTripsOverWideRange() {
         ByteBuf buf = Unpooled.buffer();
         try {
@@ -63,5 +76,68 @@ public class QpackUtilTest {
         encodePrefixedInteger(buf, (byte) 0, prefixLength, value);
         assertThat("Round trip failed for prefixLength=" + prefixLength + ", value=" + value,
             decodePrefixedInteger(buf, prefixLength), is(value));
+    }
+
+    @Test
+    public void decodesValueEncodedWithContinuationBytes() throws Exception {
+        // 5-bit prefix (nbits = 31), followed by continuation bytes encoding 1337 - 31 = 1306.
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] { 0x1f, (byte) 0x9a, 0x0a });
+        try {
+            assertEquals(1337, QpackUtil.decodePrefixedInteger(in, 5));
+            assertEquals(0, in.readableBytes());
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void returnsMinusOneWhenNotEnoughReadableBytes() throws Exception {
+        // Prefix is all-ones (needs continuation), but no continuation byte is available yet.
+        ByteBuf in = Unpooled.wrappedBuffer(new byte[] { 0x1f });
+        try {
+            int readerIndex = in.readerIndex();
+            assertEquals(-1, QpackUtil.decodePrefixedInteger(in, 5));
+            // readerIndex must be reset so a subsequent decode attempt re-reads the same bytes.
+            assertEquals(readerIndex, in.readerIndex());
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void rejectsUnboundedContinuationByteRun() {
+        // First byte with all prefix bits set, followed by a very long run of 0x80 continuation
+        // bytes that never terminates (high bit never clear). Without a cap this would previously
+        // make decodePrefixedInteger keep rescanning the buffer indefinitely, returning -1 forever
+        // and letting the caller's cumulator grow without bound.
+        byte[] bytes = new byte[4096];
+        bytes[0] = 0x7f; // 7-bit prefix, all bits set.
+        for (int i = 1; i < bytes.length; i++) {
+            bytes[i] = (byte) 0x80;
+        }
+        ByteBuf in = Unpooled.wrappedBuffer(bytes);
+        try {
+            assertThrows(QpackException.class, () -> QpackUtil.decodePrefixedInteger(in, 7));
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
+    public void rejectsContinuationRunThatWouldOverflowLong() {
+        // 9 continuation bytes (factor reaches 56) with the high bit always set is already enough
+        // to trip the guard, even though the buffer is finite and would otherwise terminate.
+        byte[] bytes = new byte[11];
+        bytes[0] = 0x0f; // 4-bit prefix, all bits set.
+        for (int i = 1; i < bytes.length - 1; i++) {
+            bytes[i] = (byte) 0x80;
+        }
+        bytes[bytes.length - 1] = 0x01; // terminator, never reached because the guard fires first.
+        ByteBuf in = Unpooled.wrappedBuffer(bytes);
+        try {
+            assertThrows(QpackException.class, () -> QpackUtil.decodePrefixedInteger(in, 4));
+        } finally {
+            in.release();
+        }
     }
 }

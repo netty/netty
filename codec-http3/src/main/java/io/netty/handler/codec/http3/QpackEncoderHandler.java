@@ -73,13 +73,13 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         //+---+---+---+-------------------+
         if ((b & 0b1110_0000) == 0b0010_0000) {
             // new capacity
-            long capacity = QpackUtil.decodePrefixedInteger(in, 5);
-            if (capacity < 0) {
-                // Not enough readable bytes
-                return;
-            }
-
             try {
+                long capacity = QpackUtil.decodePrefixedInteger(in, 5);
+                if (capacity < 0) {
+                    // Not enough readable bytes
+                    return;
+                }
+
                 qpackDecoder.setDynamicTableCapacity(capacity);
             } catch (QpackException e) {
                 handleDecodeFailure(ctx, e, "setDynamicTableCapacity failed.");
