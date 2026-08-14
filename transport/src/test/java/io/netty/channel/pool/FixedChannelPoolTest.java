@@ -151,7 +151,12 @@ public class FixedChannelPoolTest {
             channel = pool.acquire().syncUninterruptibly().getNow();
 
             Future<Channel> cancelledAcquire = pool.acquire();
-            localGroup.submit(() -> { }).syncUninterruptibly();
+            localGroup.submit(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP
+                }
+            }).syncUninterruptibly();
             assertFalse(cancelledAcquire.isDone());
             assertTrue(cancelledAcquire.cancel(false));
 
@@ -466,7 +471,7 @@ public class FixedChannelPoolTest {
     private static final class BlockingChannelPoolHandler extends AbstractChannelPoolHandler {
         private final CountDownLatch channelAcquired = new CountDownLatch(1);
         private final CountDownLatch continueAcquire = new CountDownLatch(1);
-        private final AtomicReference<Channel> channel = new AtomicReference<>();
+        private final AtomicReference<Channel> channel = new AtomicReference<Channel>();
 
         @Override
         public void channelCreated(Channel ch) {
