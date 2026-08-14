@@ -15,16 +15,19 @@
   ~ under the License.
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.16.Final-SNAPSHOT</version>
+    <version>4.2.18.Final-SNAPSHOT</version>
   </parent>
+
   <artifactId>netty-transport-selector</artifactId>
+  <packaging>jar</packaging>
 
   <name>Netty/Transport/Selector</name>
-  <packaging>jar</packaging>
 
   <properties>
     <javaModuleName>io.netty.transport.selector</javaModuleName>
@@ -67,15 +70,6 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <reuseForks>false</reuseForks>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
         <executions>
@@ -86,4 +80,5 @@
       </plugin>
     </plugins>
   </build>
+
 </project>

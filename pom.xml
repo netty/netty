@@ -813,7 +813,6 @@
     <module>resolver-dns-classes-macos</module>
     <module>resolver-dns-native-macos</module>
     <module>transport</module>
-    <module>transport-selector</module>
     <module>transport-native-unix-common-tests</module>
     <module>transport-native-unix-common</module>
     <module>transport-classes-epoll</module>
@@ -825,6 +824,7 @@
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
+    <module>transport-selector</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>handler-ssl-ocsp</module>
