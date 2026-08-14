@@ -16,9 +16,14 @@
 package io.netty.channel.uring;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// IoUringIoOps is compiled with release 9 (see the module's pom.xml), so it cannot be loaded on a Java 8
+// runtime; gate the whole class since every test here touches IoUringIoOps.
+@EnabledForJreRange(min = JRE.JAVA_9)
 class IoUringIoOpsTest {
 
     private static final long OVERFLOW_DATA = 0x1_0000L + 5;

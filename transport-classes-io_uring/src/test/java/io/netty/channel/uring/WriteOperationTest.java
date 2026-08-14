@@ -19,12 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCounted;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// WriteOperation is compiled with release 9 (see the module's pom.xml), so it cannot be loaded on a Java 8
+// runtime; gate the whole class since every test here touches WriteOperation.
+@EnabledForJreRange(min = JRE.JAVA_9)
 class WriteOperationTest {
 
     /**
