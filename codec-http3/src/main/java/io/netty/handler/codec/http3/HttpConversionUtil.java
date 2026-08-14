@@ -391,17 +391,33 @@ public final class HttpConversionUtil {
         final Http3Headers out = new DefaultHttp3Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            URI requestTargetUri = URI.create(request.uri());
-            out.path(toHttp3Path(requestTargetUri));
             out.method(request.method().asciiName());
-            setHttp3Scheme(inHeaders, requestTargetUri, out);
+            if (HttpMethod.CONNECT.equals(request.method())) {
+                // https://www.rfc-editor.org/rfc/rfc9114#section-4.4 requires that :scheme and :path are
+                // omitted, and that :authority is the authority-form request-target from the HTTP/1.x
+                // request-line (https://www.rfc-editor.org/rfc/rfc9112#section-3.2.3). The Host header must
+                // not be allowed to override the CONNECT target, so it is intentionally ignored here.
 
-            // Attempt to take from HOST header before taking from the request-line
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (host != null && !host.isEmpty()) {
-                setHttp3Authority(host, out);
+                String authorityForm = request.uri();
+                if (authorityForm != null) {
+                    // CONNECT uses a special form of request target, unique to this method, consisting of only the
+                    // host and port number of the tunnel destination, separated by a colon per
+                    // https://www.rfc-editor.org/info/rfc9110/#name-connect
+                    if (authorityForm.isEmpty() || authorityForm.indexOf('@') >= 0 || authorityForm.indexOf('/') >= 0) {
+                        throw new IllegalArgumentException("Invalid CONNECT request target: " + authorityForm);
+                    }
+                    out.authority(new AsciiString(authorityForm));
+                }
             } else {
-                if (!isOriginForm(request.uri()) && !isAsteriskForm(request.uri())) {
+                URI requestTargetUri = URI.create(request.uri());
+                out.path(toHttp3Path(requestTargetUri));
+                setHttp3Scheme(inHeaders, requestTargetUri, out);
+
+                // Attempt to take from HOST header before taking from the request-line
+                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+                if (host != null && !host.isEmpty()) {
+                    setHttp3Authority(host, out);
+                } else if (!isOriginForm(request.uri()) && !isAsteriskForm(request.uri())) {
                     setHttp3Authority(requestTargetUri.getAuthority(), out);
                 }
             }
