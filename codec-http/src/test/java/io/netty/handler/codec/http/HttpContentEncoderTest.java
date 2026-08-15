@@ -475,9 +475,14 @@ public class HttpContentEncoderTest {
             assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, "/first")));
 
-            EncoderException exception = assertThrows(EncoderException.class, () -> channel.writeOutbound(
-                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                            new ReadOnlyHttpHeaders(false))));
+            EncoderException exception = assertThrows(EncoderException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        channel.writeOutbound(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                new ReadOnlyHttpHeaders(false)));
+                    }
+                });
             assertInstanceOf(UnsupportedOperationException.class, exception.getCause());
             assertFalse(encoder.contentEncoder().isOpen());
 
