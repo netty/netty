@@ -45,6 +45,8 @@ public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
 
+        private EmbeddedChannel contentEncoder;
+
         TestEncoder() {
         }
 
@@ -54,13 +56,18 @@ public class HttpContentEncoderTest {
 
         @Override
         protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
-            return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
+            contentEncoder = new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
                 protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
                     out.writeBytes(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
                     in.skipBytes(in.readableBytes());
                 }
-            }));
+            });
+            return new Result("test", contentEncoder);
+        }
+
+        EmbeddedChannel contentEncoder() {
+            return contentEncoder;
         }
     }
 
@@ -448,6 +455,29 @@ public class HttpContentEncoderTest {
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
 
         ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testHeaderMutationFailureReleasesContentEncoder() {
+        TestEncoder encoder = new TestEncoder();
+        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        try {
+            assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/first")));
+
+            EncoderException exception = assertThrows(EncoderException.class, () -> channel.writeOutbound(
+                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                            new ReadOnlyHttpHeaders(false))));
+            assertInstanceOf(UnsupportedOperationException.class, exception.getCause());
+            assertFalse(encoder.contentEncoder().isOpen());
+
+            assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/second")));
+            assertTrue(channel.writeOutbound(new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(new byte[1]))));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     private static void assertEmptyResponse(EmbeddedChannel ch) {
