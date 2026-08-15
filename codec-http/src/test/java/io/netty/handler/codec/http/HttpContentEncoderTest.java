@@ -470,7 +470,7 @@ public class HttpContentEncoderTest {
     @Test
     public void testHeaderMutationFailureReleasesContentEncoder() {
         TestEncoder encoder = new TestEncoder();
-        EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        final EmbeddedChannel channel = new EmbeddedChannel(encoder);
         try {
             assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, HttpMethod.GET, "/first")));
