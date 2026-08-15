@@ -161,7 +161,12 @@ public class FixedChannelPoolTest {
             assertTrue(cancelledAcquire.cancel(false));
 
             Future<Channel> nextAcquire = pool.acquire();
-            localGroup.submit(() -> { }).syncUninterruptibly();
+            localGroup.submit(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP
+                }
+            }).syncUninterruptibly();
             assertFalse(nextAcquire.isDone());
 
             pool.release(channel).syncUninterruptibly();
