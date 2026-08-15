@@ -458,7 +458,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testHeaderMutationFailureReleasesContentEncoder() {
+    public void testHeaderMutationFailureReleasesContentEncoder() throws Exception {
         TestEncoder encoder = new TestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         try {
