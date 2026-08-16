@@ -474,7 +474,7 @@
     <junit.version>5.14.4</junit.version>
     <junit.platform.version>1.14.0</junit.platform.version>
     <jazzer.version>0.30.0</jazzer.version>
-    <jctools.version>4.0.6</jctools.version>
+    <jctools.version>4.0.7</jctools.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
