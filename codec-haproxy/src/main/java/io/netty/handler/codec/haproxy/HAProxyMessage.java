@@ -337,7 +337,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                     } while (byteBuf.readableBytes() >= 4);
                 }  catch (Throwable t) {
                     // Release all previously read TLVs before rethrowing as otherwise we would leak.
-                    releaseTlvs(encapsulatedTlvs);
+                    releaseDeep(encapsulatedTlvs);
                     throw t;
                 }
 
