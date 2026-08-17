@@ -53,10 +53,40 @@ public class HpackEncoderTest {
 
     @Test
     public void testSetMaxHeaderTableSizeToMaxValue() throws Http2Exception {
+        hpackEncoder = new HpackEncoder(
+            false, Integer.MAX_VALUE, HpackEncoder.HUFF_CODE_THRESHOLD);
         hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
         hpackDecoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
         hpackDecoder.decode(0, buf, mockHeaders, true);
-        assertEquals(MAX_HEADER_TABLE_SIZE, hpackDecoder.getMaxHeaderTableSize());
+        assertEquals(128 * 64, hpackDecoder.getMaxHeaderTableSize());
+    }
+
+    @Test
+    public void testSetMaxHeaderTableSizeBelowCap() throws Http2Exception {
+        hpackEncoder.setMaxHeaderTableSize(buf, 2048);
+        hpackDecoder.setMaxHeaderTableSize(2048);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
+        assertEquals(2048, hpackEncoder.getMaxHeaderTableSize());
+        assertEquals(2048, hpackDecoder.getMaxHeaderTableSize());
+
+        buf.clear();
+        hpackEncoder.setMaxHeaderTableSize(buf, 0);
+        hpackDecoder.setMaxHeaderTableSize(0);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
+        assertEquals(0, hpackEncoder.getMaxHeaderTableSize());
+        assertEquals(0, hpackDecoder.getMaxHeaderTableSize());
+    }
+
+    @Test
+    public void testSetMaxHeaderTableSizeCapScalesWithSizeHint() throws Http2Exception {
+        HpackEncoder encoder = new HpackEncoder(false, 16, HpackEncoder.HUFF_CODE_THRESHOLD);
+        encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+        assertEquals(16 * 64, encoder.getMaxHeaderTableSize());
+
+        buf.clear();
+        encoder = new HpackEncoder(false, 128, HpackEncoder.HUFF_CODE_THRESHOLD);
+        encoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
+        assertEquals(128 * 64, encoder.getMaxHeaderTableSize());
     }
 
     @Test
