@@ -104,7 +104,9 @@ final class HpackEncoder {
         maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
         maxHeaderListSize = MAX_HEADER_LIST_SIZE;
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
-        // than the length of this array, and we want the mask to be > 0.
+        // than the length of this array, and we want the mask to be > 0. There is also simply an
+        // upper limit on how many entries can be safely held, as nameEntries will have duplicate
+        // entries every time a header name is used, and thus form a long collision chain.
         nameEntries = new NameEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         nameValueEntries = new NameValueEntry[nameEntries.length];
         hashMask = (byte) (nameEntries.length - 1);
@@ -236,6 +238,10 @@ final class HpackEncoder {
             throw connectionError(PROTOCOL_ERROR, "Header Table Size must be >= %d and <= %d but was %d",
               MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, maxHeaderTableSize);
         }
+        // While the receiver may allow a larger table, it is important to cap the local impact of
+        // hash collisions and memory use. This allows the default 4 KiB table when using the
+        // default 64 arraySizeHint.
+        maxHeaderTableSize = Math.min(maxHeaderTableSize, nameEntries.length * 64);
         if (this.maxHeaderTableSize == maxHeaderTableSize) {
             return;
         }
