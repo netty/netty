@@ -249,6 +249,10 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
         if (contentLength < 0) {
             throw new DecoderException(StompHeaders.CONTENT_LENGTH + " must be non-negative");
         }
+        if (contentLength > Integer.MAX_VALUE) {
+            throw new TooLongFrameException(StompHeaders.CONTENT_LENGTH + " exceeds the maximum allowed value: "
+                    + contentLength);
+        }
         return contentLength;
     }
 
