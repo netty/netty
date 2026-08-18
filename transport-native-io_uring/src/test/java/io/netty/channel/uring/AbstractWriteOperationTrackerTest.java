@@ -18,6 +18,9 @@ package io.netty.channel.uring;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.BeforeAll;
 
+import java.nio.channels.NotYetConnectedException;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 // Shared by the tests that exercise WriteOperationTracker bookkeeping directly, both of which need a
@@ -52,13 +55,9 @@ abstract class AbstractWriteOperationTrackerTest {
         }
     }
 
-    // The channel is not connected here, so the shutdown(2) that follows the retain fails; the retain itself
-    // is what this exercises.
+    // The channel is not connected here, so the shutdown(2) that follows the retain fails with ENOTCONN, which
+    // Errors.ioResult(...) turns into a NotYetConnectedException; the retain itself is what this exercises.
     static void shutdownOutput(IoUringSocketChannel channel) {
-        try {
-            channel.doShutdownOutput();
-        } catch (Exception expected) {
-            // Not connected.
-        }
+        assertThrows(NotYetConnectedException.class, channel::doShutdownOutput);
     }
 }

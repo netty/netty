@@ -87,7 +87,6 @@ public class IoUringDatagramWriteLifecycleTest {
             assertTrue(channel.closeFuture().await(5, TimeUnit.SECONDS), "channel did not close in time");
             assertTrue(awaitRefCntZero(channel, buffer, 5, TimeUnit.SECONDS),
                     "sendmsg memory was not released by its terminal CQE");
-            assertEquals(0, buffer.refCnt(), "sendmsg memory was not released by its terminal CQE");
         } finally {
             if (channel != null) {
                 channel.close().syncUninterruptibly();

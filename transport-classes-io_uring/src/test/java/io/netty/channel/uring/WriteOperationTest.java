@@ -264,7 +264,6 @@ class WriteOperationTest {
         operation.complete(Native.IORING_CQE_F_NOTIF);
 
         assertFalse(operation.isActive());
-        assertFalse(operation.isActive());
         assertEquals(1, buffer.refCnt());
         buffer.release();
     }
@@ -292,5 +291,7 @@ class WriteOperationTest {
         assertEquals(1, second.refCnt());
 
         first.release();
+        second.release();
+        replacement.release();
     }
 }
