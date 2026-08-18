@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -55,7 +56,7 @@ final class WriteOperationTracker {
     // The one non-zero-copy write a stream channel can have in flight. Reused by direct field access -- no id,
     // no array, no opcode match -- because WRITE_SCHEDULED caps a stream channel to one outstanding write.
     // Exposed through recordStream/completeStream/abandonStream/isStreamActive below, and touched directly by
-    // retainAll()/abandonAll() the same way those touch the pooled/foreign/overflow namespaces; the field itself
+    // retainAll()/releaseAll() the same way those touch the pooled/foreign/overflow namespaces; the field itself
     // never leaves this class.
     private final WriteOperation single = new WriteOperation();
 
@@ -327,10 +328,10 @@ final class WriteOperationTracker {
 
     private static WriteOperation[] ensureCapacity(WriteOperation[] operations, short id) {
         if (operations == null) {
-            return new WriteOperation[Math.max(id + 1, 4)];
+            return new WriteOperation[Math.max(MathUtil.safeFindNextPositivePowerOfTwo(id + 1), 4)];
         }
         if (id >= operations.length) {
-            return Arrays.copyOf(operations, Math.max(id + 1, operations.length << 1));
+            return Arrays.copyOf(operations, MathUtil.safeFindNextPositivePowerOfTwo(id + 1));
         }
         return operations;
     }
@@ -338,7 +339,8 @@ final class WriteOperationTracker {
     private static WriteOperation slot(WriteOperation[] operations, short id) {
         WriteOperation operation = operations[id];
         if (operation == null) {
-            operation = operations[id] = new WriteOperation();
+            operation = new WriteOperation();
+            operations[id] = operation;
         }
         return operation;
     }
