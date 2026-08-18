@@ -110,54 +110,52 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 IovArray iovArray = handler.iovArray();
                 int offset = iovArray.count();
                 IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
-                collector.reset();
-                // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
-                // buffers.
-                iovArray.maxCount(Native.MAX_SKB_FRAGS);
                 try {
-                    in.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
-                        @Override
-                        public boolean processMessage(Object msg) throws Exception {
-                            if (msg instanceof ByteBuf) {
-                                ByteBuf buf = (ByteBuf) msg;
-                                int length = buf.readableBytes();
-                                if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
-                                    return collector.processMessage(msg);
+                    // Limit to the maximum number of fragments to ensure we don't get an error when we have too
+                    // many buffers.
+                    iovArray.maxCount(Native.MAX_SKB_FRAGS);
+                    try {
+                        in.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
+                            @Override
+                            public boolean processMessage(Object msg) throws Exception {
+                                if (msg instanceof ByteBuf) {
+                                    ByteBuf buf = (ByteBuf) msg;
+                                    int length = buf.readableBytes();
+                                    if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
+                                        return collector.processMessage(msg);
+                                    }
                                 }
+                                return false;
                             }
-                            return false;
-                        }
-                    });
-                } catch (Exception e) {
-                    // A partially filled collector never reaches the record(...) call below, so nothing else
-                    // would drop the references it already gathered before the next writev on this event loop
-                    // resets it.
-                    collector.reset();
-                    // This should never happen, anyway fallback to single write.
-                    return scheduleWriteSingle(in.current());
-                }
-                long iovArrayAddress = iovArray.memoryAddress(offset);
-                int iovArrayLength = iovArray.count() - offset;
+                        });
+                    } catch (Exception e) {
+                        // This should never happen, anyway fallback to single write.
+                        return scheduleWriteSingle(in.current());
+                    }
+                    long iovArrayAddress = iovArray.memoryAddress(offset);
+                    int iovArrayLength = iovArray.count() - offset;
 
-                MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
-                MsgHdrMemory hdr = msgHdrArray.nextHdr();
-                assert hdr != null;
-                hdr.set(iovArrayAddress, iovArrayLength);
-                long opsId = writeTracker.nextZeroCopyId();
-                IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
-                byte opCode = ops.opcode();
-                writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
-                // Drop the collector's own references now that the slot holds its own copy: this collector is a
-                // permanent, event-loop-owned object, so leaving them set would keep these buffers reachable
-                // until this event loop happens to service another writev, which may never come.
-                collector.reset();
-                writeId = registration().submit(ops);
-                writeOpCode = opCode;
-                if (writeId == 0) {
-                    writeTracker.abandon(opsId, opCode);
-                    return 0;
+                    MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
+                    MsgHdrMemory hdr = msgHdrArray.nextHdr();
+                    assert hdr != null;
+                    hdr.set(iovArrayAddress, iovArrayLength);
+                    long opsId = writeTracker.nextZeroCopyId();
+                    IoUringIoOps ops = IoUringIoOps.newSendmsgZc(
+                            fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
+                    byte opCode = ops.opcode();
+                    writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
+                    writeId = registration().submit(ops);
+                    writeOpCode = opCode;
+                    if (writeId == 0) {
+                        writeTracker.abandon(opsId, opCode);
+                        return 0;
+                    }
+                    return 1;
+                } finally {
+                    // The slot copied the references it needs, and an exception must not leave the event loop's
+                    // shared collector holding this write's buffers.
+                    collector.reset();
                 }
-                return 1;
             }
             // Should not use sendmsg_zc, just use normal writev.
             return super.scheduleWriteMultiple(in);

@@ -30,10 +30,10 @@ import java.util.Arrays;
  * <p>One instance per {@link IoUringIoHandler}, matching the {@link IovArray} it wraps: the handler hands out the
  * same {@link IovArray} instance to every channel it services, so a per-channel collector would be scoped smaller
  * than the array it fills. This collector is only ever valid between a {@link #reset()} and the {@link WriteOperation}
- * record call that copies its references out -- the caller {@link #reset()}s it again right after that copy, so
- * nothing may hold onto it across a submit. Without that second reset this instance, being permanently owned by
- * the event loop rather than any one channel, would keep the previous write's buffers reachable for as long as
- * this event loop went without servicing another write.
+ * record call that copies its references out -- the caller resets it again in a {@code finally} that also covers
+ * the submit, so nothing may hold onto it across a submit even when one throws. Without that second reset this
+ * instance, being permanently owned by the event loop rather than any one channel, would keep the previous write's
+ * buffers reachable for as long as this event loop went without servicing another write.
  */
 final class IovArrayReferenceCollector implements ChannelOutboundBuffer.MessageProcessor {
     private final IovArray iovArray;

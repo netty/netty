@@ -272,35 +272,34 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             int offset = iovArray.count();
 
             IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
-            collector.reset();
             try {
-                in.forEachFlushedMessage(filterWriteMultiple(collector));
-            } catch (Exception e) {
-                // A partially filled collector never reaches the record(...) call below, so nothing else would
-                // drop the references it already gathered before the next writev on this event loop resets it.
-                collector.reset();
-                // This should never happen, anyway fallback to single write.
-                return scheduleWriteSingle(in.current());
-            }
-            long iovArrayAddress = iovArray.memoryAddress(offset);
-            int iovArrayLength = iovArray.count() - offset;
-            // Should not use sendmsg_zc, just use normal writev.
-            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+                try {
+                    in.forEachFlushedMessage(filterWriteMultiple(collector));
+                } catch (Exception e) {
+                    // This should never happen, anyway fallback to single write.
+                    return scheduleWriteSingle(in.current());
+                }
+                long iovArrayAddress = iovArray.memoryAddress(offset);
+                int iovArrayLength = iovArray.count() - offset;
+                // Should not use sendmsg_zc, just use normal writev.
+                IoUringIoOps ops = IoUringIoOps.newWritev(
+                        fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
 
-            byte opCode = ops.opcode();
-            // record(...) copies the collector's references into the slot, so the collector stays reusable.
-            writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
-            // Drop the collector's own references now that the slot holds its own copy: this collector is a
-            // permanent, event-loop-owned object, so leaving them set would keep these buffers reachable until
-            // this event loop happens to service another writev, which may never come.
-            collector.reset();
-            writeId = registration.submit(ops);
-            writeOpCode = opCode;
-            if (writeId == 0) {
-                writeTracker.abandonStream();
-                return 0;
+                byte opCode = ops.opcode();
+                // record(...) copies the collector's references into the slot, so the collector stays reusable.
+                writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
+                writeId = registration.submit(ops);
+                writeOpCode = opCode;
+                if (writeId == 0) {
+                    writeTracker.abandonStream();
+                    return 0;
+                }
+                return 1;
+            } finally {
+                // The slot copied the references it needs, and an exception must not leave the event loop's
+                // shared collector holding this write's buffers.
+                collector.reset();
             }
-            return 1;
         }
 
         protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArrayReferenceCollector collector) {
