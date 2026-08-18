@@ -15,13 +15,15 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
 /**
  * A slot tracking the references a submitted SQE handed to the kernel. Recording does not retain: the outbound buffer
- * owns them until the write completes or {@link #retainReferences()} takes over. Slots are reused, and the backing
- * array is kept across reuses, so only the first use of a slot allocates. {@link #abandon()} is how a slot is ended
- * outside of a completion CQE -- see its javadoc for the three situations that call it.
+ * owns them until the write completes or {@link #retainReferences()} takes over. Slots are reused and the backing
+ * array is kept across reuses, so a slot allocates only on its first use and when a write hands it more references
+ * than any earlier use did. {@link #abandon()} is how a slot is ended outside of a completion CQE -- see its
+ * javadoc for the three situations that call it.
  */
 final class WriteOperation {
     private static final ReferenceCounted[] EMPTY_REFERENCES = new ReferenceCounted[0];
@@ -122,7 +124,9 @@ final class WriteOperation {
         count = 0;
         for (int i = 0; i < finishedCount; i++) {
             if (i < releaseCount) {
-                references[i].release();
+                // A completion, a failed submission and a deregistration all end up in this loop, so a reference
+                // that fails to release must not strand the ones after it or leave them reachable through the array.
+                ReferenceCountUtil.safeRelease(references[i]);
             }
             references[i] = null;
         }
