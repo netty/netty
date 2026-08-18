@@ -220,7 +220,6 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                     // Wait till the buffer was finally released, which should be done in a timely fashion.
                     assertTrue(awaitRefCntZero(channel, buffer, 5, TimeUnit.SECONDS),
                             "zero-copy buffer was not released in time");
-                    assertEquals(0, buffer.refCnt());
                 } finally {
                     // Close the channel now
                     channel.close().sync();

@@ -89,8 +89,9 @@ final class WriteOperationTracker {
     }
 
     /**
-     * Registers a write whose id came from {@link #nextId()} or {@link #nextZeroCopyId()}. The id is recycled
-     * once the terminal CQE arrives.
+     * Registers a write whose id came from {@link #nextId()} or {@link #nextZeroCopyId()}. A pooled id goes back
+     * to the free list once the terminal CQE arrives; an overflow id is never reused, its map entry is simply
+     * dropped.
      */
     void record(long id, byte opCode, ReferenceCounted reference) {
         if (id > MAX_POOLED_ID) {
@@ -146,12 +147,10 @@ final class WriteOperationTracker {
     }
 
     /**
-     * Ends the slot identified by {@code id}/{@code opCode} without it seeing a completion CQE, at the caller's
-     * choice: (1) the submission itself failed, so the kernel never saw the SQE, (2) deregistration discards a
-     * slot whose completion this channel can no longer observe, and {@link #retainReferences(long, byte)} never
-     * ran on it, making this call a plain discard, or (3) deregistration discards a slot that
-     * {@link #retainReferences(long, byte)} did retain before a shutdown, in which case this call is what
-     * actually releases those references.
+     * Ends the slot identified by {@code id}/{@code opCode} without it seeing a completion CQE: the submission
+     * itself failed, so the kernel never saw the SQE and no CQE will ever arrive for it. A pooled id goes back to
+     * the free list, an overflow entry is dropped. Deregistration ends its slots through {@link #releaseAll()}
+     * instead.
      */
     void abandon(long id, byte opCode) {
         if (id > MAX_POOLED_ID) {
@@ -219,8 +218,9 @@ final class WriteOperationTracker {
     }
 
     /**
-     * Retains the references held by the active slot identified by {@code id}/{@code opCode}, if any. Used only
-     * from the shutdown path.
+     * Retains the references held by the active slot identified by {@code id}/{@code opCode}, if any. Called from
+     * the zero-copy completion path, where {@code IORING_CQE_F_MORE} says the kernel still owns the memory until
+     * the follow-up {@code IORING_CQE_F_NOTIF}. The shutdown path uses {@link #retainAll()} instead.
      */
     void retainReferences(long id, byte opCode) {
         if (id > MAX_POOLED_ID) {
@@ -272,10 +272,10 @@ final class WriteOperationTracker {
     }
 
     /**
-     * Ends the stream slot without it ever seeing a completion CQE. A no-op if the slot is inactive -- e.g.
-     * deregistration at a point where there was no outstanding write to begin with. The same three situations
-     * documented on {@link #abandon(long, byte)} apply here too, except there is no id, so there is no opcode
-     * match either -- the slot simply finishes.
+     * Ends the stream slot without it ever seeing a completion CQE, for the same reason as
+     * {@link #abandon(long, byte)}: the submission itself failed. A no-op if the slot is inactive. There is no id,
+     * so there is no opcode match either -- the slot simply finishes. Deregistration ends this slot through
+     * {@link #releaseAll()} instead.
      */
     void abandonStream() {
         if (single.isActive()) {
@@ -370,10 +370,11 @@ final class WriteOperationTracker {
             return null;
         }
         WriteOperation operation = operations[id];
-        // Write user_data is not allocated from a single namespace. Splice registers its fixed ids in the single
-        // stream slot (see recordStream), not in this array, and the domain-socket fd-passing sendmsg submits its
-        // MsgHdrMemory index without registering it anywhere, so both can land on an occupied slot here. Matching
-        // the opcode keeps such a completion from terminating what it finds.
+        // Write user_data is not allocated from a single namespace. Every non-zero-copy stream write takes its id
+        // from AbstractIoUringChannel.nextOpsId(), and a splice picks a fixed id of its own to tell its two stages
+        // apart; both register in the single stream slot (see recordStream), not in this array, so their
+        // completions can land on a slot an unrelated zero-copy write occupies. Matching the opcode keeps such a
+        // completion from terminating what it finds.
         return operation != null && operation.isActive() && operation.opCode() == opCode ? operation : null;
     }
 

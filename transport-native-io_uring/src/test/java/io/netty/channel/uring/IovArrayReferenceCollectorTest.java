@@ -106,7 +106,7 @@ public class IovArrayReferenceCollectorTest {
     }
 
     @Test
-    public void resetClearsEntriesAboveThePreviousHighWaterMark() throws Exception {
+    public void resetClearsEntriesLeftByALargerPreviousWrite() throws Exception {
         IovArray iovArray = new IovArray(3);
         ByteBuf first = Unpooled.directBuffer().writeZero(1);
         ByteBuf second = Unpooled.directBuffer().writeZero(1);

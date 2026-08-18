@@ -162,7 +162,7 @@ class WriteOperationTest {
     }
 
     @Test
-    void zeroCopyMoreCompletionWithoutRetainDoesNotReleaseUntilNotification() {
+    void zeroCopyMoreCompletionWithoutRetainFinishesAtNotificationWithoutReleasing() {
         ByteBuf first = Unpooled.buffer();
         ByteBuf second = Unpooled.buffer();
         WriteOperation operation = new WriteOperation();
@@ -212,7 +212,8 @@ class WriteOperationTest {
         operation.record(Native.IORING_OP_SEND, buffer);
         operation.retainReferences();
 
-        // A failed submission never produces a CQE, so the abandon is the only release.
+        // Deregistration discards a slot a shutdown had retained and no CQE ever arrives for it, so the abandon
+        // is the only release.
         operation.abandon();
         operation.abandon();
 

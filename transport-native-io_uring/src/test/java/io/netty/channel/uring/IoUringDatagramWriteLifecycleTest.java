@@ -48,7 +48,7 @@ public class IoUringDatagramWriteLifecycleTest {
 
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    public void testSendmsgRetainsDatagramUntilTerminalCqe() throws Exception {
+    public void testCloseKeepsSendmsgDatagramAliveUntilTerminalCqe() throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         Channel channel = null;
         try {

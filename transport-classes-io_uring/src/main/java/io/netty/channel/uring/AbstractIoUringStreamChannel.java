@@ -396,9 +396,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (writeId == 0) {
                 writeTracker.abandonStream();
                 // Submission only fails when the registration is no longer valid (channel is
-                // being deregistered). unregistered() will release fileRegionChunkBuf and the
-                // outbound buffer will release the FileRegion, so nothing to clean up here --
-                // mirroring the plain ByteBuf path above.
+                // being deregistered). Ending the slot above is the only cleanup needed here:
+                // unregistered() will release fileRegionChunkBuf and the outbound buffer will
+                // release the FileRegion -- mirroring the plain ByteBuf path above.
                 return 0;
             }
             return 1;
