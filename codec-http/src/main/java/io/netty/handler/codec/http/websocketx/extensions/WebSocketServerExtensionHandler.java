@@ -229,7 +229,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 List<WebSocketExtensionData> extraExtensions =
                   new ArrayList<>(extensionHandshakers.size());
                 for (WebSocketServerExtension extension : validExtensionsList) {
-                    extraExtensions.add(extension.newReponseData());
+                    extraExtensions.add(extension.newResponseData());
                 }
                 String newHeaderValue = WebSocketExtensionUtil
                   .computeMergeExtensionsHeaderValue(headerValue, extraExtensions);

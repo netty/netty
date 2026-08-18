@@ -22,11 +22,22 @@ package io.netty.handler.codec.http.websocketx.extensions;
 public interface WebSocketServerExtension extends WebSocketExtension {
 
     /**
+     * @deprecated Use {@link #newResponseData()} instead.
+     *
+     */
+    @Deprecated
+    default WebSocketExtensionData newReponseData() {
+        // Delegate to the correctly spelled method.
+        return newResponseData();
+    }
+
+    /**
      * Return an extension configuration to submit to the client as an acknowledge.
      *
      * @return the acknowledged extension configuration.
      */
-    //TODO: after migrating to JDK 8 rename this to 'newResponseData()' and mark old as deprecated with default method
-    WebSocketExtensionData newReponseData();
-
+    default WebSocketExtensionData newResponseData() {
+        // Fallback for legacy implementations overriding only the misspelled method.
+        return newReponseData();
+    }
 }
