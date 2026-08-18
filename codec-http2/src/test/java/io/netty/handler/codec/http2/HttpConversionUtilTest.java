@@ -55,6 +55,76 @@ public class HttpConversionUtilTest {
         assertNotNull(request);
         assertEquals(authority, request.uri());
         assertEquals(authority, request.headers().get(HOST));
+
+        // Regular CONNECT (RFC 9113) must not carry Extended CONNECT (RFC 8441) state.
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+    }
+
+    @Test
+    public void extendedConnectPreservesProtocolAndPathAsExtensionHeaders() throws Exception {
+        String authority = "ws.example:443";
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority(authority);
+        headers.scheme("https");
+        headers.path("/admin/ws");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+
+        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
+        assertNotNull(request);
+
+        // The request-target/URI for a CONNECT request stays the authority, same as a regular CONNECT
+        // request: this fix does not change wire-level CONNECT behavior.
+        assertEquals(authority, request.uri());
+        assertEquals(HttpMethod.CONNECT, request.method());
+        assertEquals(authority, request.headers().get(HOST));
+
+        // But the Extended CONNECT (RFC 8441) state, which changes CONNECT semantics such that ':authority'
+        // must not be treated as an ordinary tunnel target, is preserved so it is not confused with a
+        // regular CONNECT request once converted to an HTTP/1.x object.
+        assertEquals("websocket",
+                request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertEquals("/admin/ws",
+                request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+    }
+
+    @Test
+    public void extendedConnectAndRegularConnectProduceDifferentHttpObjectShape() throws Exception {
+        String authority = "ws.example:443";
+
+        Http2Headers regularConnect = new DefaultHttp2Headers();
+        regularConnect.method(HttpMethod.CONNECT.asciiName());
+        regularConnect.authority(authority);
+        HttpRequest regularConnectRequest = HttpConversionUtil.toHttpRequest(0, regularConnect, true);
+
+        Http2Headers extendedConnect = new DefaultHttp2Headers();
+        extendedConnect.method(HttpMethod.CONNECT.asciiName());
+        extendedConnect.authority(authority);
+        extendedConnect.scheme("https");
+        extendedConnect.path("/admin/ws");
+        extendedConnect.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        HttpRequest extendedConnectRequest = HttpConversionUtil.toHttpRequest(0, extendedConnect, true);
+
+        // Both requests still have the same CONNECT method and request-target/Host, matching a regular
+        // CONNECT allowlist that keys off of those alone.
+        assertEquals(regularConnectRequest.method(), extendedConnectRequest.method());
+        assertEquals(regularConnectRequest.uri(), extendedConnectRequest.uri());
+        assertEquals(regularConnectRequest.headers().get(HOST), extendedConnectRequest.headers().get(HOST));
+
+        // A protocol-aware policy can still tell them apart via the extension headers.
+        assertFalse(regularConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertTrue(extendedConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+    }
+
+    @Test
+    public void regularConnectDropsExtensionHeaderReceivedFromPeer() throws Exception {
+        Http2Headers regularConnect = new DefaultHttp2Headers();
+        regularConnect.method(HttpMethod.CONNECT.asciiName());
+        regularConnect.authority("ws.example:443");
+        regularConnect.add(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text(), "websocket");
+        HttpRequest regularConnectRequest = HttpConversionUtil.toHttpRequest(0, regularConnect, true);
+        assertFalse(regularConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
     }
 
     @Test
