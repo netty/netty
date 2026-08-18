@@ -74,6 +74,9 @@ import static io.netty.util.internal.StringUtil.className;
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIoUringChannel.class);
     final LinuxSocket socket;
+    // Owns every in-flight write operation this channel is tracking -- the pooled slot array, the overflow map,
+    // the foreign slot array, and the single stream slot. See WriteOperationTracker for the four namespaces.
+    final WriteOperationTracker writeTracker = new WriteOperationTracker();
     protected volatile boolean active;
 
     // Different masks for outstanding I/O operations.
@@ -85,10 +88,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
     private short opsId = Short.MIN_VALUE;
-
-    // Owns every in-flight write operation this channel is tracking -- the pooled slot array, the overflow map,
-    // the foreign slot array, and the single stream slot. See WriteOperationTracker for the four namespaces.
-    final WriteOperationTracker writeTracker = new WriteOperationTracker();
 
     private long pollInId;
     private long pollOutId;
@@ -407,18 +406,23 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         Object msg = in.current();
 
+        int scheduled;
         if (msgCount > 1 && in.current() instanceof ByteBuf) {
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
+            scheduled = ioUringUnsafe().scheduleWriteMultiple(in);
         } else if (msg instanceof ByteBuf && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     (msg instanceof ByteBufHolder && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
             // We also need some special handling for CompositeByteBuf
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
+            scheduled = ioUringUnsafe().scheduleWriteMultiple(in);
         } else {
-            numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteSingle(msg);
+            scheduled = ioUringUnsafe().scheduleWriteSingle(msg);
         }
-        // A zero return means registration.submit(...) failed because the registration is no longer valid, not
-        // that write-operation ids ran out; writeTracker.nextZeroCopyId() falls back past the short id range.
-        assert numOutstandingWrites >= 0;
+        // A zero return means the write could not be scheduled: registration.submit(...) failed because the
+        // registration is no longer valid, a FileRegion's open() threw, or transferTo(...) produced no bytes or
+        // threw. numOutstandingWrites is a short, so guard the narrowing before it happens: a future
+        // scheduleWriteSingle/scheduleWriteMultiple override that batches more writes than a short can hold must
+        // not silently wrap around.
+        assert scheduled <= Short.MAX_VALUE;
+        numOutstandingWrites = (short) scheduled;
         return numOutstandingWrites;
     }
 
