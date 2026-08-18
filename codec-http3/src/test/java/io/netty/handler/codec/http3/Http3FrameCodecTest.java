@@ -24,13 +24,19 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
 import static io.netty.handler.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
@@ -68,6 +74,8 @@ public class Http3FrameCodecTest {
     private QpackDecoderHandler qpackDecoderHandler;
     private QpackAttributes qpackAttributes;
     private long maxTableCapacity;
+    private DefaultEventExecutor codecExecutor;
+    private Semaphore unblockCodecExecutor;
 
     public static Collection<Object[]> data() {
         return asList(
@@ -99,6 +107,11 @@ public class Http3FrameCodecTest {
 
     private void setUp(int maxBlockedStreams, boolean delayQpackStreams, int maxUnknownFramePayloadLength)
             throws Exception {
+        setUp(maxBlockedStreams, delayQpackStreams, maxUnknownFramePayloadLength, null);
+    }
+
+    private void setUp(int maxBlockedStreams, boolean delayQpackStreams, int maxUnknownFramePayloadLength,
+                       EventExecutorGroup executor) throws Exception {
         parent = new EmbeddedQuicChannel(true);
         qpackAttributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, qpackAttributes);
@@ -133,9 +146,14 @@ public class Http3FrameCodecTest {
                                 new Http3RequestStreamEncodeStateValidator();
                         Http3RequestStreamDecodeStateValidator decStateValidator =
                                 new Http3RequestStreamDecodeStateValidator();
-                        ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION, decoder,
-                                MAX_HEADER_SIZE, maxUnknownFramePayloadLength, encoder,
-                                encStateValidator, decStateValidator, (id, v) -> false));
+                        Http3FrameCodec frameCodec = new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION,
+                                decoder, MAX_HEADER_SIZE, maxUnknownFramePayloadLength, encoder,
+                                encStateValidator, decStateValidator, (id, v) -> false);
+                        if (executor == null) {
+                            ch.pipeline().addLast(frameCodec);
+                        } else {
+                            ch.pipeline().addLast(executor, frameCodec);
+                        }
                         ch.pipeline().addLast(encStateValidator);
                         ch.pipeline().addLast(decStateValidator);
                     }
@@ -160,10 +178,16 @@ public class Http3FrameCodecTest {
 
     @AfterEach
     public void tearDown() {
+        if (unblockCodecExecutor != null) {
+            unblockCodecExecutor.release();
+        }
         assertFalse(codecChannel.finish());
         assertFalse(decoderStream.finish());
         assertFalse(encoderStream.finish());
         assertFalse(parent.finish());
+        if (codecExecutor != null) {
+            codecExecutor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        }
     }
 
     @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
@@ -766,6 +790,26 @@ public class Http3FrameCodecTest {
         Http3TestUtils.assertFrameEquals(second, readFrame);
 
         assertFalse(codecChannel.finish());
+    }
+
+    @Test
+    public void testReadResumptionUsesHandlerExecutor() throws Exception {
+        codecExecutor = new DefaultEventExecutor();
+        unblockCodecExecutor = new Semaphore(0);
+        setUp(1, true, Integer.MAX_VALUE, codecExecutor);
+        codecExecutor.submit(() -> { }).syncUninterruptibly();
+
+        CountDownLatch executorBlocked = new CountDownLatch(1);
+        codecExecutor.execute(() -> {
+            executorBlocked.countDown();
+            unblockCodecExecutor.acquireUninterruptibly();
+        });
+        assertTrue(executorBlocked.await(5, TimeUnit.SECONDS));
+        assertEquals(0, codecExecutor.pendingTasks());
+
+        setQpackDecoderStream();
+
+        assertEquals(1, codecExecutor.pendingTasks());
     }
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
