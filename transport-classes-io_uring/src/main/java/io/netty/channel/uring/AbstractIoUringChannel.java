@@ -459,6 +459,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         remote = socket.remoteAddress();
     }
 
+    // Write completions may carry an id that fell back out of the short range, so they get the untruncated
+    // user_data. Connect completions always submit a short id, but connectComplete(...) takes a long to stay
+    // consistent with writeComplete(...), so it is also handed the untruncated value. The remaining completions
+    // (read, poll, cancel) only ever submit short ids, so narrowUserData(...) below asserts and narrows those.
+    private static short narrowUserData(long userData) {
+        assert userData == (short) userData : "user_data does not fit a short: " + userData;
+        return (short) userData;
+    }
+
     protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
@@ -483,15 +492,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             byte op = event.opcode();
             int res = event.res();
             int flags = event.flags();
-            // Only the write completions may carry an id that fell back out of the short range, so they are the
-            // only ones handed the untruncated user_data. Narrowing it here would silently corrupt such an id.
             long userData = event.userData();
             switch (op) {
                 case Native.IORING_OP_RECV:
                 case Native.IORING_OP_ACCEPT:
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
-                    readComplete(op, res, flags, (short) userData);
+                    readComplete(op, res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -503,13 +510,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     writeComplete(op, res, flags, userData);
                     break;
                 case Native.IORING_OP_POLL_ADD:
-                    pollAddComplete(res, flags, (short) userData);
+                    pollAddComplete(res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
-                    cancelComplete0(op, res, flags, (short) userData);
+                    cancelComplete0(op, res, flags, narrowUserData(userData));
                     break;
                 case Native.IORING_OP_CONNECT:
-                    connectComplete(op, res, flags, (short) userData);
+                    connectComplete(op, res, flags, userData);
 
                     // once the connect was completed we can also free some resources that are not needed anymore.
                     freeMsgHdrArray();
@@ -1017,8 +1024,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
 
                     // Explicit pass in 0 as this is returned by a connect(...) call when it was successful.
-                    // The TCP Fast Open sendmsg allocates from the short pool, so narrowing is lossless here.
-                    connectComplete(op, 0, flags, (short) data);
+                    connectComplete(op, 0, flags, data);
                 } else if (res == ERRNO_EINPROGRESS_NEGATIVE || res == 0) {
                     // This happens when we (as a client) have no pre-existing cookie for doing a fast-open connection.
                     // In this case, our TCP connection will be established normally, but no data was transmitted at
@@ -1027,7 +1033,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     submitConnect((InetSocketAddress) requestedRemoteAddress);
                 } else {
                     // There was an error, handle it as a normal connect error.
-                    connectComplete(op, res, flags, (short) data);
+                    connectComplete(op, res, flags, data);
                 }
                 return;
             }
@@ -1085,7 +1091,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param flags         the flags.
          * @param data          the data that was passed when submitting the op.
          */
-        void connectComplete(byte op, int res, int flags, short data) {
+        void connectComplete(byte op, int res, int flags, long data) {
             ioState &= ~CONNECT_SCHEDULED;
             freeRemoteAddressMemory();
 

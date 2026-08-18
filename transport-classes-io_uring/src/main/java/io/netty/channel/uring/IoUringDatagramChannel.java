@@ -554,7 +554,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 sendmsgHdrs.clear();
                 ChannelOutboundBuffer outboundBuffer = outboundBuffer();
                 if (outboundBuffer == null) {
-                    // The completion may arrive after close() already dropped the outbound buffer.
+                    // The completion may arrive after close() or shutdownOutput() already dropped the
+                    // outbound buffer.
                     return true;
                 }
                 for (int i = 0; i < numWritten; i++) {
@@ -584,7 +585,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        void connectComplete(byte op, int res, int flags, short data) {
+        void connectComplete(byte op, int res, int flags, long data) {
             if (res >= 0) {
                 connected = true;
             }
