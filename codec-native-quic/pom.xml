@@ -620,7 +620,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>flatten-maven-plugin</artifactId>
         <configuration>
-          <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenDependencyMode>direct</flattenDependencyMode>
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
           <flattenMode>ossrh</flattenMode>
         </configuration>
