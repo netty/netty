@@ -1852,7 +1852,7 @@
               <encoding>UTF-8</encoding>
               <sourceDirectories>${basedir}</sourceDirectories>
               <includes>**/*</includes>
-              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
+              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class,**/.github/ghsa/**</excludes>
             </configuration>
             <goals>
               <goal>check</goal>
