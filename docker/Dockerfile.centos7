@@ -5,6 +5,11 @@ ARG openssl_sha256=b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a
 ENV OPENSSL_VERSION $openssl_version
 ENV OPENSSL_SHA256 $openssl_sha256
 
+ARG patchelf_version=0.18.0
+ARG patchelf_sha256=ce84f2447fb7a8679e58bc54a20dc2b01b37b5802e12c57eece772a6f14bf3f0
+ENV PATCHELF_VERSION $patchelf_version
+ENV PATCHELF_SHA256 $patchelf_sha256
+
 ENV SOURCE_DIR=/root/source
 ENV LIBS_DIR=/root/libs
 ENV CMAKE_VERSION_BASE=3.26
@@ -52,6 +57,16 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 
 RUN yum -y install devtoolset-11-gcc devtoolset-11-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-11/enable' >> ~/.bashrc
+
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. The upstream release is a
+# fully static binary with no DT_NEEDED of its own, so it runs on this ancient base as-is - and
+# EPEL 7, the obvious alternative, is archived.
+RUN wget -q https://github.com/NixOS/patchelf/releases/download/$PATCHELF_VERSION/patchelf-$PATCHELF_VERSION-x86_64.tar.gz && \
+  echo "$PATCHELF_SHA256  patchelf-$PATCHELF_VERSION-x86_64.tar.gz" | sha256sum -c - && \
+  tar zxf patchelf-$PATCHELF_VERSION-x86_64.tar.gz -C /usr/local ./bin/patchelf && \
+  rm patchelf-$PATCHELF_VERSION-x86_64.tar.gz && \
+  patchelf --version
 
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
 RUN wget -q https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc

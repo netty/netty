@@ -1,5 +1,10 @@
 FROM --platform=linux/amd64 centos:7.9.2009
 
+ARG patchelf_version=0.18.0
+ARG patchelf_sha256=ce84f2447fb7a8679e58bc54a20dc2b01b37b5802e12c57eece772a6f14bf3f0
+ENV PATCHELF_VERSION $patchelf_version
+ENV PATCHELF_SHA256 $patchelf_sha256
+
 ARG gcc_version=10.3-2021.07
 ENV GCC_VERSION=$gcc_version
 ENV SOURCE_DIR=/root/source
@@ -37,6 +42,16 @@ RUN yum install -y \
  unzip \
  wget \
  zip
+
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. The upstream release is a
+# fully static binary with no DT_NEEDED of its own, so it runs on this ancient base as-is - and
+# EPEL 7, the obvious alternative, is archived.
+RUN wget -q https://github.com/NixOS/patchelf/releases/download/$PATCHELF_VERSION/patchelf-$PATCHELF_VERSION-x86_64.tar.gz && \
+  echo "$PATCHELF_SHA256  patchelf-$PATCHELF_VERSION-x86_64.tar.gz" | sha256sum -c - && \
+  tar zxf patchelf-$PATCHELF_VERSION-x86_64.tar.gz -C /usr/local ./bin/patchelf && \
+  rm patchelf-$PATCHELF_VERSION-x86_64.tar.gz && \
+  patchelf --version
 
 # Install Java
 RUN yum install -y java-11-openjdk-devel

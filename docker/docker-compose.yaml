@@ -37,6 +37,13 @@ services:
       ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
 
+  # Build just what netty-codec-native-quic needs, and install it so the musl verification legs
+  # can pick the jars out of ~/.m2. `build` above runs the whole reactor plus its tests, which is
+  # far more than a load check needs.
+  build-native-quic:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -pl codec-native-quic -am clean install -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+
   deploy:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp clean deploy -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"

@@ -211,7 +211,21 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-static-libstdc++ -l:libstdc++.a -Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
+        <!-- The libgcc archives must come *after* libstdc++.a and libquiche.a: those are what pull
+             in the _Unwind_* symbols, and libgcc_eh.a is what defines them. Linking them
+             statically is what keeps libgcc_s.so.1 out of DT_NEEDED - `gcc_s.` is not one of the
+             names musl reserves, so on Alpine that entry is a real file lookup, and it fails on
+             any image without the `libgcc` package. Alpine JDK images disagree about shipping it:
+             eclipse-temurin does, amazoncorretto and a good number of vendor images do not, so the
+             dependency is not safe, merely invisible on some bases.
+
+             NOTE: spell this as `-l:` and never `-static-libgcc`. GNU libtool links the shared
+             library via archive_cmds, which expands only $libobjs $deplibs $compiler_flags; `-l*`
+             is parsed into deplibs, but `-static-lib*` falls into func_mode_link's catch-all
+             `-* | +*)` branch and reaches only the *program* link path, so gcc never sees it. That
+             is also why the -static-libstdc++ that used to sit here was doing nothing.
+             `grep dependency_libs target/native-build/lib${jniLibName}.la` shows what survived. -->
+        <extraLdflags>-l:libstdc++.a -l:libgcc.a -l:libgcc_eh.a -Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
       <dependencies>
@@ -499,7 +513,8 @@
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
-        <extraLdflags>-static-libstdc++ -l:libstdc++.a -Wl,--strip-debug -Wl,--exclude-libs,ALL</extraLdflags>
+        <!-- Same static unwinder as the `linux` profile above; see the note there. -->
+        <extraLdflags>-l:libstdc++.a -l:libgcc.a -l:libgcc_eh.a -Wl,--strip-debug -Wl,--exclude-libs,ALL</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch64</bundleNativeCode>
         <jniLibName>${jniLibPrefix}_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
@@ -1002,6 +1017,88 @@
                     <filter token="EXTRA_CFLAGS" value="${extraCflags}" />
                     <copy file="src/main/native-package/m4/custom.m4.template" tofile="${templateDir}/m4/custom.m4" filtering="true" overwrite="true" verbose="true" />
                   </else>
+                </if>
+              </target>
+            </configuration>
+          </execution>
+
+          <!-- Drop the DT_NEEDED on ld-linux-<arch>.so from the freshly linked library, before
+               anything copies it anywhere.
+
+               PHASE: process-test-resources, and declared immediately before
+               copy-native-lib-and-license rather than anywhere earlier. hawtjni 1.18 binds its
+               `generate` goal to process-classes but its `build` goal to generate-test-resources,
+               so the library does not exist until then; at process-classes there would be nothing
+               to patch. Executions of the same plugin in the same phase run in the order they are
+               declared here, which is what puts this ahead of the copy.
+
+               The entry gets recorded because __tls_get_addr lives in
+               glibc's loader, but musl defines that symbol itself, so only the *filename* lookup
+               fails: `ld-linux-...` does not start with `lib`, so it is not one of the names musl
+               satisfies internally, and the library is unloadable on Alpine purely because of it.
+               Removing it is a no-op on glibc, where the loader is already mapped.
+
+               Applied unconditionally on Linux rather than per architecture, because whether the
+               entry appears at all depends on the toolchain and link path: it is present in the
+               released x86_64 artifact and absent from the aarch64 cross build. patchelf exits 0
+               when the name is not there, so naming both is safe from either host.
+
+               Same approach as async-profiler:
+               https://github.com/async-profiler/async-profiler/blob/bb8f0476a1804ac77b48b84a3905fb26e9ca7428/Makefile#L156
+               and as netty-tcnative, see https://github.com/netty/netty-tcnative/issues/907 -->
+          <execution>
+            <id>remove-ld-linux-dt-needed</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+                <if>
+                  <and>
+                    <equals arg1="${os.detected.name}" arg2="linux" />
+                    <!-- The Android libraries are loaded by bionic, not by musl or glibc, and the
+                         android profile drives its own copy of this build. -->
+                    <not>
+                      <equals arg1="${platform}" arg2="android" />
+                    </not>
+                  </and>
+                  <then>
+                    <property environment="env" />
+                    <if>
+                      <not>
+                        <available file="patchelf" filepath="${env.PATH}" />
+                      </not>
+                      <then>
+                        <!-- Say so plainly rather than letting ant report an IOException from
+                             Execute. objcopy is not an alternative: it cannot remove a DT_NEEDED. -->
+                        <fail message="patchelf is required to build the Linux native library and was not found on PATH. It is installed in docker/Dockerfile.centos7 and docker/Dockerfile.cross_compile_aarch64; on a workstation install the distribution package or the upstream release from https://github.com/NixOS/patchelf/releases" />
+                      </then>
+                    </if>
+                    <!-- Located rather than spelled out: hawtjni nests its output under a
+                         platform directory, META-INF/native/linux64/lib<name>.so, which is why
+                         copy-native-lib-and-license below needs a regexpmapper to flatten it.
+                         The resourcecount check keeps a future layout change from turning this
+                         into a silent no-op, which is the one failure mode that would ship a
+                         broken artifact rather than break the build. -->
+                    <fileset id="nativeLibToPatch" dir="${nativeLibOnlyDir}/META-INF/native"
+                             includes="**/lib${jniLibName}.so" />
+                    <fail message="expected exactly one lib${jniLibName}.so under ${nativeLibOnlyDir}/META-INF/native to patch">
+                      <condition>
+                        <not>
+                          <resourcecount refid="nativeLibToPatch" count="1" />
+                        </not>
+                      </condition>
+                    </fail>
+                    <apply executable="patchelf" failonerror="true" resolveexecutable="true">
+                      <arg value="--remove-needed" />
+                      <arg value="ld-linux-x86-64.so.2" />
+                      <arg value="--remove-needed" />
+                      <arg value="ld-linux-aarch64.so.1" />
+                      <fileset refid="nativeLibToPatch" />
+                    </apply>
+                  </then>
                 </if>
               </target>
             </configuration>
