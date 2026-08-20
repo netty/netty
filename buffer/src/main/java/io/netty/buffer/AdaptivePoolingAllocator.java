@@ -125,7 +125,9 @@ final class AdaptivePoolingAllocator {
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
 
     static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
-            "io.netty.allocator.chunkPurgePollsThreadLocal", 16L));
+            "io.netty.allocator.chunkPurgePollsThreadLocal", 4L));
+
+    private static final int FULL_SWEEP_MULTIPLIER = 8;
 
     /**
      * Derivation basis for the per-size-class retention floor. No longer enforced as a cap.
@@ -902,7 +904,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         SizeClassedChunk forcePurge() {
-            runPurgeScan();
+            fullSweep();
             return pollChunkInternal();
         }
 
@@ -921,42 +923,35 @@ final class AdaptivePoolingAllocator {
             return scanExhaustedForCapacity();
         }
 
+        private static final int MAX_EXHAUSTED_SCAN_MOVE = 8;
+
         private SizeClassedChunk scanExhaustedForCapacity() {
+            SizeClassedChunk result = null;
             SizeClassedChunk cur = exhaustedHead;
-            while (cur != null) {
+            int moved = 0;
+            while (cur != null && moved < MAX_EXHAUSTED_SCAN_MOVE) {
                 SizeClassedChunk next = cur.nextInCache;
                 if (cur.hasRemainingCapacity()) {
                     removeFromExhausted(cur);
-                    detachFromCache(cur);
-                    return cur;
+                    if (result == null) {
+                        detachFromCache(cur);
+                        result = cur;
+                    } else {
+                        addToReusable(cur);
+                        moved++;
+                    }
                 }
                 cur = next;
             }
-            return null;
+            return result;
         }
 
         @Override
         public void tickPurge() {
-            runPurgeScan();
-        }
-
-        private void runPurgeScan() {
-            // Sweep exhausted list: detect chunks that gained capacity via external returns
-            SizeClassedChunk cur = exhaustedHead;
-            while (cur != null) {
-                SizeClassedChunk next = cur.nextInCache;
-                if (cur.hasRemainingCapacity()) {
-                    removeFromExhausted(cur);
-                    addToReusable(cur);
-                }
-                cur = next;
-            }
-
-            // Sweep reusable list: evict fully-free chunks above retention floor.
-            // No epoch aging — Signal B handles inline eviction for same-thread returns.
-            // This sweep catches cross-thread returns that made chunks fully free.
+            // Frequent bounded: evict fully-free reusable chunks above retention floor.
+            // Exhausted→reusable is handled on demand by scanExhaustedForCapacity (bounded).
             int total = totalCount();
-            cur = reusableHead;
+            SizeClassedChunk cur = reusableHead;
             while (cur != null && total > purgeRetentionFloor) {
                 SizeClassedChunk next = cur.nextInCache;
                 if (cur.hasFullCapacity()) {
@@ -967,6 +962,22 @@ final class AdaptivePoolingAllocator {
                 }
                 cur = next;
             }
+        }
+
+        void fullSweep() {
+            // Rare unbounded: sweep exhausted list for chunks with capacity from
+            // cross-thread MPSC returns that the bounded scan didn't reach.
+            SizeClassedChunk cur = exhaustedHead;
+            while (cur != null) {
+                SizeClassedChunk next = cur.nextInCache;
+                if (cur.hasRemainingCapacity()) {
+                    removeFromExhausted(cur);
+                    addToReusable(cur);
+                }
+                cur = next;
+            }
+            // Then do the eviction sweep
+            tickPurge();
         }
 
         @Override
@@ -1318,6 +1329,7 @@ final class AdaptivePoolingAllocator {
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
+        private int purgeCount;
         boolean purgeFired;
 
         // Size-classed magazine constructor (both thread-local and shared-stripe)
@@ -1351,7 +1363,12 @@ final class AdaptivePoolingAllocator {
         private void tickAllocPurge() {
             if (purgeTickThreshold > 0 && ++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
-                chunkCache.tickPurge();
+                if (++purgeCount >= FULL_SWEEP_MULTIPLIER) {
+                    purgeCount = 0;
+                    ((ThreadLocalSizeClassedChunkCache) chunkCache).fullSweep();
+                } else {
+                    chunkCache.tickPurge();
+                }
                 purgeFired = true;
             }
         }
@@ -1920,10 +1937,10 @@ final class AdaptivePoolingAllocator {
         private void detectCacheTransition(int cls) {
             if (cls == CACHE_EXHAUSTED) {
                 owningCache.moveToReusable(this);
-                if (localFreeList.size() == segments) {
+                if (hasFullCapacity()) {
                     owningCache.evictIfAboveFloor(this);
                 }
-            } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
+            } else if (cls == CACHE_REUSABLE && hasFullCapacity()) {
                 owningCache.evictIfAboveFloor(this);
             }
         }
