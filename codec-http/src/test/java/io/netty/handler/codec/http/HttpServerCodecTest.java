@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpServerCodecTest {
@@ -579,6 +581,45 @@ public class HttpServerCodecTest {
         buf.release();
 
         assertFalse(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testMaxPipelineDepthLimited() {
+        HttpServerCodec codec = new HttpServerCodec(new HttpDecoderConfig(), 2);
+        final EmbeddedChannel ch = new EmbeddedChannel(codec);
+
+        final ByteBuf request = Unpooled.copiedBuffer(
+                "GET / HTTP/1.1\r\nHost: netty.io\r\nContent-Length: 0\r\n\r\n", CharsetUtil.US_ASCII);
+        try {
+            assertTrue(ch.writeInbound(request.retainedDuplicate()));
+            HttpRequest req = ch.readInbound();
+            LastHttpContent content = ch.readInbound();
+            content.release();
+            assertTrue(ch.writeInbound(request.retainedDuplicate()));
+            req = ch.readInbound();
+            content = ch.readInbound();
+            content.release();
+
+            assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.writeInbound(request.retainedDuplicate());
+                }
+            });
+
+            // This one will be just discarded
+            assertFalse(ch.writeInbound(
+                request.retainedDuplicate()));
+
+            // Writing the response will close the channel.
+            assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
+            ReferenceCountUtil.release(ch.readOutbound());
+
+            assertFalse(ch.isActive());
+        } finally {
+            request.release();
+            ch.finishAndReleaseAll();
+        }
     }
 
     private static ByteBuf prepareDataChunk(int size) {
