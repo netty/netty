@@ -503,8 +503,8 @@ public abstract class Recycler<T> {
         private final int ratioInterval;
         private final H[] batch;
         private int batchSize;
-        private Thread owner;
-        private MessagePassingQueue<H> pooledHandles;
+        private volatile Thread owner;
+        private volatile MessagePassingQueue<H> pooledHandles;
         private int ratioCounter;
 
         LocalPool(int maxCapacity) {
