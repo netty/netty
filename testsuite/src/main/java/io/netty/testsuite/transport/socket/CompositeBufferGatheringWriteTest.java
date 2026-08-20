@@ -217,6 +217,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
                                 latch.countDown();
+                            } else if (!cause.getMessage().contains("reset")) {
+                                logger.warn("{} server got weird exception",
+                                        CompositeBufferGatheringWriteTest.this.getClass(), cause);
                             }
                         }
                     });
@@ -249,6 +252,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
                                 latch.countDown();
+                            } else if (!cause.getMessage().contains("reset")) {
+                                logger.warn("{} client got weird exception",
+                                        CompositeBufferGatheringWriteTest.this.getClass(), cause);
                             }
                         }
 
