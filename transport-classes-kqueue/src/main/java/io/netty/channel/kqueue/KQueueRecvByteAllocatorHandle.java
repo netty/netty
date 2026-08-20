@@ -71,7 +71,8 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
 
     @Override
     public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
+        // If we received EOF we need to continue reading until there is nothing left.
+        return isReadEOF() || ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
     }
 
     @Override
