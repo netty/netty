@@ -32,7 +32,7 @@ public class QpackUtilTest {
     // continuation byte (it does not fit in the final, non-continuation byte, which can only hold 0-127).
     // For a 6-bit prefix (nbits = 63) this first happens at value 191 (63 + 128).
     @Test
-    public void encodeDecodeRoundTripsAtContinuationByteBoundary() {
+    public void encodeDecodeRoundTripsAtContinuationByteBoundary() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         try {
             for (int prefixLength = 1; prefixLength <= 8; prefixLength++) {
@@ -58,7 +58,7 @@ public class QpackUtilTest {
     }
 
     @Test
-    public void encodeDecodeRoundTripsOverWideRange() {
+    public void encodeDecodeRoundTripsOverWideRange() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         try {
             for (int prefixLength : new int[] { 4, 5, 6, 7, 8 }) {
@@ -72,7 +72,7 @@ public class QpackUtilTest {
         }
     }
 
-    private static void assertRoundTrip(ByteBuf buf, int prefixLength, long value) {
+    private static void assertRoundTrip(ByteBuf buf, int prefixLength, long value) throws Exception {
         encodePrefixedInteger(buf, (byte) 0, prefixLength, value);
         assertThat("Round trip failed for prefixLength=" + prefixLength + ", value=" + value,
             decodePrefixedInteger(buf, prefixLength), is(value));
