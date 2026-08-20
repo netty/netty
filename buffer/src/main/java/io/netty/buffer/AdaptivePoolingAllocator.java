@@ -119,8 +119,7 @@ final class AdaptivePoolingAllocator {
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
-     * The capacity of the chunk reuse queues, that allow chunks to be shared across magazines in a stripe.
-     * The default size is twice {@link NettyRuntime#availableProcessors()}.
+     * The capacity of the buddy chunk cache (large buffer reuse).
      */
     static final int CHUNK_REUSE_QUEUE = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
@@ -129,14 +128,14 @@ final class AdaptivePoolingAllocator {
             "io.netty.allocator.chunkPurgePollsThreadLocal", 16L));
 
     /**
-     * Per-size-class upper bound (in bytes) on the thread-local chunk cache.
+     * Derivation basis for the per-size-class retention floor. No longer enforced as a cap.
      */
     static final int THREAD_LOCAL_CACHE_MAX_BYTES = Math.max(1, SystemPropertyUtil.getInt(
             "io.netty.allocator.threadLocalChunkCacheMaxBytes", 8 * 1024 * 1024));
 
     /**
-     * Per-size-class lower bound (in bytes) on the thread-local chunk cache.
-     * Clamped to {@link #THREAD_LOCAL_CACHE_MAX_BYTES} if the configured value exceeds it.
+     * Per-size-class retention floor (in bytes) on the chunk cache.
+     * Chunks below this floor are kept cached to avoid hysteresis.
      */
     static final int THREAD_LOCAL_CACHE_MIN_BYTES = Math.min(THREAD_LOCAL_CACHE_MAX_BYTES,
             Math.max(1, SystemPropertyUtil.getInt(
@@ -458,13 +457,6 @@ final class AdaptivePoolingAllocator {
                 @SuppressWarnings("unchecked")
                 T element = (T) elements[i];
                 action.accept(element);
-                elements[i] = null;
-            }
-            size = 0;
-        }
-
-        void clear() {
-            for (int i = 0; i < size; i++) {
                 elements[i] = null;
             }
             size = 0;
@@ -877,24 +869,17 @@ final class AdaptivePoolingAllocator {
             addToReusable(chunk);
         }
 
-        // Called from releaseSegment (Signal B, thread-local): reusable → eviction (if above floor)
-        void signalFullyFree(SizeClassedChunk chunk) {
-            if (totalCount() > purgeRetentionFloor) {
+        void evictIfAboveFloor(SizeClassedChunk chunk) {
+            if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
                 removeFromReusable(chunk);
                 detachFromCache(chunk);
                 chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
             }
-            // At or below floor: chunk stays in reusable list (it has full capacity,
-            // available for pollChunk). This preserves a warm cache for the next burst.
         }
 
-        // Called from releaseSegment on the cross-thread path. Attempts the stripe
-        // lock; if acquired, pushes the segment to localFreeList (plain push, no MPSC
-        // CAS) and handles cache list transitions. Returns true if the segment was
-        // handled under the lock, false if the caller should fall back to MPSC offer.
         boolean tryReturnSegmentUnderLock(SizeClassedChunk chunk, int startIndex) {
             if (stripeLock == null) {
-                return false; // thread-local cache, cross-thread return — fall back to MPSC
+                return false;
             }
             long stamp = stripeLock.tryWriteLock();
             if (stamp == 0) {
@@ -904,22 +889,11 @@ final class AdaptivePoolingAllocator {
                 chunk.localFreeList.push(startIndex);
                 int cls = chunk.cacheListState;
                 if (cls == SizeClassedChunk.CACHE_EXHAUSTED) {
-                    removeFromExhausted(chunk);
-                    if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
-                        detachFromCache(chunk);
-                        chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
-                    } else {
-                        addToReusable(chunk);
-                    }
+                    moveToReusable(chunk);
+                    evictIfAboveFloor(chunk);
                 } else if (cls == SizeClassedChunk.CACHE_REUSABLE) {
-                    if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
-                        removeFromReusable(chunk);
-                        detachFromCache(chunk);
-                        chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
-                    }
+                    evictIfAboveFloor(chunk);
                 }
-                // CACHE_NONE: chunk is in a magazine. Segment pushed to local freelist —
-                // the magazine will pop it during allocation. No list transition needed.
             } finally {
                 stripeLock.unlockWrite(stamp);
             }
@@ -1946,8 +1920,11 @@ final class AdaptivePoolingAllocator {
         private void detectCacheTransition(int cls) {
             if (cls == CACHE_EXHAUSTED) {
                 owningCache.moveToReusable(this);
+                if (localFreeList.size() == segments) {
+                    owningCache.evictIfAboveFloor(this);
+                }
             } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
-                owningCache.signalFullyFree(this);
+                owningCache.evictIfAboveFloor(this);
             }
         }
 

@@ -271,12 +271,12 @@ public class SizeClassedChunkCacheTest {
             cache.offerChunk(chunkWithCapacity());
         }
 
-        SizeClassedChunk chunk = chunkWithCapacity();
+        SizeClassedChunk chunk = fullChunk();
         cache.offerChunk(chunk);
         int countBefore = cache.reusableCount;
 
-        // Simulate Signal B: inline call from releaseSegment
-        cache.signalFullyFree(chunk);
+        // Simulate Signal B: chunk is fully free, above floor → evict
+        cache.evictIfAboveFloor(chunk);
 
         assertEquals(countBefore - 1, cache.reusableCount);
         verify(chunk).recycleOrDeallocate(null, 0);
@@ -290,7 +290,7 @@ public class SizeClassedChunkCacheTest {
         SizeClassedChunk chunk = chunkWithCapacity();
         cache.offerChunk(chunk);
 
-        cache.signalFullyFree(chunk);
+        cache.evictIfAboveFloor(chunk);
 
         // Chunk stays in reusable list
         assertEquals(1, cache.reusableCount);
