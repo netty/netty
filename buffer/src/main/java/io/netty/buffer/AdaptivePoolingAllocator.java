@@ -1869,18 +1869,11 @@ final class AdaptivePoolingAllocator {
         }
 
         private int nextAvailableSegmentOffset() {
-            final int startIndex;
             IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null) {
-                if (localFreeList.isEmpty()) {
-                    startIndex = externalFreeList.poll();
-                } else {
-                    startIndex = localFreeList.pop();
-                }
-            } else {
-                startIndex = externalFreeList.poll();
+            if (!localFreeList.isEmpty()) {
+                return localFreeList.pop();
             }
-            return startIndex;
+            return externalFreeList.poll();
         }
 
         // this can be used by the ConcurrentQueueChunkCache to find the first buffer to use:
@@ -1891,19 +1884,12 @@ final class AdaptivePoolingAllocator {
             if (remaining > 0) {
                 return true;
             }
-            if (localFreeList != null) {
-                return !localFreeList.isEmpty();
-            }
-            return !externalFreeList.isEmpty();
+            return !localFreeList.isEmpty() || !externalFreeList.isEmpty();
         }
 
         boolean hasFullCapacity() {
-            int free = externalFreeList.size();
-            IntStack local = localFreeList;
-            if (local != null) {
-                free += local.size();
-            }
-            return free == segments;
+            int localSize = localFreeList.size();
+            return localSize == segments || localSize + externalFreeList.size() == segments;
         }
 
         @Override
@@ -1913,11 +1899,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private int updateRemainingCapacity(int snapshotted) {
-            int freeSegments = externalFreeList.size();
-            IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null) {
-                freeSegments += localFreeList.size();
-            }
+            int freeSegments = externalFreeList.size() + localFreeList.size();
             int updated = freeSegments * segmentSize;
             if (updated != snapshotted) {
                 allocatedBytes = capacity() - updated;
@@ -1926,8 +1908,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private void releaseSegmentOffsetIntoFreeList(int startIndex) {
-            IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null && Thread.currentThread() == ownerThread) {
+            if (ownerThread != null && Thread.currentThread() == ownerThread) {
                 localFreeList.push(startIndex);
             } else {
                 boolean segmentReturned = externalFreeList.offer(startIndex);
@@ -1937,16 +1918,15 @@ final class AdaptivePoolingAllocator {
 
         @Override
         void releaseSegment(int startIndex, int size) {
-            IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null && Thread.currentThread() == ownerThread) {
+            if (ownerThread != null && Thread.currentThread() == ownerThread) {
                 localFreeList.push(startIndex);
                 int state = this.state;
                 if (state != AVAILABLE) {
-                    updateStateOnLocalReleaseSegment(state, localFreeList);
+                    updateStateOnLocalReleaseSegment(state);
                 } else {
                     int cls = cacheListState;
                     if (cls != CACHE_NONE) {
-                        detectCacheTransition(cls, localFreeList);
+                        detectCacheTransition(cls);
                     }
                 }
             } else {
@@ -1963,19 +1943,15 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        private void detectCacheTransition(int cls, IntStack localFreeList) {
-            ThreadLocalSizeClassedChunkCache cache = owningCache;
-            if (cache == null) {
-                return;
-            }
+        private void detectCacheTransition(int cls) {
             if (cls == CACHE_EXHAUSTED) {
-                cache.moveToReusable(this);
+                owningCache.moveToReusable(this);
             } else if (cls == CACHE_REUSABLE && localFreeList.size() == segments) {
-                cache.signalFullyFree(this);
+                owningCache.signalFullyFree(this);
             }
         }
 
-        private void updateStateOnLocalReleaseSegment(int previousLocalSize, IntStack localFreeList) {
+        private void updateStateOnLocalReleaseSegment(int previousLocalSize) {
             int newLocalSize = localFreeList.size();
             boolean alwaysTrue = STATE.compareAndSet(this, previousLocalSize, newLocalSize);
             assert alwaysTrue : "this shouldn't happen unless double release in the local free list";
