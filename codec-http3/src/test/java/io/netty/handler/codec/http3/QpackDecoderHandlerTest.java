@@ -252,6 +252,101 @@ public class QpackDecoderHandlerTest {
         finishStreams(false);
     }
 
+    // A malicious/non-compliant decoder that keeps acknowledging dynamic-table insertions (so the encoder keeps
+    // reusing the same entry) but never sends the mandatory Section Acknowledgment/Stream Cancellation for each
+    // field section must not be able to grow the encoder's per-connection tracking state without bound.
+    // See https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2
+    @Test
+    public void outstandingSectionTrackingIsBounded() throws Exception {
+        setup(128L);
+
+        // Insert the entry once. The insert itself is encoded as a literal to avoid blocking the decoder before
+        // it has seen the insert, so it does not create an outstanding section tracker.
+        encodeHeaders(0, headers -> headers.add(fooBar.name, fooBar.value));
+        sendInsertCountIncrement(1);
+        assertThat(encoder.outstandingSectionCount(), is(0));
+
+        // Reference the now-known entry from MAX_OUTSTANDING_SECTIONS distinct streams, without ever sending a
+        // Section Acknowledgment or Stream Cancellation for any of them.
+        for (long streamId = 1; streamId <= QpackEncoder.MAX_OUTSTANDING_SECTIONS; streamId++) {
+            encodeHeaders(streamId, headers -> headers.add(fooBar.name, fooBar.value));
+        }
+        assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS));
+
+        // The limit is reached: further field sections must fall back to literal encoding instead of growing
+        // the tracker map any further.
+        long overflowStreamId = QpackEncoder.MAX_OUTSTANDING_SECTIONS + 1;
+        ByteBuf out = decoderStream.alloc().buffer();
+        try {
+            encodeHeaders(overflowStreamId, headers -> headers.add(fooBar.name, fooBar.value), out);
+            assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS));
+            assertThat("Field section beyond the tracking limit must be encoded as a literal.",
+                    isLiteralFieldLineWithLiteralName(out), is(true));
+        } finally {
+            out.release();
+        }
+
+        // Acknowledging one outstanding section frees up tracking capacity again, and the dynamic table is used
+        // once more for the next field section.
+        sendAckForStreamId(1);
+        assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS - 1));
+
+        long resumedStreamId = overflowStreamId + 1;
+        out = decoderStream.alloc().buffer();
+        try {
+            encodeHeaders(resumedStreamId, headers -> headers.add(fooBar.name, fooBar.value), out);
+            assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS));
+            assertThat("Dynamic table must be used again once tracking capacity frees up.",
+                    isIndexedFieldLineWithDynamicTable(out), is(true));
+        } finally {
+            out.release();
+        }
+
+        // Clean up all remaining outstanding sections so the test itself does not leak state.
+        for (long streamId = 2; streamId <= QpackEncoder.MAX_OUTSTANDING_SECTIONS; streamId++) {
+            sendStreamCancellation(streamId);
+        }
+        sendStreamCancellation(resumedStreamId);
+        assertThat(encoder.outstandingSectionCount(), is(0));
+
+        finishStreams();
+    }
+
+    @Test
+    public void streamCancellationFreesOutstandingSectionTrackingCapacity() throws Exception {
+        setup(128L);
+
+        encodeHeaders(0, headers -> headers.add(fooBar.name, fooBar.value));
+        sendInsertCountIncrement(1);
+
+        for (long streamId = 1; streamId <= QpackEncoder.MAX_OUTSTANDING_SECTIONS; streamId++) {
+            encodeHeaders(streamId, headers -> headers.add(fooBar.name, fooBar.value));
+        }
+        assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS));
+
+        // Cancelling a stream with a still-pending field section also frees up tracking capacity.
+        sendStreamCancellation(1);
+        assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS - 1));
+
+        long resumedStreamId = QpackEncoder.MAX_OUTSTANDING_SECTIONS + 1;
+        ByteBuf out = decoderStream.alloc().buffer();
+        try {
+            encodeHeaders(resumedStreamId, headers -> headers.add(fooBar.name, fooBar.value), out);
+            assertThat(isIndexedFieldLineWithDynamicTable(out), is(true));
+        } finally {
+            out.release();
+        }
+        assertThat(encoder.outstandingSectionCount(), is(QpackEncoder.MAX_OUTSTANDING_SECTIONS));
+
+        for (long streamId = 2; streamId <= QpackEncoder.MAX_OUTSTANDING_SECTIONS; streamId++) {
+            sendStreamCancellation(streamId);
+        }
+        sendStreamCancellation(resumedStreamId);
+        assertThat(encoder.outstandingSectionCount(), is(0));
+
+        finishStreams();
+    }
+
     @Test
     public void invalidIncrement() throws Exception {
         setup(128);
@@ -308,14 +403,44 @@ public class QpackDecoderHandlerTest {
     }
 
     private void encodeHeaders(Consumer<Http3Headers> headersUpdater) {
+        encodeHeaders(decoderStream.streamId(), headersUpdater);
+    }
+
+    private void encodeHeaders(long streamId, Consumer<Http3Headers> headersUpdater, ByteBuf out) {
         Http3Headers headers = new DefaultHttp3Headers();
         headersUpdater.accept(headers);
-        final ByteBuf buf = decoderStream.alloc().buffer();
+        encoder.encodeHeaders(attributes, out, decoderStream.alloc(), streamId, headers);
+    }
+
+    private void encodeHeaders(long streamId, Consumer<Http3Headers> headersUpdater) {
+        ByteBuf out = decoderStream.alloc().buffer();
         try {
-            encoder.encodeHeaders(attributes, buf, decoderStream.alloc(), decoderStream.streamId(), headers);
+            encodeHeaders(streamId, headersUpdater, out);
         } finally {
-            buf.release();
+            out.release();
         }
+    }
+
+    private static boolean isLiteralFieldLineWithLiteralName(ByteBuf encoded) {
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
+        //   0   1   2   3   4   5   6   7
+        //   +---+---+---+---+---+---+---+---+
+        //   | 0 | 0 | 1 | N | H |NameLen(3+)|
+        //   +---+---+---+---+---+-----------+
+        // Section prefix is 2 bytes (required insert count + delta base) when both fit in a single byte.
+        int firstLiteralByte = encoded.getByte(2) & 0xFF;
+        return (firstLiteralByte & 0b1110_0000) == 0b0010_0000;
+    }
+
+    private static boolean isIndexedFieldLineWithDynamicTable(ByteBuf encoded) {
+        // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
+        //   0   1   2   3   4   5   6   7
+        // +---+---+---+---+---+---+---+---+
+        // | 1 | T |      Index (6+)       |
+        // +---+---+-----------------------+
+        // T = 0 for the dynamic table.
+        int firstLiteralByte = encoded.getByte(2) & 0xFF;
+        return (firstLiteralByte & 0b1100_0000) == 0b1000_0000;
     }
 
     private void setup(long maxTableCapacity) throws Exception {
