@@ -888,43 +888,42 @@ final class AdaptivePoolingAllocator {
             // available for pollChunk). This preserves a warm cache for the next burst.
         }
 
-        // Called from releaseSegment on the external (cross-thread) path.
-        // Mirrors mimalloc's freeBlockMt → tryWriteLock → freeLocal pattern:
-        // attempt the stripe lock, and if acquired, process both Signal A and Signal B.
-        // If the lock is contended (allocation in progress), skip — the allocation
-        // path handles transitions during pollChunk/runPurgeScan.
-        void tryProcessExternalReturn(SizeClassedChunk chunk) {
+        // Called from releaseSegment on the cross-thread path. Attempts the stripe
+        // lock; if acquired, pushes the segment to localFreeList (plain push, no MPSC
+        // CAS) and handles cache list transitions. Returns true if the segment was
+        // handled under the lock, false if the caller should fall back to MPSC offer.
+        boolean tryReturnSegmentUnderLock(SizeClassedChunk chunk, int startIndex) {
             if (stripeLock == null) {
-                return; // thread-local cache, cross-thread return — deferred to purge
+                return false; // thread-local cache, cross-thread return — fall back to MPSC
             }
             long stamp = stripeLock.tryWriteLock();
             if (stamp == 0) {
-                return;
+                return false;
             }
             try {
+                chunk.localFreeList.push(startIndex);
                 int cls = chunk.cacheListState;
                 if (cls == SizeClassedChunk.CACHE_EXHAUSTED) {
-                    // Signal A: chunk gained capacity. Move to reusable.
-                    if (chunk.hasRemainingCapacity()) {
-                        removeFromExhausted(chunk);
-                        if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
-                            detachFromCache(chunk);
-                            chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
-                        } else {
-                            addToReusable(chunk);
-                        }
+                    removeFromExhausted(chunk);
+                    if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
+                        detachFromCache(chunk);
+                        chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                    } else {
+                        addToReusable(chunk);
                     }
                 } else if (cls == SizeClassedChunk.CACHE_REUSABLE) {
-                    // Signal B: check if all segments returned.
                     if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
                         removeFromReusable(chunk);
                         detachFromCache(chunk);
                         chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
                     }
                 }
+                // CACHE_NONE: chunk is in a magazine. Segment pushed to local freelist —
+                // the magazine will pop it during allocation. No list transition needed.
             } finally {
                 stripeLock.unlockWrite(stamp);
             }
+            return true;
         }
 
         @Override
@@ -1202,6 +1201,12 @@ final class AdaptivePoolingAllocator {
                 offsets[i] = segmentOffset;
             }
             return new IntStack(offsets);
+        }
+
+        private IntStack createEmptyLocalFreeList() {
+            final int segmentsCount = chunkSize / segmentSize;
+            int[] offsets = new int[segmentsCount];
+            return new IntStack(offsets, -1);
         }
 
         @Override
@@ -1715,6 +1720,11 @@ final class AdaptivePoolingAllocator {
             top = initialValues.length - 1;
         }
 
+        IntStack(int[] backingArray, int initialTop) {
+            stack = backingArray;
+            top = initialTop;
+        }
+
         public boolean isEmpty() {
             return top == -1;
         }
@@ -1801,7 +1811,7 @@ final class AdaptivePoolingAllocator {
             owningCache = (ThreadLocalSizeClassedChunkCache) magazine.chunkCache;
             if (ownerThread == null) {
                 externalFreeList = controller.createFreeList();
-                localFreeList = null;
+                localFreeList = controller.createEmptyLocalFreeList();
             } else {
                 externalFreeList = controller.createEmptyFreeList();
                 localFreeList = controller.createLocalFreeList();
@@ -1830,7 +1840,12 @@ final class AdaptivePoolingAllocator {
                 }
                 recycledFreeList.resetAndFill(0, segmentSize);
             } else {
-                localFreeList = null;
+                if (recycledLocalFreeList != null && recycledLocalFreeList.capacity() >= segments) {
+                    localFreeList = recycledLocalFreeList;
+                    localFreeList.refill(0, segmentSize);
+                } else {
+                    localFreeList = controller.createEmptyLocalFreeList();
+                }
                 recycledFreeList.resetAndFill(segments, segmentSize);
             }
         }
@@ -1857,7 +1872,6 @@ final class AdaptivePoolingAllocator {
             final int startIndex;
             IntStack localFreeList = this.localFreeList;
             if (localFreeList != null) {
-                assert Thread.currentThread() == ownerThread;
                 if (localFreeList.isEmpty()) {
                     startIndex = externalFreeList.poll();
                 } else {
@@ -1936,20 +1950,14 @@ final class AdaptivePoolingAllocator {
                     }
                 }
             } else {
-                int sizeAfterOffer = externalFreeList.offerAndGetSize(startIndex);
-                assert sizeAfterOffer >= 0 : "externalFreeList full";
-                // implicit StoreLoad barrier from MPSC offer()
-                int state = this.state;
-                if (state != AVAILABLE) {
-                    deallocateIfNeeded(state);
-                } else if (sizeAfterOffer == 1 || sizeAfterOffer == segments) {
-                    // Only attempt the stripe lock on transition boundaries:
-                    // sizeAfterOffer == 1: first segment return (Signal A candidate)
-                    // sizeAfterOffer == segments: all segments returned (Signal B candidate)
-                    // Mid-lifecycle returns (2..segments-1) skip entirely.
-                    ThreadLocalSizeClassedChunkCache cache = owningCache;
-                    if (cache != null) {
-                        cache.tryProcessExternalReturn(this);
+                if (!owningCache.tryReturnSegmentUnderLock(this, startIndex)) {
+                    // Lock not acquired — fall back to MPSC queue
+                    boolean segmentReturned = externalFreeList.offer(startIndex);
+                    assert segmentReturned;
+                    // implicit StoreLoad barrier from MPSC offer()
+                    int state = this.state;
+                    if (state != AVAILABLE) {
+                        deallocateIfNeeded(state);
                     }
                 }
             }

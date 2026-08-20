@@ -54,13 +54,6 @@ public interface MpscIntQueue {
     boolean offer(int value);
 
     /**
-     * Offer the given value and return the queue size after the addition.
-     * @param value The value to add to the queue.
-     * @return The approximate queue size after the offer, or {@code -1} if the queue is full.
-     */
-    int offerAndGetSize(int value);
-
-    /**
      * Remove and return the next value from the queue, or return the "empty" value if the queue is empty.
      * @return The next value or the "empty" value.
      */
@@ -188,33 +181,6 @@ public interface MpscIntQueue {
             lazySet(offset, value);
             // AWESOME :)
             return true;
-        }
-
-        @Override
-        public int offerAndGetSize(int value) {
-            if (value == emptyValue) {
-                throw new IllegalArgumentException("Cannot offer the \"empty\" value: " + emptyValue);
-            }
-            final int mask = this.mask;
-            long producerLimit = this.producerLimit;
-            long pIndex;
-            do {
-                pIndex = producerIndex;
-                if (pIndex >= producerLimit) {
-                    final long cIndex = consumerIndex;
-                    producerLimit = cIndex + mask + 1;
-                    if (pIndex >= producerLimit) {
-                        return -1;
-                    } else {
-                        PRODUCER_LIMIT.lazySet(this, producerLimit);
-                    }
-                }
-            } while (!PRODUCER_INDEX.compareAndSet(this, pIndex, pIndex + 1));
-            final int offset = (int) (pIndex & mask);
-            lazySet(offset, value);
-            // pIndex + 1 is the new producerIndex; consumerIndex is the snapshot from the CAS loop
-            // (or a fresh read if producerLimit was not exceeded). This is an approximation.
-            return (int) (pIndex + 1 - consumerIndex);
         }
 
         @Override
