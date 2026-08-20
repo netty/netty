@@ -68,7 +68,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
                 Channel ch = null;
                 try {
                     SocketAddress address = server.bindAndAccept();
-                    ReadHandler handler = new ReadHandler(PAYLOAD_BYTES, PAUSE_AFTER_BYTES, PAUSE_MILLIS);
+                    final ReadHandler handler = new ReadHandler(PAYLOAD_BYTES, PAUSE_AFTER_BYTES, PAUSE_MILLIS);
                     bootstrap.option(ChannelOption.AUTO_READ, false)
                         .option(ChannelOption.TCP_NODELAY, true)
                         .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(CHUNK_BYTES))
