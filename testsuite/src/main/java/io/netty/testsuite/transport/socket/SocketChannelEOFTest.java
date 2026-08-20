@@ -212,7 +212,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
         private final long sendBytes;
         private final ServerSocket serverSocket;
         private final Promise<Void> result = ImmediateEventExecutor.INSTANCE.newPromise();
-        private final AtomicReference<Socket> accepted = new AtomicReference<>();
+        private final AtomicReference<Socket> accepted = new AtomicReference<Socket>();
         private Thread thread;
 
         PayloadServer(long sendBytes) throws IOException {
