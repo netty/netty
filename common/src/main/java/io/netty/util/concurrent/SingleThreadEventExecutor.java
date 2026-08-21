@@ -1480,6 +1480,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             threadStartIssued.set(false);
                             // Let the next thread take over if needed.
                             processingLock.unlock();
+                            // execute() or shutdown may have moved us to ST_STARTED / SHUTTING_DOWN
+                            // while this thread still held threadStartIssued (e.g. during removeAll).
+                            int currentState = state;
+                            if (currentState == ST_STARTED
+                                    || (currentState >= ST_SHUTTING_DOWN && currentState < ST_TERMINATED)) {
+                                issueDoStartThread();
+                            }
                         }
                     }
                 }

@@ -824,6 +824,9 @@ public class SingleThreadEventExecutorTest {
                         task.run();
                     }
                     if (isSuspended()) {
+                        // Suspension requested: return so the base class can suspend this thread.
+                        // Note: run() intentionally does not call canSuspend() so that the only
+                        // canSuspend(int) calls after arming are the base class' two checks.
                         return;
                     }
                 }
@@ -832,6 +835,9 @@ public class SingleThreadEventExecutorTest {
             @Override
             protected boolean canSuspend(int state) {
                 if (armed.get() && armedCanSuspendCalls.incrementAndGet() == 2) {
+                    // Second armed call is the re-engage check canSuspend(ST_SUSPENDED): at this
+                    // point the executor thread has already CAS'd the state to ST_SUSPENDED but
+                    // has not yet reset the start gate. Let an external execute() race in now.
                     executorThreadAtReengage.countDown();
                     boolean interrupted = false;
                     while (externalDone.getCount() > 0) {
@@ -854,13 +860,100 @@ public class SingleThreadEventExecutorTest {
             }
         };
 
+        // Start the executor thread and make sure it is parked in takeTask().
+        LatchTask started = new LatchTask();
+        executor.execute(started);
+        started.await();
+
+        // Arm the interception, then request suspension, then wait for executor to hit suspension point.
+        armed.set(true);
+        assertTrue(executor.trySuspend());
+        assertTrue(executorThreadAtReengage.await(5, TimeUnit.SECONDS));
+
+        // Racy external submission: CASing state from ST_SUSPENDED to ST_STARTED.
+        // Despite the race, this *should* punt the executor thread back to started *or* start a new executor
+        // thread (which will wait for the existing one to completely finish its suspension).
+        LatchTask raced = new LatchTask();
+        executor.execute(raced);
+
+        // Let the old executor thread finish suspending.
+        externalDone.countDown();
+
+        // The expected behavior is that the raced task must eventually run, and not leave the executor stuck
+        // in ST_STARTED state with no actual thread started.
+        assertTrue(raced.await(10, TimeUnit.SECONDS));
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    }
+
+    /**
+     * execute() after canSuspend(ST_SUSPENDED) returns true must not leave ST_STARTED with no thread.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testExecuteAfterSuspendDecisionDoesNotStrandExecutor() throws Exception {
+        final AtomicBoolean armed = new AtomicBoolean();
+        final AtomicInteger armedCanSuspendCalls = new AtomicInteger();
+        final CountDownLatch executorThreadPastSuspendDecision = new CountDownLatch(1);
+        final CountDownLatch externalDone = new CountDownLatch(1);
+
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                null, new DefaultThreadFactory("suspend-post-decision"), false, true,
+                Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+            @Override
+            protected void run() {
+                for (;;) {
+                    if (confirmShutdown()) {
+                        return;
+                    }
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                    if (isSuspended()) {
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            protected boolean canSuspend(int state) {
+                if (armed.get() && armedCanSuspendCalls.incrementAndGet() == 2) {
+                    // Re-engage check passed; block before returning so execute() races during
+                    // wind-down while threadStartIssued is still held (e.g. in removeAll).
+                    boolean can = super.canSuspend(state);
+                    if (can) {
+                        executorThreadPastSuspendDecision.countDown();
+                        boolean interrupted = false;
+                        while (externalDone.getCount() > 0) {
+                            try {
+                                externalDone.await();
+                            } catch (InterruptedException e) {
+                                interrupted = true;
+                            }
+                        }
+                        if (interrupted) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    return can;
+                }
+                return super.canSuspend(state);
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                interruptThread();
+            }
+        };
+
         LatchTask started = new LatchTask();
         executor.execute(started);
         started.await();
 
         armed.set(true);
         assertTrue(executor.trySuspend());
-        assertTrue(executorThreadAtReengage.await(5, TimeUnit.SECONDS));
+        assertTrue(executorThreadPastSuspendDecision.await(5, TimeUnit.SECONDS));
 
         LatchTask raced = new LatchTask();
         executor.execute(raced);
