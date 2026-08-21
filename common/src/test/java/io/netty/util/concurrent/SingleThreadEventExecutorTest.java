@@ -800,6 +800,79 @@ public class SingleThreadEventExecutorTest {
     }
 
     /**
+     * execute() racing suspension must not leave the executor in ST_STARTED with no thread.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testExecuteRacingSuspensionDoesNotStrandExecutor() throws Exception {
+        final AtomicBoolean armed = new AtomicBoolean();
+        final AtomicInteger armedCanSuspendCalls = new AtomicInteger();
+        final CountDownLatch executorThreadAtReengage = new CountDownLatch(1);
+        final CountDownLatch externalDone = new CountDownLatch(1);
+
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                null, new DefaultThreadFactory("suspend-race"), false, true,
+                Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+            @Override
+            protected void run() {
+                for (;;) {
+                    if (confirmShutdown()) {
+                        return;
+                    }
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                    if (isSuspended()) {
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            protected boolean canSuspend(int state) {
+                if (armed.get() && armedCanSuspendCalls.incrementAndGet() == 2) {
+                    executorThreadAtReengage.countDown();
+                    boolean interrupted = false;
+                    while (externalDone.getCount() > 0) {
+                        try {
+                            externalDone.await();
+                        } catch (InterruptedException e) {
+                            interrupted = true;
+                        }
+                    }
+                    if (interrupted) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                return super.canSuspend(state);
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                interruptThread();
+            }
+        };
+
+        LatchTask started = new LatchTask();
+        executor.execute(started);
+        started.await();
+
+        armed.set(true);
+        assertTrue(executor.trySuspend());
+        assertTrue(executorThreadAtReengage.await(5, TimeUnit.SECONDS));
+
+        LatchTask raced = new LatchTask();
+        executor.execute(raced);
+
+        externalDone.countDown();
+
+        assertTrue(raced.await(10, TimeUnit.SECONDS));
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    }
+
+    /**
      * A never-started executor that receives a task before shutdown still starts a thread and runs it.
      */
     @Test

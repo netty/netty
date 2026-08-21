@@ -135,6 +135,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
 
+    private final Runnable neverStartedQuietPeriodTask = new Runnable() {
+        @Override
+        public void run() {
+            onNeverStartedQuietPeriodTimer();
+        }
+    };
+
     /**
      * Create a new instance
      *
@@ -1164,6 +1171,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 try {
                     issueDoStartThread();
                     success = true;
+                    // execute() may have moved ST_SUSPENDED -> ST_STARTED while this thread is still
+                    // winding down; wake it so it re-engages instead of exiting with no replacement.
+                    if (currentState == ST_SUSPENDED && thread != null) {
+                        wakeup(false);
+                    }
                 } finally {
                     if (!success) {
                         STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
@@ -1257,13 +1269,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             GlobalEventExecutor.INSTANCE.schedule(neverStartedQuietPeriodTask, timeoutNanos, TimeUnit.NANOSECONDS);
         }
     }
-
-    private final Runnable neverStartedQuietPeriodTask = new Runnable() {
-        @Override
-        public void run() {
-            onNeverStartedQuietPeriodTimer();
-        }
-    };
 
     private void onNeverStartedQuietPeriodTimer() {
         if (thread != null || isTerminated() || !isShuttingDown()) {
@@ -1376,10 +1381,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
 
-                            if (!canSuspend(ST_SUSPENDED) && STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
-                                        ST_SUSPENDED, ST_STARTED)) {
-                                // Seems like there was something added to the task queue again in the meantime but we
-                                // were able to re-engage this thread as the event loop thread.
+                            if (!canSuspend(ST_SUSPENDED)) {
+                                // Work arrived while suspending. execute() may already have moved us to
+                                // ST_STARTED; re-engage this thread in either case.
+                                STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
+                                        ST_SUSPENDED, ST_STARTED);
                                 continue;
                             }
                             suspend = true;
