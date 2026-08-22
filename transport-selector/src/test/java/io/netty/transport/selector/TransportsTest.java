@@ -34,6 +34,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.uring.IoUringDatagramChannel;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executor;
@@ -41,6 +42,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class TransportsTest {
 
@@ -55,7 +57,8 @@ class TransportsTest {
         assertEquals(TransportType.NIO, selection.type());
         assertEquals(NioSocketChannel.class, selection.socketChannelClass());
         assertNotNull(selection.domainSocketChannelClass());
-        assertTrue(selection.isDomainSocketSupported());
+        // NIO domain sockets require Java 16+.
+        assertEquals(PlatformDependent.javaVersion() >= 16, selection.isDomainSocketSupported());
     }
 
     @Test
@@ -287,7 +290,8 @@ class TransportsTest {
     @Test
     void domainSocketChannelFactoryCreatesChannel() {
         TransportSelection selection = Transports.selection(TransportType.NIO);
-        assertTrue(selection.isDomainSocketSupported());
+        // NIO domain sockets require Java 16+.
+        assumeTrue(selection.isDomainSocketSupported());
         ChannelFactory<? extends Channel> factory = selection.domainSocketChannelFactory();
         assertNotNull(factory);
         Channel ch = factory.newChannel();
@@ -298,7 +302,8 @@ class TransportsTest {
     @Test
     void serverDomainSocketChannelFactoryCreatesChannel() {
         TransportSelection selection = Transports.selection(TransportType.NIO);
-        assertTrue(selection.isDomainSocketSupported());
+        // NIO domain sockets require Java 16+.
+        assumeTrue(selection.isDomainSocketSupported());
         ChannelFactory<? extends ServerChannel> factory = selection.serverDomainSocketChannelFactory();
         assertNotNull(factory);
         ServerChannel ch = factory.newChannel();
