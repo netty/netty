@@ -16,10 +16,9 @@
 package io.netty.transport.selector;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -27,23 +26,107 @@ import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.uring.IoUringDatagramChannel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.uring.IoUringServerSocketChannel;
 import io.netty.channel.uring.IoUringSocketChannel;
-import io.netty.transport.selector.Transports.TransportSelection;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class TransportsTest {
+
+    @Test
+    void selectionReportsItsType() {
+        assertNotNull(Transports.selection().type());
+    }
+
+    @Test
+    void explicitNioSelection() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        assertEquals(TransportType.NIO, selection.type());
+        assertEquals(NioSocketChannel.class, selection.socketChannelClass());
+        assertNotNull(selection.domainSocketChannelClass());
+        assertTrue(selection.isDomainSocketSupported());
+    }
+
+    @Test
+    void requireNativeFailsWhenNoNativeAvailable() {
+        boolean anyNative = TransportType.IO_URING.isAvailable()
+                || TransportType.EPOLL.isAvailable()
+                || TransportType.KQUEUE.isAvailable();
+        if (!anyNative) {
+            assertThrows(IllegalStateException.class,
+                    () -> Transports.selection(SelectionMode.NATIVE_ONLY, TransportType.IO_URING));
+        } else {
+            TransportSelection selection = Transports.selection(SelectionMode.NATIVE_ONLY, TransportType.IO_URING);
+            assertNotSame(TransportType.NIO, selection.type());
+        }
+    }
+
+    @Test
+    void requireNativeWithNioThrows() {
+        assertThrows(IllegalStateException.class,
+                () -> Transports.selection(SelectionMode.NATIVE_ONLY, TransportType.NIO));
+    }
+
+    @Test
+    void priorityOrderRespectedWhenRequestedTypeUnavailable() {
+        TransportSelection selection = Transports.selection(TransportType.EPOLL);
+        assertNotNull(selection);
+        assertEquals(TransportType.EPOLL.isAvailable() ? TransportType.EPOLL : TransportType.NIO,
+                selection.type());
+    }
+
+    @Test
+    void selectionKeepsRequestedOrderForAvailableTypes() {
+        TransportSelection selection = Transports.selection(TransportType.NIO, TransportType.KQUEUE);
+        assertEquals(TransportType.NIO, selection.type());
+    }
+
+    @Test
+    void newEventLoopGroupWithThreadFactory() {
+        final AtomicInteger created = new AtomicInteger();
+        ThreadFactory threadFactory = runnable -> {
+            created.incrementAndGet();
+            return new Thread(runnable);
+        };
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        EventLoopGroup group = selection.newEventLoopGroup(threadFactory, 1);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        // Threads are created lazily; we only verify the group is usable and shuts down gracefully.
+        group.next();
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void staticNewEventLoopGroupWithThreadFactory() {
+        ThreadFactory threadFactory = Thread::new;
+        EventLoopGroup group = Transports.newEventLoopGroup(threadFactory, 1);
+        assertNotNull(group);
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void domainSocketChannelClassIsChannelSubtype() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        Class<? extends Channel> udsClass = selection.domainSocketChannelClass();
+        assertNotNull(udsClass);
+        assertTrue(Channel.class.isAssignableFrom(udsClass));
+
+        Class<? extends ServerChannel> srvClass = selection.serverDomainSocketChannelClass();
+        assertNotNull(srvClass);
+        assertTrue(ServerChannel.class.isAssignableFrom(srvClass));
+    }
 
     @Test
     void selectionIsNotNull() {
@@ -83,9 +166,14 @@ class TransportsTest {
     void transportSelectionToStringContainsTransportNames() {
         String toString = Transports.selection().toString();
         assertTrue(toString.startsWith("TransportSelection["));
+        assertTrue(toString.contains("type="));
+        assertTrue(toString.contains("ioHandlerFactory="));
         assertTrue(toString.contains("socketChannel="));
         assertTrue(toString.contains("serverSocketChannel="));
         assertTrue(toString.contains("datagramChannel="));
+        assertTrue(toString.contains("domainSocketsSupported="));
+        assertTrue(toString.contains("domainSocketChannel="));
+        assertTrue(toString.contains("serverDomainSocketChannel="));
     }
 
     @Test
@@ -143,7 +231,7 @@ class TransportsTest {
     }
 
     @Test
-    void socketChannelFactoryCreatesChannel() throws Exception {
+    void socketChannelFactoryCreatesChannel() {
         TransportSelection selection = Transports.selection();
         ChannelFactory<? extends SocketChannel> factory = selection.socketChannelFactory();
         assertNotNull(factory);
@@ -153,12 +241,116 @@ class TransportsTest {
     }
 
     @Test
-    void serverSocketChannelFactoryCreatesChannel() throws Exception {
+    void serverSocketChannelFactoryCreatesChannel() {
         TransportSelection selection = Transports.selection();
         ChannelFactory<? extends ServerSocketChannel> factory = selection.serverSocketChannelFactory();
         assertNotNull(factory);
         ServerSocketChannel ch = factory.newChannel();
         assertNotNull(ch);
         assertSame(selection.serverSocketChannelClass(), ch.getClass());
+    }
+
+    @Test
+    void staticNewEventLoopGroupWithThreadFactoryOnly() {
+        ThreadFactory threadFactory = Thread::new;
+        EventLoopGroup group = Transports.newEventLoopGroup(threadFactory);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void transportSelectionNewEventLoopGroupWithThreadFactoryOnly() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        ThreadFactory threadFactory = Thread::new;
+        EventLoopGroup group = selection.newEventLoopGroup(threadFactory);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void transportTypeIsAvailableReportsAvailability() {
+        for (TransportType type : TransportType.values()) {
+            boolean available = type.isAvailable();
+            // When only a single transport is requested, an available one is selected,
+            // and an unavailable one falls back to NIO (which is always available).
+            TransportType selected = Transports.selection(type).type();
+            if (available || type == TransportType.NIO) {
+                assertEquals(type, selected);
+            } else {
+                assertEquals(TransportType.NIO, selected);
+            }
+        }
+    }
+
+    @Test
+    void domainSocketChannelFactoryCreatesChannel() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        assertTrue(selection.isDomainSocketSupported());
+        ChannelFactory<? extends Channel> factory = selection.domainSocketChannelFactory();
+        assertNotNull(factory);
+        Channel ch = factory.newChannel();
+        assertNotNull(ch);
+        assertSame(selection.domainSocketChannelClass(), ch.getClass());
+    }
+
+    @Test
+    void serverDomainSocketChannelFactoryCreatesChannel() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        assertTrue(selection.isDomainSocketSupported());
+        ChannelFactory<? extends ServerChannel> factory = selection.serverDomainSocketChannelFactory();
+        assertNotNull(factory);
+        ServerChannel ch = factory.newChannel();
+        assertNotNull(ch);
+        assertSame(selection.serverDomainSocketChannelClass(), ch.getClass());
+    }
+
+    @Test
+    void datagramChannelFactoryCreatesChannel() {
+        TransportSelection selection = Transports.selection();
+        ChannelFactory<? extends DatagramChannel> factory = selection.datagramChannelFactory(null);
+        assertNotNull(factory);
+        DatagramChannel ch = factory.newChannel();
+        assertNotNull(ch);
+        assertSame(selection.datagramChannelClass(), ch.getClass());
+    }
+
+    @Test
+    void staticNewEventLoopGroupWithExecutor() {
+        Executor executor = command -> new Thread(command).start();
+        EventLoopGroup group = Transports.newEventLoopGroup(executor);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void staticNewEventLoopGroupWithExecutorAndThreads() {
+        Executor executor = command -> new Thread(command).start();
+        EventLoopGroup group = Transports.newEventLoopGroup(executor, 1);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void transportSelectionNewEventLoopGroupWithExecutor() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        Executor executor = command -> new Thread(command).start();
+        EventLoopGroup group = selection.newEventLoopGroup(executor);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
+    }
+
+    @Test
+    void transportSelectionNewEventLoopGroupWithExecutorAndThreads() {
+        TransportSelection selection = Transports.selection(TransportType.NIO);
+        Executor executor = command -> new Thread(command).start();
+        EventLoopGroup group = selection.newEventLoopGroup(executor, 1);
+        assertNotNull(group);
+        assertFalse(group.isShutdown());
+        group.shutdownGracefully().syncUninterruptibly();
     }
 }
