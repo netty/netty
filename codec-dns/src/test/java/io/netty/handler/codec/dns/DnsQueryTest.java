@@ -32,6 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
 
+    private static final DnsOpCode[] OP_CODES = {
+            DnsOpCode.QUERY, DnsOpCode.IQUERY, DnsOpCode.STATUS, DnsOpCode.NOTIFY, DnsOpCode.UPDATE };
+
     @Test
     public void testEncodeAndDecodeQuery() {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
@@ -77,5 +80,80 @@ public class DnsQueryTest {
 
         assertFalse(writeChannel.finish());
         assertFalse(readChannel.finish());
+    }
+
+    @Test
+    public void testOpCodeSurvivesEncodeAndDecode() {
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+        EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
+
+        for (DnsOpCode opCode: OP_CODES) {
+            DnsQuery query = new DatagramDnsQuery(null, addr, 1, opCode).setRecord(
+                    DnsSection.QUESTION,
+                    new DefaultDnsQuestion("example.com", DnsRecordType.A));
+
+            assertTrue(writeChannel.writeOutbound(query));
+            DatagramPacket packet = writeChannel.readOutbound();
+            assertTrue(readChannel.writeInbound(packet));
+
+            DnsQuery decodedDnsQuery = readChannel.readInbound();
+            assertEquals(opCode, decodedDnsQuery.opCode());
+            assertTrue(decodedDnsQuery.release());
+        }
+
+        assertFalse(writeChannel.finish());
+        assertFalse(readChannel.finish());
+    }
+
+    @Test
+    public void testOpCodeIsEncodedIntoBits14To11() {
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+
+        for (DnsOpCode opCode: OP_CODES) {
+            for (boolean recursionDesired: new boolean[] { false, true }) {
+                DnsQuery query = new DatagramDnsQuery(null, addr, 1, opCode)
+                        .setRecursionDesired(recursionDesired);
+                query.setRecord(DnsSection.QUESTION,
+                        new DefaultDnsQuestion("example.com", DnsRecordType.A));
+
+                assertTrue(writeChannel.writeOutbound(query));
+                DatagramPacket packet = writeChannel.readOutbound();
+
+                // RFC 1035 section 4.1.1: the flags word is QR(1) OPCODE(4) AA TC RD RA Z(3) RCODE(4).
+                // The OPCODE and RD are the only fields this encoder writes, so the whole word is known.
+                int expectedFlags = opCode.byteValue() << 11;
+                if (recursionDesired) {
+                    expectedFlags |= 1 << 8;
+                }
+                assertEquals(expectedFlags, packet.content().getUnsignedShort(2),
+                        "unexpected flags for opCode " + opCode + " and RD " + recursionDesired);
+
+                assertTrue(packet.release());
+            }
+        }
+
+        assertFalse(writeChannel.finish());
+    }
+
+    @Test
+    public void testOutOfRangeOpCodeIsTruncatedToFourBits() {
+        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
+
+        // DnsOpCode does not range check, so an OPCODE that does not fit the 4 bits reserved by
+        // RFC 1035 section 4.1.1 can reach the encoder. It must not spill into the neighbouring QR bit.
+        DnsQuery query = new DatagramDnsQuery(null, addr, 1, DnsOpCode.valueOf(16)).setRecord(
+                DnsSection.QUESTION,
+                new DefaultDnsQuestion("example.com", DnsRecordType.A));
+
+        assertTrue(writeChannel.writeOutbound(query));
+        DatagramPacket packet = writeChannel.readOutbound();
+
+        assertEquals(0, packet.content().getUnsignedShort(2));
+
+        assertTrue(packet.release());
+        assertFalse(writeChannel.finish());
     }
 }
