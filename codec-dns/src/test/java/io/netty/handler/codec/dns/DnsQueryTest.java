@@ -25,8 +25,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DnsQueryTest {
 
-    static Stream<DnsOpCode> opCodes() {
-        return Stream.of(
+    static List<DnsOpCode> opCodes() {
+        return Arrays.asList(
                 DnsOpCode.QUERY,
                 DnsOpCode.IQUERY,
                 DnsOpCode.STATUS,
