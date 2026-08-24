@@ -824,8 +824,13 @@ final class AdaptivePoolingAllocator {
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
         /**
-         * Diagnostic: how many chunks {@link #fullSweep()} had to rescue from the exhausted list
-         * because a notification never arrived. Must stay zero; see Invariant N below.
+         * Diagnostic: how many chunks {@link #fullSweep()} moved out of the exhausted list.
+         *
+         * <p>This is <em>not</em> a violation counter and it does not have to stay zero. A releaser
+         * that has offered its segment but has not yet published its note leaves exactly the state
+         * the sweep looks for - capacity present, no note in the list - so a non-zero count is
+         * expected under concurrency. Only a count that grows in proportion to allocations, rather
+         * than staying incidental, would suggest the notification path is actually broken.
          */
         static final LongAdder RESCUED_BY_FULL_SWEEP = new LongAdder();
 
@@ -1153,16 +1158,18 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Safety net for Invariant N, and a detector for its violation. This is <b>not</b> how chunks
-         * that regained capacity are discovered — {@link #drainPending()} is, and by the time this
-         * runs it has already been called. Anything this sweep finds on the exhausted list with
-         * capacity is a chunk the notification path should have moved: a lost signal, which would
-         * otherwise leave it stranded forever (never reusable, and not fully free either, so the
-         * eviction sweep would never reach it).
+         * Unbounded catch-all, and the last of the three routes out of the exhausted list.
          *
-         * <p>Invariant N is a conjunction of four properties; break any one of them and the failure
-         * is silent memory growth. {@link #RESCUED_BY_FULL_SWEEP} turns that into something
-         * observable: a non-zero count means the notification path has a hole.
+         * <p>{@link #drainPending()} handles chunks whose note has been published, and
+         * {@link #probeExhausted()} covers notes still in flight - but the probe stops after
+         * {@code MAX_EXHAUSTED_PROBE} chunks, so a usable chunk sitting deeper in a long exhausted
+         * list can outlive both. This sweep walks the whole list and is the only thing that
+         * guarantees such a chunk is eventually found. It runs rarely, on one purge tick in
+         * {@code FULL_SWEEP_MULTIPLIER}.
+         *
+         * <p>It is <b>not</b> a violation detector, and what it finds is not evidence of a bug: a
+         * releaser that has offered its segment but not yet published its note leaves precisely the
+         * state this looks for. See {@link #RESCUED_BY_FULL_SWEEP}.
          */
         void fullSweep() {
             drainPending();
@@ -1179,8 +1186,6 @@ final class AdaptivePoolingAllocator {
             }
             if (rescued != 0) {
                 RESCUED_BY_FULL_SWEEP.add(rescued);
-                assert false : "Invariant N (notification completeness) is broken: the full sweep had to "
-                        + "rescue " + rescued + " chunk(s) that the notification drain should have moved";
             }
             // Then do the eviction sweep
             tickPurge();

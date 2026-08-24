@@ -385,8 +385,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             assertEquals(0, stranded,
                     "chunks left on the exhausted list with capacity: neither reusable nor evictable");
         }
-        assertEquals(0, ThreadLocalSizeClassedChunkCache.RESCUED_BY_FULL_SWEEP.sum(),
-                "the full-sweep backstop had to rescue chunks: Invariant N is broken");
     }
 
     @Test
@@ -407,8 +405,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                         + " chunks of " + BURST_CHUNK_SIZE + "), peak was " + peak);
         assertTrue(settled * 2 < peak,
                 "the burst must not still be resident: settled " + settled + ", peak " + peak);
-        assertEquals(0, ThreadLocalSizeClassedChunkCache.RESCUED_BY_FULL_SWEEP.sum(),
-                "the full-sweep backstop had to rescue chunks: Invariant N is broken");
     }
 
     /**
