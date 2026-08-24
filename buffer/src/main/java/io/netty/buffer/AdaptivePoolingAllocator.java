@@ -128,6 +128,11 @@ final class AdaptivePoolingAllocator {
     static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
             "io.netty.allocator.chunkPurgePollsThreadLocal", 4L));
 
+    /**
+     * How many purge ticks pass between two runs of the {@link ThreadLocalSizeClassedChunkCache#fullSweep()}
+     * safety net. The sweep is insurance, not the discovery mechanism, so this only bounds how long a
+     * (never observed) missed notification could go unnoticed.
+     */
     private static final int FULL_SWEEP_MULTIPLIER = 8;
 
     /**
@@ -584,7 +589,8 @@ final class AdaptivePoolingAllocator {
                 recycler = Magazine.AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex, null, recycler, lock);
+            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex, null, recycler, lock,
+                    magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -718,8 +724,8 @@ final class AdaptivePoolingAllocator {
 
         private Magazine createMagazine(int sizeClassIndex) {
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            Magazine mag = new Magazine(allocator, strategy,
-                                       chunkRecycler, sizeClassIndex, Thread.currentThread(), null, null);
+            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex,
+                                       Thread.currentThread(), null, null, magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -768,8 +774,12 @@ final class AdaptivePoolingAllocator {
      *       floor also stay here — they have capacity and are available for allocation.</li>
      * </ul>
      *
-     * <p>Transitions between lists happen inline on the owner thread's release path
-     * (zero CAS, zero volatile writes — just plain field reads and pointer manipulation):
+     * <p>A cached chunk can only <em>gain</em> capacity: segments are handed out only by
+     * {@code readInitInto} on a magazine's chunk, and {@link #pollChunk} removes a chunk from the
+     * cache before it is attached to a magazine. So a chunk that is inserted with capacity keeps it,
+     * and neither list ever has to be searched for a usable chunk.
+     *
+     * <p>Transitions between lists are driven by exactly one event, a segment return:
      * <ul>
      *   <li><b>Signal A</b> (exhausted → reusable): first segment return on a cached chunk.
      *       Mimalloc analog: {@code pageUnfull} (full → regular).</li>
@@ -778,18 +788,30 @@ final class AdaptivePoolingAllocator {
      *       buffer offered to the {@link SizeClassChunkRecycler} for cross-size-class reuse.</li>
      * </ul>
      *
+     * <p>A return by the owner thread, or by a releaser that wins the stripe lock, applies its
+     * transition inline (zero CAS, zero volatile writes — just plain field reads and pointer
+     * manipulation). A releaser that cannot take the lock instead leaves a note via
+     * {@link #notifyHasCapacity}, and {@link #drainPending} applies the transition later, under the
+     * lock. Both routes are exact, so nothing here scans.
+     *
      * <p>The cache never rejects chunks ({@code offerChunk} always returns true). Cache size
-     * tracks the working set naturally. Idle chunks are detected inline via Signal B and
-     * evicted immediately. The {@link SizeClassChunkRecycler} serves as the shared pool for
-     * recycling backing buffers across size classes.
+     * tracks the working set naturally. Idle chunks are detected via Signal B and evicted. The
+     * {@link SizeClassChunkRecycler} serves as the shared pool for recycling backing buffers
+     * across size classes.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
+        /**
+         * Diagnostic: how many chunks {@link #fullSweep()} had to rescue from the exhausted list
+         * because a notification never arrived. Must stay zero; see Invariant N below.
+         */
+        static final LongAdder RESCUED_BY_FULL_SWEEP = new LongAdder();
+
         private static final AtomicReferenceFieldUpdater<ThreadLocalSizeClassedChunkCache, SizeClassedChunk>
                 PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
                         ThreadLocalSizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
 
-        private SizeClassedChunk exhaustedHead;
-        private SizeClassedChunk reusableHead;
+        SizeClassedChunk exhaustedHead;
+        SizeClassedChunk reusableHead;
         /** Treiber stack of chunks that a releasing thread asked us to look at. */
         private volatile SizeClassedChunk pendingHead;
         int exhaustedCount;
@@ -887,6 +909,29 @@ final class AdaptivePoolingAllocator {
         }
 
         // --- Notification queue: cross-thread segment returns that could not take the lock ---
+        //
+        // Invariant N (notification completeness): every segment return is either observed by a later
+        // cache decision about that chunk, or leaves an outstanding note that is processed after that
+        // decision. Nothing scans, so a lost signal means a chunk with capacity sits on the exhausted
+        // list forever -- never reusable, and never fully free either, so the purge sweep will not
+        // evict it. Four properties carry the invariant, and all four must hold:
+        //
+        //  1. Offer before notify. releaseSegment puts the segment in the MPSC free list first, so a
+        //     drainer that pops the note is guaranteed to see the segment.
+        //  2. Notes are state-independent: "look at this chunk", never "this specific thing changed".
+        //     One note therefore covers any number of later returns, and a note left while the chunk
+        //     was still CACHE_NONE stays correct once the chunk is classified. Do not optimise the
+        //     note to carry state. This is also why a releaser that finds the claim already taken can
+        //     simply walk away: the in-flight note covers its return too.
+        //  3. Re-arm before processing (see drainPending).
+        //  4. Classification and drain cannot interleave. offerChunk's (read capacity, insert) pair
+        //     and the drain both run under the same stripe lock, or on the same owner thread. This is
+        //     what covers a return landing right after offerChunk read the capacity but before the
+        //     insert: the chunk is filed as exhausted while holding capacity, and the note -- which
+        //     cannot be consumed in between -- is what fixes it.
+        //
+        // A drain that finds CACHE_NONE and no-ops is benign, not a lost signal: the chunk is in a
+        // magazine, which consumes its own returned segments through nextAvailableSegmentOffset.
 
         /**
          * Queue {@code chunk} for the next drain. Called by a releasing thread that holds no lock,
@@ -921,6 +966,11 @@ final class AdaptivePoolingAllocator {
          * a thread-local cache.
          */
         void drainPending() {
+            if (pendingHead == null) {
+                // Cheap when there is nothing to do: one volatile read, no atomic RMW. The heap-wide
+                // drain pays this per size class, so it has to stay a plain read.
+                return;
+            }
             SizeClassedChunk cur = PENDING_HEAD.getAndSet(this, null);
             final SizeClassedChunk sentinel = SizeClassedChunk.PENDING_SENTINEL;
             while (cur != null && cur != sentinel) {
@@ -938,6 +988,17 @@ final class AdaptivePoolingAllocator {
                 processPending(cur);
                 cur = next == sentinel ? null : next;
             }
+        }
+
+        // Visible for testing: how many chunks are queued for the next drain.
+        int pendingCount() {
+            int count = 0;
+            SizeClassedChunk cur = pendingHead;
+            while (cur != null && cur != SizeClassedChunk.PENDING_SENTINEL) {
+                count++;
+                cur = cur.pendingNext;
+            }
+            return count;
         }
 
         private void processPending(SizeClassedChunk chunk) {
@@ -993,6 +1054,12 @@ final class AdaptivePoolingAllocator {
             return pollChunkInternal();
         }
 
+        /**
+         * O(1) and unconditional: every chunk on the reusable list has capacity, and keeps it for as
+         * long as it stays cached (nothing allocates out of a cached chunk, so its capacity can only
+         * grow). The exhausted list is never searched — a chunk leaves it only when a notification
+         * says it gained capacity.
+         */
         private SizeClassedChunk pollChunkInternal() {
             if (reusableHead != null) {
                 SizeClassedChunk chunk = reusableHead;
@@ -1000,54 +1067,14 @@ final class AdaptivePoolingAllocator {
                 detachFromCache(chunk);
                 return chunk;
             }
-            return scanExhaustedForCapacity();
-        }
-
-        private static final int MAX_EXHAUSTED_SCAN_MOVE = 8;
-        private static final int MAX_VISITS_AFTER_HIT = 16;
-
-        /**
-         * Find a chunk that regained capacity from cross-thread segment returns.
-         *
-         * <p>The walk up to the first hit is deliberately unbounded: it is the only mechanism
-         * that discovers such chunks, and cutting it short would leave usable chunks stranded
-         * in the exhausted list while the magazine allocates fresh ones.
-         *
-         * <p>Past the first hit the walk is pure opportunistic maintenance — promoting further
-         * chunks so subsequent polls hit {@code reusableHead} directly — so it is bounded in
-         * both visits and moves.
-         */
-        private SizeClassedChunk scanExhaustedForCapacity() {
-            SizeClassedChunk result = null;
-            SizeClassedChunk cur = exhaustedHead;
-            int moved = 0;
-            int visitsAfterHit = 0;
-            while (cur != null) {
-                if (result != null
-                        && (moved >= MAX_EXHAUSTED_SCAN_MOVE || ++visitsAfterHit > MAX_VISITS_AFTER_HIT)) {
-                    break;
-                }
-                SizeClassedChunk next = cur.nextInCache;
-                if (cur.hasRemainingCapacity()) {
-                    removeFromExhausted(cur);
-                    if (result == null) {
-                        detachFromCache(cur);
-                        result = cur;
-                    } else {
-                        addToReusable(cur);
-                        moved++;
-                    }
-                }
-                cur = next;
-            }
-            return result;
+            return null;
         }
 
         @Override
         public void tickPurge() {
             drainPending();
-            // Frequent bounded: evict fully-free reusable chunks above retention floor.
-            // Exhausted→reusable is handled on demand by scanExhaustedForCapacity (bounded).
+            // Exhausted→reusable is applied by the drain above (fullSweep is only a backstop). All
+            // that is left is evicting fully-free reusable chunks above the retention floor.
             int total = totalCount();
             SizeClassedChunk cur = reusableHead;
             while (cur != null && total > purgeRetentionFloor) {
@@ -1062,17 +1089,35 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        /**
+         * Safety net for Invariant N, and a detector for its violation. This is <b>not</b> how chunks
+         * that regained capacity are discovered — {@link #drainPending()} is, and by the time this
+         * runs it has already been called. Anything this sweep finds on the exhausted list with
+         * capacity is a chunk the notification path should have moved: a lost signal, which would
+         * otherwise leave it stranded forever (never reusable, and not fully free either, so the
+         * eviction sweep would never reach it).
+         *
+         * <p>Invariant N is a conjunction of four properties; break any one of them and the failure
+         * is silent memory growth. {@link #RESCUED_BY_FULL_SWEEP} turns that into something
+         * observable: a non-zero count means the notification path has a hole.
+         */
         void fullSweep() {
-            // Rare unbounded: sweep exhausted list for chunks with capacity from
-            // cross-thread MPSC returns that the bounded scan didn't reach.
+            drainPending();
+            int rescued = 0;
             SizeClassedChunk cur = exhaustedHead;
             while (cur != null) {
                 SizeClassedChunk next = cur.nextInCache;
                 if (cur.hasRemainingCapacity()) {
+                    rescued++;
                     removeFromExhausted(cur);
                     addToReusable(cur);
                 }
                 cur = next;
+            }
+            if (rescued != 0) {
+                RESCUED_BY_FULL_SWEEP.add(rescued);
+                assert false : "Invariant N (notification completeness) is broken: the full sweep had to "
+                        + "rescue " + rescued + " chunk(s) that the notification drain should have moved";
             }
             // Then do the eviction sweep
             tickPurge();
@@ -1425,6 +1470,13 @@ final class AdaptivePoolingAllocator {
         final Thread ownerThread;
         private final ChunkController chunkController;
         private final ChunkCache chunkCache;
+        /**
+         * Every size-classed magazine of the heap this magazine belongs to, including this one, or
+         * {@code null} for the buddy magazine. The whole array is covered by the one lock (shared
+         * stripe) or the one owner thread (thread-local heap) that guards this magazine, which is
+         * what makes the heap-wide drain legal from here.
+         */
+        private final Magazine[] heapMagazines;
         final int sizeClassIndex;
         final SizeClassChunkRecycler chunkRecycler;
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
@@ -1436,7 +1488,9 @@ final class AdaptivePoolingAllocator {
         // Size-classed magazine constructor (both thread-local and shared-stripe)
         Magazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
                  SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
-                 Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock) {
+                 Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock,
+                 Magazine[] heapMagazines) {
+            this.heapMagazines = heapMagazines;
             this.allocator = allocator;
             this.ownerThread = ownerThread;
             this.sizeClassIndex = sizeClassIndex;
@@ -1451,6 +1505,7 @@ final class AdaptivePoolingAllocator {
         // Buddy (large buffer) magazine constructor
         Magazine(AdaptivePoolingAllocator allocator,
                  BuddyChunkManagementStrategy strategy, AdaptiveRecycler bufRecycler) {
+            this.heapMagazines = null;
             this.allocator = allocator;
             this.ownerThread = null;
             this.sizeClassIndex = -1;
@@ -1476,6 +1531,28 @@ final class AdaptivePoolingAllocator {
 
         void tickCachePurge() {
             chunkCache.tickPurge();
+        }
+
+        /**
+         * Apply the notifications left by releasers on every size class of this heap, not just this
+         * magazine's. A size class that has gone idle stops allocating, so it would never drain its
+         * own notes — and those are exactly the chunks worth reclaiming, because their backing
+         * buffers go to the {@link SizeClassChunkRecycler} that every size class draws from.
+         *
+         * <p>Called on the allocation slow path only, right before {@link ChunkCache#pollChunk},
+         * which is once per chunk-worth of allocations.
+         */
+        private void drainHeapPending() {
+            Magazine[] mags = heapMagazines;
+            if (mags == null) {
+                return;
+            }
+            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+                Magazine mag = mags[i];
+                if (mag != null) {
+                    ((ThreadLocalSizeClassedChunkCache) mag.chunkCache).drainPending();
+                }
+            }
         }
 
         boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
@@ -1541,6 +1618,7 @@ final class AdaptivePoolingAllocator {
             }
 
             // Now try to poll from the cache first
+            drainHeapPending();
             curr = chunkCache.pollChunk(size);
             if (curr == null) {
                 curr = chunkController.newChunkAllocation(size, this);

@@ -18,6 +18,10 @@ package io.netty.buffer;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunk;
 import io.netty.buffer.AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache;
 import org.junit.jupiter.api.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import java.util.concurrent.CyclicBarrier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -117,24 +121,42 @@ public class SizeClassedChunkCacheTest {
         assertNull(cache.pollChunk(256));
     }
 
-    // --- pollChunk fallback: exhausted chunks that gained capacity ---
+    // --- Notification: exhausted chunks that gained capacity ---
+    //
+    // A chunk that gains capacity from a cross-thread return that could not take the stripe lock is
+    // discovered only through a notification. Nothing searches the exhausted list any more, so a
+    // capacity gain with no note left behind is invisible -- by design.
 
     @Test
-    void pollChunkFallbackFindsExhaustedChunkThatGainedCapacity() {
+    void pollChunkFindsExhaustedChunkThatGainedCapacityAfterNotification() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
         assertEquals(1, cache.exhaustedCount);
 
-        // Simulate external segment return
+        // Simulate a cross-thread segment return that could not take the lock: the segment lands in
+        // the external free list, and the releaser leaves a note.
         when(chunk.hasRemainingCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(chunk);
 
         assertSame(chunk, cache.pollChunk(256));
         assertEquals(0, cache.exhaustedCount);
     }
 
-    // --- forcePurge: runs scan + returns reusable chunk ---
+    @Test
+    void pollChunkDoesNotSearchTheExhaustedListWithoutANotification() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
+
+        assertNull(cache.pollChunk(256));
+        assertEquals(1, cache.exhaustedCount);
+    }
+
+    // --- forcePurge: drains notifications + returns reusable chunk ---
 
     @Test
     void forcePurgeDetectsCapacityGainOnExhaustedChunks() {
@@ -147,6 +169,7 @@ public class SizeClassedChunkCacheTest {
 
         // Simulate external return giving capacity
         when(chunk.hasRemainingCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(chunk);
 
         SizeClassedChunk polled = cache.forcePurge();
         assertSame(chunk, polled);
@@ -322,13 +345,13 @@ public class SizeClassedChunkCacheTest {
         assertEquals(2, cache.exhaustedCount);
     }
 
-    // --- scan bound: maintenance past the first hit must not walk the whole list ---
-    // Regression: scanExhaustedForCapacity bounded only the number of chunks MOVED, so when
-    // nothing (or almost nothing) had capacity it walked the entire exhausted list on every
-    // poll -- even when it hit a usable chunk on the very first element.
+    // --- No scanning: a poll must not walk the exhausted list at all ---
+    // The predecessor of the notification queue walked the exhausted list looking for chunks that
+    // had regained capacity. It was the only discovery mechanism, so the walk up to the first hit
+    // could not be bounded, and a mostly-exhausted list made every poll O(cache size).
 
     @Test
-    void scanStopsWalkingShortlyAfterFindingAUsableChunk() {
+    void pollDoesNotTouchTheExhaustedList() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         int tail = 200;
@@ -339,23 +362,191 @@ public class SizeClassedChunkCacheTest {
         }
         // Offered last, so it sits at the head of the exhausted list. It is classified as
         // exhausted, then gains capacity -- exactly what a cross-thread segment return does.
-        SizeClassedChunk stale = chunkWithoutCapacity();
-        cache.offerChunk(stale);
-        when(stale.hasRemainingCapacity()).thenReturn(true);
+        SizeClassedChunk notified = chunkWithoutCapacity();
+        cache.offerChunk(notified);
+        when(notified.hasRemainingCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(notified);
 
         for (SizeClassedChunk c : rest) {
             clearInvocations(c);
         }
 
-        assertSame(stale, cache.pollChunk(256));
+        assertSame(notified, cache.pollChunk(256));
 
-        int visitedAfterHit = 0;
+        int visited = 0;
         for (SizeClassedChunk c : rest) {
-            visitedAfterHit += mockingDetails(c).getInvocations().size();
+            visited += mockingDetails(c).getInvocations().size();
         }
-        assertTrue(visitedAfterHit <= 32,
-                "post-hit maintenance walk must be bounded, but visited " + visitedAfterHit
-                        + " of " + tail + " chunks behind the hit");
+        assertEquals(0, visited, "a poll must not visit any chunk on the exhausted list");
+    }
+
+    // --- Notification queue ---
+
+    @Test
+    void concurrentReturnsOnOneChunkQueueItAtMostOncePerDrain() throws Exception {
+        final ThreadLocalSizeClassedChunkCache cache =
+                new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        final SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
+
+        final int threads = 8;
+        final int notificationsPerThread = 10000;
+        final CyclicBarrier start = new CyclicBarrier(threads);
+        Thread[] releasers = new Thread[threads];
+        for (int i = 0; i < threads; i++) {
+            releasers[i] = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        start.await();
+                    } catch (Exception e) {
+                        throw new AssertionError(e);
+                    }
+                    for (int n = 0; n < notificationsPerThread; n++) {
+                        cache.notifyHasCapacity(chunk);
+                    }
+                }
+            });
+            releasers[i].start();
+        }
+        for (Thread t : releasers) {
+            t.join();
+        }
+
+        assertEquals(1, cache.pendingCount(), "80000 returns on one chunk must leave one note");
+
+        cache.drainPending();
+        assertEquals(0, cache.pendingCount());
+        assertEquals(0, cache.exhaustedCount);
+        assertEquals(1, cache.reusableCount);
+    }
+
+    @Test
+    void returnLandingDuringProcessingRequeuesTheChunk() {
+        final ThreadLocalSizeClassedChunkCache cache =
+                new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        final SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        cache.notifyHasCapacity(chunk);
+        assertEquals(1, cache.pendingCount());
+
+        // A cross-thread return lands while the drain is inside processPending. Re-arming the link
+        // only after processing would swallow this notification and strand the chunk.
+        when(chunk.hasRemainingCapacity()).thenAnswer(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock invocation) {
+                cache.notifyHasCapacity(chunk);
+                return true;
+            }
+        });
+
+        cache.drainPending();
+
+        assertEquals(1, cache.pendingCount(),
+                "a return that lands during processing must leave the chunk queued again");
+        assertNotNull(chunk.pendingNext);
+    }
+
+    @Test
+    void drainMovesNotifiedExhaustedChunkToReusable() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        assertEquals(1, cache.exhaustedCount);
+
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(chunk);
+        cache.drainPending();
+
+        assertEquals(0, cache.exhaustedCount);
+        assertEquals(1, cache.reusableCount);
+        assertEquals(SizeClassedChunk.CACHE_REUSABLE, chunk.cacheListState);
+        assertNull(chunk.pendingNext);
+    }
+
+    @Test
+    void drainEvictsNotifiedReusableChunkThatBecameFullyFree() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        // Pad above the retention floor so eviction is allowed.
+        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
+            cache.offerChunk(chunkWithCapacity());
+        }
+        SizeClassedChunk chunk = chunkWithCapacity();
+        cache.offerChunk(chunk);
+        int countBefore = cache.reusableCount;
+
+        // Last outstanding segment comes back on a foreign thread.
+        when(chunk.hasFullCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(chunk);
+        cache.drainPending();
+
+        assertEquals(countBefore - 1, cache.reusableCount);
+        assertEquals(SizeClassedChunk.CACHE_NONE, chunk.cacheListState);
+        verify(chunk).recycleOrDeallocate(null, 0);
+    }
+
+    // Regression for Invariant N property 4: offerChunk classifies a chunk by reading
+    // hasRemainingCapacity(), which the MPSC free list lets any thread change at any instant. A
+    // return that lands right after that read files the chunk as exhausted while it holds capacity,
+    // and with nothing scanning any more, the releaser's note is the only thing that can fix it.
+    @Test
+    void chunkMisclassifiedAtOfferTimeStillBecomesReusable() {
+        final ThreadLocalSizeClassedChunkCache cache =
+                new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        final SizeClassedChunk chunk = chunkWithoutCapacity();
+        // The releasing thread offered its segment just after offerChunk read the capacity, so the
+        // chunk lands on the exhausted list, and the note is left behind.
+        cache.offerChunk(chunk);
+        assertEquals(SizeClassedChunk.CACHE_EXHAUSTED, chunk.cacheListState);
+        cache.notifyHasCapacity(chunk);
+
+        // The first drain looks before the segment is visible, and the release completes while
+        // processPending is running -- so the drain must leave the chunk queued for another look.
+        when(chunk.hasRemainingCapacity()).thenAnswer(new Answer<Boolean>() {
+            private boolean landed;
+
+            @Override
+            public Boolean answer(InvocationOnMock invocation) {
+                if (!landed) {
+                    landed = true;
+                    cache.notifyHasCapacity(chunk);
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        cache.drainPending();
+        assertEquals(SizeClassedChunk.CACHE_EXHAUSTED, chunk.cacheListState,
+                "no capacity was visible yet, so the chunk must stay on the exhausted list");
+        assertEquals(1, cache.pendingCount(), "the return that landed during processing must requeue");
+
+        cache.drainPending();
+        assertEquals(SizeClassedChunk.CACHE_REUSABLE, chunk.cacheListState);
+        assertSame(chunk, cache.pollChunk(256));
+    }
+
+    @Test
+    void drainIgnoresChunksThatLeftTheCache() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        SizeClassedChunk chunk = chunkWithoutCapacity();
+        cache.offerChunk(chunk);
+        when(chunk.hasRemainingCapacity()).thenReturn(true);
+        cache.notifyHasCapacity(chunk);
+
+        // Polled into a magazine before the drain got to it: the note is now stale.
+        assertSame(chunk, cache.pollChunk(256));
+        assertEquals(SizeClassedChunk.CACHE_NONE, chunk.cacheListState);
+        assertEquals(0, cache.pendingCount());
+        assertEquals(0, cache.exhaustedCount);
+        assertEquals(0, cache.reusableCount);
     }
 
     @Test

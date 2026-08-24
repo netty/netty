@@ -24,15 +24,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunk;
+import io.netty.buffer.AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache;
+
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.SplittableRandom;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -346,6 +354,183 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
         assertEquals(0, allocator.usedHeapMemory(),
                 "chunk must deallocate once its last segment is returned");
+    }
+
+    // --- Cross-thread returns that miss the stripe lock ---
+    //
+    // A releaser that cannot take the stripe lock puts its segment in the chunk's MPSC free list and
+    // leaves a note on the owning cache. Nothing scans for such chunks any more, so if a note is lost
+    // the chunk stays on the exhausted list forever: it has capacity nobody can find, and it is never
+    // fully free either, so the purge sweep will not evict it. Both tests below are about that.
+
+    /** Buffer size whose size class has a 128 KiB chunk of 32 segments. */
+    private static final int BURST_BUF_SIZE = 4096;
+    private static final int BURST_SEGMENTS_PER_CHUNK = 32;
+    private static final int BURST_CHUNK_SIZE = BURST_BUF_SIZE * BURST_SEGMENTS_PER_CHUNK;
+    private static final int BURST_CHUNKS = 400;
+
+    @Test
+    void noChunkIsStrandedAfterABurstWithCrossThreadReleases() throws Exception {
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        runBurstWithCrossThreadReleases(allocator);
+
+        // Every worker has been joined, so the lists are quiescent and safe to walk from here.
+        for (ThreadLocalSizeClassedChunkCache cache : sizeClassChunkCaches(allocator)) {
+            int stranded = 0;
+            for (SizeClassedChunk c = cache.exhaustedHead; c != null; c = c.nextInCache) {
+                if (c.hasRemainingCapacity()) {
+                    stranded++;
+                }
+            }
+            assertEquals(0, stranded,
+                    "chunks left on the exhausted list with capacity: neither reusable nor evictable");
+        }
+        assertEquals(0, ThreadLocalSizeClassedChunkCache.RESCUED_BY_FULL_SWEEP.sum(),
+                "the full-sweep backstop had to rescue chunks: Invariant N is broken");
+    }
+
+    @Test
+    void memoryFallsBackToTheRetentionFloorAfterAnIdleBurst() throws Exception {
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        long peak = runBurstWithCrossThreadReleases(allocator);
+
+        int caches = sizeClassChunkCaches(allocator).size();
+        int floor = Math.max(1, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MIN_BYTES / BURST_CHUNK_SIZE);
+        // Per cache: the floor it is allowed to retain, plus the magazine's current and next-in-line
+        // chunk, plus slack.
+        long bound = (long) caches * (floor + 4) * BURST_CHUNK_SIZE;
+        long settled = allocator.usedHeapMemory();
+
+        assertTrue(settled <= bound,
+                "after the burst went idle the cache must fall back to the retention floor: settled "
+                        + settled + " > " + bound + " (" + caches + " caches, floor " + floor
+                        + " chunks of " + BURST_CHUNK_SIZE + "), peak was " + peak);
+        assertTrue(settled * 2 < peak,
+                "the burst must not still be resident: settled " + settled + ", peak " + peak);
+        assertEquals(0, ThreadLocalSizeClassedChunkCache.RESCUED_BY_FULL_SWEEP.sum(),
+                "the full-sweep backstop had to rescue chunks: Invariant N is broken");
+    }
+
+    /**
+     * Allocate a large live set on one thread, then hand every buffer to a pool of releaser threads
+     * that contend with each other for the same stripe lock, so most returns take the lock-free MPSC
+     * path and have to leave a note behind. Returns the peak used memory, and leaves the allocator
+     * settled on a small working set.
+     *
+     * <p>All allocation happens on one thread, and never while the releasers are running: a stripe
+     * whose lock is contended makes the allocation path fall through to another stripe, and a stripe
+     * that is never allocated on again is also never purged (that is true of this allocator with or
+     * without the notification queue). Keeping to a single stripe is what makes the assertions here
+     * about the mechanism rather than about stripe scheduling.
+     */
+    private static long runBurstWithCrossThreadReleases(final AdaptiveByteBufAllocator allocator)
+            throws Exception {
+        final BlockingQueue<ByteBuf> toRelease = new ArrayBlockingQueue<ByteBuf>(1024);
+        final AtomicBoolean handedOver = new AtomicBoolean();
+        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        final AtomicReference<Long> peak = new AtomicReference<Long>(0L);
+        final CountDownLatch releasersDone = new CountDownLatch(8);
+
+        Thread[] releasers = new Thread[8];
+        for (int i = 0; i < releasers.length; i++) {
+            releasers[i] = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (;;) {
+                            ByteBuf buf = toRelease.poll(1, TimeUnit.MILLISECONDS);
+                            if (buf != null) {
+                                buf.release();
+                            } else if (handedOver.get() && toRelease.isEmpty()) {
+                                return;
+                            }
+                        }
+                    } catch (Throwable t) {
+                        failure.compareAndSet(null, t);
+                    } finally {
+                        releasersDone.countDown();
+                    }
+                }
+            }, "releaser-" + i);
+            releasers[i].start();
+        }
+
+        Thread allocatorThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int burstBuffers = BURST_CHUNKS * BURST_SEGMENTS_PER_CHUNK;
+                    ByteBuf[] live = new ByteBuf[burstBuffers];
+                    for (int i = 0; i < burstBuffers; i++) {
+                        live[i] = allocator.heapBuffer(BURST_BUF_SIZE);
+                    }
+                    peak.set(allocator.usedHeapMemory());
+
+                    // Hand the live set to the releasers, which now contend with each other.
+                    for (int i = 0; i < burstBuffers; i++) {
+                        toRelease.put(live[i]);
+                        live[i] = null;
+                    }
+                    handedOver.set(true);
+                    releasersDone.await();
+
+                    // Settle on a tiny working set, on the same thread and so the same stripe. These
+                    // allocations are what drives the heap-wide drain and the purge tick; the releases
+                    // are uncontended now, so they take the inline path and leave no new notes.
+                    int allocations = 8 * BURST_SEGMENTS_PER_CHUNK
+                            * (int) AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL * 4;
+                    for (int i = 0; i < allocations; i++) {
+                        allocator.heapBuffer(BURST_BUF_SIZE).release();
+                    }
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                    handedOver.set(true);
+                }
+            }
+        }, "burst-allocator");
+        allocatorThread.start();
+        allocatorThread.join();
+        for (Thread t : releasers) {
+            t.join();
+        }
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+        return peak.get();
+    }
+
+    private static List<ThreadLocalSizeClassedChunkCache> sizeClassChunkCaches(
+            AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
+        stripesField.setAccessible(true);
+        Object[] stripes = (Object[]) stripesField.get(pooling);
+        List<ThreadLocalSizeClassedChunkCache> caches = new ArrayList<ThreadLocalSizeClassedChunkCache>();
+        for (Object stripe : stripes) {
+            if (stripe == null) {
+                continue;
+            }
+            Field magsField = stripe.getClass().getDeclaredField("magazines");
+            magsField.setAccessible(true);
+            Object[] magazines = (Object[]) magsField.get(stripe);
+            if (magazines == null) {
+                continue;
+            }
+            for (Object magazine : magazines) {
+                if (magazine == null) {
+                    continue;
+                }
+                Field cacheField = magazine.getClass().getDeclaredField("chunkCache");
+                cacheField.setAccessible(true);
+                Object cache = cacheField.get(magazine);
+                if (cache instanceof ThreadLocalSizeClassedChunkCache) {
+                    caches.add((ThreadLocalSizeClassedChunkCache) cache);
+                }
+            }
+        }
+        return caches;
     }
 
     private static void shuffle(SplittableRandom rng, Object array) {
