@@ -130,13 +130,6 @@ final class AdaptivePoolingAllocator {
             "io.netty.allocator.chunkPurgePollsThreadLocal", 4L));
 
     /**
-     * How many purge ticks pass between two runs of the {@link ThreadLocalSizeClassedChunkCache#fullSweep()}
-     * safety net. The sweep is insurance, not the discovery mechanism, so this only bounds how long a
-     * (never observed) missed notification could go unnoticed.
-     */
-    private static final int FULL_SWEEP_MULTIPLIER = 8;
-
-    /**
      * Derivation basis for the per-size-class retention floor. No longer enforced as a cap.
      */
     static final int THREAD_LOCAL_CACHE_MAX_BYTES = Math.max(1, SystemPropertyUtil.getInt(
@@ -805,6 +798,14 @@ final class AdaptivePoolingAllocator {
      * Routes 2 and 3 overlap deliberately, as they do in mimalloc: notifications reach chunks a
      * bounded scan would not, and a bounded scan covers what notifications are late for.
      *
+     * <p>There is deliberately no periodic sweep of the exhausted list. A note is never dropped -
+     * {@link #drainPending} re-arms a chunk's link before processing it, so a return that lands
+     * mid-processing queues the chunk again rather than being swallowed - so a sweep could only ever
+     * find a chunk whose notification was lost, which is a bug in this protocol and not something a
+     * periodic rescue should paper over. mimalloc reasons the same way: its collect walks the page
+     * queues but deliberately stops one bin short of {@code pages_full}, because the free that would
+     * un-full a page cannot be lost either.
+     *
      * <p><b>Eviction only ever operates on the reusable list</b> — {@link #evictIfAboveFloor} calls
      * {@code removeFromReusable} unconditionally, and every caller either walks {@code reusableHead}
      * or moves the chunk there first. So an exhausted-list chunk never has its free lists stripped,
@@ -819,17 +820,6 @@ final class AdaptivePoolingAllocator {
      * {@link SizeClassChunkRecycler}, which every size class on the heap draws from.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
-        /**
-         * Diagnostic: how many chunks {@link #fullSweep()} moved out of the exhausted list.
-         *
-         * <p>This is <em>not</em> a violation counter and it does not have to stay zero. A releaser
-         * that has offered its segment but has not yet published its note leaves exactly the state
-         * the sweep looks for - capacity present, no note in the list - so a non-zero count is
-         * expected under concurrency. Only a count that grows in proportion to allocations, rather
-         * than staying incidental, would suggest the notification path is actually broken.
-         */
-        static final LongAdder RESCUED_BY_FULL_SWEEP = new LongAdder();
-
         private static final AtomicReferenceFieldUpdater<ThreadLocalSizeClassedChunkCache, SizeClassedChunk>
                 PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
                         ThreadLocalSizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
@@ -1069,7 +1059,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         SizeClassedChunk forcePurge() {
-            fullSweep();
+            tickPurge();
             return pollChunkInternal();
         }
 
@@ -1137,8 +1127,8 @@ final class AdaptivePoolingAllocator {
         @Override
         public void tickPurge() {
             drainPending();
-            // Exhausted→reusable is applied by the drain above (fullSweep is only a backstop). All
-            // that is left is evicting fully-free reusable chunks above the retention floor.
+            // Exhausted→reusable is applied by the drain above. All that is left is evicting
+            // fully-free reusable chunks above the retention floor.
             int total = totalCount();
             SizeClassedChunk cur = reusableHead;
             while (cur != null && total > purgeRetentionFloor) {
@@ -1151,40 +1141,6 @@ final class AdaptivePoolingAllocator {
                 }
                 cur = next;
             }
-        }
-
-        /**
-         * Unbounded catch-all, and the last of the three routes out of the exhausted list.
-         *
-         * <p>{@link #drainPending()} handles chunks whose note has been published, and
-         * {@link #probeExhausted()} covers notes still in flight - but the probe stops after
-         * {@code MAX_EXHAUSTED_PROBE} chunks, so a usable chunk sitting deeper in a long exhausted
-         * list can outlive both. This sweep walks the whole list and is the only thing that
-         * guarantees such a chunk is eventually found. It runs rarely, on one purge tick in
-         * {@code FULL_SWEEP_MULTIPLIER}.
-         *
-         * <p>It is <b>not</b> a violation detector, and what it finds is not evidence of a bug: a
-         * releaser that has offered its segment but not yet published its note leaves precisely the
-         * state this looks for. See {@link #RESCUED_BY_FULL_SWEEP}.
-         */
-        void fullSweep() {
-            drainPending();
-            int rescued = 0;
-            SizeClassedChunk cur = exhaustedHead;
-            while (cur != null) {
-                SizeClassedChunk next = cur.nextInCache;
-                if (cur.hasRemainingCapacity()) {
-                    rescued++;
-                    removeFromExhausted(cur);
-                    addToReusable(cur);
-                }
-                cur = next;
-            }
-            if (rescued != 0) {
-                RESCUED_BY_FULL_SWEEP.add(rescued);
-            }
-            // Then do the eviction sweep
-            tickPurge();
         }
 
         @Override
@@ -1545,7 +1501,6 @@ final class AdaptivePoolingAllocator {
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
-        private int purgeCount;
         boolean purgeFired;
 
         // Size-classed magazine constructor (both thread-local and shared-stripe)
@@ -1582,12 +1537,7 @@ final class AdaptivePoolingAllocator {
         private void tickAllocPurge() {
             if (purgeTickThreshold > 0 && ++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
-                if (++purgeCount >= FULL_SWEEP_MULTIPLIER) {
-                    purgeCount = 0;
-                    ((ThreadLocalSizeClassedChunkCache) chunkCache).fullSweep();
-                } else {
-                    chunkCache.tickPurge();
-                }
+                chunkCache.tickPurge();
                 purgeFired = true;
             }
         }
