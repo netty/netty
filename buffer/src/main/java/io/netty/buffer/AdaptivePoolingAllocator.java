@@ -2188,30 +2188,14 @@ final class AdaptivePoolingAllocator {
         void releaseSegment(int startIndex, int size) {
             if (ownerThread != null && Thread.currentThread() == ownerThread) {
                 localFreeList.push(startIndex);
-                int state = this.state;
-                if (state != AVAILABLE) {
-                    updateStateOnLocalReleaseSegment(state);
-                } else {
-                    int cls = cacheListState;
-                    if (cls != CACHE_NONE) {
-                        detectCacheTransition(cls);
-                    }
-                }
+                afterLocalRelease();
             } else {
                 final ThreadLocalSizeClassedChunkCache cache = owningCache;
                 final long stamp = cache.tryLockForRelease();
                 if (stamp != 0) {
                     try {
                         localFreeList.push(startIndex);
-                        int state = this.state;
-                        if (state != AVAILABLE) {
-                            updateStateOnLockedReleaseSegment(state);
-                        } else {
-                            int cls = cacheListState;
-                            if (cls != CACHE_NONE) {
-                                cache.transitionAfterRelease(this, cls);
-                            }
-                        }
+                        afterLockedRelease(cache);
                     } finally {
                         cache.unlockAfterRelease(stamp);
                     }
@@ -2230,6 +2214,36 @@ final class AdaptivePoolingAllocator {
                         cache.notifyHasCapacity(this);
                     }
                 }
+            }
+        }
+
+        /**
+         * Cold: apply the deallocation bookkeeping or cache-list transition implied by a segment
+         * returned by the owner thread. Split out of {@link #releaseSegment} so the common case —
+         * push the segment, find nothing else to do — stays a few lines.
+         */
+        private void afterLocalRelease() {
+            int state = this.state;
+            if (state != AVAILABLE) {
+                updateStateOnLocalReleaseSegment(state);
+                return;
+            }
+            int cls = cacheListState;
+            if (cls != CACHE_NONE) {
+                detectCacheTransition(cls);
+            }
+        }
+
+        /** Locked counterpart of {@link #afterLocalRelease()}; caller holds the stripe lock. */
+        private void afterLockedRelease(ThreadLocalSizeClassedChunkCache cache) {
+            int state = this.state;
+            if (state != AVAILABLE) {
+                updateStateOnLockedReleaseSegment(state);
+                return;
+            }
+            int cls = cacheListState;
+            if (cls != CACHE_NONE) {
+                cache.transitionAfterRelease(this, cls);
             }
         }
 
