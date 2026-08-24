@@ -810,6 +810,9 @@ final class AdaptivePoolingAllocator {
                 PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
                         ThreadLocalSizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
 
+        /** Bound on the last-resort probe of the exhausted list; see {@link #probeExhausted()}. */
+        private static final int MAX_EXHAUSTED_PROBE = 8;
+
         SizeClassedChunk exhaustedHead;
         SizeClassedChunk reusableHead;
         /** Treiber stack of chunks that a releasing thread asked us to look at. */
@@ -1066,6 +1069,43 @@ final class AdaptivePoolingAllocator {
                 removeFromReusable(chunk);
                 detachFromCache(chunk);
                 return chunk;
+            }
+            return probeExhausted();
+        }
+
+        /**
+         * Last resort before the caller allocates a fresh chunk: look at a bounded number of
+         * exhausted chunks in case one regained capacity from a return whose notification has not
+         * been drained yet.
+         *
+         * <p>An empty reusable list means "no usable chunk is <em>known</em>", not "none exists".
+         * {@code drainPending} runs immediately before the poll, so it catches every note pushed
+         * before its {@code getAndSet} - but a note pushed concurrently with the drain, or by a
+         * releaser that has claimed its link and not yet published it, is not seen. Without this
+         * probe the caller would allocate a new chunk while a usable one sat in the exhausted list,
+         * which is the chunk-count growth this cache exists to avoid.
+         *
+         * <p>mimalloc does the same and for the same reason: {@code findFreePage} calls
+         * {@code pageFreeCollect} on the queue head before its fast path, and
+         * {@code pageQueueFindFreeEx} calls it on every page it visits, bounded by
+         * {@code MAX_PAGE_CANDIDATE_SEARCH}. Notifications cover what a scan cannot reach; a
+         * bounded scan covers what notifications are late for.
+         *
+         * <p>Bounded by chunks <em>visited</em>, not by anything found - a bound on work done is
+         * the only kind that holds when nothing matches.
+         */
+        private SizeClassedChunk probeExhausted() {
+            SizeClassedChunk cur = exhaustedHead;
+            int visited = 0;
+            while (cur != null && visited < MAX_EXHAUSTED_PROBE) {
+                SizeClassedChunk next = cur.nextInCache;
+                visited++;
+                if (cur.hasRemainingCapacity()) {
+                    removeFromExhausted(cur);
+                    detachFromCache(cur);
+                    return cur;
+                }
+                cur = next;
             }
             return null;
         }

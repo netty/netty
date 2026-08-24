@@ -144,16 +144,30 @@ public class SizeClassedChunkCacheTest {
         assertEquals(0, cache.exhaustedCount);
     }
 
+    // A note pushed concurrently with the drain, or by a releaser that has claimed its link but not
+    // yet published it, is not seen by the drain that runs just before the poll. Without the probe
+    // the caller would allocate a fresh chunk while a usable one sat in the exhausted list.
     @Test
-    void pollChunkDoesNotSearchTheExhaustedListWithoutANotification() {
+    void pollProbesTheExhaustedListForAChunkWithNoPendingNotification() {
         ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
+        // gains capacity, but deliberately NO notifyHasCapacity - models a note racing the drain
         when(chunk.hasRemainingCapacity()).thenReturn(true);
 
+        assertSame(chunk, cache.pollChunk(256), "the probe must find a chunk with no pending note");
+        assertEquals(0, cache.exhaustedCount);
+    }
+
+    @Test
+    void pollReturnsNullWhenNothingWithinTheProbeBoundHasCapacity() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+        for (int i = 0; i < 50; i++) {
+            cache.offerChunk(chunkWithoutCapacity());
+        }
         assertNull(cache.pollChunk(256));
-        assertEquals(1, cache.exhaustedCount);
+        assertEquals(50, cache.exhaustedCount);
     }
 
     // --- forcePurge: drains notifications + returns reusable chunk ---
@@ -345,7 +359,7 @@ public class SizeClassedChunkCacheTest {
         assertEquals(2, cache.exhaustedCount);
     }
 
-    // --- No scanning: a poll must not walk the exhausted list at all ---
+    // --- Bounded probing: a poll may glance at the exhausted list, but never walk it ---
     // The predecessor of the notification queue walked the exhausted list looking for chunks that
     // had regained capacity. It was the only discovery mechanism, so the walk up to the first hit
     // could not be bounded, and a mostly-exhausted list made every poll O(cache size).
@@ -377,7 +391,10 @@ public class SizeClassedChunkCacheTest {
         for (SizeClassedChunk c : rest) {
             visited += mockingDetails(c).getInvocations().size();
         }
-        assertEquals(0, visited, "a poll must not visit any chunk on the exhausted list");
+        // The probe is bounded, so a poll may look at a few exhausted chunks - but it must never
+        // walk the list, which is what made every poll O(cache size) before the notification queue.
+        assertTrue(visited <= 8,
+                "a poll must not walk the exhausted list, but visited " + visited + " of " + tail);
     }
 
     // --- Notification queue ---
