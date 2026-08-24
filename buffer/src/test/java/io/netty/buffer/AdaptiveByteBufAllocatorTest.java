@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.SplittableRandom;
@@ -41,6 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.StampedLock;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -369,10 +371,17 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     private static final int BURST_CHUNK_SIZE = BURST_BUF_SIZE * BURST_SEGMENTS_PER_CHUNK;
     private static final int BURST_CHUNKS = 400;
 
+    /**
+     * Runs the burst with every stripe write lock held, so no releaser can apply the exhausted -&gt;
+     * reusable transition inline and the notification is the only thing that can move a chunk. Without
+     * that this assertion is at the mercy of the scheduler: with the locks free, most chunks are moved
+     * by the lock-winning path and deleting the drain's {@code moveToReusable} still leaves only a
+     * handful stranded.
+     */
     @Test
     void noChunkIsStrandedAfterABurstWithCrossThreadReleases() throws Exception {
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
-        runBurstWithCrossThreadReleases(allocator);
+        runBurstWithCrossThreadReleases(allocator, true);
 
         // Every worker has been joined, so the lists are quiescent and safe to walk from here.
         for (ThreadLocalSizeClassedChunkCache cache : sizeClassChunkCaches(allocator)) {
@@ -390,7 +399,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     void memoryFallsBackToTheRetentionFloorAfterAnIdleBurst() throws Exception {
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
-        long peak = runBurstWithCrossThreadReleases(allocator);
+        long peak = runBurstWithCrossThreadReleases(allocator, false);
 
         int caches = sizeClassChunkCaches(allocator).size();
         int floor = Math.max(1, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MIN_BYTES / BURST_CHUNK_SIZE);
@@ -419,8 +428,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
      * without the notification queue). Keeping to a single stripe is what makes the assertions here
      * about the mechanism rather than about stripe scheduling.
      */
-    private static long runBurstWithCrossThreadReleases(final AdaptiveByteBufAllocator allocator)
-            throws Exception {
+    private static long runBurstWithCrossThreadReleases(final AdaptiveByteBufAllocator allocator,
+            final boolean forceNotifyPath) throws Exception {
         final BlockingQueue<ByteBuf> toRelease = new ArrayBlockingQueue<ByteBuf>(1024);
         final AtomicBoolean handedOver = new AtomicBoolean();
         final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
@@ -462,6 +471,18 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                     }
                     peak.set(allocator.usedHeapMemory());
 
+                    // Optionally hold every stripe write lock across the release phase. Contention
+                    // alone only makes *most* returns take the notify path - how many is up to the
+                    // scheduler, and if every releaser happens to win the lock the assertions below
+                    // test nothing. With the locks held no releaser can win, so the notification is
+                    // the only thing that can move a chunk, deterministically.
+                    List<Long> stamps = new ArrayList<Long>();
+                    List<StampedLock> locks = forceNotifyPath ?
+                            stripeLocks(allocator) : Collections.<StampedLock>emptyList();
+                    for (StampedLock l : locks) {
+                        stamps.add(l.writeLock());
+                    }
+
                     // Hand the live set to the releasers, which now contend with each other.
                     for (int i = 0; i < burstBuffers; i++) {
                         toRelease.put(live[i]);
@@ -469,6 +490,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                     }
                     handedOver.set(true);
                     releasersDone.await();
+                    for (int i = 0; i < locks.size(); i++) {
+                        locks.get(i).unlockWrite(stamps.get(i));
+                    }
 
                     // Settle on a tiny working set, on the same thread and so the same stripe. These
                     // allocations are what drives the heap-wide drain and the purge tick; the releases
@@ -493,6 +517,25 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             throw new AssertionError(failure.get());
         }
         return peak.get();
+    }
+
+    private static List<StampedLock> stripeLocks(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
+        stripesField.setAccessible(true);
+        Object[] stripes = (Object[]) stripesField.get(pooling);
+        List<StampedLock> out = new ArrayList<StampedLock>();
+        for (Object stripe : stripes) {
+            if (stripe == null) {
+                continue;
+            }
+            Field lockField = stripe.getClass().getDeclaredField("lock");
+            lockField.setAccessible(true);
+            out.add((StampedLock) lockField.get(stripe));
+        }
+        return out;
     }
 
     private static List<ThreadLocalSizeClassedChunkCache> sizeClassChunkCaches(
