@@ -232,8 +232,12 @@ public class SimpleChannelPoolTest {
                 .group(group)
                 .channel(LocalChannel.class)
                 .remoteAddress(addr);
-        ChannelHealthChecker healthChecker = channel ->
-                channel.eventLoop().newSucceededFuture(Boolean.FALSE);
+        ChannelHealthChecker healthChecker = new ChannelHealthChecker() {
+            @Override
+            public Future<Boolean> isHealthy(Channel channel) {
+                return channel.eventLoop().newSucceededFuture(Boolean.FALSE);
+            }
+        };
         SimpleChannelPool pool = new SimpleChannelPool(cb, handler, healthChecker);
         Channel channel = null;
         try {
