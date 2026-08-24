@@ -213,7 +213,7 @@ public class SimpleChannelPoolTest {
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)
-                .childHandler(new ChannelHandler() {});
+                .childHandler(new ChannelHandler() { });
         Channel sc = sb.bind(addr).get();
 
         AtomicBoolean channelReleased = new AtomicBoolean();
