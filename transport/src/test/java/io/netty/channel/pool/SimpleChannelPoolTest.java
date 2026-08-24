@@ -210,7 +210,7 @@ public class SimpleChannelPoolTest {
                 .childHandler(new ChannelInboundHandlerAdapter());
         Channel sc = sb.bind(addr).syncUninterruptibly().channel();
 
-        AtomicBoolean channelReleased = new AtomicBoolean();
+        final AtomicBoolean channelReleased = new AtomicBoolean();
         ChannelPoolHandler handler = new ChannelPoolHandler() {
             @Override
             public void channelReleased(Channel ch) {
