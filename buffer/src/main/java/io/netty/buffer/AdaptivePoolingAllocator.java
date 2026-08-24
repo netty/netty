@@ -834,8 +834,8 @@ final class AdaptivePoolingAllocator {
         int exhaustedCount;
         int reusableCount;
 
-        SizeClassChunkRecycler chunkRecycler;
-        int sizeClassIndex;
+        final SizeClassChunkRecycler chunkRecycler;
+        final int sizeClassIndex;
         final int purgeRetentionFloor;
         final StampedLock stripeLock; // null for thread-local, non-null for shared stripes
 
@@ -1034,15 +1034,26 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Try to take exclusive access to this cache so a releasing thread can place a segment
-         * and apply any resulting list transition. Returns 0 when unavailable (thread-local
-         * caches have no lock, and a contended stripe lock is not waited on).
+         * Try to take exclusive access to this cache so a releasing thread can place a segment and
+         * apply any resulting list transition. Returns 0 when unavailable: a cache with no lock has
+         * no exclusive mode to take, and a contended stripe lock is not waited on.
+         *
+         * <p>A non-zero result must be passed to {@link #unlockAfterRelease(long)}; a zero result
+         * must not be.
          */
         long tryLockForRelease() {
             return stripeLock == null ? 0 : stripeLock.tryWriteLock();
         }
 
+        /**
+         * Release the exclusive access taken by {@link #tryLockForRelease()}.
+         *
+         * @param stamp a non-zero stamp from {@code tryLockForRelease}. Zero is not a stamp - it is
+         *              how that method reports failure, and a cache without a lock reports nothing
+         *              else - so passing it here is a caller bug, not a no-op.
+         */
         void unlockAfterRelease(long stamp) {
+            assert stamp != 0 : "unlockAfterRelease(0): tryLockForRelease did not grant the lock";
             stripeLock.unlockWrite(stamp);
         }
 
