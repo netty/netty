@@ -322,6 +322,32 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 "During burst: " + memoryDuringBurst + ", after settled: " + memoryAfterSettled);
     }
 
+    // Regression: on the shared (striped) path a segment returned after the allocator was
+    // freed was absorbed into the chunk's local free list by the lock-holding release path,
+    // which skipped the deallocation accounting entirely -- so the chunk never deallocated.
+    @Test
+    void segmentReturnedAfterFreeMustStillDeallocateChunk() throws Exception {
+        // useCacheForNonEventLoopThreads=false -> a plain thread takes the shared path
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        ByteBuf buf = allocator.heapBuffer(256);
+        assertTrue(allocator.usedHeapMemory() > 0);
+
+        java.lang.reflect.Field f = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        f.setAccessible(true);
+        Object inner = f.get(allocator);
+        java.lang.reflect.Method free = inner.getClass().getDeclaredMethod("free");
+        free.setAccessible(true);
+        free.invoke(inner);
+
+        // last outstanding segment comes back from another thread
+        Thread t = new Thread(buf::release);
+        t.start();
+        t.join();
+
+        assertEquals(0, allocator.usedHeapMemory(),
+                "chunk must deallocate once its last segment is returned");
+    }
+
     private static void shuffle(SplittableRandom rng, Object array) {
         int len = Array.getLength(array);
         for (int i = 0; i < len; i++) {

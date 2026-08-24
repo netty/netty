@@ -879,27 +879,28 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        boolean tryReturnSegmentUnderLock(SizeClassedChunk chunk, int startIndex) {
-            if (stripeLock == null) {
-                return false;
+        /**
+         * Try to take exclusive access to this cache so a releasing thread can place a segment
+         * and apply any resulting list transition. Returns 0 when unavailable (thread-local
+         * caches have no lock, and a contended stripe lock is not waited on).
+         */
+        long tryLockForRelease() {
+            return stripeLock == null ? 0 : stripeLock.tryWriteLock();
+        }
+
+        void unlockAfterRelease(long stamp) {
+            stripeLock.unlockWrite(stamp);
+        }
+
+        /**
+         * Apply the list transition implied by a segment return. Caller must hold the stamp
+         * from {@link #tryLockForRelease()} and must have already placed the segment.
+         */
+        void transitionAfterRelease(SizeClassedChunk chunk, int cls) {
+            if (cls == SizeClassedChunk.CACHE_EXHAUSTED) {
+                moveToReusable(chunk);
             }
-            long stamp = stripeLock.tryWriteLock();
-            if (stamp == 0) {
-                return false;
-            }
-            try {
-                chunk.localFreeList.push(startIndex);
-                int cls = chunk.cacheListState;
-                if (cls == SizeClassedChunk.CACHE_EXHAUSTED) {
-                    moveToReusable(chunk);
-                    evictIfAboveFloor(chunk);
-                } else if (cls == SizeClassedChunk.CACHE_REUSABLE) {
-                    evictIfAboveFloor(chunk);
-                }
-            } finally {
-                stripeLock.unlockWrite(stamp);
-            }
-            return true;
+            evictIfAboveFloor(chunk);
         }
 
         @Override
@@ -924,12 +925,29 @@ final class AdaptivePoolingAllocator {
         }
 
         private static final int MAX_EXHAUSTED_SCAN_MOVE = 8;
+        private static final int MAX_VISITS_AFTER_HIT = 16;
 
+        /**
+         * Find a chunk that regained capacity from cross-thread segment returns.
+         *
+         * <p>The walk up to the first hit is deliberately unbounded: it is the only mechanism
+         * that discovers such chunks, and cutting it short would leave usable chunks stranded
+         * in the exhausted list while the magazine allocates fresh ones.
+         *
+         * <p>Past the first hit the walk is pure opportunistic maintenance — promoting further
+         * chunks so subsequent polls hit {@code reusableHead} directly — so it is bounded in
+         * both visits and moves.
+         */
         private SizeClassedChunk scanExhaustedForCapacity() {
             SizeClassedChunk result = null;
             SizeClassedChunk cur = exhaustedHead;
             int moved = 0;
-            while (cur != null && moved < MAX_EXHAUSTED_SCAN_MOVE) {
+            int visitsAfterHit = 0;
+            while (cur != null) {
+                if (result != null
+                        && (moved >= MAX_EXHAUSTED_SCAN_MOVE || ++visitsAfterHit > MAX_VISITS_AFTER_HIT)) {
+                    break;
+                }
                 SizeClassedChunk next = cur.nextInCache;
                 if (cur.hasRemainingCapacity()) {
                     removeFromExhausted(cur);
@@ -1921,8 +1939,24 @@ final class AdaptivePoolingAllocator {
                     }
                 }
             } else {
-                if (!owningCache.tryReturnSegmentUnderLock(this, startIndex)) {
-                    // Lock not acquired — fall back to MPSC queue
+                final ThreadLocalSizeClassedChunkCache cache = owningCache;
+                final long stamp = cache.tryLockForRelease();
+                if (stamp != 0) {
+                    try {
+                        localFreeList.push(startIndex);
+                        int state = this.state;
+                        if (state != AVAILABLE) {
+                            updateStateOnLockedReleaseSegment(state);
+                        } else {
+                            int cls = cacheListState;
+                            if (cls != CACHE_NONE) {
+                                cache.transitionAfterRelease(this, cls);
+                            }
+                        }
+                    } finally {
+                        cache.unlockAfterRelease(stamp);
+                    }
+                } else {
                     boolean segmentReturned = externalFreeList.offer(startIndex);
                     assert segmentReturned;
                     // implicit StoreLoad barrier from MPSC offer()
@@ -1942,6 +1976,25 @@ final class AdaptivePoolingAllocator {
                 }
             } else if (cls == CACHE_REUSABLE && hasFullCapacity()) {
                 owningCache.evictIfAboveFloor(this);
+            }
+        }
+
+        /**
+         * Deallocation accounting for a segment placed into {@link #localFreeList} while holding
+         * the stripe lock. Unlike the owner-thread variant, {@code state} may be concurrently
+         * advanced to {@link #DEALLOCATED} by a releaser on the lock-free MPSC path, so the
+         * update is a CAS loop rather than an unconditional CAS.
+         */
+        private void updateStateOnLockedReleaseSegment(int observedState) {
+            int st = observedState;
+            while (st != DEALLOCATED) {
+                // Safe under the stripe lock: only lock holders mutate localFreeList.
+                int newLocalSize = localFreeList.size();
+                if (STATE.compareAndSet(this, st, newLocalSize)) {
+                    deallocateIfNeeded(newLocalSize);
+                    return;
+                }
+                st = state;
             }
         }
 

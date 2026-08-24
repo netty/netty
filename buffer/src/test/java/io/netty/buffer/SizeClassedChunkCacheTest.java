@@ -24,7 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -318,6 +320,42 @@ public class SizeClassedChunkCacheTest {
 
         assertEquals(2, drained);
         assertEquals(2, cache.exhaustedCount);
+    }
+
+    // --- scan bound: maintenance past the first hit must not walk the whole list ---
+    // Regression: scanExhaustedForCapacity bounded only the number of chunks MOVED, so when
+    // nothing (or almost nothing) had capacity it walked the entire exhausted list on every
+    // poll -- even when it hit a usable chunk on the very first element.
+
+    @Test
+    void scanStopsWalkingShortlyAfterFindingAUsableChunk() {
+        ThreadLocalSizeClassedChunkCache cache = new ThreadLocalSizeClassedChunkCache(128 * 1024, null, 0);
+
+        int tail = 200;
+        SizeClassedChunk[] rest = new SizeClassedChunk[tail];
+        for (int i = 0; i < tail; i++) {
+            rest[i] = chunkWithoutCapacity();
+            cache.offerChunk(rest[i]);
+        }
+        // Offered last, so it sits at the head of the exhausted list. It is classified as
+        // exhausted, then gains capacity -- exactly what a cross-thread segment return does.
+        SizeClassedChunk stale = chunkWithoutCapacity();
+        cache.offerChunk(stale);
+        when(stale.hasRemainingCapacity()).thenReturn(true);
+
+        for (SizeClassedChunk c : rest) {
+            clearInvocations(c);
+        }
+
+        assertSame(stale, cache.pollChunk(256));
+
+        int visitedAfterHit = 0;
+        for (SizeClassedChunk c : rest) {
+            visitedAfterHit += mockingDetails(c).getInvocations().size();
+        }
+        assertTrue(visitedAfterHit <= 32,
+                "post-hit maintenance walk must be bounded, but visited " + visitedAfterHit
+                        + " of " + tail + " chunks behind the hit");
     }
 
     @Test
