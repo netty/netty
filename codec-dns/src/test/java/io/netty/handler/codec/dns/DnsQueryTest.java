@@ -21,7 +21,6 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.InetSocketAddress;
@@ -45,24 +44,25 @@ public class DnsQueryTest {
                 DnsOpCode.UPDATE);
     }
 
-    static Stream<Arguments> opCodesAndExpectedFlags() {
-        return Stream.of(
-                // RFC 1035 section 4.1.1: QR(1) OPCODE(4) AA TC RD RA Z(3) RCODE(4), so the OPCODE
-                // occupies bits 14-11 and RD is bit 8.
-                Arguments.of(DnsOpCode.QUERY, false, 0x0000),
-                Arguments.of(DnsOpCode.QUERY, true, 0x0100),
-                Arguments.of(DnsOpCode.IQUERY, false, 0x0800),
-                Arguments.of(DnsOpCode.IQUERY, true, 0x0900),
-                Arguments.of(DnsOpCode.STATUS, false, 0x1000),
-                Arguments.of(DnsOpCode.STATUS, true, 0x1100),
-                Arguments.of(DnsOpCode.NOTIFY, false, 0x2000),
-                Arguments.of(DnsOpCode.NOTIFY, true, 0x2100),
-                Arguments.of(DnsOpCode.UPDATE, false, 0x2800),
-                Arguments.of(DnsOpCode.UPDATE, true, 0x2900),
+    static List<Object[]> opCodesAndExpectedFlags() {
+        // RFC 1035 section 4.1.1: QR(1) OPCODE(4) AA TC RD RA Z(3) RCODE(4), so the OPCODE
+        // occupies bits 14-11 and RD is bit 8.
+        List<Object[]> arguments = new ArrayList<Object[]>();
+        arguments.add(new Object[] { DnsOpCode.QUERY, false, 0x0000 });
+        arguments.add(new Object[] { DnsOpCode.QUERY, true, 0x0100 });
+        arguments.add(new Object[] { DnsOpCode.IQUERY, false, 0x0800 });
+        arguments.add(new Object[] { DnsOpCode.IQUERY, true, 0x0900 });
+        arguments.add(new Object[] { DnsOpCode.STATUS, false, 0x1000 });
+        arguments.add(new Object[] { DnsOpCode.STATUS, true, 0x1100 });
+        arguments.add(new Object[] { DnsOpCode.NOTIFY, false, 0x2000 });
+        arguments.add(new Object[] { DnsOpCode.NOTIFY, true, 0x2100 });
+        arguments.add(new Object[] { DnsOpCode.UPDATE, false, 0x2800 });
+        arguments.add(new Object[] { DnsOpCode.UPDATE, true, 0x2900 });
 
                 // DnsOpCode does not range check, and an OPCODE that does not fit the four bits
                 // reserved for it must not reach the neighbouring QR bit.
-                Arguments.of(DnsOpCode.valueOf(16), false, 0x0000));
+        arguments.add(new Object[] { DnsOpCode.valueOf(16), false, 0x0000 });
+        return arguments;
     }
 
     @Test
