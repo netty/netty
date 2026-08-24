@@ -59,8 +59,8 @@ public class DnsQueryTest {
         arguments.add(new Object[] { DnsOpCode.UPDATE, false, 0x2800 });
         arguments.add(new Object[] { DnsOpCode.UPDATE, true, 0x2900 });
 
-                // DnsOpCode does not range check, and an OPCODE that does not fit the four bits
-                // reserved for it must not reach the neighbouring QR bit.
+        // DnsOpCode does not range check, and an OPCODE that does not fit the four bits
+        // reserved for it must not reach the neighbouring QR bit.
         arguments.add(new Object[] { DnsOpCode.valueOf(16), false, 0x0000 });
         return arguments;
     }
