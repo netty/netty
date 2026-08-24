@@ -1883,10 +1883,17 @@ final class AdaptivePoolingAllocator {
         }
 
         protected void deallocate() {
-            onRelease();
-            allocator.chunkRegistry.remove(this);
             if (delegate != null) {
+                // Only when the buffer is actually being freed. recycleOrDeallocate hands the
+                // buffer to SizeClassChunkRecycler and nulls the field, and a FreeChunk event for
+                // that chunk would be wrong twice over: the memory has not been freed, it has been
+                // pooled for another size class to pick up, and AbstractChunkEvent.fill reads
+                // isDirect()/memoryAddress(), which dereference the delegate.
+                onRelease();
+                allocator.chunkRegistry.remove(this);
                 delegate.release();
+            } else {
+                allocator.chunkRegistry.remove(this);
             }
         }
 
