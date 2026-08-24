@@ -648,7 +648,7 @@ final class AdaptivePoolingAllocator {
                 if (buf == null) {
                     buf = mag.newBuffer();
                 }
-                if (mag.allocate(size, maxCapacity, buf, reallocate)) {
+                if (mag.allocate(size, maxCapacity, buf)) {
                     if (mag.purgeFired && sizeClassIndex < SIZE_CLASSES_COUNT) {
                         mag.purgeFired = false;
                         stripeWidePurge(sizeClassIndex);
@@ -697,7 +697,7 @@ final class AdaptivePoolingAllocator {
             if (!reallocate) {
                 buf = mag.newBuffer();
             }
-            boolean success = mag.allocate(size, maxCapacity, buf, reallocate);
+            boolean success = mag.allocate(size, maxCapacity, buf);
             assert success : "Thread-local allocation must always succeed";
             if (mag.purgeFired) {
                 mag.purgeFired = false;
@@ -1325,7 +1325,7 @@ final class AdaptivePoolingAllocator {
         /**
          * Compute the "fast max capacity" value for the buffer.
          */
-        int computeBufferCapacity(int requestedSize, int maxCapacity, boolean isReallocation);
+        int computeBufferCapacity(int requestedSize, int maxCapacity);
 
         /**
          * Allocate a new {@link Chunk} for the given {@link Magazine}.
@@ -1405,8 +1405,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public int computeBufferCapacity(
-                int requestedSize, int maxCapacity, boolean isReallocation) {
+        public int computeBufferCapacity(int requestedSize, int maxCapacity) {
             return Math.min(segmentSize, maxCapacity);
         }
 
@@ -1464,7 +1463,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public int computeBufferCapacity(int requestedSize, int maxCapacity, boolean isReallocation) {
+        public int computeBufferCapacity(int requestedSize, int maxCapacity) {
             return MathUtil.safeFindNextPositivePowerOfTwo(requestedSize);
         }
 
@@ -1619,8 +1618,8 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
+        boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
+            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity);
             Chunk curr = current;
             if (curr != null) {
                 boolean success = curr.readInitInto(buf, size, startingCapacity, maxCapacity);
