@@ -114,7 +114,7 @@ public class DnsQueryTest {
 
     @ParameterizedTest
     @MethodSource("opCodes")
-    public void testOpCodeSurvivesEncodeAndDecode(DnsOpCode opCode) {
+    public void testOpCodeSurvivesEncodeAndDecode(DnsOpCode opCode) throws Exception {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
@@ -137,7 +137,8 @@ public class DnsQueryTest {
 
     @ParameterizedTest
     @MethodSource("opCodesAndExpectedFlags")
-    public void testOpCodeIsEncodedIntoBits14To11(DnsOpCode opCode, boolean recursionDesired, int expectedFlags) {
+    public void testOpCodeIsEncodedIntoBits14To11(DnsOpCode opCode, boolean recursionDesired, int expectedFlags)
+        throws Exception {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
 
