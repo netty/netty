@@ -764,40 +764,63 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * Two-list chunk cache for thread-local chunk reuse (SPSC — only the owner thread accesses it).
+     * Two-list chunk cache: answers "give me a chunk to carve from" and "release what is idle".
      *
-     * <p>Chunks are organized into two intrusive doubly-linked lists based on their state:
+     * <p><b>Access.</b> The lists, the counters and {@code cacheListState} are touched only by the
+     * owner thread (thread-local magazines) or under the stripe write lock (shared magazines) —
+     * one magazine's caches all share that one lock. The only exception is {@link #pendingHead},
+     * which any releasing thread may push to; it is the sole concurrent structure here.
+     *
+     * <p><b>The two lists.</b>
      * <ul>
-     *   <li><b>Exhausted</b> (mimalloc: full page queue): chunks with no free segments.</li>
-     *   <li><b>Reusable</b> (mimalloc: regular page queue): chunks with some free segments.
-     *       {@link #pollChunk} takes from here, O(1). Fully-free chunks below the retention
-     *       floor also stay here — they have capacity and are available for allocation.</li>
+     *   <li><b>Reusable</b> — chunks known to have free segments. {@link #pollChunk} takes the
+     *       head, O(1). Fully-free chunks at or below the retention floor stay here rather than
+     *       being evicted, so a burst does not have to re-allocate immediately after draining.</li>
+     *   <li><b>Exhausted</b> — chunks with no free segments when they were filed. Primarily an
+     *       ownership registry: it keeps chunks reachable for {@link #free()} and gives the
+     *       notification drain somewhere to move a chunk out of. It is <em>not</em> the discovery
+     *       mechanism, and is never walked.</li>
      * </ul>
      *
-     * <p>A cached chunk can only <em>gain</em> capacity: segments are handed out only by
-     * {@code readInitInto} on a magazine's chunk, and {@link #pollChunk} removes a chunk from the
-     * cache before it is attached to a magazine. So a chunk that is inserted with capacity keeps it,
-     * and neither list ever has to be searched for a usable chunk.
+     * <p><b>Why the reusable list is trustworthy.</b> A cached chunk can only <em>gain</em>
+     * capacity: segments are handed out only by {@code readInitInto} on a magazine's chunk, and
+     * {@link #pollChunk} removes a chunk from the cache before it is attached to a magazine. So a
+     * chunk filed with capacity still has it, and the head of the reusable list is always usable.
      *
-     * <p>Transitions between lists are driven by exactly one event, a segment return:
-     * <ul>
-     *   <li><b>Signal A</b> (exhausted → reusable): first segment return on a cached chunk.
-     *       Mimalloc analog: {@code pageUnfull} (full → regular).</li>
-     *   <li><b>Signal B</b> (reusable → eviction): all segments returned, above retention floor.
-     *       Mimalloc analog: {@code pageRetire}. Chunk is immediately evicted and its backing
-     *       buffer offered to the {@link SizeClassChunkRecycler} for cross-size-class reuse.</li>
-     * </ul>
+     * <p><b>Why the exhausted list is not.</b> {@code offerChunk} files a chunk by reading its
+     * capacity, and a cross-thread return landing just after that read leaves it filed as exhausted
+     * while it actually has capacity. Monotonicity does not help here — it says the reusable list
+     * is pure, not that the exhausted list is.
      *
-     * <p>A return by the owner thread, or by a releaser that wins the stripe lock, applies its
-     * transition inline (zero CAS, zero volatile writes — just plain field reads and pointer
-     * manipulation). A releaser that cannot take the lock instead leaves a note via
-     * {@link #notifyHasCapacity}, and {@link #drainPending} applies the transition later, under the
-     * lock. Both routes are exact, so nothing here scans.
+     * <p><b>Three routes move a chunk back to reusable</b>, all driven by the one event that can
+     * change a chunk's occupancy, a segment return:
+     * <ol>
+     *   <li><b>Inline</b>, when the returning thread can synchronise — it is the owner thread, or it
+     *       won the stripe lock. Plain field reads and pointer writes, no atomics. Signal A
+     *       (exhausted → reusable, mimalloc's {@code pageUnfull}) and Signal B (fully free →
+     *       evicted above the floor, mimalloc's {@code pageRetire}).</li>
+     *   <li><b>Deferred</b>, when it cannot: {@link #notifyHasCapacity} leaves a note and
+     *       {@link #drainPending} applies the transition under the lock. See Invariant N.</li>
+     *   <li><b>Probed</b>, as a last resort: {@link #probeExhausted()} looks at a bounded number of
+     *       exhausted chunks when the reusable list is empty, because a note pushed concurrently
+     *       with the drain has not been applied yet. Without it the caller would allocate a fresh
+     *       chunk while a usable one sat in the exhausted list.</li>
+     * </ol>
+     * Routes 2 and 3 overlap deliberately, as they do in mimalloc: notifications reach chunks a
+     * bounded scan would not, and a bounded scan covers what notifications are late for.
      *
-     * <p>The cache never rejects chunks ({@code offerChunk} always returns true). Cache size
-     * tracks the working set naturally. Idle chunks are detected via Signal B and evicted. The
-     * {@link SizeClassChunkRecycler} serves as the shared pool for recycling backing buffers
-     * across size classes.
+     * <p><b>Eviction only ever operates on the reusable list</b> — {@link #evictIfAboveFloor} calls
+     * {@code removeFromReusable} unconditionally, and every caller either walks {@code reusableHead}
+     * or moves the chunk there first. So an exhausted-list chunk never has its free lists stripped,
+     * and {@link #probeExhausted()} cannot encounter one that does.
+     *
+     * <p>Note that route 3 can hand out a chunk that route 2 would have evicted. That is intended:
+     * reusing a fully-free chunk beats evicting it and allocating a fresh one. mimalloc makes the
+     * same trade, cancelling a page's retirement when a scan selects it.
+     *
+     * <p><b>No cap.</b> {@code offerChunk} always returns true; cache size follows the working set,
+     * and idle chunks leave via Signal B rather than a byte threshold. Evicted buffers go to the
+     * {@link SizeClassChunkRecycler}, which every size class on the heap draws from.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
         /**
