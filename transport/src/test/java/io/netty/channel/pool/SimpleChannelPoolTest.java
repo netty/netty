@@ -202,7 +202,7 @@ public class SimpleChannelPoolTest {
 
     @Test
     public void testActiveUnhealthyChannelIsClosedOnRelease() throws Exception {
-        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+        EventLoopGroup group = new DefaultEventLoopGroup();
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group)
