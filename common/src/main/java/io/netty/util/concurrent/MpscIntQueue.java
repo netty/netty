@@ -112,7 +112,13 @@ public interface MpscIntQueue {
 
     /**
      * Reset the queue and fill with {@code count} values: 0, stride, 2*stride, ...
-     * Must only be called when no producers or consumers are active (single-threaded context).
+     * <p>
+     * Must only be called once no <em>new</em> producer or consumer can start. Producers that
+     * have already claimed a slot are awaited: a producer that has won the race for its slot is
+     * visible to {@link #size()} straight away, but its value may not have been stored yet, so a
+     * caller has no way to observe that it is still in flight. Resetting underneath such a
+     * producer would let its store land in the reset queue, so this method waits for those
+     * stores to complete before resetting.
      */
     void resetAndFill(int count, int stride);
 
@@ -324,9 +330,29 @@ public interface MpscIntQueue {
             return mask + 1;
         }
 
+        /**
+         * Wait until every slot claimed by a producer holds its value.
+         *
+         * <p>{@link #offer(int)} publishes the producer index before the element, so a slot in
+         * {@code [consumerIndex, producerIndex)} still reading as the empty value belongs to a
+         * producer that has claimed it but has not stored into it yet. The claim is already
+         * counted by {@link #size()}, so callers cannot tell such a producer apart from a
+         * completed one -- only the queue can, by looking at the slots.
+         */
+        private void awaitClaimedSlotsPublished(int mask) {
+            final long pIndex = producerIndex;
+            for (long i = consumerIndex; i < pIndex; i++) {
+                final int offset = (int) (i & mask);
+                while (get(offset) == emptyValue) {
+                    // Spin: the producer is a couple of instructions away from publishing.
+                }
+            }
+        }
+
         @Override
         public void resetAndFill(int count, int stride) {
             final int mask = this.mask;
+            awaitClaimedSlotsPublished(mask);
             int offset = 0;
             for (int i = 0; i < count; i++) {
                 lazySet(i & mask, offset);
