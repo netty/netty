@@ -642,8 +642,7 @@ final class AdaptivePoolingAllocator {
                     buf = mag.newBuffer();
                 }
                 if (mag.allocate(size, maxCapacity, buf)) {
-                    if (mag.purgeFired && sizeClassIndex < SIZE_CLASSES_COUNT) {
-                        mag.purgeFired = false;
+                    if (mag.tickAllocPurge()) {
                         stripeWidePurge(sizeClassIndex);
                     }
                     return buf;
@@ -692,8 +691,7 @@ final class AdaptivePoolingAllocator {
             }
             boolean success = mag.allocate(size, maxCapacity, buf);
             assert success : "Thread-local allocation must always succeed";
-            if (mag.purgeFired) {
-                mag.purgeFired = false;
+            if (mag.tickAllocPurge()) {
                 stripeWidePurge(sizeClassIndex);
             }
             return buf;
@@ -1512,7 +1510,6 @@ final class AdaptivePoolingAllocator {
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
-        boolean purgeFired;
 
         // Size-classed magazine constructor (both thread-local and shared-stripe)
         Magazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
@@ -1545,12 +1542,22 @@ final class AdaptivePoolingAllocator {
             this.purgeTickThreshold = 0;
         }
 
-        private void tickAllocPurge() {
+        /**
+         * Count one successful allocation and, when the budget is spent, purge this magazine's cache.
+         *
+         * <p>Call exactly once per successful {@link #allocate}, from the caller that acts on the
+         * result: a fired tick also owes the sibling caches on this stripe a purge, and only the
+         * caller can do that.
+         *
+         * @return {@code true} if the tick fired
+         */
+        boolean tickAllocPurge() {
             if (purgeTickThreshold > 0 && ++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
                 chunkCache.tickPurge();
-                purgeFired = true;
+                return true;
             }
+            return false;
         }
 
         void tickCachePurge() {
@@ -1593,7 +1600,6 @@ final class AdaptivePoolingAllocator {
                     curr.releaseFromMagazine();
                 }
                 if (success) {
-                    tickAllocPurge();
                     return true;
                 }
             }
@@ -1620,7 +1626,6 @@ final class AdaptivePoolingAllocator {
                         curr.readInitInto(buf, size, startingCapacity, maxCapacity)) {
                     // We have a Chunk that has some space left.
                     current = curr;
-                    tickAllocPurge();
                     return true;
                 }
 
@@ -1628,11 +1633,7 @@ final class AdaptivePoolingAllocator {
                     if (remainingCapacity >= size) {
                         // At this point we know that this will be the last time curr will be used, so directly set it
                         // to null and release it once we are done.
-                        boolean allocated = curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
-                        if (allocated) {
-                            tickAllocPurge();
-                        }
-                        return allocated;
+                        return curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                     }
                 } finally {
                     // Release in a finally block so even if readInitInto(...) would throw we would still correctly
@@ -1681,9 +1682,6 @@ final class AdaptivePoolingAllocator {
                     curr.releaseFromMagazine();
                     current = null;
                 }
-            }
-            if (success) {
-                tickAllocPurge();
             }
             return success;
         }
