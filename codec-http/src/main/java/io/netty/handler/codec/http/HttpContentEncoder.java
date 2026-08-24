@@ -184,35 +184,47 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     break;
                 }
 
-                encoder = result.contentEncoder();
+                EmbeddedChannel contentEncoder = result.contentEncoder();
+                try {
+                    // Encode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
 
-                // Encode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                res.headers().set(HttpHeaderNames.CONTENT_ENCODING, result.targetContentEncoding());
+                    // Output the rewritten response.
+                    if (isFull) {
+                        // Convert full message into unfull one.
+                        HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
+                        newRes.headers().set(res.headers());
+                        out.add(newRes);
 
-                // Output the rewritten response.
-                if (isFull) {
-                    // Convert full message into unfull one.
-                    HttpResponse newRes = new DefaultHttpResponse(res.protocolVersion(), res.status());
-                    newRes.headers().set(res.headers());
-                    out.add(newRes);
-
-                    ensureContent(res);
-                    encodeFullResponse(newRes, (HttpContent) res, out);
-                    break;
-                } else {
-                    // Make the response chunked to simplify content transformation.
-                    res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-                    res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-
-                    out.add(ReferenceCountUtil.retain(res));
-                    state = State.AWAIT_CONTENT;
-                    if (!(msg instanceof HttpContent)) {
-                        // only break out the switch statement if we have not content to process
-                        // See https://github.com/netty/netty/issues/2006
+                        ensureContent(res);
+                        encoder = contentEncoder;
+                        encodeFullResponse(newRes, (HttpContent) res, out);
+                        contentEncoder = null;
                         break;
+                    } else {
+                        // Make the response chunked to simplify content transformation.
+                        res.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+                        res.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+
+                        out.add(ReferenceCountUtil.retain(res));
+                        state = State.AWAIT_CONTENT;
+                        encoder = contentEncoder;
+                        contentEncoder = null;
+                        if (!(msg instanceof HttpContent)) {
+                            // only break out the switch statement if we have not content to process
+                            // See https://github.com/netty/netty/issues/2006
+                            break;
+                        }
+                        // Fall through to encode the content
                     }
-                    // Fall through to encode the content
+                } finally {
+                    if (contentEncoder != null) {
+                        if (encoder == contentEncoder) {
+                            encoder = null;
+                        }
+                        contentEncoder.finishAndReleaseAll();
+                    }
                 }
             }
             case AWAIT_CONTENT: {

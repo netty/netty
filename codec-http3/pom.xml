@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.17.Final-SNAPSHOT</version>
+    <version>4.2.18.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-http3</artifactId>
@@ -201,8 +201,7 @@
         <configuration>
           <!-- We need to also merge the dependencies defined by our profile. -->
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
-          <!-- Ensure excludes are set correctly -->
-          <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenDependencyMode>direct</flattenDependencyMode>
           <flattenMode>ossrh</flattenMode>
         </configuration>
         <executions>

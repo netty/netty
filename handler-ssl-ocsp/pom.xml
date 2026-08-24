@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.17.Final-SNAPSHOT</version>
+    <version>4.2.18.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-handler-ssl-ocsp</artifactId>
@@ -41,6 +41,11 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -83,6 +88,14 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-testsuite-common</artifactId>
       <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- ensure tests are run with tcnative as well -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <optional>true</optional>
       <scope>test</scope>
     </dependency>
   </dependencies>

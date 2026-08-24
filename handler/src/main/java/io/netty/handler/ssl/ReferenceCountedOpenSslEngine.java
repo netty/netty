@@ -205,7 +205,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     final boolean jdkCompatibilityMode;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
-    private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+    private final OpenSslEngineMap engines;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
     private final OpenSslInternalSession session;
@@ -422,8 +422,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // object so we need to retain a reference to the parent context.
         parentContext = context;
 
-        // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engines.put(ssl, this);
+        // Register for the SSL* -> engine reverse lookup used by native callbacks; held weakly (see OpenSslEngineMap).
+        engines.add(ssl, this);
 
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
@@ -2489,6 +2489,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Updated once a new handshake is started and so the SSLSession reused.
         private long lastAccessed = -1;
 
+        private volatile String namedGroup;
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
         private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<String, Object>();
@@ -2653,7 +2654,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     this.cipher = toJavaCipherSuite(cipher, protocol);
                     this.protocol = protocol;
-
+                    try {
+                        String groupName = SSL.getGroupName(ssl);
+                        if (groupName != null) {
+                            // Normalize group name across BoringSSL/OpenSSL versions.
+                            groupName = GroupsConverter.toOpenSsl(groupName);
+                        }
+                        this.namedGroup = groupName;
+                    } catch (Exception e) {
+                        throw new SSLException(e);
+                    }
                     if (clientMode) {
                         if (isEmpty(peerCertificateChain)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
@@ -2723,6 +2733,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
                 }
             }
+        }
+
+        @Override
+        public String getNamedGroup() {
+            return namedGroup;
         }
 
         @Override

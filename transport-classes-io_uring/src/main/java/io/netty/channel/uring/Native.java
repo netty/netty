@@ -320,6 +320,7 @@ final class Native {
     static final int IORING_ENTER_NO_IOWAIT = 1 << 7;
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
+    static final int IOSQE_HARDLINK = NativeStaticallyReferencedJniMethods.iosqeHardlink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
     static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
     static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
@@ -603,6 +604,7 @@ final class Native {
     }
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);
+    static native boolean isUnixDomainSocketInqSupported();
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {
