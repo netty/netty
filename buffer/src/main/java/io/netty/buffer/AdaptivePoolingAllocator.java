@@ -48,6 +48,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntConsumer;
@@ -783,8 +784,14 @@ final class AdaptivePoolingAllocator {
      * recycling backing buffers across size classes.
      */
     static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
+        private static final AtomicReferenceFieldUpdater<ThreadLocalSizeClassedChunkCache, SizeClassedChunk>
+                PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
+                        ThreadLocalSizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
+
         private SizeClassedChunk exhaustedHead;
         private SizeClassedChunk reusableHead;
+        /** Treiber stack of chunks that a releasing thread asked us to look at. */
+        private volatile SizeClassedChunk pendingHead;
         int exhaustedCount;
         int reusableCount;
 
@@ -879,6 +886,75 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        // --- Notification queue: cross-thread segment returns that could not take the lock ---
+
+        /**
+         * Queue {@code chunk} for the next drain. Called by a releasing thread that holds no lock,
+         * <em>after</em> the segment has been offered to the chunk's external free list, so a drainer
+         * that pops the note is guaranteed to also see the segment.
+         *
+         * <p>This path must never read {@code cacheListState} or any list link: those belong to the
+         * owner thread / stripe lock holder. The note only says "look at this chunk". The chunk finds
+         * this cache through its {@code final owningCache} field, so no racy reference read is involved.
+         *
+         * <p>{@link SizeClassedChunk#pendingNext} doubles as the dedup claim, so a return on a chunk
+         * that is already queued costs a single volatile read.
+         */
+        void notifyHasCapacity(SizeClassedChunk chunk) {
+            if (chunk.pendingNext != null) {
+                return;
+            }
+            final SizeClassedChunk sentinel = SizeClassedChunk.PENDING_SENTINEL;
+            // Claim: only the thread that moves the link off null owns the push.
+            if (!SizeClassedChunk.PENDING_NEXT.compareAndSet(chunk, null, sentinel)) {
+                return;
+            }
+            SizeClassedChunk head;
+            do {
+                head = pendingHead;
+                SizeClassedChunk.PENDING_NEXT.lazySet(chunk, head == null ? sentinel : head);
+            } while (!PENDING_HEAD.compareAndSet(this, head, chunk));
+        }
+
+        /**
+         * Apply every queued notification. Caller must hold the stripe lock, or be the owner thread of
+         * a thread-local cache.
+         */
+        void drainPending() {
+            SizeClassedChunk cur = PENDING_HEAD.getAndSet(this, null);
+            final SizeClassedChunk sentinel = SizeClassedChunk.PENDING_SENTINEL;
+            while (cur != null && cur != sentinel) {
+                SizeClassedChunk next = cur.pendingNext;
+                // Re-arm BEFORE processing. A return that lands while we are inside processPending must
+                // be able to queue the chunk again; re-arming afterwards would lose it and strand the
+                // chunk until some later, unrelated notification.
+                //
+                // This is a full volatile store on purpose, not a lazySet: it is the store half of a
+                // Dekker pair with the releaser, which offers the segment (MPSC offer ends in a CAS on
+                // the producer index, so a StoreLoad) and only then reads pendingNext. processPending
+                // reads the free lists right after this store; without the StoreLoad here both sides
+                // could miss each other and the chunk would be stranded.
+                SizeClassedChunk.PENDING_NEXT.set(cur, null);
+                processPending(cur);
+                cur = next == sentinel ? null : next;
+            }
+        }
+
+        private void processPending(SizeClassedChunk chunk) {
+            int cls = chunk.cacheListState;
+            if (cls == SizeClassedChunk.CACHE_NONE) {
+                // Attached to a magazine, already polled, or gone: not ours to move. Checked first,
+                // because such a chunk may have had its free lists stripped by recycleOrDeallocate.
+                return;
+            }
+            if (cls == SizeClassedChunk.CACHE_EXHAUSTED && chunk.hasRemainingCapacity()) {
+                moveToReusable(chunk);
+            }
+            if (chunk.cacheListState == SizeClassedChunk.CACHE_REUSABLE) {
+                evictIfAboveFloor(chunk);
+            }
+        }
+
         /**
          * Try to take exclusive access to this cache so a releasing thread can place a segment
          * and apply any resulting list transition. Returns 0 when unavailable (thread-local
@@ -911,6 +987,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public SizeClassedChunk pollChunk(int size) {
+            // Slow-path only (once per chunk-worth of allocations), which is exactly where a chunk is
+            // wanted. Draining per allocation is what made the old notification cache expensive.
+            drainPending();
             return pollChunkInternal();
         }
 
@@ -966,6 +1045,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public void tickPurge() {
+            drainPending();
             // Frequent bounded: evict fully-free reusable chunks above retention floor.
             // Exhausted→reusable is handled on demand by scanExhaustedForCapacity (bounded).
             int total = totalCount();
@@ -1011,6 +1091,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public void free() {
+            // Drop any outstanding notes: every chunk they point at is about to be marked for
+            // deallocation, and this cache is dead afterwards.
+            PENDING_HEAD.lazySet(this, null);
             freeList(exhaustedHead);
             exhaustedHead = null;
             exhaustedCount = 0;
@@ -1579,7 +1662,7 @@ final class AdaptivePoolingAllocator {
         protected int allocatedBytes;
 
         Chunk() {
-            // Constructor only used by the MAGAZINE_FREED sentinel.
+            // Constructor only used by sentinel instances (MAGAZINE_FREED, PENDING_SENTINEL).
             delegate = null;
             magazine = null;
             allocator = null;
@@ -1810,6 +1893,33 @@ final class AdaptivePoolingAllocator {
         int cacheListState;
         final ThreadLocalSizeClassedChunkCache owningCache;
 
+        // --- Pending-notification link (see ThreadLocalSizeClassedChunkCache#notifyHasCapacity) ---
+
+        /**
+         * Marks the end of the pending-notification list, so that {@code null} can keep its meaning of
+         * "not queued". Never a usable chunk.
+         */
+        static final SizeClassedChunk PENDING_SENTINEL = new SizeClassedChunk();
+        static final AtomicReferenceFieldUpdater<SizeClassedChunk, SizeClassedChunk> PENDING_NEXT =
+                AtomicReferenceFieldUpdater.newUpdater(
+                        SizeClassedChunk.class, SizeClassedChunk.class, "pendingNext");
+        /**
+         * {@code null} = not queued for attention, non-null = queued (or in the middle of being queued).
+         * This field <em>is</em> the dedup claim: whoever moves it off {@code null} owns the push, so no
+         * separate flag is needed.
+         */
+        volatile SizeClassedChunk pendingNext;
+
+        /**
+         * Constructor only used by {@link #PENDING_SENTINEL}.
+         */
+        private SizeClassedChunk() {
+            segmentSize = 0;
+            segments = 0;
+            ownerThread = null;
+            owningCache = null;
+        }
+
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
                          SizeClassChunkController controller) {
             super(delegate, magazine, true);
@@ -1963,6 +2073,12 @@ final class AdaptivePoolingAllocator {
                     int state = this.state;
                     if (state != AVAILABLE) {
                         deallocateIfNeeded(state);
+                    } else {
+                        // The chunk just gained capacity but we could not take the lock to apply the
+                        // resulting list transition. Leave a note instead; the next drain applies it.
+                        // A chunk whose state is not AVAILABLE is never on a cache list, so there is
+                        // nothing to notify about on that branch.
+                        cache.notifyHasCapacity(this);
                     }
                 }
             }
