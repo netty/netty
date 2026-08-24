@@ -40,7 +40,9 @@ final class QpackUtil {
         } else {
             out.writeByte((byte) (mask | nbits));
             long remainder = toEncode - nbits;
-            while (remainder > 128) {
+            // A remainder of exactly 128 does not fit in the final (non-continuation) byte, which can only
+            // represent 0-127; it must still go through the continuation-byte branch below.
+            while (remainder >= 128) {
                 byte next = (byte) ((remainder % 128) | 0x80);
                 out.writeByte(next);
                 remainder = remainder / 128;
