@@ -18,6 +18,7 @@ package io.netty.channel.pool;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -212,8 +213,8 @@ public class SimpleChannelPoolTest {
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter());
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+                .childHandler(new ChannelHandler() {});
+        Channel sc = sb.bind(addr).get();
 
         AtomicBoolean channelReleased = new AtomicBoolean();
         ChannelPoolHandler handler = new ChannelPoolHandler() {
@@ -238,7 +239,7 @@ public class SimpleChannelPoolTest {
                 .channel(LocalChannel.class)
                 .remoteAddress(addr);
         ChannelHealthChecker healthChecker = channel ->
-                channel.eventLoop().newSucceededFuture(Boolean.FALSE);
+                channel.executor().newSucceededFuture(Boolean.FALSE);
         SimpleChannelPool pool = new SimpleChannelPool(cb, handler, healthChecker);
         Channel channel = null;
         try {
