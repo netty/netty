@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /**
@@ -460,7 +461,7 @@ final class AdaptivePoolingAllocator {
             return true;
         }
 
-        void forEach(java.util.function.Consumer<T> action) {
+        void forEach(Consumer<T> action) {
             for (int i = 0; i < size; i++) {
                 @SuppressWarnings("unchecked")
                 T element = (T) elements[i];
@@ -545,15 +546,10 @@ final class AdaptivePoolingAllocator {
 
         void freeAll() {
             for (RecycleStack<AbstractByteBuf> pool : bufferPools) {
-                pool.forEach(new java.util.function.Consumer<AbstractByteBuf>() {
-                    @Override
-                    public void accept(AbstractByteBuf buf) {
-                        buf.release();
-                    }
-                });
+                pool.forEach(AbstractByteBuf::release);
             }
-            java.util.Arrays.fill(freelistSlots, null);
-            java.util.Arrays.fill(localFreelistSlots, null);
+            Arrays.fill(freelistSlots, null);
+            Arrays.fill(localFreelistSlots, null);
         }
     }
 
