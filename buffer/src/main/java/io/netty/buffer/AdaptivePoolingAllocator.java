@@ -1637,17 +1637,17 @@ final class AdaptivePoolingAllocator {
                     return true;
                 }
             }
+            return allocateSlow(size, maxCapacity, buf, startingCapacity);
+        }
 
+        /**
+         * The current chunk (if any) had no room. Try the next-in-line chunk, then the cache, then
+         * fall back to allocating a fresh chunk. Whichever chunk ends up serving the allocation is
+         * stashed in {@link #current}, "reserving" it for this magazine's exclusive use.
+         */
+        private boolean allocateSlow(int size, int maxCapacity, AdaptiveByteBuf buf, int startingCapacity) {
             assert current == null;
-            // The fast-path for allocations did not work.
-            //
-            // Try to fetch the next "Magazine local" Chunk first, if this fails because we don't have a
-            // next-in-line chunk available, we will poll our centralQueue.
-            // If this fails as well we will just allocate a new Chunk.
-            //
-            // In any case we will store the Chunk as the current so it will be used again for the next allocation and
-            // thus be "reserved" by this Magazine for exclusive usage.
-            curr = nextInLine;
+            Chunk curr = nextInLine;
             nextInLine = null;
             if (curr != null) {
                 if (curr == MAGAZINE_FREED) {
