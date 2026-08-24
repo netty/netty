@@ -744,14 +744,6 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    abstract static class SizeClassedChunkCache implements ChunkCache {
-        @Override
-        public abstract SizeClassedChunk pollChunk(int size);
-
-        // Visible for testing: triggers a purge scan bypassing the budget counter.
-        abstract SizeClassedChunk forcePurge();
-    }
-
     /**
      * Two-list chunk cache: answers "give me a chunk to carve from" and "release what is idle".
      *
@@ -819,10 +811,10 @@ final class AdaptivePoolingAllocator {
      * and idle chunks leave via Signal B rather than a byte threshold. Evicted buffers go to the
      * {@link SizeClassChunkRecycler}, which every size class on the heap draws from.
      */
-    static final class ThreadLocalSizeClassedChunkCache extends SizeClassedChunkCache {
-        private static final AtomicReferenceFieldUpdater<ThreadLocalSizeClassedChunkCache, SizeClassedChunk>
+    static final class SizeClassedChunkCache implements ChunkCache {
+        private static final AtomicReferenceFieldUpdater<SizeClassedChunkCache, SizeClassedChunk>
                 PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
-                        ThreadLocalSizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
+                        SizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
 
         /** Bound on the last-resort probe of the exhausted list; see {@link #probeExhausted()}. */
         private static final int MAX_EXHAUSTED_PROBE = 8;
@@ -837,13 +829,21 @@ final class AdaptivePoolingAllocator {
         final SizeClassChunkRecycler chunkRecycler;
         final int sizeClassIndex;
         final int purgeRetentionFloor;
-        final StampedLock stripeLock; // null for thread-local, non-null for shared stripes
+        /**
+         * The lock guarding this cache's lists, or {@code null} when there is nothing to guard.
+         *
+         * <p>A magazine owned by one thread reaches its cache only from that thread, so it has no
+         * lock; a magazine on a stripe shares the stripe's lock with the other size classes there.
+         * Either way the lists are only ever touched by a thread with exclusive access - see
+         * {@link #tryLockForRelease()}, which reports "not available" for both cases alike.
+         */
+        final StampedLock stripeLock;
 
-        ThreadLocalSizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
+        SizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
             this(chunkSize, chunkRecycler, sizeClassIndex, null);
         }
 
-        ThreadLocalSizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler,
+        SizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler,
                                          int sizeClassIndex, StampedLock stripeLock) {
             this.chunkRecycler = chunkRecycler;
             this.sizeClassIndex = sizeClassIndex;
@@ -1068,7 +1068,7 @@ final class AdaptivePoolingAllocator {
             evictIfAboveFloor(chunk);
         }
 
-        @Override
+        /** Visible for testing: runs a purge tick bypassing the budget counter, then polls. */
         SizeClassedChunk forcePurge() {
             tickPurge();
             return pollChunkInternal();
@@ -1320,7 +1320,7 @@ final class AdaptivePoolingAllocator {
 
         ChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
                                     StampedLock stripeLock) {
-            return new ThreadLocalSizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex, stripeLock);
+            return new SizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex, stripeLock);
         }
     }
 
@@ -1574,7 +1574,7 @@ final class AdaptivePoolingAllocator {
             for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
                 Magazine mag = mags[i];
                 if (mag != null) {
-                    ((ThreadLocalSizeClassedChunkCache) mag.chunkCache).drainPending();
+                    ((SizeClassedChunkCache) mag.chunkCache).drainPending();
                 }
             }
         }
@@ -2000,9 +2000,9 @@ final class AdaptivePoolingAllocator {
         SizeClassedChunk prevInCache;
         SizeClassedChunk nextInCache;
         int cacheListState;
-        final ThreadLocalSizeClassedChunkCache owningCache;
+        final SizeClassedChunkCache owningCache;
 
-        // --- Pending-notification link (see ThreadLocalSizeClassedChunkCache#notifyHasCapacity) ---
+        // --- Pending-notification link (see SizeClassedChunkCache#notifyHasCapacity) ---
 
         /**
          * Marks the end of the pending-notification list, so that {@code null} can keep its meaning of
@@ -2036,7 +2036,7 @@ final class AdaptivePoolingAllocator {
             segments = controller.chunkSize / segmentSize;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
-            owningCache = (ThreadLocalSizeClassedChunkCache) magazine.chunkCache;
+            owningCache = (SizeClassedChunkCache) magazine.chunkCache;
             if (ownerThread == null) {
                 externalFreeList = controller.createFreeList();
                 localFreeList = controller.createEmptyLocalFreeList();
@@ -2058,7 +2058,7 @@ final class AdaptivePoolingAllocator {
             segments = controller.chunkSize / segmentSize;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
-            owningCache = (ThreadLocalSizeClassedChunkCache) magazine.chunkCache;
+            owningCache = (SizeClassedChunkCache) magazine.chunkCache;
             if (ownerThread != null) {
                 if (recycledLocalFreeList != null && recycledLocalFreeList.capacity() >= segments) {
                     localFreeList = recycledLocalFreeList;
@@ -2150,7 +2150,7 @@ final class AdaptivePoolingAllocator {
                 localFreeList.push(startIndex);
                 afterLocalRelease();
             } else {
-                final ThreadLocalSizeClassedChunkCache cache = owningCache;
+                final SizeClassedChunkCache cache = owningCache;
                 final long stamp = cache.tryLockForRelease();
                 if (stamp != 0) {
                     try {
@@ -2195,7 +2195,7 @@ final class AdaptivePoolingAllocator {
         }
 
         /** Locked counterpart of {@link #afterLocalRelease()}; caller holds the stripe lock. */
-        private void afterLockedRelease(ThreadLocalSizeClassedChunkCache cache) {
+        private void afterLockedRelease(SizeClassedChunkCache cache) {
             int state = this.state;
             if (state != AVAILABLE) {
                 updateStateOnLockedReleaseSegment(state);

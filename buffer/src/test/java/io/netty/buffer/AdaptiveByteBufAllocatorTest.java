@@ -25,7 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunk;
-import io.netty.buffer.AdaptivePoolingAllocator.ThreadLocalSizeClassedChunkCache;
+import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunkCache;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -384,7 +384,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         runBurstWithCrossThreadReleases(allocator, true);
 
         // Every worker has been joined, so the lists are quiescent and safe to walk from here.
-        for (ThreadLocalSizeClassedChunkCache cache : sizeClassChunkCaches(allocator)) {
+        for (SizeClassedChunkCache cache : sizeClassChunkCaches(allocator)) {
             int stranded = 0;
             for (SizeClassedChunk c = cache.exhaustedHead; c != null; c = c.nextInCache) {
                 if (c.hasRemainingCapacity()) {
@@ -538,7 +538,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         return out;
     }
 
-    private static List<ThreadLocalSizeClassedChunkCache> sizeClassChunkCaches(
+    private static List<SizeClassedChunkCache> sizeClassChunkCaches(
             AdaptiveByteBufAllocator allocator) throws Exception {
         Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
         heapField.setAccessible(true);
@@ -546,7 +546,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
         stripesField.setAccessible(true);
         Object[] stripes = (Object[]) stripesField.get(pooling);
-        List<ThreadLocalSizeClassedChunkCache> caches = new ArrayList<ThreadLocalSizeClassedChunkCache>();
+        List<SizeClassedChunkCache> caches = new ArrayList<SizeClassedChunkCache>();
         for (Object stripe : stripes) {
             if (stripe == null) {
                 continue;
@@ -564,8 +564,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 Field cacheField = magazine.getClass().getDeclaredField("chunkCache");
                 cacheField.setAccessible(true);
                 Object cache = cacheField.get(magazine);
-                if (cache instanceof ThreadLocalSizeClassedChunkCache) {
-                    caches.add((ThreadLocalSizeClassedChunkCache) cache);
+                if (cache instanceof SizeClassedChunkCache) {
+                    caches.add((SizeClassedChunkCache) cache);
                 }
             }
         }
