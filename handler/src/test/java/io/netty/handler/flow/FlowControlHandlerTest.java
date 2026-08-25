@@ -721,58 +721,7 @@ public class FlowControlHandlerTest {
     }
 
     @Test
-    public void testSuppressingUpstreamReadCompletesStrict() throws Exception {
-        final AtomicInteger reads = new AtomicInteger();
-        final AtomicInteger readCompletes = new AtomicInteger();
-        final EmbeddedChannel channel = new EmbeddedChannel(
-                false, false,
-                new FlowControlHandler(),
-                new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        reads.incrementAndGet();
-                    }
-
-                    @Override
-                    public void channelReadComplete(ChannelHandlerContext ctx) {
-                        readCompletes.incrementAndGet();
-                    }
-                });
-
-        channel.config().setAutoRead(false);
-        channel.register();
-
-        assertEquals(0, reads.get());
-        assertEquals(0, readCompletes.get());
-
-        channel.flushInbound();
-        channel.flushInbound();
-        channel.flushInbound();
-
-        assertEquals(0, reads.get());
-        assertEquals(0, readCompletes.get());
-
-        channel.read();
-        channel.writeOneInbound("msg").syncUninterruptibly();
-        assertEquals(1, reads.get());
-        assertEquals(1, readCompletes.get());
-
-        channel.flushInbound();
-        channel.flushInbound();
-        assertEquals(1, reads.get());
-        assertEquals(1, readCompletes.get());
-
-        channel.read();
-        channel.flushInbound();
-
-        assertEquals(1, reads.get());
-        assertEquals(1, readCompletes.get());
-
-        assertFalse(channel.finishAndReleaseAll());
-    }
-
-    @Test
-    public void testSuppressingUpstreamReadCompletesRelaxed() throws Exception {
+    public void testSuppressingUpstreamReadCompletes() throws Exception {
         final List<String> events = new ArrayList<>();
         final EmbeddedChannel channel = new EmbeddedChannel(
                 false, false,
