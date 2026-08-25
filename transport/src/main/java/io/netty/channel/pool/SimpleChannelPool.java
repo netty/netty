@@ -343,6 +343,7 @@ public class SimpleChannelPool implements ChannelPool {
                 releaseAndOffer(channel, promise);
             } else { //channel not healthy, just releasing it.
                 handler.channelReleased(channel);
+                closeChannel(channel);
                 promise.setSuccess(null);
             }
         } catch (Throwable cause) {
