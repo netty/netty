@@ -167,6 +167,19 @@ public abstract class Recycler<T> {
     }
 
     /**
+     * As {@link #Recycler(boolean)}, but with an explicit recycling {@code interval} instead of the
+     * global default.
+     *
+     * <p>An interval of {@code 0} pools every recycled instance. A non-zero interval admits one
+     * instance in {@code interval} and costs a stateful counter and a data-dependent branch in
+     * {@code canAllocatePooled()} on the allocation path, which is why a caller whose objects are
+     * already bounded by {@code maxCapacity} may prefer {@code 0}.
+     */
+    protected Recycler(boolean unguarded, int interval) {
+        this(DEFAULT_MAX_CAPACITY_PER_THREAD, interval, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD, unguarded);
+    }
+
+    /**
      * USE IT CAREFULLY!<br>
      * This is NOT enforcing pooled instances states to be validated if {@code unguarded = true} as stated by
      * {@link #Recycler(boolean)} and allows to pin the recycler to a specific {@link Thread}, if {@code owner}

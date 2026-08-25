@@ -1457,9 +1457,9 @@ final class AdaptivePoolingAllocator {
 
         static final class AdaptiveRecycler extends Recycler<AdaptiveByteBuf> {
 
-            private AdaptiveRecycler(boolean unguarded) {
+            private AdaptiveRecycler(boolean unguarded, int interval) {
                 // uses fast thread local
-                super(unguarded);
+                super(unguarded, interval);
             }
 
             private AdaptiveRecycler(int maxCapacity, boolean unguarded) {
@@ -1478,7 +1478,13 @@ final class AdaptivePoolingAllocator {
             }
 
             public static AdaptiveRecycler threadLocal() {
-                return new AdaptiveRecycler(true);
+                // Interval 0: pool every recycled buffer, matching what the shared-stripe recycler
+                // gets from sharedExclusiveGet. The global default interval of 8 admits one buffer
+                // in eight and pays a stateful counter plus a data-dependent branch per allocation;
+                // retention is already bounded by the recycler's capacity, so the interval buys
+                // nothing here. Measured on SOCKET_PROXY, t=1: -15.0 ns/op at MLB=65536,
+                // -3.3 ns/op at MLB=1024, neutral on API_GATEWAY.
+                return new AdaptiveRecycler(true, 0);
             }
 
             public static AdaptiveRecycler sharedWith(int maxCapacity) {
