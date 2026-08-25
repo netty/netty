@@ -18,6 +18,7 @@ package io.netty.channel.pool;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -34,6 +35,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,6 +204,62 @@ public class SimpleChannelPoolTest {
         channel3.close().syncUninterruptibly();
         pool.close();
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testActiveUnhealthyChannelIsClosedOnRelease() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelHandler() { });
+        Channel sc = sb.bind(addr).get();
+
+        AtomicBoolean channelReleased = new AtomicBoolean();
+        ChannelPoolHandler handler = new ChannelPoolHandler() {
+            @Override
+            public void channelReleased(Channel ch) {
+                assertTrue(ch.isActive());
+                channelReleased.set(true);
+            }
+
+            @Override
+            public void channelAcquired(Channel ch) {
+                // NOOP
+            }
+
+            @Override
+            public void channelCreated(Channel ch) {
+                // NOOP
+            }
+        };
+        Bootstrap cb = new Bootstrap()
+                .group(group)
+                .channel(LocalChannel.class)
+                .remoteAddress(addr);
+        ChannelHealthChecker healthChecker = channel ->
+                channel.executor().newSucceededFuture(Boolean.FALSE);
+        SimpleChannelPool pool = new SimpleChannelPool(cb, handler, healthChecker);
+        Channel channel = null;
+        try {
+            channel = pool.acquire().syncUninterruptibly().getNow();
+            assertTrue(channel.isActive());
+
+            Future<Void> releaseFuture = pool.release(channel).syncUninterruptibly();
+
+            assertTrue(releaseFuture.isSuccess());
+            assertTrue(channelReleased.get());
+            assertTrue(channel.closeFuture().awaitUninterruptibly(1, TimeUnit.SECONDS));
+            assertFalse(channel.isActive());
+        } finally {
+            if (channel != null) {
+                channel.close().syncUninterruptibly();
+            }
+            pool.close();
+            sc.close().syncUninterruptibly();
+            group.shutdownGracefully();
+        }
     }
 
     /**
