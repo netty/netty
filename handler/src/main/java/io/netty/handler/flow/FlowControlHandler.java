@@ -67,8 +67,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class FlowControlHandler extends ChannelDuplexHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
 
-    public static final boolean DEFAUT_RELEASE_MESSAGES = true;
-
     private final boolean releaseMessages;
 
     private RecyclableArrayDeque queue;
@@ -113,7 +111,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private boolean dequeuing;
 
     public FlowControlHandler() {
-        this(DEFAUT_RELEASE_MESSAGES);
+        this(true);
     }
 
     /**
@@ -121,7 +119,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      *
      * @param releaseMessages
      *        Release all queued messages when channel becomes inactive,
-     *        {@link #DEFAUT_RELEASE_MESSAGES} by default.
+     *        {@code true} by default.
      */
     public FlowControlHandler(boolean releaseMessages) {
         this.releaseMessages = releaseMessages;
