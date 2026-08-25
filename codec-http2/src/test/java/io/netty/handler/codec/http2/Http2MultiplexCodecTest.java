@@ -42,4 +42,10 @@ public class Http2MultiplexCodecTest extends Http2MultiplexTest<Http2FrameCodec>
     protected boolean useUserEventForPriorityFrame() {
         return false;
     }
+
+    @Override
+    protected boolean supportsCloseCause() {
+        // Http2MultiplexCodec is deprecated and does not populate Http2StreamChannel.closeCause().
+        return false;
+    }
 }

@@ -28,4 +28,13 @@ public interface Http2StreamChannel extends Channel {
      * Returns the {@link Http2FrameStream} that belongs to this channel.
      */
     Http2FrameStream stream();
+
+    /**
+     * Returns the cause that made this {@link Http2StreamChannel} close, or {@code null} if the channel is
+     * still open, or was closed without a specific cause being attributable (for example because the
+     * application closed it, or the parent {@link Channel} was closed).
+     */
+    default Throwable closeCause() {
+        return null;
+    }
 }

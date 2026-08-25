@@ -199,6 +199,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     private int flowControlledBytes;
 
     /**
+     * Set at most once, the first time we learn a specific, distinguishable reason why this channel is being
+     * closed (for example a received {@code RST_STREAM} or {@code GOAWAY}).
+     *
+     */
+    private volatile Throwable closedCause;
+
+    /**
      * This variable represents if a read is in progress for the current channel or was requested.
      * Note that depending upon the {@link RecvByteBufAllocator} behavior a read may extend beyond the
      * {@link Http2ChannelUnsafe#beginRead()} method scope. The {@link Http2ChannelUnsafe#beginRead()} loop may
@@ -335,6 +342,22 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public Http2FrameStream stream() {
         return stream;
+    }
+
+    @Override
+    public Throwable closeCause() {
+        return closedCause;
+    }
+
+    /**
+     * Record the reason this channel is being (or was) closed, if not already set. Must be called before the
+     * corresponding {@code CLOSED} state change is delivered to this channel, so that {@link #closeCause()} and
+     * any {@link ClosedChannelException} produced for failed operations can reflect it.
+     */
+    void setCloseCause(Throwable cause) {
+        if (closedCause == null) {
+            closedCause = cause;
+        }
     }
 
     void closeOutbound() {
@@ -1011,7 +1034,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     // Once the outbound side was closed we should not allow header / data frames
                     outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                 ReferenceCountUtil.release(msg);
-                promise.setFailure(new ClosedChannelException());
+                promise.setFailure(newClosedChannelException());
                 return;
             }
 
@@ -1037,7 +1060,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         flowControlledBytes -= updateFrame.windowSizeIncrement();
                         if (parentContext().isRemoved()) {
                             ReferenceCountUtil.release(msg);
-                            promise.setFailure(new ClosedChannelException());
+                            promise.setFailure(newClosedChannelException());
                             return;
                         }
                         ChannelFuture f = writeWindowUpdateFrame(updateFrame);
@@ -1147,9 +1170,28 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // If the error was caused by STREAM_CLOSED we should use a ClosedChannelException to better
             // mimic other transports and make it easier to reason about what exceptions to expect.
             if (cause instanceof Http2Exception && ((Http2Exception) cause).error() == Http2Error.STREAM_CLOSED) {
-                return new ClosedChannelException().initCause(cause);
+                return newClosedChannelException(cause);
             }
             return cause;
+        }
+
+        private ClosedChannelException newClosedChannelException() {
+            return newClosedChannelException(null);
+        }
+
+        private ClosedChannelException newClosedChannelException(Throwable cause) {
+            Throwable closedCause = AbstractHttp2StreamChannel.this.closedCause;
+            if (closedCause instanceof ClosedChannelException) {
+                // Prefer the specific reason (e.g. Http2StreamRstException / Http2GoAwayClosedStreamException)
+                // recorded when we learned the stream was closed, so callers can distinguish it via instanceof
+                // rather than having to inspect the stack trace.
+                return (ClosedChannelException) closedCause;
+            }
+            ClosedChannelException exception = new ClosedChannelException();
+            if (cause != null) {
+                exception.initCause(cause);
+            }
+            return exception;
         }
 
         private Http2StreamFrame validateStreamFrame(Http2StreamFrame frame) {

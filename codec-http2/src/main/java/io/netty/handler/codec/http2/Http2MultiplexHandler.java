@@ -177,7 +177,14 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
-            if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
+            boolean isResetFrame = msg instanceof Http2ResetFrame;
+            if (isResetFrame || msg instanceof Http2PriorityFrame) {
+                if (isResetFrame) {
+                    // Record why the stream is being closed so that it can later be surfaced via
+                    // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
+                    // callers having to inspect stack traces to distinguish RST_STREAM from other causes.
+                    channel.setCloseCause(new Http2StreamRstException(((Http2ResetFrame) msg).errorCode()));
+                }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
                 channel.pipeline().fireUserEventTriggered(msg);
@@ -338,6 +345,14 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                         final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                                 ((DefaultHttp2FrameStream) stream).attachment;
+                        // Record why the stream is being closed so that it can later be surfaced via
+                        // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
+                        // callers having to inspect stack traces to distinguish GOAWAY from other causes.
+                        ByteBuf content = goAwayFrame.content();
+                        byte[] debugData = new byte[content.readableBytes()];
+                        content.getBytes(content.readerIndex(), debugData);
+                        childChannel.setCloseCause(new Http2GoAwayClosedStreamException(goAwayFrame.lastStreamId(),
+                                goAwayFrame.errorCode(), debugData));
                         childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
                     }
                     return true;

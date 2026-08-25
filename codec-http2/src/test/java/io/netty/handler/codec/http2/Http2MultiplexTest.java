@@ -67,6 +67,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty.util.ReferenceCountUtil.release;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -75,6 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -559,6 +561,38 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void closeCauseIsSetOnGoAwayReceived() {
+        assumeTrue(supportsCloseCause());
+
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.isActive());
+        assertNull(childChannel.closeCause());
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        byte[] debugData = { 1, 2, 3 };
+        frameInboundWriter.writeInboundGoAway(0, Http2Error.ENHANCE_YOUR_CALM.code(),
+                Unpooled.wrappedBuffer(debugData));
+
+        Http2GoAwayFrame goAwayFrame = inboundHandler.readUserEvent();
+        assertNotNull(goAwayFrame);
+        release(goAwayFrame);
+
+        // The stream itself is not necessarily force-closed by a received GOAWAY (that only happens for streams
+        // this endpoint itself created, per the HTTP/2 spec), but the reason should be recorded regardless so it
+        // is available should the stream close later on.
+        Throwable closeCause = childChannel.closeCause();
+        assertTrue(closeCause instanceof Http2GoAwayClosedStreamException, "Unexpected closeCause: " + closeCause);
+        Http2GoAwayClosedStreamException goAwayCause = (Http2GoAwayClosedStreamException) closeCause;
+        assertEquals(0, goAwayCause.lastStreamId());
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM.code(), goAwayCause.errorCode());
+        assertEquals(Http2Error.ENHANCE_YOUR_CALM, goAwayCause.error());
+        assertArrayEquals(debugData, goAwayCause.debugData());
+    }
+
+    @Test
     public void channelReadShouldRespectAutoRead() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
@@ -646,6 +680,35 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         assertEquals(childChannel.stream(), resetFrame.stream());
         assertEquals(NO_ERROR.code(), resetFrame.errorCode());
+
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 0);
+    }
+
+    @Test
+    public void closeCauseIsSetOnRstStreamReceived() {
+        assumeTrue(supportsCloseCause());
+
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.isActive());
+        assertNull(childChannel.closeCause());
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), Http2Error.CANCEL.code());
+
+        childChannel.closeFuture().syncUninterruptibly();
+
+        Throwable closeCause = childChannel.closeCause();
+        assertTrue(closeCause instanceof Http2StreamRstException, "Unexpected closeCause: " + closeCause);
+        Http2StreamRstException rstCause = (Http2StreamRstException) closeCause;
+        assertEquals(Http2Error.CANCEL.code(), rstCause.errorCode());
+        assertEquals(Http2Error.CANCEL, rstCause.error());
+
+        Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.<Http2ResetFrame>readUserEvent() :
+                inboundHandler.<Http2ResetFrame>readInbound();
+        assertEquals(Http2Error.CANCEL.code(), resetFrame.errorCode());
 
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 0);
     }
@@ -1316,6 +1379,15 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     protected abstract boolean useUserEventForResetFrame();
 
     protected abstract boolean ignoreWindowUpdateFrames();
+
+    /**
+     * Whether {@link Http2StreamChannel#closeCause()} is populated with a specific reason
+     * ({@link Http2StreamRstException} / {@link Http2GoAwayClosedStreamException}) when a stream is closed due to
+     * a received {@code RST_STREAM} or {@code GOAWAY} frame.
+     */
+    protected boolean supportsCloseCause() {
+        return true;
+    }
 
     @Test
     public void windowUpdateFrames() {
