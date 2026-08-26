@@ -213,8 +213,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 resolver = ExternalAddressResolver.getOrDefault(externalResolver).getResolver(eventLoop);
             } catch (Throwable cause) {
                 channel.close();
-                promise.setFailure(cause);
-                return promise;
+                return promise.setFailure(cause);
             }
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
@@ -249,7 +248,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 }
             });
         } catch (Throwable cause) {
-            promise.setFailure(cause);
+            promise.tryFailure(cause);
         }
         return promise;
     }
