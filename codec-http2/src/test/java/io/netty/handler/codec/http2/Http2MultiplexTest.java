@@ -695,8 +695,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.closeFuture().syncUninterruptibly();
 
         Throwable closeCause = childChannel.closeCause();
-        assertTrue(closeCause instanceof Http2RstStreamClosedChannelException, "Unexpected closeCause: " + closeCause);
-        Http2RstStreamClosedChannelException rstCause = (Http2RstStreamClosedChannelException) closeCause;
+
+        Http2RstStreamClosedChannelException rstCause =
+            assertInstanceOf(Http2RstStreamClosedChannelException.class, closeCause);
         assertEquals(Http2Error.CANCEL.code(), rstCause.errorCode());
         assertEquals(Http2Error.CANCEL, rstCause.error());
 
