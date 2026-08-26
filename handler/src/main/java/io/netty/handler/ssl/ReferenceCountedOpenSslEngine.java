@@ -2109,6 +2109,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
     }
 
+    private String toJavaCipherSuite(String openSslCipherSuite, String version) {
+        if (openSslCipherSuite == null) {
+            return null;
+        }
+        String prefix = toJavaCipherSuitePrefix(version);
+        return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
+    }
+
     /**
      * Returns the negotiated protocol version as one of the {@link SslProtocols} {@code String}s.
      * <p>
@@ -2141,6 +2149,27 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return SslProtocols.SSL_v2;
             default:
                 return null;
+        }
+    }
+
+    /**
+     * Converts the protocol version string returned by {@link SSL#getVersion(long)} to protocol family string.
+     */
+    private static String toJavaCipherSuitePrefix(String protocolVersion) {
+        final char c;
+        if (protocolVersion == null || protocolVersion.isEmpty()) {
+            c = 0;
+        } else {
+            c = protocolVersion.charAt(0);
+        }
+
+        switch (c) {
+            case 'T':
+                return "TLS";
+            case 'S':
+                return "SSL";
+            default:
+                return "UNKNOWN";
         }
     }
 
@@ -2693,7 +2722,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // did not set it earlier via setSessionDetails(...)
                         this.creationTime = lastAccessed = creationTime;
                     }
-                    this.cipher = toJavaCipherSuite(cipher, SSL.getVersionInt(ssl));
+                    this.cipher = toJavaCipherSuite(cipher, protocol);
                     this.protocol = protocol;
                     try {
                         String groupName = SSL.getGroupName(ssl);
