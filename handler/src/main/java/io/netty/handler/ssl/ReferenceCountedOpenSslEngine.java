@@ -2031,7 +2031,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return NEED_WRAP;
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
-        session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), protocolVersion(),
+        session.handshakeFinished(SSL.getSessionId(ssl), SSL.getCipherForSSL(ssl), SSL.getVersionInt(ssl),
                 SSL.getPeerCertificate(ssl), SSL.getPeerCertChain(ssl),
                 SSL.getTime(ssl) * 1000L, parentContext.sessionTimeout() * 1000L);
         selectApplicationProtocol();
@@ -2109,26 +2109,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
     }
 
-    private String toJavaCipherSuite(String openSslCipherSuite, String version) {
-        if (openSslCipherSuite == null) {
-            return null;
-        }
-        String prefix = toJavaCipherSuitePrefix(version);
-        return CipherSuiteConverter.toJava(openSslCipherSuite, prefix);
-    }
-
-    /**
-     * Returns the negotiated protocol version as one of the {@link SslProtocols} {@code String}s.
-     * <p>
-     * This uses {@link SSL#getVersionInt(long)} and maps the returned numeric version to an interned
-     * {@link SslProtocols} constant, so no new {@code String} is allocated on the (performance sensitive)
-     * handshake path. For a version that can't be mapped it falls back to {@link SSL#getVersion(long)}.
-     */
-    private String protocolVersion() {
-        String version = toJavaProtocolVersion(SSL.getVersionInt(ssl));
-        return version != null ? version : SSL.getVersion(ssl);
-    }
-
     /**
      * Maps the numeric protocol version returned by {@link SSL#getVersionInt(long)} to the matching interned
      * {@link SslProtocols} constant, or {@code null} if the version is not known.
@@ -2148,7 +2128,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             case SSL2_VERSION:
                 return SslProtocols.SSL_v2;
             default:
-                return null;
+                return "";
         }
     }
 
@@ -2551,7 +2531,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private Certificate[] peerCerts;
 
         private boolean valid = true;
-        private String protocol;
+        private int protocol;
         private String cipher;
         private OpenSslSessionId id = OpenSslSessionId.NULL_ID;
         private long creationTime;
@@ -2709,7 +2689,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
          * by the user.
          */
         @Override
-        public void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
+        public void handshakeFinished(byte[] id, String cipher, int protocol, byte[] peerCertificate,
                                       byte[][] peerCertificateChain, long creationTime, long timeout)
                 throws SSLException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
@@ -2880,17 +2860,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public String getProtocol() {
-            String protocol = this.protocol;
-            if (protocol == null) {
+            int protocol = this.protocol;
+            if (protocol == 0) {
                 synchronized (ReferenceCountedOpenSslEngine.this) {
                     if (!destroyed) {
-                        protocol = protocolVersion();
-                    } else {
-                        protocol = StringUtil.EMPTY_STRING;
+                        protocol = SSL.getVersionInt(ssl);
                     }
                 }
             }
-            return protocol;
+            return toJavaProtocolVersion(protocol);
         }
 
         @Override
