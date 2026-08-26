@@ -341,9 +341,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         // Notify which streams were not processed by the remote peer and are safe to retry on another connection:
         try {
             final boolean server = isServer(ctx);
-            // Record why the stream is being closed so that it can later be surfaced via
-            // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
-            // callers having to inspect stack traces to distinguish GOAWAY from other causes.
+            // Record the goaway so if the stream is closed later, we assume this was the cause.
             ByteBuf content = goAwayFrame.content();
             byte[] debugData = new byte[content.readableBytes()];
             content.getBytes(content.readerIndex(), debugData);
