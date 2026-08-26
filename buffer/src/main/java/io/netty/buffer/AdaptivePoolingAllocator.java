@@ -635,15 +635,18 @@ final class AdaptivePoolingAllocator {
                 return null;
             }
             try {
-                Magazine mag = sizeClassIndex < SIZE_CLASSES_COUNT
+                boolean sizeClassed = sizeClassIndex < SIZE_CLASSES_COUNT;
+                Magazine mag = sizeClassed
                         ? getOrCreateMagazine(sizeClassIndex, allocator)
                         : getOrCreateBuddyMagazine(allocator);
                 if (buf == null) {
                     buf = mag.newBuffer();
                 }
                 if (mag.allocate(size, maxCapacity, buf)) {
-                    if (mag.tickAllocPurge()) {
-                        stripeWidePurge(sizeClassIndex);
+                    if (sizeClassed) {
+                        // Cache purging is size-class management: the buddy magazine has no size
+                        // class, no sibling magazines and no chunk recycler to feed.
+                        mag.tickAllocPurge();
                     }
                     return buf;
                 }
@@ -653,23 +656,6 @@ final class AdaptivePoolingAllocator {
                 return null;
             } finally {
                 l.unlockWrite(stamp);
-            }
-        }
-
-        private void stripeWidePurge(int triggeringSizeClassIndex) {
-            if (magazines != null) {
-                purgeSiblingCaches(magazines, triggeringSizeClassIndex);
-            }
-        }
-    }
-
-    private static void purgeSiblingCaches(Magazine[] magazines, int triggeringSizeClassIndex) {
-        for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-            if (i != triggeringSizeClassIndex) {
-                Magazine sibling = magazines[i];
-                if (sibling != null) {
-                    sibling.tickCachePurge();
-                }
             }
         }
     }
@@ -691,14 +677,8 @@ final class AdaptivePoolingAllocator {
             }
             boolean success = mag.allocate(size, maxCapacity, buf);
             assert success : "Thread-local allocation must always succeed";
-            if (mag.tickAllocPurge()) {
-                stripeWidePurge(sizeClassIndex);
-            }
+            mag.tickAllocPurge();
             return buf;
-        }
-
-        private void stripeWidePurge(int triggeringSizeClassIndex) {
-            purgeSiblingCaches(magazines, triggeringSizeClassIndex);
         }
 
         Magazine getOrCreateMagazine(int sizeClassIndex) {
@@ -1549,25 +1529,35 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Count one successful allocation and, when the budget is spent, purge this magazine's cache.
+         * Count one successful allocation and, when the budget is spent, purge this magazine's cache
+         * and those of every other size class on this heap.
          *
-         * <p>Call exactly once per successful {@link #allocate}, from the caller that acts on the
-         * result: a fired tick also owes the sibling caches on this stripe a purge, and only the
-         * caller can do that.
-         *
-         * @return {@code true} if the tick fired
+         * <p>Call exactly once per successful {@link #allocate}. Size-classed magazines only: the
+         * buddy magazine has no size class and no siblings, so it never ticks.
          */
-        boolean tickAllocPurge() {
-            if (purgeTickThreshold > 0 && ++allocCount >= purgeTickThreshold) {
+        void tickAllocPurge() {
+            assert sizeClassIndex >= 0 : "tickAllocPurge is size-class management";
+            if (++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
                 chunkCache.tickPurge();
-                return true;
+                purgeHeapSiblings();
             }
-            return false;
         }
 
-        void tickCachePurge() {
-            chunkCache.tickPurge();
+        /**
+         * Purge the caches of the other size classes on this heap. A size class that has gone idle
+         * stops allocating, so it would never fire its own tick — and those are exactly the caches
+         * worth purging, because the chunks they release go to the {@link SizeClassChunkRecycler}
+         * that every size class on this heap draws from.
+         */
+        private void purgeHeapSiblings() {
+            Magazine[] mags = heapMagazines;
+            for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+                Magazine sibling = mags[i];
+                if (sibling != null && sibling != this) {
+                    sibling.chunkCache.tickPurge();
+                }
+            }
         }
 
         /**
