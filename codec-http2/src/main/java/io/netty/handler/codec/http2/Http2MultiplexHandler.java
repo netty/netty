@@ -183,7 +183,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     // Record why the stream is being closed so that it can later be surfaced via
                     // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
                     // callers having to inspect stack traces to distinguish RST_STREAM from other causes.
-                    channel.setCloseCause(new Http2StreamRstException(((Http2ResetFrame) msg).errorCode()));
+                    channel.setCloseCause(new Http2RstStreamClosedChannelException(((Http2ResetFrame) msg).errorCode()));
                 }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
@@ -335,25 +335,30 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             // None of the streams can have an id greater than Integer.MAX_VALUE
             return;
         }
+        if (!hasActiveStream()) {
+            return;
+        }
         // Notify which streams were not processed by the remote peer and are safe to retry on another connection:
         try {
             final boolean server = isServer(ctx);
+            // Record why the stream is being closed so that it can later be surfaced via
+            // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
+            // callers having to inspect stack traces to distinguish GOAWAY from other causes.
+            ByteBuf content = goAwayFrame.content();
+            byte[] debugData = new byte[content.readableBytes()];
+            content.getBytes(content.readerIndex(), debugData);
+            final Http2GoAwayClosedChannelException closedStreamException =
+                new Http2GoAwayClosedChannelException(goAwayFrame.lastStreamId(), goAwayFrame.errorCode(), debugData);
             forEachActiveStream(new Http2FrameStreamVisitor() {
                 @Override
                 public boolean visit(Http2FrameStream stream) {
                     final int streamId = stream.id();
+                    final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
                     if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
-                        final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                                ((DefaultHttp2FrameStream) stream).attachment;
-                        // Record why the stream is being closed so that it can later be surfaced via
-                        // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
-                        // callers having to inspect stack traces to distinguish GOAWAY from other causes.
-                        ByteBuf content = goAwayFrame.content();
-                        byte[] debugData = new byte[content.readableBytes()];
-                        content.getBytes(content.readerIndex(), debugData);
-                        childChannel.setCloseCause(new Http2GoAwayClosedStreamException(goAwayFrame.lastStreamId(),
-                                goAwayFrame.errorCode(), debugData));
                         childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+                    } else {
+                        childChannel.setCloseCause(closedStreamException);
                     }
                     return true;
                 }

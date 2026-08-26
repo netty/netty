@@ -205,6 +205,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
+    boolean hasActiveStream() {
+        return connection().numActiveStreams() > 0;
+    }
+
     /**
      * Retrieve the number of streams currently in the process of being initialized.
      * <p>

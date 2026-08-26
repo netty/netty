@@ -18,23 +18,35 @@ import java.nio.channels.ClosedChannelException;
 
 /**
  * A {@link ClosedChannelException} which signals that a {@link Http2StreamChannel} was closed because a
- * {@code RST_STREAM} frame was received from the peer for the corresponding HTTP/2 stream.
+ * {@code GOAWAY} frame was received from the peer while it was still active.
  *
  * @see Http2StreamChannel#closeCause()
  */
-public final class Http2StreamRstException extends ClosedChannelException {
+public final class Http2GoAwayClosedChannelException extends ClosedChannelException {
 
-    private static final long serialVersionUID = 4171742226598852908L;
+    private static final long serialVersionUID = -8118885433489741466L;
 
+    private final int lastStreamId;
     private final long errorCode;
+    private final byte[] debugData;
 
-    public Http2StreamRstException(long errorCode) {
+    Http2GoAwayClosedChannelException(int lastStreamId, long errorCode, byte[] debugData) {
+        this.lastStreamId = lastStreamId;
         this.errorCode = errorCode;
+        this.debugData = debugData;
     }
 
     /**
-     * Returns the HTTP/2 error code that was carried by the {@code RST_STREAM} frame as defined by the
-     * HTTP/2 specification.
+     * Returns the last stream identifier carried by the {@code GOAWAY} frame, as defined by the HTTP/2
+     * specification.
+     */
+    public int lastStreamId() {
+        return lastStreamId;
+    }
+
+    /**
+     * Returns the HTTP/2 error code that was carried by the {@code GOAWAY} frame as defined by the HTTP/2
+     * specification.
      */
     public long errorCode() {
         return errorCode;
@@ -48,8 +60,16 @@ public final class Http2StreamRstException extends ClosedChannelException {
         return Http2Error.valueOf(errorCode);
     }
 
+    /**
+     * Returns the (possibly empty) debug data that was carried by the {@code GOAWAY} frame.
+     */
+    public byte[] debugData() {
+        return debugData.clone();
+    }
+
     @Override
     public String getMessage() {
-        return "Stream reset received with error code: " + errorCode;
+        return "Stream closed because of GOAWAY received with lastStreamId=" + lastStreamId
+                + ", errorCode=" + errorCode;
     }
 }
