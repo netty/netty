@@ -201,9 +201,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     /**
      * Set at most once, the first time we learn a specific, distinguishable reason why this channel is being
      * closed (for example a received {@code RST_STREAM} or {@code GOAWAY}).
-     *
      */
-    private volatile Throwable closedCause;
+    private volatile Throwable closeCause;
 
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
@@ -346,7 +345,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public Throwable closeCause() {
-        return closedCause;
+        return closeCause;
     }
 
     /**
@@ -355,8 +354,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * any {@link ClosedChannelException} produced for failed operations can reflect it.
      */
     void setCloseCause(Throwable cause) {
-        if (closedCause == null) {
-            closedCause = cause;
+        if (closeCause == null) {
+            closeCause = cause;
         }
     }
 
@@ -1180,12 +1179,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private ClosedChannelException newClosedChannelException(Throwable cause) {
-            Throwable closedCause = AbstractHttp2StreamChannel.this.closedCause;
-            if (closedCause instanceof ClosedChannelException) {
+            Throwable closeCause = AbstractHttp2StreamChannel.this.closeCause;
+            if (closeCause instanceof ClosedChannelException) {
                 // Prefer the specific reason (e.g. Http2StreamRstException / Http2GoAwayClosedStreamException)
                 // recorded when we learned the stream was closed, so callers can distinguish it via instanceof
                 // rather than having to inspect the stack trace.
-                return (ClosedChannelException) closedCause;
+                return (ClosedChannelException) closeCause;
             }
             ClosedChannelException exception = new ClosedChannelException();
             if (cause != null) {
