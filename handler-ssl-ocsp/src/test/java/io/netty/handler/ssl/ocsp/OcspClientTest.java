@@ -73,7 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OcspClientTest extends AbstractOcspTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"https://netty.io", "https://apple.com"})
+    @ValueSource(strings = {"https://apple.com"})
     void simpleOcspQueryTest(String urlString) throws IOException, ExecutionException, InterruptedException {
         HttpsURLConnection httpsConnection = null;
         try {

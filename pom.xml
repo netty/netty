@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.17.Final-SNAPSHOT</version>
+  <version>4.2.18.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -207,7 +207,7 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras} -Djdk.tls.SunX509KeyManager.certChecking=false</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
              our EventExecutorGroup implementations
@@ -598,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.79.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.82.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -744,7 +744,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.78.Final</tcnative.version>
+    <tcnative.version>2.0.81.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -765,6 +765,7 @@
     <junit.version>5.14.3</junit.version>
     <junit.platform.version>1.14.0</junit.platform.version>
     <jazzer.version>0.30.0</jazzer.version>
+    <jctools.version>4.0.7</jctools.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
@@ -888,7 +889,7 @@
       <dependency>
         <groupId>com.google.protobuf.nano</groupId>
         <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-7</version>
+        <version>3.1.0</version>
       </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
@@ -950,12 +951,12 @@
       <dependency>
         <groupId>com.ning</groupId>
         <artifactId>compress-lzf</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.1</version>
       </dependency>
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.11.1</version>
+        <version>1.11.2</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1023,7 +1024,12 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>4.0.6</version>
+        <version>${jctools.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jctools</groupId>
+        <artifactId>jctools-core-jdk11</artifactId>
+        <version>${jctools.version}</version>
       </dependency>
 
       <!-- Annotations for IDE integration and analysis -->
@@ -1603,7 +1609,7 @@
               <encoding>UTF-8</encoding>
               <sourceDirectories>${basedir}</sourceDirectories>
               <includes>**/*</includes>
-              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
+              <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class,**/.github/ghsa/**</excludes>
             </configuration>
             <goals>
               <goal>check</goal>
@@ -2012,12 +2018,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.5.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -2223,7 +2229,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>flatten-maven-plugin</artifactId>
-          <version>1.2.2</version>
+          <version>1.8.0</version>
         </plugin>
       </plugins>
     </pluginManagement>

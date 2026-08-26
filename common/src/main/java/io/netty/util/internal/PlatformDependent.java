@@ -30,6 +30,12 @@ import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.queues.atomic.unpadded.MpscAtomicUnpaddedArrayQueue;
 import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
+import org.jctools.queues.varhandle.MpmcVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscChunkedVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscUnboundedVarHandleArrayQueue;
+import org.jctools.queues.varhandle.MpscVarHandleArrayQueue;
+import org.jctools.queues.varhandle.SpscLinkedVarHandleQueue;
+import org.jctools.queues.varhandle.unpadded.MpscVarHandleUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
@@ -688,6 +694,10 @@ public final class PlatformDependent {
         return VAR_HANDLE;
     }
 
+    static boolean hasJctoolsVarHandle() {
+        return javaVersion() >= 11;
+    }
+
     /**
      * {@code true} if {@code VarHandle} should be used for multi-byte access.
      *
@@ -1279,13 +1289,19 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newChunkedMpscQueue(final int chunkSize, final int capacity) {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(chunkSize, capacity)
+            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
+                return new MpscChunkedArrayQueue<T>(chunkSize, capacity);
+            }
+            return hasJctoolsVarHandle() ? new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity)
                     : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
+                return new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE);
+            }
+            return hasJctoolsVarHandle() ? new MpscUnboundedVarHandleArrayQueue<T>(MPSC_CHUNK_SIZE)
+                    : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
         }
     }
 
@@ -1320,7 +1336,10 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        if (hasUnsafe()) {
+            return new SpscLinkedQueue<T>();
+        }
+        return hasJctoolsVarHandle() ? new SpscLinkedVarHandleQueue<T>() : new SpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -1328,7 +1347,10 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpscArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ? new MpscVarHandleArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1337,7 +1359,11 @@ public final class PlatformDependent {
      * This should be preferred to {@link #newFixedMpscQueue(int)} when the queue is not to be heavily contended.
      */
     public static <T> Queue<T> newFixedMpscUnpaddedQueue(int capacity) {
-        return hasUnsafe() ? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpscUnpaddedArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ? new MpscVarHandleUnpaddedArrayQueue<T>(capacity)
+                : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**
@@ -1345,7 +1371,10 @@ public final class PlatformDependent {
      * consumers with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpmcQueue(int capacity) {
-        return hasUnsafe() ? new MpmcArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
+        if (hasUnsafe()) {
+            return new MpmcArrayQueue<T>(capacity);
+        }
+        return hasJctoolsVarHandle() ? new MpmcVarHandleArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
     }
 
     /**

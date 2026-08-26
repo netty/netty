@@ -706,7 +706,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         @Override
         public void operationComplete(Future<? super QuicStreamChannel> future) {
             if (future.isSuccess()) {
-                resume();
+                run();
             } else {
                 ctx.fireExceptionCaught(future.cause());
             }
@@ -714,7 +714,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         @Override
         public void run() {
-            resume();
+            // If we are not on the handler's event executor loop, schedule resume to execute there.
+            if (ctx.executor().inEventLoop()) {
+                resume();
+            } else {
+                ctx.executor().execute(this);
+            }
         }
 
         private void resume() {
@@ -762,7 +767,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         @Override
         public void operationComplete(Future<? super QuicStreamChannel> future) {
-            drain();
+            // If we are not on the handler's event executor loop, schedule drain to execute there.
+            if (ctx.executor().inEventLoop()) {
+                drain();
+            } else {
+                ctx.executor().execute(this::drain);
+            }
         }
 
         void enqueue(Object msg, ChannelPromise promise) {
