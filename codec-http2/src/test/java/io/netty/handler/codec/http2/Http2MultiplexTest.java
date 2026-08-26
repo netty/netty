@@ -579,7 +579,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Throwable closeCause = childChannel.closeCause();
 
-        Http2GoAwayClosedChannelException goAwayCause = assertInstanceOf(Http2GoAwayClosedChannelException.class, closeCause);
+        Http2GoAwayClosedChannelException goAwayCause =
+            assertInstanceOf(Http2GoAwayClosedChannelException.class, closeCause);
         assertEquals(3, goAwayCause.lastStreamId());
         assertEquals(Http2Error.ENHANCE_YOUR_CALM.code(), goAwayCause.errorCode());
         assertEquals(Http2Error.ENHANCE_YOUR_CALM, goAwayCause.error());
@@ -1377,8 +1378,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
     /**
      * Whether {@link Http2StreamChannel#closeCause()} is populated with a specific reason
-     * ({@link Http2RstStreamClosedChannelException} / {@link Http2GoAwayClosedChannelException}) when a stream is closed due to
-     * a received {@code RST_STREAM} or {@code GOAWAY} frame.
+     * ({@link Http2RstStreamClosedChannelException} / {@link Http2GoAwayClosedChannelException}) when a stream
+     * is closed due to a received {@code RST_STREAM} or {@code GOAWAY} frame.
      */
     protected boolean supportsCloseCause() {
         return true;

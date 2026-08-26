@@ -81,7 +81,7 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
         frameCodec.forEachActiveStream(streamVisitor);
     }
 
-    boolean hasActiveStream(){
+    boolean hasActiveStream() {
         return frameCodec.hasActiveStream();
     }
 
