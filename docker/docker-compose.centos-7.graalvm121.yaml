@@ -5,6 +5,7 @@ services:
   runtime-setup:
     image: netty:centos-7-1.11
     build:
+      dockerfile: Dockerfile.centos7
       args:
         java_version : "21.0.2-graalce"
 
