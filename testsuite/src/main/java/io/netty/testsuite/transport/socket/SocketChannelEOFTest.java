@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -78,7 +78,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
                                 channel.pipeline().addLast(handler);
                             }
                         });
-                    ch = bootstrap.connect(address).sync().channel();
+                    ch = bootstrap.connect(address).get();
                     handler.result().get(10, TimeUnit.SECONDS);
                     server.result().get(10, TimeUnit.SECONDS);
                 } finally {
@@ -111,7 +111,7 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
         }
     }
 
-    private static final class ReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class ReadHandler implements ChannelInboundHandler {
 
         private final long expectedBytes;
         private final long pauseAfterBytes;
@@ -191,7 +191,6 @@ public class SocketChannelEOFTest extends AbstractClientSocketTest {
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-            super.handlerRemoved(ctx);
             if (readFuture != null) {
                 readFuture.cancel(true);
             }
