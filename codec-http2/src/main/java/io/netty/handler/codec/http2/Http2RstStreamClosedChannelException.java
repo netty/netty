@@ -28,7 +28,7 @@ public final class Http2RstStreamClosedChannelException extends ClosedChannelExc
 
     private final long errorCode;
 
-    public Http2RstStreamClosedChannelException(long errorCode) {
+    Http2RstStreamClosedChannelException(long errorCode) {
         this.errorCode = errorCode;
     }
 
