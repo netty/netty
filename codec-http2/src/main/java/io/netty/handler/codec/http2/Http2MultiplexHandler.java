@@ -181,8 +181,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (isResetFrame || msg instanceof Http2PriorityFrame) {
                 if (isResetFrame) {
                     // Record why the stream is being closed so that it can later be surfaced via
-                    // Http2StreamChannel.closeCause() and any failed operations on the channel, instead of
-                    // callers having to inspect stack traces to distinguish RST_STREAM from other causes.
+                    // Http2StreamChannel.closeCause() and any failed operations on the channel.
                     channel.setCloseCause(new Http2RstStreamClosedChannelException(((Http2ResetFrame) msg).errorCode()));
                 }
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
