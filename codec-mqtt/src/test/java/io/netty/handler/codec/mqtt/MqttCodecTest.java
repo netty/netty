@@ -810,12 +810,12 @@ public class MqttCodecTest {
             ByteBuf properties = ALLOCATOR.buffer();
             int i = 0;
             while (properties.readableBytes() < 130) {
-                properties.writeByte(USER_PROPERTY);
+                properties.writeByte(USER_PROPERTY.value());
                 writeMqttUtf8String(properties, "key" + i);
                 writeMqttUtf8String(properties, "value-with-some-padding-" + i);
                 i++;
             }
-            properties.writeByte(PAYLOAD_FORMAT_INDICATOR); // 0x01
+            properties.writeByte(PAYLOAD_FORMAT_INDICATOR.value()); // 0x01
             properties.writeByte(0x01);                      // its single-byte value
             assertTrue(properties.readableBytes() >= 128); // 2-byte VBI trigger condition
 
@@ -827,7 +827,7 @@ public class MqttCodecTest {
                 // The payload must be exactly the JSON, without the leaked 0x01 0x01 property bytes in front.
                 assertEquals(expectedPayload, decoded.payload().toString(CharsetUtil.UTF_8));
                 // ... and the PAYLOAD_FORMAT_INDICATOR must have been decoded as a property.
-                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR));
+                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR.value()));
             } finally {
                 ReferenceCountUtil.release(decoded);
             }
@@ -847,9 +847,9 @@ public class MqttCodecTest {
             ReferenceCountUtil.release(channel.readInbound());
 
             ByteBuf properties = ALLOCATOR.buffer();
-            properties.writeByte(PAYLOAD_FORMAT_INDICATOR); // 0x01, placed first (not last)
+            properties.writeByte(PAYLOAD_FORMAT_INDICATOR.value()); // 0x01, placed first (not last)
             properties.writeByte(0x01);
-            properties.writeByte(USER_PROPERTY);
+            properties.writeByte(USER_PROPERTY.value());
             writeMqttUtf8String(properties, "tag");
             writeMqttUtf8String(properties, "value");
             assertTrue(properties.readableBytes() < 128); // single-byte VBI length
@@ -860,7 +860,7 @@ public class MqttCodecTest {
             try {
                 assertFalse(decoded.decoderResult().isFailure(), String.valueOf(decoded.decoderResult().cause()));
                 assertEquals(expectedPayload, decoded.payload().toString(CharsetUtil.UTF_8));
-                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR));
+                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR.value()));
             } finally {
                 ReferenceCountUtil.release(decoded);
             }
