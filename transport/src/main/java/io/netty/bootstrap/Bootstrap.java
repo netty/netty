@@ -193,11 +193,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private ChannelFuture doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
                                                final SocketAddress localAddress, final ChannelPromise promise) {
-        // The Channel was created and registered before the address resolution started. If cancellation won the
-        // registration race, close the Channel and skip resolution. Once resolution starts, don't allow cancellation
-        // to race with resolver completion.
+        // The Channel was created and registered before the address resolution started. Close it if the connect
+        // attempt fails or is cancelled while resolution is still in progress.
         promise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-        if (!promise.setUncancellable()) {
+        if (promise.isDone()) {
             return promise;
         }
 
@@ -213,7 +212,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 resolver = ExternalAddressResolver.getOrDefault(externalResolver).getResolver(eventLoop);
             } catch (Throwable cause) {
                 channel.close();
-                return promise.setFailure(cause);
+                promise.tryFailure(cause);
+                return promise;
             }
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
@@ -230,7 +230,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 if (resolveFailureCause != null) {
                     // Failed to resolve immediately
                     channel.close();
-                    promise.setFailure(resolveFailureCause);
+                    promise.tryFailure(resolveFailureCause);
                 } else {
                     // Succeeded to resolve immediately; cached? (or did a blocking lookup)
                     doConnect(resolveFuture.getNow(), localAddress, promise);
@@ -240,9 +240,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
             // Wait until the name resolution is finished.
             resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
+                if (promise.isDone()) {
+                    return;
+                }
                 if (future.cause() != null) {
                     channel.close();
-                    promise.setFailure(future.cause());
+                    promise.tryFailure(future.cause());
                 } else {
                     doConnect(future.getNow(), localAddress, promise);
                 }

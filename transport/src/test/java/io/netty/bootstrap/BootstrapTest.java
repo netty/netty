@@ -396,7 +396,7 @@ public class BootstrapTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void testConnectIsUncancellableDuringAddressResolution() throws Exception {
+    public void testCancelDuringAddressResolutionClosesChannel() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         PendingAddressResolverGroup resolverGroup = new PendingAddressResolverGroup();
         ChannelFuture connectFuture = null;
@@ -409,20 +409,19 @@ public class BootstrapTest {
 
             connectFuture = bootstrap.connect(InetSocketAddress.createUnresolved("netty.io", 443));
             assertTrue(resolverGroup.resolveStarted.await(5, TimeUnit.SECONDS));
-            assertFalse(connectFuture.cancel(false));
-            assertFalse(connectFuture.isDone());
-            assertTrue(connectFuture.channel().isOpen());
+            assertTrue(connectFuture.cancel(false));
+            assertTrue(connectFuture.channel().closeFuture().await(5, TimeUnit.SECONDS));
+            assertFalse(connectFuture.channel().isOpen());
 
             Promise<SocketAddress> resolvePromise = resolverGroup.resolvePromise.get();
             assertNotNull(resolvePromise);
             assertFalse(resolvePromise.isDone());
-            UnknownHostException cause = new UnknownHostException("resolver failure");
-            resolvePromise.setFailure(cause);
-
-            assertTrue(connectFuture.await(5, TimeUnit.SECONDS));
-            assertSame(cause, connectFuture.cause());
-            assertTrue(connectFuture.channel().closeFuture().await(5, TimeUnit.SECONDS));
-            assertFalse(connectFuture.channel().isOpen());
+            assertTrue(resolvePromise.tryFailure(new UnknownHostException("late resolver failure")));
+            connectFuture.channel().eventLoop().submit(new Runnable() {
+                @Override
+                public void run() { }
+            }).sync();
+            assertTrue(connectFuture.isCancelled());
         } finally {
             if (connectFuture != null) {
                 connectFuture.channel().close().syncUninterruptibly();
