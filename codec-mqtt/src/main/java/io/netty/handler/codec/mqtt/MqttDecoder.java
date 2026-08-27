@@ -865,14 +865,23 @@ public final class MqttDecoder extends ByteToMessageDecoder {
     private Result<MqttProperties> decodeProperties(ByteBuf buffer) {
         final long propertiesLength = decodeVariableByteInteger(buffer);
         int totalPropertiesLength = unpackA(propertiesLength);
-        int numberOfBytesConsumed = unpackB(propertiesLength);
-        if (buffer.readableBytes() < totalPropertiesLength) {
-            // Force an early REPLAY to avoid repeatedly parsing the properties.
-            buffer.readSlice(totalPropertiesLength);
+        // Number of bytes used by the Property Length Variable Byte Integer itself. These bytes are
+        // part of the value returned by this method, but they must not be counted against
+        // totalPropertiesLength, which only covers the properties content that follows the length.
+        final int propertiesLengthNumBytes = unpackB(propertiesLength);
+        int numberOfBytesConsumed = propertiesLengthNumBytes;
+        if (totalPropertiesLength > 0) {
+            // Force an early REPLAY when the buffer does not yet have the full properties block,
+            // so we don't repeatedly parse partial properties as data arrives. A direct
+            // buffer.readableBytes() check is unusable here because ReplayingDecoderByteBuf
+            // returns Integer.MAX_VALUE - readerIndex; touching the last byte via getByte()
+            // routes through ReplayingDecoderByteBuf.checkIndex(), which throws REPLAY if the
+            // buffer's writerIndex hasn't reached that position yet.
+            buffer.getByte(buffer.readerIndex() + totalPropertiesLength - 1);
         }
 
         MqttProperties decodedProperties = new MqttProperties();
-        while (numberOfBytesConsumed < totalPropertiesLength) {
+        while (numberOfBytesConsumed - propertiesLengthNumBytes < totalPropertiesLength) {
             long propertyId = decodeVariableByteInteger(buffer);
             final int propertyIdValue = unpackA(propertyId);
             numberOfBytesConsumed += unpackB(propertyId);
