@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.Future;
@@ -34,11 +35,13 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -709,6 +712,183 @@ public class DefaultHttp2ConnectionTest {
         });
     }
 
+    @Test
+    public void defaultSettingsShouldEnforceMaxConcurrentStreamsOnRemoteEndpoint() throws Exception {
+        // Build a server handler using default settings (no explicit maxConcurrentStreams override).
+        final Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .frameListener(new Http2FrameAdapter())
+                .build();
+
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        try {
+            // Feed the client connection preface.
+            assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+
+            ByteBuf clientSettings = clientSettingsWithoutMaxConcurrentStreams();
+            assertFalse(channel.writeInbound(clientSettings));
+
+            Http2Connection connection = handler.connection();
+
+            // The server's default (SMALLEST_MAX_CONCURRENT_STREAMS = 100) must be
+            // enforced on the remote endpoint — the one that tracks client-initiated streams.
+            assertEquals(Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS,
+                    connection.remote().maxActiveStreams());
+
+            // Create exactly the maximum allowed client-initiated (odd-numbered) streams.
+            for (int id = 1; id < Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS * 2; id += 2) {
+                connection.remote().createStream(id, true);
+            }
+            assertEquals(Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS,
+                    connection.numActiveStreams());
+
+            // The next stream must be refused.
+            final int nextStreamId = Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS * 2 + 1;
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handler.connection().remote().createStream(nextStreamId, true);
+                }
+            });
+            assertEquals(Http2Error.REFUSED_STREAM, e.error());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void customMaxConcurrentStreamsShouldBeEnforcedOnRemoteEndpoint() throws Exception {
+        final int maxConcurrentStreams = 150;
+
+        final Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .frameListener(new Http2FrameAdapter())
+                .initialSettings(new Http2Settings().maxConcurrentStreams(maxConcurrentStreams))
+                .build();
+
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        try {
+            assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+
+            ByteBuf clientSettings = clientSettingsWithoutMaxConcurrentStreams();
+            assertFalse(channel.writeInbound(clientSettings));
+
+            Http2Connection connection = handler.connection();
+
+            assertEquals(maxConcurrentStreams, connection.remote().maxActiveStreams());
+
+            // Create exactly the configured limit of client-initiated streams.
+            for (int id = 1; id < maxConcurrentStreams * 2; id += 2) {
+                connection.remote().createStream(id, true);
+            }
+            assertEquals(maxConcurrentStreams, connection.numActiveStreams());
+
+            // The next stream must be refused.
+            final int nextStreamId = maxConcurrentStreams * 2 + 1;
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handler.connection().remote().createStream(nextStreamId, true);
+                }
+            });
+            assertEquals(Http2Error.REFUSED_STREAM, e.error());
+        } finally {
+           channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void defaultSettingsShouldEnforceMaxConcurrentStreamsOnRemoteEndpointWithCodec()
+            throws Exception {
+        final DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
+        DefaultHttp2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+        Http2ConnectionDecoder decoder =
+                new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
+
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .frameListener(new Http2FrameAdapter())
+                .codec(decoder, encoder)
+                .build();
+
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        try {
+            assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+            assertFalse(channel.writeInbound(clientSettingsWithoutMaxConcurrentStreams()));
+
+            assertEquals(Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS,
+                    connection.remote().maxActiveStreams());
+
+            for (int id = 1; id < Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS * 2; id += 2) {
+                connection.remote().createStream(id, true);
+            }
+            assertEquals(Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS, connection.numActiveStreams());
+
+            final int nextStreamId = Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS * 2 + 1;
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    connection.remote().createStream(nextStreamId, true);
+                }
+            });
+            assertEquals(Http2Error.REFUSED_STREAM, e.error());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    public void customMaxConcurrentStreamsShouldBeEnforcedOnRemoteEndpointWithCodec()
+            throws Exception {
+        final int maxConcurrentStreams = 150;
+
+        final DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
+        DefaultHttp2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+        Http2ConnectionDecoder decoder =
+                new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
+
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .frameListener(new Http2FrameAdapter())
+                .initialSettings(new Http2Settings().maxConcurrentStreams(maxConcurrentStreams))
+                .codec(decoder, encoder)
+                .build();
+
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        try {
+            assertFalse(channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf()));
+            assertFalse(channel.writeInbound(clientSettingsWithoutMaxConcurrentStreams()));
+
+            assertEquals(maxConcurrentStreams, connection.remote().maxActiveStreams());
+
+            for (int id = 1; id < maxConcurrentStreams * 2; id += 2) {
+                connection.remote().createStream(id, true);
+            }
+            assertEquals(maxConcurrentStreams, connection.numActiveStreams());
+
+            final int nextStreamId = maxConcurrentStreams * 2 + 1;
+            Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    connection.remote().createStream(nextStreamId, true);
+                }
+            });
+            assertEquals(Http2Error.REFUSED_STREAM, e.error());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Nonnull
+    private static ByteBuf clientSettingsWithoutMaxConcurrentStreams() {
+        ByteBuf clientSettings = Unpooled.buffer();
+        clientSettings.writeMedium(6);       // Payload length: one 6-byte setting
+        clientSettings.writeByte(0x4);       // Frame type: SETTINGS
+        clientSettings.writeByte(0x0);       // Flags
+        clientSettings.writeInt(0x0);        // Stream 0
+        clientSettings.writeShort(0x4);      // SETTINGS_INITIAL_WINDOW_SIZE
+        clientSettings.writeInt(65535);
+        return clientSettings;
+    }
+
     private static void incrementAndGetStreamShouldSucceed(Endpoint<?> endpoint) throws Http2Exception {
         Http2Stream streamA = endpoint.createStream(endpoint.incrementAndGetNextStreamId(), true);
         Http2Stream streamB = endpoint.createStream(streamA.id() + 2, true);
@@ -718,7 +898,6 @@ public class DefaultHttp2ConnectionTest {
     }
 
     private static final class ListenerExceptionThrower implements Answer<Void> {
-        private static final RuntimeException FAKE_EXCEPTION = new RuntimeException("Fake Exception");
         private final boolean[] array;
         private final int index;
 
@@ -730,7 +909,7 @@ public class DefaultHttp2ConnectionTest {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
             array[index] = true;
-            throw FAKE_EXCEPTION;
+            throw Http2TestUtil.FAKE_EXCEPTION;
         }
     }
 

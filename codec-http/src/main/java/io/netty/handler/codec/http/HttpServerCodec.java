@@ -16,7 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
 import java.util.ArrayDeque;
@@ -26,7 +28,6 @@ import java.util.Queue;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
-import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
 
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
@@ -51,6 +52,11 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
+
+    /**
+     * When set, the connection will be closed after the next response is written.
+     */
+    private boolean mustCloseAfterResponse;
 
     /**
      * Creates a new instance with the default decoder options
@@ -173,11 +179,26 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
                 }
             }
         }
+
+        @Override
+        protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
+            super.handleTransferEncodingChunkedWithContentLength(message);
+            mustCloseAfterResponse = true;
+        }
     }
 
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
         private HttpMethod method;
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            if (mustCloseAfterResponse && msg instanceof LastHttpContent) {
+                mustCloseAfterResponse = false;
+                promise = promise.unvoid().addListener(ChannelFutureListener.CLOSE);
+            }
+            super.write(ctx, msg, promise);
+        }
 
         @Override
         protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {
@@ -194,6 +215,12 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
         @Override
         protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") HttpResponse msg) {
+            if (msg.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                // An informational response should be excluded from paired comparison. This covers 101 as well:
+                // once the protocol is switched this handler is removed from the pipeline, so the entry that is
+                // left behind goes away with it. Just delegate to super method which has all the needed handling.
+                return super.isContentAlwaysEmpty(msg);
+            }
             method = queue.poll();
             return HttpMethod.HEAD.equals(method) || super.isContentAlwaysEmpty(msg);
         }

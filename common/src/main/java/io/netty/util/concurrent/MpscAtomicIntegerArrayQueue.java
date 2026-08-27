@@ -199,6 +199,37 @@ public final class MpscAtomicIntegerArrayQueue extends AtomicIntegerArray implem
         return actualLimit;
     }
 
+    /**
+     * Peek at all available elements and compute a reduction.
+     * The elements are not removed, and the iteration is weakly consistent.
+     * @param limit The maximum number of elements to process.
+     * @param initial The initial value to the reduction operation.
+     * @param op The reduction operation, taking a prior result and an element, and producing a new result.
+     * @return The last result of the reduction operation.
+     */
+    public int weakPeekReduce(int limit, int initial, IntBinaryOperator op) {
+        ObjectUtil.checkNotNull(op, "op");
+        ObjectUtil.checkPositiveOrZero(limit, "limit");
+        if (limit == 0) {
+            return 0;
+        }
+        int result = initial;
+
+        final int mask = this.mask;
+        final long cIndex = consumerIndex; // Note: could be weakened to plain-load.
+        for (int i = 0; i < limit; i++) {
+            final long index = cIndex + i;
+            final int offset = (int) (index & mask);
+            final int value = get(offset);
+            if (emptyValue == value) {
+                return result;
+            }
+            // Do not remove the element or advance the consumer index.
+            result = op.applyAsInt(result, value);
+        }
+        return result;
+    }
+
     @Override
     public boolean isEmpty() {
         // Load consumer index before producer index, so our check is conservative.
@@ -222,5 +253,9 @@ public final class MpscAtomicIntegerArrayQueue extends AtomicIntegerArray implem
             }
         }
         return size < 0 ? 0 : size > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) size;
+    }
+
+    public interface IntBinaryOperator {
+        int applyAsInt(int a, int b);
     }
 }

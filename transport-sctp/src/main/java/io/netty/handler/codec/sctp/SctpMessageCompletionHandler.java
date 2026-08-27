@@ -17,15 +17,19 @@
 package io.netty.handler.codec.sctp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.sctp.SctpMessage;
+import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
@@ -33,7 +37,41 @@ import java.util.List;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
+    private static final int DEFAULT_MAX_BUFFERED_BYTES = 16 * 1024 * 1024;
+
+    private final IntObjectMap<List<ByteBuf>> incompleteSctpMessages = new IntObjectHashMap<List<ByteBuf>>();
+    private final int maxIncompleteSctpMessages;
+    private final int maxFragments;
+    private final int maxBufferedBytes;
+    private long bufferedBytes;
+
+    public SctpMessageCompletionHandler() {
+        this(128, 128);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param maxIncompleteSctpMessages the maximum number of incomplete sctp message inflight.
+     * @param maxFragments              the maximum number of fragments per sctp message.
+     */
+    public SctpMessageCompletionHandler(int maxIncompleteSctpMessages, int maxFragments) {
+        this(maxIncompleteSctpMessages, maxFragments, DEFAULT_MAX_BUFFERED_BYTES);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param maxIncompleteSctpMessages the maximum number of incomplete sctp message inflight.
+     * @param maxFragments              the maximum number of fragments per sctp message.
+     * @param maxBufferedBytes          the maximum number of bytes buffered by incomplete sctp messages.
+     */
+    public SctpMessageCompletionHandler(int maxIncompleteSctpMessages, int maxFragments, int maxBufferedBytes) {
+        super(SctpMessage.class);
+        this.maxIncompleteSctpMessages = checkPositive(maxIncompleteSctpMessages, "maxIncompleteSctpMessages");
+        this.maxFragments = checkPositive(maxFragments, "maxFragments");
+        this.maxBufferedBytes = checkPositive(maxBufferedBytes, "maxBufferedBytes");
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
@@ -43,38 +81,78 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
         final boolean isComplete = msg.isComplete();
         final boolean isUnordered = msg.isUnordered();
 
-        ByteBuf frag = fragments.remove(streamIdentifier);
+        List<ByteBuf> frag = incompleteSctpMessages.get(streamIdentifier);
         if (frag == null) {
-            frag = Unpooled.EMPTY_BUFFER;
-        }
-
-        if (isComplete && !frag.isReadable()) {
-            //data chunk is not fragmented
-            out.add(msg);
-        } else if (!isComplete && frag.isReadable()) {
-            //more message to complete
-            fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf));
-        } else if (isComplete && frag.isReadable()) {
-            //last message to complete
-            SctpMessage assembledMsg = new SctpMessage(
-                    protocolIdentifier,
-                    streamIdentifier,
-                    isUnordered,
-                    Unpooled.wrappedBuffer(frag, byteBuf));
-            out.add(assembledMsg);
+            // No previous fragments.
+            if (isComplete) {
+                out.add(msg.retain());
+            } else {
+                if (maxIncompleteSctpMessages <= incompleteSctpMessages.size()) {
+                    throw new CodecException(
+                            "Too many incomplete sctp messages in flight: " + maxIncompleteSctpMessages);
+                }
+                checkBufferedBytes(byteBuf);
+                //first incomplete message
+                frag = new ArrayList<ByteBuf>();
+                frag.add(byteBuf.retain());
+                bufferedBytes += byteBuf.readableBytes();
+                incompleteSctpMessages.put(streamIdentifier, frag);
+            }
         } else {
-            //first incomplete message
-            fragments.put(streamIdentifier, byteBuf);
+            if (maxFragments <= frag.size()) {
+                throw new CodecException("Too many fragments for sctp message: " + maxFragments);
+            }
+            checkBufferedBytes(byteBuf);
+            frag.add(byteBuf.retain());
+            bufferedBytes += byteBuf.readableBytes();
+            if (isComplete) {
+                // Is complete so remove it.
+                incompleteSctpMessages.remove(streamIdentifier);
+                CompositeByteBuf composite = ctx.alloc().compositeBuffer();
+
+                for (int i = 0; i < frag.size(); i++) {
+                    composite.addComponent(true, frag.get(i));
+                }
+                // last message to complete
+                SctpMessage assembledMsg = new SctpMessage(
+                        protocolIdentifier,
+                        streamIdentifier,
+                        isUnordered,
+                        composite);
+                out.add(assembledMsg);
+                removeBufferedBytes(frag);
+            }
         }
-        byteBuf.retain();
+    }
+
+    private void checkBufferedBytes(ByteBuf byteBuf) {
+        int readableBytes = byteBuf.readableBytes();
+        if (readableBytes > maxBufferedBytes - bufferedBytes) {
+            throw new CodecException("Too many buffered bytes for incomplete sctp messages: " + maxBufferedBytes);
+        }
+    }
+
+    private void removeBufferedBytes(List<ByteBuf> buffers) {
+        for (ByteBuf buffer : buffers) {
+            bufferedBytes -= buffer.readableBytes();
+        }
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        for (ByteBuf buffer: fragments.values()) {
-            buffer.release();
+        for (List<ByteBuf> buffers: incompleteSctpMessages.values()) {
+            for (ByteBuf buffer: buffers) {
+                buffer.release();
+            }
         }
-        fragments.clear();
+        incompleteSctpMessages.clear();
+        bufferedBytes = 0;
         super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        ctx.close();
     }
 }

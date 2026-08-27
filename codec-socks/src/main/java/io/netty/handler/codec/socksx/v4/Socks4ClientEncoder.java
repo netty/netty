@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 
 /**
@@ -45,14 +47,25 @@ public final class Socks4ClientEncoder extends MessageToByteEncoder<Socks4Comman
         ByteBufUtil.writeShortBE(out, msg.dstPort());
         if (NetUtil.isValidIpV4Address(msg.dstAddr())) {
             out.writeBytes(NetUtil.createByteArrayFromIpAddressString(msg.dstAddr()));
-            ByteBufUtil.writeAscii(out, msg.userId());
+            ByteBufUtil.writeAscii(out, sanitize("userId", msg.userId()));
             out.writeByte(0);
         } else {
             out.writeBytes(IPv4_DOMAIN_MARKER);
-            ByteBufUtil.writeAscii(out, msg.userId());
+            ByteBufUtil.writeAscii(out, sanitize("userId", msg.userId()));
             out.writeByte(0);
-            ByteBufUtil.writeAscii(out, msg.dstAddr());
+            ByteBufUtil.writeAscii(out, sanitize("dstAddr", msg.dstAddr()));
             out.writeByte(0);
         }
+    }
+
+    private CharSequence sanitize(String fieldName, String strValue) {
+        for (int i = 0, len = strValue.length(); i < len; i++) {
+            char c = strValue.charAt(i);
+            // SOCKS4 uses NUL-bytes as field delimiters.
+            if (AsciiString.c2b(c) == 0) {
+                throw new EncoderException("Illegal character in " + fieldName + " field.");
+            }
+        }
+        return strValue;
     }
 }

@@ -26,6 +26,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
@@ -47,6 +49,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -157,7 +160,7 @@ public class Http2ConnectionHandlerTest {
         DefaultChannelConfig config = new DefaultChannelConfig(channel);
         when(channel.config()).thenReturn(config);
 
-        Throwable fakeException = new RuntimeException("Fake exception");
+        Throwable fakeException = Http2TestUtil.FAKE_EXCEPTION;
         when(encoder.connection()).thenReturn(connection);
         when(decoder.connection()).thenReturn(connection);
         when(encoder.frameWriter()).thenReturn(frameWriter);
@@ -341,6 +344,68 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         verify(ctx, never()).write(eq(connectionPrefaceBuf()));
         verify(ctx).flush();
+    }
+
+    @Test
+    public void channelWritabilityChangedShouldNotReenterFlush() throws Exception {
+        when(channel.isActive()).thenReturn(false);
+        when(channel.isWritable()).thenReturn(true);
+        handler = newHandler();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                handler.channelWritabilityChanged(ctx);
+                return null;
+            }
+        }).when(ctx).flush();
+
+        handler.flush(ctx);
+
+        verify(remoteFlow).writePendingBytes();
+        verify(ctx).flush();
+        verify(remoteFlow).channelWritabilityChanged();
+    }
+
+    /**
+     * A large body must fully drain even when the channel briefly becomes unwritable while it is being written
+     * and then flips back to writable synchronously during {@code flush()}. That writable transition re-enters
+     * {@link Http2ConnectionHandler#channelWritabilityChanged(ChannelHandlerContext)} while the flush is still in
+     * progress; the handler must not recurse (which livelocks), but it must still write the frames that were
+     * queued in the remote flow controller. Dropping the reentrant flush strands the tail of the body forever.
+     */
+    @Test
+    public void largeWriteDrainsFullyWhenWritabilityTogglesDuringFlush() throws Exception {
+        // Small watermarks so writing ~1 KiB flips the channel unwritable, and EmbeddedChannel draining the
+        // outbound buffer during flush() flips it back to writable synchronously (ChannelOutboundBuffer.remove
+        // fires the event inline), re-entering flush().
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
+
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .server(false)
+                .frameListener(new Http2FrameAdapter())
+                .validateHeaders(false)
+                .gracefulShutdownTimeoutMillis(0)
+                .build();
+
+        channel.connect(new InetSocketAddress(0));
+        channel.pipeline().addLast(handler);
+        channel.pipeline().fireChannelActive();
+        // Discard the connection preface + SETTINGS the handler wrote on activation.
+        channel.releaseOutbound();
+
+        ChannelHandlerContext ctx = channel.pipeline().context(handler);
+        handler.encoder().writeHeaders(ctx, 3, new DefaultHttp2Headers(), 0, false, ctx.newPromise());
+
+        // Larger than the write high-watermark but within the default 65535-byte flow-control window, so only
+        // channel writability (not flow control) gates the write.
+        final int size = 60 * 1024;
+        ByteBuf data = Unpooled.buffer(size).writeZero(size);
+        ChannelPromise dataPromise = ctx.newPromise();
+        handler.encoder().writeData(ctx, 3, data, 0, false, dataPromise);
+        handler.flush(ctx);
+        assertTrue(dataPromise.isSuccess());
+        channel.finishAndReleaseAll();
     }
 
     @Test
@@ -726,7 +791,6 @@ public class Http2ConnectionHandlerTest {
         ByteBuf data = dummyData();
         long errorCode = Http2Error.INTERNAL_ERROR.code();
         handler = newHandler();
-        final Throwable cause = new RuntimeException("fake exception");
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
@@ -737,12 +801,12 @@ public class Http2ConnectionHandlerTest {
                         new SimpleChannelPromiseAggregator(promise, channel, ImmediateEventExecutor.INSTANCE);
                 aggregatedPromise.newPromise();
                 aggregatedPromise.doneAllocatingPromises();
-                return aggregatedPromise.setFailure(cause);
+                return aggregatedPromise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
             }
         }).when(frameWriter).writeGoAway(
                 any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class), any(ChannelPromise.class));
         handler.goAway(ctx, STREAM_ID, errorCode, data, newVoidPromise(channel));
-        verify(pipeline).fireExceptionCaught(cause);
+        verify(pipeline).fireExceptionCaught(Http2TestUtil.FAKE_EXCEPTION);
     }
 
     @Test
@@ -894,7 +958,6 @@ public class Http2ConnectionHandlerTest {
 
     private void writeRstStreamUsingVoidPromise(int streamId) throws Exception {
         handler = newHandler();
-        final Throwable cause = new RuntimeException("fake exception");
         when(stream.id()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(streamId), anyLong(), any(ChannelPromise.class)))
                 .then(new Answer<ChannelFuture>() {
@@ -902,12 +965,12 @@ public class Http2ConnectionHandlerTest {
                     public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
                         ChannelPromise promise = invocationOnMock.getArgument(3);
                         assertFalse(promise.isVoid());
-                        return promise.setFailure(cause);
+                        return promise.setFailure(Http2TestUtil.FAKE_EXCEPTION);
                     }
                 });
         handler.resetStream(ctx, streamId, STREAM_CLOSED.code(), newVoidPromise(channel));
         verify(frameWriter).writeRstStream(eq(ctx), eq(streamId), anyLong(), any(ChannelPromise.class));
-        verify(pipeline).fireExceptionCaught(cause);
+        verify(pipeline).fireExceptionCaught(Http2TestUtil.FAKE_EXCEPTION);
     }
 
     private static ByteBuf dummyData() {

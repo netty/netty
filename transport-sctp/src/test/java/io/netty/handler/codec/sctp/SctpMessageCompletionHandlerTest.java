@@ -21,13 +21,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.sctp.SctpMessage;
+import io.netty.handler.codec.CodecException;
 import io.netty.util.SuppressForbidden;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketAddress;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SctpMessageCompletionHandlerTest {
 
@@ -47,8 +52,124 @@ public class SctpMessageCompletionHandlerTest {
         assertEquals(0, buffer2.refCnt());
     }
 
+    @Test
+    public void testIncompleteMessagesLimited() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        SctpMessage message = new SctpMessage(new TestMessageInfo(false, 1), buffer);
+        assertFalse(channel.writeInbound(message));
+        assertEquals(1, buffer.refCnt());
+        final SctpMessage message2 = new SctpMessage(new TestMessageInfo(false, 2), buffer2);
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(message2);
+            }
+        });
+        // exceptionCaught closes the channel, triggering handlerRemoved which releases all buffered fragments
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testFragmentsLimited() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(1, 2));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        final ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertEquals(1, buffer.refCnt());
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer2)));
+        assertEquals(1, buffer2.refCnt());
+
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer3));
+            }
+        });
+        assertEquals(0, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+    }
+
+    @Test
+    public void testBufferedBytesLimited() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        final ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 1 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertEquals(1, buffer.refCnt());
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 2), buffer2)));
+        assertEquals(1, buffer2.refCnt());
+
+        assertThrows(CodecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer3));
+            }
+        });
+        assertEquals(0, buffer.refCnt());
+        assertEquals(0, buffer2.refCnt());
+        assertEquals(0, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testBufferedBytesReleasedAfterCompletion() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler(2, 2, 8));
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        ByteBuf buffer2 = Unpooled.wrappedBuffer(new byte[] { 5, 6, 7, 8 });
+        ByteBuf buffer3 = Unpooled.wrappedBuffer(new byte[] { 9, 10, 11, 12, 13, 14, 15, 16 });
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 1), buffer)));
+        assertTrue(channel.writeInbound(new SctpMessage(new TestMessageInfo(true, 1), buffer2)));
+        SctpMessage read = channel.readInbound();
+        assertEquals(8, read.content().readableBytes());
+        read.release();
+
+        assertFalse(channel.writeInbound(new SctpMessage(new TestMessageInfo(false, 2), buffer3)));
+        assertEquals(1, buffer3.refCnt());
+
+        assertFalse(channel.finish());
+        assertEquals(0, buffer3.refCnt());
+    }
+
+    @Test
+    public void testBufferedBytesLimitMustBePositive() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new SctpMessageCompletionHandler(1, 1, 0);
+            }
+        });
+    }
+
+    @Test
+    public void testNotFragmented() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SctpMessageCompletionHandler());
+        ByteBuf buffer = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        SctpMessage message = new SctpMessage(new TestMessageInfo(true, 1), buffer);
+        assertTrue(channel.writeInbound(message));
+        SctpMessage read = channel.readInbound();
+        assertSame(message, read);
+        assertEquals(1, read.refCnt());
+        read.release();
+        assertFalse(channel.finish());
+    }
+
     @SuppressForbidden(reason = "test-only")
-    private final class TestMessageInfo extends MessageInfo {
+    private static final class TestMessageInfo extends MessageInfo {
 
         private final boolean complete;
         private final int streamNumber;

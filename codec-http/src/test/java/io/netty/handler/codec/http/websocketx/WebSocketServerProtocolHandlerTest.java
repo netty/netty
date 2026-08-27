@@ -77,7 +77,7 @@ public class WebSocketServerProtocolHandlerTest {
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch, full);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
@@ -99,7 +99,7 @@ public class WebSocketServerProtocolHandlerTest {
         });
         writeUpgradeRequest(ch);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
         assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
@@ -161,7 +161,7 @@ public class WebSocketServerProtocolHandlerTest {
                 new MockOutboundHandler());
         writeUpgradeRequest(ch);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
 
@@ -182,7 +182,7 @@ public class WebSocketServerProtocolHandlerTest {
                 new MockOutboundHandler());
         writeUpgradeRequest(ch);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
 
@@ -195,7 +195,7 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
         writeUpgradeRequest(ch);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
 
@@ -227,18 +227,21 @@ public class WebSocketServerProtocolHandlerTest {
 
         FullHttpResponse response;
 
-        createChannel(config, null).writeInbound(builder.uri("/test").build());
-        response = responses.remove();
+        EmbeddedChannel ch = createChannel(config, null);
+        ch.writeInbound(builder.uri("/test").build());
+        response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
 
-        createChannel(config, null).writeInbound(builder.uri("/?q=v").build());
-        response = responses.remove();
+        ch = createChannel(config, null);
+        ch.writeInbound(builder.uri("/?q=v").build());
+        response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
 
-        createChannel(config, null).writeInbound(builder.uri("/").build());
-        response = responses.remove();
+        ch = createChannel(config, null);
+        ch.writeInbound(builder.uri("/").build());
+        response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
     }
@@ -266,7 +269,7 @@ public class WebSocketServerProtocolHandlerTest {
                 new MockOutboundHandler());
         ch.writeInbound(httpRequest);
 
-        FullHttpResponse response = responses.remove();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(SWITCHING_PROTOCOLS, response.status());
         response.release();
     }
@@ -394,6 +397,59 @@ public class WebSocketServerProtocolHandlerTest {
 
         CloseWebSocketFrame closeMessage = decode(server.<ByteBuf>readOutbound(), CloseWebSocketFrame.class);
         assertEquals(closeMessage, new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
+        closeMessage.release();
+
+        assertFalse(client.finishAndReleaseAll());
+        assertFalse(server.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testHandshakeResponseNotSeenByHandlersAfterProtocolHandlerFull() throws Exception {
+        testHandshakeResponseNotSeenByHandlersAfterProtocolHandler0(true);
+    }
+
+    @Test
+    public void testHandshakeResponseNotSeenByHandlersAfterProtocolHandlerNonFull() throws Exception {
+        testHandshakeResponseNotSeenByHandlersAfterProtocolHandler0(false);
+    }
+
+    private void testHandshakeResponseNotSeenByHandlersAfterProtocolHandler0(boolean full) throws Exception {
+        final Queue<Object> writtenAfterProtocolHandler = new ArrayDeque<Object>();
+        EmbeddedChannel client = createClient();
+        final EmbeddedChannel server;
+        if (full) {
+            server = createServer();
+        } else {
+            // No HttpObjectAggregator so that the handshake handler receives a plain HttpRequest.
+            server = new EmbeddedChannel(
+                new HttpServerCodec(),
+                new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                    .websocketPath("/test")
+                    .dropPongFrames(false)
+                    .build()));
+        }
+        // Added after register() so the recorder really sits behind the WebSocketServerProtocolHandler.
+        server.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                writtenAfterProtocolHandler.add(msg);
+                ctx.write(msg, promise);
+            }
+        });
+
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
+
+        // The handshake response must not pass through handlers placed after the protocol handler.
+        assertTrue(writtenAfterProtocolHandler.isEmpty());
+
+        client.close();
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.isOpen());
+        assertFalse(server.isOpen());
+
+        CloseWebSocketFrame closeMessage = decode(server.<ByteBuf>readOutbound(), CloseWebSocketFrame.class);
+        assertEquals(closeMessage.statusCode(), WebSocketCloseStatus.NORMAL_CLOSURE.code());
         closeMessage.release();
 
         assertFalse(client.finishAndReleaseAll());

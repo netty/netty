@@ -24,12 +24,14 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.function.Executable;
@@ -50,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -1481,6 +1484,39 @@ public class OpenSslEngineTest extends SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
+        }
+    }
+
+    // Pins OPENSSL (not sslClientProvider()) because only the OPENSSL engine has a finalizer to drive the reclaim
+    // asserted here; the OPENSSL_REFCNT subclass overrides this to a no-op (it has no finalizer). Verifies that a
+    // leaked engine is collected and releases its parent context while the context is still alive -- only possible
+    // because OpenSslEngineMap holds engines weakly rather than pinning them for the context's lifetime.
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void leakedEngineIsReclaimedWhileContextAlive() throws Exception {
+        assumeTrue(OpenSsl.isAvailable());
+
+        SslContext ctx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(OPENSSL)
+                .build();
+        try {
+            // newEngine retains the context, so its refCnt goes from 1 to 2.
+            SSLEngine engine = ctx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            assertEquals(2, ReferenceCountUtil.refCnt(ctx));
+
+            // Drop the engine without releasing it, simulating a leak (e.g. handlerRemoved0 never firing).
+            engine = null;
+
+            // Collection triggers OpenSslEngine.finalize(), which releases the context (2 -> 1).
+            while (ReferenceCountUtil.refCnt(ctx) != 1) {
+                System.gc();
+                System.runFinalization();
+                Thread.sleep(50);
+            }
+            assertEquals(1, ReferenceCountUtil.refCnt(ctx));
+        } finally {
+            ReferenceCountUtil.release(ctx);
         }
     }
 

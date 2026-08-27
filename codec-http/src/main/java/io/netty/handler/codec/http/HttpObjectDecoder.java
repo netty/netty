@@ -27,7 +27,9 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -154,6 +156,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
     public static final boolean DEFAULT_STRICT_LINE_PARSING =
             SystemPropertyUtil.getBoolean("io.netty.handler.codec.http.defaultStrictLineParsing", true);
+    public static final String PROP_RFC9112_TRANSFER_ENCODING = "io.netty.handler.codec.http.rfc9112TransferEncoding";
+    public static final boolean RFC9112_TRANSFER_ENCODING =
+            SystemPropertyUtil.getBoolean(PROP_RFC9112_TRANSFER_ENCODING, true);
 
     private static final Runnable THROW_INVALID_CHUNK_EXTENSION = new Runnable() {
         @Override
@@ -168,6 +173,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             throw new InvalidLineSeparatorException();
         }
     };
+    private static final TransferEncodingNotAllowedException TRANSFER_ENCODING_NOT_ALLOWED =
+            ThrowableUtil.unknownStackTrace(
+                    new TransferEncodingNotAllowedException(
+                            "The Transfer-Encoding header is only allowed in HTTP/1.1 or newer"),
+                    HttpObjectDecoder.class,
+                    "readHeaders(ByteBuf)");
 
     private final int maxChunkSize;
     private final boolean chunkedSupported;
@@ -180,6 +191,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected final HttpHeadersFactory headersFactory;
     protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
+    private final boolean useRfc9112TransferEncoding;
     private final ByteBuf parserScratchBuffer;
     private final Runnable defaultStrictCRLFCheck;
     private final HeaderParser headerParser;
@@ -212,6 +224,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * <em>Internal use only</em>.
      */
     private enum State {
+        SKIP_INITIAL_LINE_CHARS,
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,
@@ -225,7 +238,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         UPGRADED
     }
 
-    private State currentState = State.SKIP_CONTROL_CHARS;
+    private State currentState = State.SKIP_INITIAL_LINE_CHARS;
 
     /**
      * Creates a new instance with the default
@@ -344,6 +357,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         validateHeaders = isValidating(headersFactory);
         allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
         allowPartialChunks = config.isAllowPartialChunks();
+        useRfc9112TransferEncoding = config.isUseRfc9112TransferEncoding();
     }
 
     protected boolean isValidating(HttpHeadersFactory headersFactory) {
@@ -361,7 +375,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         switch (currentState) {
-        case SKIP_CONTROL_CHARS:
+        case SKIP_INITIAL_LINE_CHARS:
             // Fall-through
         case READ_INITIAL: try {
             ByteBuf line = lineParser.parse(buffer, defaultStrictCRLFCheck);
@@ -605,6 +619,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 resetNow();
                 return;
             case SKIP_CONTROL_CHARS: // fall-trough
+            case SKIP_INITIAL_LINE_CHARS: // fall-trough
             case READ_INITIAL:// fall-trough
             case BAD_MESSAGE: // fall-trough
             case UPGRADED: // fall-trough
@@ -692,7 +707,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         message = null;
         name = null;
         value = null;
-        contentLength = Long.MIN_VALUE;
+        clearContentLength();
         chunked = false;
         lineParser.reset();
         headerParser.reset();
@@ -704,7 +719,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         resetRequested.lazySet(false);
-        currentState = State.SKIP_CONTROL_CHARS;
+        currentState = State.SKIP_INITIAL_LINE_CHARS;
     }
 
     private HttpMessage invalidMessage(HttpMessage current, ByteBuf in, Exception cause) {
@@ -825,10 +840,41 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
         }
+        if (message.headers().contains(HttpHeaderNames.TRANSFER_ENCODING) &&
+                message.protocolVersion() != HttpVersion.HTTP_1_1 &&
+                useRfc9112TransferEncoding) {
+            // The Transfer-Encoding header is not permitted at all with HTTP protocols older than 1.1,
+            // and such requests must be rejected.
+            throw TRANSFER_ENCODING_NOT_ALLOWED;
+        }
         if (HttpUtil.isTransferEncodingChunked(message)) {
             this.chunked = true;
-            if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                handleTransferEncodingChunkedWithContentLength(message);
+            // The "chunked must be the last encoding" rule (RFC 9112 6.1) is not specific to
+            // HTTP/1.1 -- it applies to any message that carries a Transfer-Encoding header at
+            // all. This validation must not be gated on protocolVersion(), since a decoder
+            // configured with useRfc9112TransferEncoding(false) (see HttpDecoderConfig) can
+            // still reach this point for HTTP/1.0 and other non-1.1 messages, and the ordering
+            // requirement applies to those just as much as it does to HTTP/1.1.
+            // See https://datatracker.ietf.org/doc/html/rfc9112#name-message-body-length
+            Iterator<? extends CharSequence> encodingIt =
+                    message.headers().valueCharSequenceIterator(HttpHeaderNames.TRANSFER_ENCODING);
+            CharSequence v = null;
+            while (encodingIt.hasNext()) {
+                v = encodingIt.next();
+            }
+            final int vLen = v.length();
+            final int chunkedValueLength = HttpHeaderValues.CHUNKED.length();
+            // We only need to validate if we have more then the chunked value length contained as otherwise
+            // we know it is only chunked.
+            if (vLen > chunkedValueLength && !AsciiString.regionMatches(v, true, vLen - chunkedValueLength,
+                    HttpHeaderValues.CHUNKED, 0, chunkedValueLength)) {
+                    throw new IllegalArgumentException(
+                            "chunked must be the last encoding present in the Transfer-Encoding header");
+            }
+            if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
+                if (!contentLengthFields.isEmpty()) {
+                    handleTransferEncodingChunkedWithContentLength(message);
+                }
             }
             return State.READ_CHUNK_SIZE;
         }
@@ -840,27 +886,66 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     /**
      * Invoked when a message with both a "Transfer-Encoding: chunked" and a "Content-Length" header field is detected.
-     * The default behavior is to <i>remove</i> the Content-Length field, but this method could be overridden
-     * to change the behavior (to, e.g., throw an exception and produce an invalid message).
+     * The default behavior is to throw a {@link ContentLengthNotAllowedException} exception, but this method could
+     * be overridden to change the behavior (to, e.g., remove the {@code Content-Length} header value.
      * <p>
-     * See: https://tools.ietf.org/html/rfc7230#section-3.3.3
+     * See: <a href="https://www.rfc-editor.org/rfc/rfc9112.html#section-6.1-15">RFC 9112, Section 6.1-15</a>.
      * <pre>
-     *     If a message is received with both a Transfer-Encoding and a
-     *     Content-Length header field, the Transfer-Encoding overrides the
-     *     Content-Length.  Such a message might indicate an attempt to
-     *     perform request smuggling (Section 9.5) or response splitting
-     *     (Section 9.4) and ought to be handled as an error.  A sender MUST
-     *     remove the received Content-Length field prior to forwarding such
-     *     a message downstream.
+     *     A server MAY reject a request that contains both Content-Length and Transfer-Encoding
+     *     or process such a request in accordance with the Transfer-Encoding alone.
+     *     Regardless, the server MUST close the connection after responding to such a request
+     *     to avoid the potential attacks.
      * </pre>
-     * Also see:
-     * https://github.com/apache/tomcat/blob/b693d7c1981fa7f51e58bc8c8e72e3fe80b7b773/
-     * java/org/apache/coyote/http11/Http11Processor.java#L747-L755
-     * https://github.com/nginx/nginx/blob/0ad4393e30c119d250415cb769e3d8bc8dce5186/
-     * src/http/ngx_http_request.c#L1946-L1953
+     * Since Netty itself cannot track the request/response pairing, it cannot guarantee that the connection is closed
+     * immediately after the response is sent. As such, it is safer to immediately reject the request.
+     * <p>
+     * <strong>Note:</strong> RFC 7230 (the previous HTTP/1.1 RFC) allowed the {@code Content-Length} header to simply
+     * be ignored, in the presence of a {@code Transfer-Encoding} header, but this practice is now obsolete
+     * and considered unsafe.
+     * The RFC 7230 behavior can be restored in the following ways:
+     * <ul>
+     *     <li>
+     *         Process-wide, by setting the {@value PROP_RFC9112_TRANSFER_ENCODING} system property to {@code false}.
+     *     </li>
+     *     <li>
+     *         Configured for a specific decoder, by setting
+     *         {@link HttpDecoderConfig#setUseRfc9112TransferEncoding(boolean)} to {@code false}.
+     *     </li>
+     *     <li>
+     *         Hard-coded for a specific decoder, by overriding this method with an implementation like the following:
+     *         <pre>{@code
+     * @Override
+     * protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
+     *     clearContentLength();
+     *     message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+     * }
+     *         }</pre>
+     *     </li>
+     * </ul>
+     * <p>
+     * <strong>Note:</strong> This method is only called for {@code HTTP/1.1} requests. Under the
+     * default configuration, earlier HTTP protocol versions carrying a {@code Transfer-Encoding}
+     * header are rejected before reaching this point. However, if
+     * {@link HttpDecoderConfig#setUseRfc9112TransferEncoding(boolean)} is set to {@code false}
+     * (see above), that rejection does not happen — a non-{@code HTTP/1.1} message can then
+     * legitimately carry {@code Transfer-Encoding} without being rejected for it, though this
+     * method specifically remains {@code HTTP/1.1}-only and is not invoked for such messages.
      */
+    @SuppressWarnings("unused")
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
-        message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+        clearContentLength();
+        if (useRfc9112TransferEncoding) {
+            throw new ContentLengthNotAllowedException(
+                    "Content-Length are not allowed in HTTP/1.1 messages that contains a Transfer-Encoding header.");
+        } else {
+            message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+            if (isDecodingRequest()) {
+                HttpUtil.setKeepAlive(message, false);
+            }
+        }
+    }
+
+    protected final void clearContentLength() {
         contentLength = Long.MIN_VALUE;
     }
 
@@ -952,7 +1037,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         start += skipped;
         length -= skipped;
-        int result = 0;
+        long result = 0;
         for (int i = 0; i < length; i++) {
             final int digit = StringUtil.decodeHexNibble(hex[start + i]);
             if (digit == -1) {
@@ -963,18 +1048,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         // empty case
                         throw new NumberFormatException("Empty chunk size");
                     }
-                    return result;
+                    return (int) result;
                 }
                 // non-hex char fail-fast path
                 throw new NumberFormatException("Invalid character in chunk size");
             }
             result *= 16;
             result += digit;
-            if (result < 0) {
+            if (result > Integer.MAX_VALUE) {
                 throw new NumberFormatException("Chunk size overflow: " + result);
             }
         }
-        return result;
+        return (int) result;
     }
 
     private String[] splitInitialLine(ByteBuf asciiBuffer) {
@@ -1257,26 +1342,33 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (readableBytes == 0) {
                 return null;
             }
-            if (currentState == State.SKIP_CONTROL_CHARS &&
-                    skipControlChars(buffer, readableBytes, buffer.readerIndex())) {
+            if (currentState == State.SKIP_INITIAL_LINE_CHARS &&
+                    skipLineChars(buffer, readableBytes, buffer.readerIndex(), strictCRLFCheck)) {
                 return null;
             }
             return super.parse(buffer, strictCRLFCheck);
         }
 
-        private boolean skipControlChars(ByteBuf buffer, int readableBytes, int readerIndex) {
-            assert currentState == State.SKIP_CONTROL_CHARS;
+        private boolean skipLineChars(ByteBuf buffer, int readableBytes, int readerIndex, Runnable strictCRLFCheck) {
+            assert currentState == State.SKIP_INITIAL_LINE_CHARS;
             final int maxToSkip = Math.min(maxLength, readableBytes);
-            final int firstNonControlIndex = buffer.forEachByte(readerIndex, maxToSkip, SKIP_CONTROL_CHARS_BYTES);
-            if (firstNonControlIndex == -1) {
+            final int firstNonLineIndex = buffer.forEachByte(readerIndex, maxToSkip,
+                    strictCRLFCheck == null ? SKIP_CONTROL_CHARS_BYTES : ByteProcessor.FIND_NON_CRLF);
+            if (firstNonLineIndex == -1) {
                 buffer.skipBytes(maxToSkip);
                 if (readableBytes > maxLength) {
                     throw newException(maxLength);
                 }
                 return true;
             }
+            if (strictCRLFCheck != null) {
+                final int b = buffer.getByte(firstNonLineIndex) & 0xFF;
+                if (Character.isISOControl(b)) {
+                    strictCRLFCheck.run();
+                }
+            }
             // from now on we don't care about control chars
-            buffer.readerIndex(firstNonControlIndex);
+            buffer.readerIndex(firstNonLineIndex);
             currentState = State.READ_INITIAL;
             return false;
         }
@@ -1297,7 +1389,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private static final ByteProcessor SKIP_CONTROL_CHARS_BYTES = new ByteProcessor() {
-
         @Override
         public boolean process(byte value) {
             return ISO_CONTROL_OR_WHITESPACE[128 + value];

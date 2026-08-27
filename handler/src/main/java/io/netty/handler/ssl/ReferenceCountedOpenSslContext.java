@@ -114,7 +114,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     static final boolean SERVER_ENABLE_SESSION_TICKET =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
 
-     static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
+    static final boolean SERVER_ENABLE_SESSION_TICKET_TLSV13 =
             SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", true);
 
     static final boolean SERVER_ENABLE_SESSION_CACHE =
@@ -165,7 +165,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final boolean hasTmpDhKeys;
 
     final boolean enableOcsp;
-    final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
+    final OpenSslEngineMap engines = new OpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
 
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
@@ -428,14 +428,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
             SSLContext.setUseTasks(ctx, useTasks);
             if (privateKeyMethod != null) {
-                SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, privateKeyMethod));
+                SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engines, privateKeyMethod));
             }
             if (asyncPrivateKeyMethod != null) {
-                SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engineMap, asyncPrivateKeyMethod));
+                SSLContext.setPrivateKeyMethod(ctx, new AsyncPrivateKeyMethod(engines, asyncPrivateKeyMethod));
             }
             if (certCompressionConfig != null) {
                 for (OpenSslCertificateCompressionConfig.AlgorithmConfig configPair : certCompressionConfig) {
-                    final CertificateCompressionAlgo algo = new CompressionAlgorithm(engineMap, configPair.algorithm());
+                    final CertificateCompressionAlgo algo = new CompressionAlgorithm(engines, configPair.algorithm());
                     switch (configPair.mode()) {
                         case Decompress:
                             SSLContext.addCertificateCompressionAlgorithm(
@@ -527,7 +527,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, executor, resumptionController);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -650,7 +650,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {
-            SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, method));
+            SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engines, method));
         } finally {
             writerLock.unlock();
         }
@@ -832,15 +832,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     abstract static class AbstractCertificateVerifier extends CertificateVerifier {
-        private final OpenSslEngineMap engineMap;
+        private final OpenSslEngineMap engines;
 
-        AbstractCertificateVerifier(OpenSslEngineMap engineMap) {
-            this.engineMap = engineMap;
+        AbstractCertificateVerifier(OpenSslEngineMap engines) {
+            this.engines = engines;
         }
 
         @Override
         public final int verify(long ssl, byte[][] chain, String auth) {
-            final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+            final ReferenceCountedOpenSslEngine engine = engines.get(ssl);
             if (engine == null) {
                 // May be null if it was destroyed in the meantime.
                 return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
@@ -905,25 +905,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         abstract void verify(ReferenceCountedOpenSslEngine engine, X509Certificate[] peerCerts,
                              String auth) throws Exception;
-    }
-
-    private static final class DefaultOpenSslEngineMap implements OpenSslEngineMap {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines = PlatformDependent.newConcurrentHashMap();
-
-        @Override
-        public ReferenceCountedOpenSslEngine remove(long ssl) {
-            return engines.remove(ssl);
-        }
-
-        @Override
-        public void add(ReferenceCountedOpenSslEngine engine) {
-            engines.put(engine.sslPointer(), engine);
-        }
-
-        @Override
-        public ReferenceCountedOpenSslEngine get(long ssl) {
-            return engines.get(ssl);
-        }
     }
 
     static void setKeyMaterial(long ctx, X509Certificate[] keyCertChain, PrivateKey key, String keyPassword)
@@ -1078,16 +1059,16 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class PrivateKeyMethod implements SSLPrivateKeyMethod {
 
-        private final OpenSslEngineMap engineMap;
+        private final OpenSslEngineMap engines;
         private final OpenSslPrivateKeyMethod keyMethod;
-        PrivateKeyMethod(OpenSslEngineMap engineMap, OpenSslPrivateKeyMethod keyMethod) {
-            this.engineMap = engineMap;
+        PrivateKeyMethod(OpenSslEngineMap engines, OpenSslPrivateKeyMethod keyMethod) {
+            this.engines = engines;
             this.keyMethod = keyMethod;
         }
 
         @Override
         public byte[] sign(long ssl, int signatureAlgorithm, byte[] digest) throws Exception {
-            ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
             try {
                 return verifyResult(keyMethod.sign(engine, signatureAlgorithm, digest));
             } catch (Exception e) {
@@ -1098,7 +1079,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         @Override
         public byte[] decrypt(long ssl, byte[] input) throws Exception {
-            ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
             try {
                 return verifyResult(keyMethod.decrypt(engine, input));
             } catch (Exception e) {
@@ -1110,18 +1091,19 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     private static final class AsyncPrivateKeyMethod implements AsyncSSLPrivateKeyMethod {
 
-        private final OpenSslEngineMap engineMap;
+        private final OpenSslEngineMap engines;
         private final OpenSslAsyncPrivateKeyMethod keyMethod;
 
-        AsyncPrivateKeyMethod(OpenSslEngineMap engineMap, OpenSslAsyncPrivateKeyMethod keyMethod) {
-            this.engineMap = engineMap;
+        AsyncPrivateKeyMethod(OpenSslEngineMap engines,
+                              OpenSslAsyncPrivateKeyMethod keyMethod) {
+            this.engines = engines;
             this.keyMethod = keyMethod;
         }
 
         @Override
         public void sign(long ssl, int signatureAlgorithm, byte[] bytes, ResultCallback<byte[]> resultCallback) {
             try {
-                ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+                ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
                 keyMethod.sign(engine, signatureAlgorithm, bytes)
                         .addListener(new ResultCallbackListener(engine, ssl, resultCallback));
             } catch (SSLException e) {
@@ -1132,7 +1114,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         @Override
         public void decrypt(long ssl, byte[] bytes, ResultCallback<byte[]> resultCallback) {
             try {
-                ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+                ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
                 keyMethod.decrypt(engine, bytes)
                         .addListener(new ResultCallbackListener(engine, ssl, resultCallback));
             } catch (SSLException e) {
@@ -1178,23 +1160,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     private static final class CompressionAlgorithm implements CertificateCompressionAlgo {
-        private final OpenSslEngineMap engineMap;
+        private final OpenSslEngineMap engines;
         private final OpenSslCertificateCompressionAlgorithm compressionAlgorithm;
 
-        CompressionAlgorithm(OpenSslEngineMap engineMap, OpenSslCertificateCompressionAlgorithm compressionAlgorithm) {
-            this.engineMap = engineMap;
+        CompressionAlgorithm(OpenSslEngineMap engines,
+                             OpenSslCertificateCompressionAlgorithm compressionAlgorithm) {
+            this.engines = engines;
             this.compressionAlgorithm = compressionAlgorithm;
         }
 
         @Override
         public byte[] compress(long ssl, byte[] bytes) throws Exception {
-            ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
             return compressionAlgorithm.compress(engine, bytes);
         }
 
         @Override
         public byte[] decompress(long ssl, int len, byte[] bytes) throws Exception {
-            ReferenceCountedOpenSslEngine engine = retrieveEngine(engineMap, ssl);
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(engines, ssl);
             return compressionAlgorithm.decompress(engine, len, bytes);
         }
 

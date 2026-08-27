@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -44,15 +45,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
+
+        private EmbeddedChannel contentEncoder;
+
+        TestEncoder() {
+        }
+
+        TestEncoder(int maxPipelineDepth) {
+            super(maxPipelineDepth);
+        }
+
         @Override
         protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
-            return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
+            contentEncoder = new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
                 protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
                     out.writeBytes(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
                     in.skipBytes(in.readableBytes());
                 }
-            }));
+            });
+            return new Result("test", contentEncoder);
+        }
+
+        EmbeddedChannel contentEncoder() {
+            return contentEncoder;
         }
     }
 
@@ -433,6 +449,50 @@ public class HttpContentEncoderTest {
 
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
+    }
+
+    @Test
+    public void testPipelineDepthLimited() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder(2));
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+        ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+            }
+        });
+
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testHeaderMutationFailureReleasesContentEncoder() {
+        TestEncoder encoder = new TestEncoder();
+        final EmbeddedChannel channel = new EmbeddedChannel(encoder);
+        try {
+            assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/first")));
+
+            EncoderException exception = assertThrows(EncoderException.class, new Executable() {
+                    @Override
+                    public void execute() throws Throwable {
+                        channel.writeOutbound(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                new ReadOnlyHttpHeaders(false)));
+                    }
+                });
+            assertInstanceOf(UnsupportedOperationException.class, exception.getCause());
+            assertFalse(encoder.contentEncoder().isOpen());
+
+            assertTrue(channel.writeInbound(new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/second")));
+            assertTrue(channel.writeOutbound(new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(new byte[1]))));
+        } finally {
+            channel.finishAndReleaseAll();
+        }
     }
 
     private static void assertEmptyResponse(EmbeddedChannel ch) {

@@ -23,7 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -156,6 +159,117 @@ public class DefaultHttp2HeadersTest {
                 headers.add(of("Foo"), of("foo"));
             }
         });
+    }
+
+    @Test
+    public void rejectNonAsciiHeaderNameAsciiString() {
+        // U+1F631 ("😱") encoded as F0 9F 98 B1 — bytes outside the token grammar that previously
+        // slipped past the upper-case-only validator. See issue #11975.
+        final byte[] buf = {(byte) 0xF0, (byte) 0x9F, (byte) 0x98, (byte) 0xB1};
+        final Http2Headers headers = new DefaultHttp2Headers();
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.add(new AsciiString(buf), of("test"));
+            }
+        });
+    }
+
+    @Test
+    public void rejectNonAsciiHeaderNameCharSequence() {
+        final Http2Headers headers = new DefaultHttp2Headers();
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                // Non-ASCII char via the CharSequence path.
+                headers.add("naÿme", "test");
+            }
+        });
+    }
+
+    @Test
+    public void rejectHighBitHeaderNameCharSequence() {
+        final Http2Headers headers = new DefaultHttp2Headers();
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                // U+0100 — above 0xFF, must be rejected by the CharSequence path.
+                headers.add("naĀme", "test");
+            }
+        });
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] byte=0x{0}")
+    @MethodSource("nonTokenBytesInHeaderName")
+    void rejectNonTokenCharactersInHeaderName(int illegalByte) {
+        final String name = "n" + (char) illegalByte + "ame";
+        final Http2Headers headers = new DefaultHttp2Headers();
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                headers.add(name, "test");
+            }
+        });
+    }
+
+    static List<Integer> nonTokenBytesInHeaderName() {
+        return Arrays.asList(
+                // Control characters: every byte in the C0 range that the previous validator silently let through.
+                0x00, // NUL
+                0x01, // SOH
+                0x07, // BEL
+                0x08, // BS
+                0x09, // HTAB
+                0x0A, // LF
+                0x0B, // VT
+                0x0C, // FF
+                0x0D, // CR
+                0x1F, // US
+                0x7F, // DEL
+                // Whitespace and RFC 7230 separators that are not valid token characters.
+                0x20, // SP
+                (int) ',',
+                (int) ';',
+                (int) ':',
+                (int) '/',
+                (int) '=',
+                (int) '?',
+                (int) '@',
+                (int) '(',
+                (int) ')',
+                (int) '[',
+                (int) ']',
+                (int) '{',
+                (int) '}',
+                (int) '<',
+                (int) '>',
+                (int) '\\',
+                (int) '"'
+        );
+    }
+
+    @Test
+    public void acceptValidLowercaseTokenHeaderName() {
+        // Regression: valid RFC 7230 token (lower-case ALPHA, DIGIT, "!#$%&'*+-.^_`|~") must be accepted.
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.add(of("x-custom-header"), of("v"));
+        headers.add(of("2name"), of("v"));
+        headers.add(of("a!#$%&'*+-.^_`|~b"), of("v"));
+        assertTrue(headers.contains("x-custom-header"));
+        assertTrue(headers.contains("2name"));
+        assertTrue(headers.contains("a!#$%&'*+-.^_`|~b"));
+    }
+
+    @Test
+    public void acceptPseudoHeaderName() {
+        // Regression: leading-colon pseudo-header names must remain accepted even though ":" is not a token char.
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.method(of("GET"));
+        headers.path(of("/"));
+        headers.scheme(of("https"));
+        headers.authority(of("example.com"));
+        assertEquals(of("GET"), headers.method());
+        assertEquals(of("/"), headers.path());
     }
 
     @Test

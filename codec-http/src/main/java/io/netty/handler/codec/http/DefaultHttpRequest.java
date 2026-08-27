@@ -25,6 +25,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     private static final int HASH_CODE_PRIME = 31;
     private HttpMethod method;
     private String uri;
+    private final boolean validateRequestLine;
 
     /**
      * Creates a new instance.
@@ -91,6 +92,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         super(httpVersion, headers);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
+        this.validateRequestLine = validateRequestLine;
         if (validateRequestLine) {
             HttpUtil.validateRequestLineTokens(method, uri);
         }
@@ -120,13 +122,21 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
-        this.method = checkNotNull(method, "method");
+        checkNotNull(method, "method");
+        if (validateRequestLine) {
+            HttpUtil.validateRequestLineTokens(method, uri);
+        }
+        this.method = method;
         return this;
     }
 
     @Override
     public HttpRequest setUri(String uri) {
-        this.uri = checkNotNull(uri, "uri");
+        checkNotNull(uri, "uri");
+        if (validateRequestLine) {
+            HttpUtil.validateRequestLineTokens(method, uri);
+        }
+        this.uri = uri;
         return this;
     }
 

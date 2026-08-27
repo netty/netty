@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import java.util.List;
@@ -35,7 +36,17 @@ import java.util.List;
 
 public class XmlDecoder extends ByteToMessageDecoder {
 
-    private static final AsyncXMLInputFactory XML_INPUT_FACTORY = new InputFactoryImpl();
+    private static final AsyncXMLInputFactory XML_INPUT_FACTORY;
+
+    static {
+        // Disable risky features by default as we read from the network and so things are considered untrusted.
+        InputFactoryImpl factory = new InputFactoryImpl();
+        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
+        factory.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
+        factory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, Boolean.FALSE);
+        XML_INPUT_FACTORY = factory;
+    }
+
     private static final XmlDocumentEnd XML_DOCUMENT_END = XmlDocumentEnd.INSTANCE;
 
     private final AsyncXMLStreamReader<AsyncByteArrayFeeder> streamReader = XML_INPUT_FACTORY.createAsyncForByteArray();

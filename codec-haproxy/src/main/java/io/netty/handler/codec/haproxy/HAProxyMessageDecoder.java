@@ -173,7 +173,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         }
 
         int idx = buffer.readerIndex();
-        return match(BINARY_PREFIX, buffer, idx) ? buffer.getByte(idx + BINARY_PREFIX_LENGTH) : 1;
+        return match(BINARY_PREFIX, buffer, idx) ? buffer.getUnsignedByte(idx + BINARY_PREFIX_LENGTH) : 1;
     }
 
     /**

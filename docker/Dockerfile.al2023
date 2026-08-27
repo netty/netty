@@ -27,6 +27,7 @@ RUN dnf install -y \
  make \
  ninja-build \
  patch \
+ patchelf \
  perl \
  perl-parent \
  perl-devel \
