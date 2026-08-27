@@ -789,6 +789,139 @@ public class MqttCodecTest {
         validatePublishPayload(message.payload(), decodedMessage.payload());
     }
 
+    // See https://github.com/netty/netty MQTT 5 properties-length decoding.
+    // When the MQTT 5 Property Length is >= 128 (so it is encoded as a multi-byte Variable Byte
+    // Integer) AND the last property is a single-byte value property (e.g. PAYLOAD_FORMAT_INDICATOR),
+    // decodeProperties() used to stop reading one Variable-Byte-Integer-length worth of content bytes
+    // too early. Those unread property bytes (here 0x01 0x01) then leaked into the PUBLISH payload.
+    @Test
+    public void testPublishMqtt5MultiBytePropertiesLengthWithTrailingSingleByteProperty() throws Exception {
+        final String expectedPayload = "{\"complete\":1}";
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder());
+        try {
+            // The MQTT version is read from a channel attribute set while decoding CONNECT. Without a
+            // preceding MQTT 5 CONNECT, getMqttVersion() defaults to 3.1.1 and properties are never
+            // decoded, so the PUBLISH must follow a CONNECT with protocol level 5 on the same channel.
+            assertTrue(channel.writeInbound(newMqtt5Connect()));
+            ReferenceCountUtil.release(channel.readInbound());
+
+            // Build a properties block > 127 bytes (so its length needs a 2-byte VBI) using several
+            // User Properties, with a single-byte PAYLOAD_FORMAT_INDICATOR as the very last property.
+            ByteBuf properties = ALLOCATOR.buffer();
+            int i = 0;
+            while (properties.readableBytes() < 130) {
+                properties.writeByte(USER_PROPERTY);
+                writeMqttUtf8String(properties, "key" + i);
+                writeMqttUtf8String(properties, "value-with-some-padding-" + i);
+                i++;
+            }
+            properties.writeByte(PAYLOAD_FORMAT_INDICATOR); // 0x01
+            properties.writeByte(0x01);                      // its single-byte value
+            assertTrue(properties.readableBytes() >= 128); // 2-byte VBI trigger condition
+
+            assertTrue(channel.writeInbound(newPublish("topic", properties, expectedPayload)));
+
+            MqttPublishMessage decoded = channel.readInbound();
+            try {
+                assertFalse(decoded.decoderResult().isFailure(), String.valueOf(decoded.decoderResult().cause()));
+                // The payload must be exactly the JSON, without the leaked 0x01 0x01 property bytes in front.
+                assertEquals(expectedPayload, decoded.payload().toString(CharsetUtil.UTF_8));
+                // ... and the PAYLOAD_FORMAT_INDICATOR must have been decoded as a property.
+                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR));
+            } finally {
+                ReferenceCountUtil.release(decoded);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    // Control case: a properties block < 128 bytes (single-byte VBI length) with the single-byte
+    // PAYLOAD_FORMAT_INDICATOR NOT last. This layout decodes correctly both before and after the fix.
+    @Test
+    public void testPublishMqtt5SingleBytePropertiesLengthIsUnaffected() throws Exception {
+        final String expectedPayload = "{\"complete\":1}";
+        EmbeddedChannel channel = new EmbeddedChannel(new MqttDecoder());
+        try {
+            assertTrue(channel.writeInbound(newMqtt5Connect()));
+            ReferenceCountUtil.release(channel.readInbound());
+
+            ByteBuf properties = ALLOCATOR.buffer();
+            properties.writeByte(PAYLOAD_FORMAT_INDICATOR); // 0x01, placed first (not last)
+            properties.writeByte(0x01);
+            properties.writeByte(USER_PROPERTY);
+            writeMqttUtf8String(properties, "tag");
+            writeMqttUtf8String(properties, "value");
+            assertTrue(properties.readableBytes() < 128); // single-byte VBI length
+
+            assertTrue(channel.writeInbound(newPublish("topic", properties, expectedPayload)));
+
+            MqttPublishMessage decoded = channel.readInbound();
+            try {
+                assertFalse(decoded.decoderResult().isFailure(), String.valueOf(decoded.decoderResult().cause()));
+                assertEquals(expectedPayload, decoded.payload().toString(CharsetUtil.UTF_8));
+                assertNotNull(decoded.variableHeader().properties().getProperty(PAYLOAD_FORMAT_INDICATOR));
+            } finally {
+                ReferenceCountUtil.release(decoded);
+            }
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    // Minimal well-formed MQTT 5 CONNECT (empty client id) whose only purpose is to make the decoder
+    // record MQTT 5 for the channel so subsequent packets have their properties decoded.
+    private static ByteBuf newMqtt5Connect() {
+        ByteBuf variablePart = ALLOCATOR.buffer();
+        writeMqttUtf8String(variablePart, "MQTT"); // protocol name
+        variablePart.writeByte(5);                 // protocol level = MQTT 5
+        variablePart.writeByte(0x02);              // connect flags: clean start
+        variablePart.writeShort(0);                // keep alive
+        variablePart.writeByte(0);                 // CONNECT properties length = 0
+        writeMqttUtf8String(variablePart, "");     // empty client id (allowed for MQTT 5)
+
+        ByteBuf connect = ALLOCATOR.buffer();
+        connect.writeByte(0x10);                   // CONNECT, flags 0
+        writeVariableByteInteger(connect, variablePart.readableBytes());
+        connect.writeBytes(variablePart);
+        variablePart.release();
+        return connect;
+    }
+
+    // Builds a QoS 0 PUBLISH from a raw properties block and a UTF-8 payload. Releases propertiesContent.
+    private static ByteBuf newPublish(String topic, ByteBuf propertiesContent, String payload) {
+        ByteBuf variablePart = ALLOCATOR.buffer();
+        writeMqttUtf8String(variablePart, topic);  // topic name (QoS 0 -> no packet id)
+        writeVariableByteInteger(variablePart, propertiesContent.readableBytes()); // property length
+        variablePart.writeBytes(propertiesContent);
+        propertiesContent.release();
+        variablePart.writeBytes(payload.getBytes(CharsetUtil.UTF_8));
+
+        ByteBuf publish = ALLOCATOR.buffer();
+        publish.writeByte(0x30);                    // PUBLISH, DUP=0, QoS=0, RETAIN=0
+        writeVariableByteInteger(publish, variablePart.readableBytes());
+        publish.writeBytes(variablePart);
+        variablePart.release();
+        return publish;
+    }
+
+    private static void writeMqttUtf8String(ByteBuf buffer, String value) {
+        byte[] bytes = value.getBytes(CharsetUtil.UTF_8);
+        buffer.writeShort(bytes.length);
+        buffer.writeBytes(bytes);
+    }
+
+    private static void writeVariableByteInteger(ByteBuf buffer, int value) {
+        do {
+            int digit = value & 0x7F;
+            value >>>= 7;
+            if (value > 0) {
+                digit |= 0x80;
+            }
+            buffer.writeByte(digit);
+        } while (value > 0);
+    }
+
     @Test
     public void testPubAckMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
