@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -219,13 +220,16 @@ public class AbstractChannelTest {
             ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
             assertEquals(1, msg.refCnt());
             ChannelPromise promise = channel.newPromise();
-            channel.unsafe().write(msg, promise);
+            loop.execute(() -> {
+                channel.unsafe().write(msg, promise);
+            });
 
+            assertTrue(promise.await(2, TimeUnit.SECONDS));
             assertTrue(promise.isDone());
             assertInstanceOf(ClosedChannelException.class, promise.cause());
             assertEquals(0, msg.refCnt());
         } finally {
-            channel.close();
+            channel.close().sync();
             loop.shutdownGracefully();
         }
     }
@@ -234,6 +238,13 @@ public class AbstractChannelTest {
     public void flushOnUnconnectedOpenChannelFailsWithNotYetConnected() throws Exception {
         EventLoop eventLoop = mock(EventLoop.class);
         when(eventLoop.inEventLoop()).thenReturn(true);
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) {
+                ((Runnable) invocationOnMock.getArgument(0)).run();
+                return null;
+            }
+        }).when(eventLoop).execute(any(Runnable.class));
         TestChannel channel = new TestChannel() {
             @Override
             public boolean isOpen() {
@@ -247,21 +258,37 @@ public class AbstractChannelTest {
             }
         };
 
-        registerChannel(eventLoop, channel);
-        ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
-        ChannelPromise promise = channel.newPromise();
-        channel.unsafe().write(msg, promise);
+        try {
+            registerChannel(eventLoop, channel);
+            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            ChannelPromise promise = channel.newPromise();
 
-        channel.unsafe().flush();
-        assertTrue(promise.isDone());
-        assertInstanceOf(NotYetConnectedException.class, promise.cause());
-        assertEquals(0, msg.refCnt());
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.unsafe().write(msg, promise);
+                    channel.unsafe().flush();
+                }
+            });
+            assertTrue(promise.isDone());
+            assertInstanceOf(NotYetConnectedException.class, promise.cause());
+            assertEquals(0, msg.refCnt());
+        } finally {
+            channel.close().sync();
+        }
     }
 
     @Test
     public void flushOnUnconnectedClosedChannelFailsWithClosedChannel() throws Exception {
         EventLoop eventLoop = mock(EventLoop.class);
         when(eventLoop.inEventLoop()).thenReturn(true);
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) {
+                ((Runnable) invocationOnMock.getArgument(0)).run();
+                return null;
+            }
+        }).when(eventLoop).execute(any(Runnable.class));
         TestChannel channel = new TestChannel() {
             private boolean open = true;
 
@@ -280,19 +307,23 @@ public class AbstractChannelTest {
                 this.open = false;
             }
         };
+        try {
+            registerChannel(eventLoop, channel);
+            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            ChannelPromise promise = channel.newPromise();
 
-        registerChannel(eventLoop, channel);
-        ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
-        ChannelPromise promise = channel.newPromise();
+            eventLoop.execute(() -> {
+                channel.unsafe().write(msg, promise);
+                channel.unsafe().close(channel.unsafe().voidPromise());
+                channel.unsafe().flush();
+            });
 
-        channel.unsafe().write(msg, promise);
-
-        channel.unsafe().close(channel.unsafe().voidPromise());
-        channel.unsafe().flush();
-
-        assertTrue(promise.isDone());
-        assertInstanceOf(ClosedChannelException.class, promise.cause());
-        assertEquals(0, msg.refCnt());
+            assertTrue(promise.isDone());
+            assertInstanceOf(ClosedChannelException.class, promise.cause());
+            assertEquals(0, msg.refCnt());
+        } finally {
+            channel.close().sync();
+        }
     }
 
     private static void assertClosedChannelException(ChannelFuture future, IOException expected)
