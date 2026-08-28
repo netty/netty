@@ -217,9 +217,9 @@ public class AbstractChannelTest {
             channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
 
             assertSame(ioException, channel.writeAndFlush("").await().cause());
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            final ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
             assertEquals(1, msg.refCnt());
-            ChannelPromise promise = channel.newPromise();
+            final ChannelPromise promise = channel.newPromise();
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -248,7 +248,7 @@ public class AbstractChannelTest {
                 return null;
             }
         }).when(eventLoop).execute(any(Runnable.class));
-        TestChannel channel = new TestChannel() {
+        final TestChannel channel = new TestChannel() {
             @Override
             public boolean isOpen() {
                 //Open, but never connected
@@ -263,8 +263,8 @@ public class AbstractChannelTest {
 
         try {
             registerChannel(eventLoop, channel);
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
-            ChannelPromise promise = channel.newPromise();
+            final ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            final ChannelPromise promise = channel.newPromise();
 
             eventLoop.execute(new Runnable() {
                 @Override
