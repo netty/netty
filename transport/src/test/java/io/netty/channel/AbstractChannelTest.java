@@ -292,7 +292,7 @@ public class AbstractChannelTest {
                 return null;
             }
         }).when(eventLoop).execute(any(Runnable.class));
-        TestChannel channel = new TestChannel() {
+        final TestChannel channel = new TestChannel() {
             private boolean open = true;
 
             @Override
@@ -312,13 +312,16 @@ public class AbstractChannelTest {
         };
         try {
             registerChannel(eventLoop, channel);
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
-            ChannelPromise promise = channel.newPromise();
+            final ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
+            final ChannelPromise promise = channel.newPromise();
 
-            eventLoop.execute(() -> {
-                channel.unsafe().write(msg, promise);
-                channel.unsafe().close(channel.unsafe().voidPromise());
-                channel.unsafe().flush();
+            eventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.unsafe().write(msg, promise);
+                    channel.unsafe().close(channel.unsafe().voidPromise());
+                    channel.unsafe().flush();
+                }
             });
 
             assertTrue(promise.isDone());
