@@ -35,6 +35,8 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -49,6 +51,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -61,6 +64,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -385,6 +390,88 @@ public class BootstrapTest {
     }
 
     @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCancelDuringAddressResolutionClosesChannel() throws Exception {
+        EventLoopGroup group = new NioEventLoopGroup(1);
+        PendingAddressResolverGroup resolverGroup = new PendingAddressResolverGroup();
+        ChannelFuture connectFuture = null;
+        try {
+            Bootstrap bootstrap = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .resolver(resolverGroup)
+                    .handler(dummyHandler);
+
+            connectFuture = bootstrap.connect(InetSocketAddress.createUnresolved("netty.io", 443));
+            assertTrue(resolverGroup.resolveStarted.await(5, TimeUnit.SECONDS));
+            assertTrue(connectFuture.cancel(false));
+            assertTrue(connectFuture.channel().closeFuture().await(5, TimeUnit.SECONDS));
+            assertFalse(connectFuture.channel().isOpen());
+
+            Promise<SocketAddress> resolvePromise = resolverGroup.resolvePromise.get();
+            assertNotNull(resolvePromise);
+            assertFalse(resolvePromise.isDone());
+            assertTrue(resolvePromise.tryFailure(new UnknownHostException("late resolver failure")));
+            connectFuture.channel().eventLoop().submit(new Runnable() {
+                @Override
+                public void run() { }
+            }).sync();
+            assertTrue(connectFuture.isCancelled());
+        } finally {
+            if (connectFuture != null) {
+                connectFuture.channel().close().syncUninterruptibly();
+            }
+            resolverGroup.close();
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCancelBeforeRegistrationDoesNotResolveAddress() throws Exception {
+        DefaultEventLoop group = new DefaultEventLoop();
+        PendingAddressResolverGroup resolverGroup = new PendingAddressResolverGroup();
+        final CountDownLatch eventLoopBlocked = new CountDownLatch(1);
+        final CountDownLatch releaseEventLoop = new CountDownLatch(1);
+        ChannelFuture connectFuture = null;
+        try {
+            group.execute(new Runnable() {
+                @Override
+                public void run() {
+                    eventLoopBlocked.countDown();
+                    try {
+                        releaseEventLoop.await();
+                    } catch (InterruptedException ignore) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
+            assertTrue(eventLoopBlocked.await(5, TimeUnit.SECONDS));
+
+            Bootstrap bootstrap = new Bootstrap()
+                    .group(group)
+                    .channel(LocalChannel.class)
+                    .resolver(resolverGroup)
+                    .handler(dummyHandler);
+
+            connectFuture = bootstrap.connect(LocalAddress.ANY);
+            assertTrue(connectFuture.cancel(false));
+            releaseEventLoop.countDown();
+
+            assertTrue(connectFuture.channel().closeFuture().await(5, TimeUnit.SECONDS));
+            assertFalse(connectFuture.channel().isOpen());
+            assertEquals(0, resolverGroup.resolveCount.get());
+        } finally {
+            releaseEventLoop.countDown();
+            if (connectFuture != null) {
+                connectFuture.channel().close().syncUninterruptibly();
+            }
+            resolverGroup.close();
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
     public void testGetResolverFailed() throws Exception {
         class TestException extends RuntimeException { }
 
@@ -597,6 +684,39 @@ public class BootstrapTest {
                             }
                         }
                     });
+                }
+            };
+        }
+    }
+
+    private static final class PendingAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
+
+        final CountDownLatch resolveStarted = new CountDownLatch(1);
+        final AtomicInteger resolveCount = new AtomicInteger();
+        final AtomicReference<Promise<SocketAddress>> resolvePromise =
+                new AtomicReference<Promise<SocketAddress>>();
+
+        @Override
+        protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+            return new AbstractAddressResolver<SocketAddress>(executor) {
+                @Override
+                protected boolean doIsResolved(SocketAddress address) {
+                    return false;
+                }
+
+                @Override
+                protected void doResolve(SocketAddress address, Promise<SocketAddress> promise) throws Exception {
+                    resolveCount.incrementAndGet();
+                    if (!resolvePromise.compareAndSet(null, promise)) {
+                        throw new IllegalStateException("resolve already started");
+                    }
+                    resolveStarted.countDown();
+                }
+
+                @Override
+                protected void doResolveAll(SocketAddress address, Promise<List<SocketAddress>> promise)
+                        throws Exception {
+                    throw new UnsupportedOperationException();
                 }
             };
         }
