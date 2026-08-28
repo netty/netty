@@ -17,12 +17,14 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.IovArray;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import static io.netty.channel.unix.Errors.ioResult;
@@ -43,6 +45,27 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
     IoUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
         this.config = new IoUringSocketChannelConfig(this);
+    }
+
+    /**
+     * Returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
+     */
+    public IoUringTcpInfo tcpInfo() {
+        return tcpInfo(new IoUringTcpInfo());
+    }
+
+    /**
+     * Updates and returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
+     */
+    public IoUringTcpInfo tcpInfo(IoUringTcpInfo info) {
+        try {
+            socket.getTcpInfo(info);
+            return info;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
