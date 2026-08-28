@@ -584,6 +584,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         return parent().toString() + '/' + channelId.getSequenceId() + " (H2 - " + stream + ')';
     }
 
+    void fireChildExceptionCaught(Throwable cause) {
+        pipeline().fireExceptionCaught(cause);
+    }
+
+    void fireChildUserEventTriggered(Object evt) {
+        pipeline().fireUserEventTriggered(evt);
+    }
+
     /**
      * Receive a read message. This does not notify handlers unless a read is in progress on the
      * channel.
