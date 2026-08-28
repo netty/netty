@@ -185,7 +185,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
                 // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
                 // so must not be controlled by suppressing channel.read() on the child channel.
-                channel.pipeline().fireUserEventTriggered(msg);
+                channel.fireChildUserEventTriggered(msg);
 
                 // RST frames will also trigger closing of the streams which then will call
                 // AbstractHttp2StreamChannel.streamClosed()
@@ -292,7 +292,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
             try {
-                childChannel.pipeline().fireExceptionCaught(cause.getCause());
+                childChannel.fireChildExceptionCaught(cause.getCause());
             } finally {
                 // Close with the correct error that causes this stream exception.
                 // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
@@ -318,7 +318,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             public boolean visit(Http2FrameStream stream) {
                 AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                         ((DefaultHttp2FrameStream) stream).attachment;
-                childChannel.pipeline().fireExceptionCaught(cause);
+                childChannel.fireChildExceptionCaught(cause);
                 return true;
             }
         });
@@ -343,7 +343,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     if (streamId > goAwayFrame.lastStreamId() && Http2CodecUtil.isStreamIdValid(streamId, server)) {
                         final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                                 ((DefaultHttp2FrameStream) stream).attachment;
-                        childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+                        childChannel.fireChildUserEventTriggered(goAwayFrame.retainedDuplicate());
                     }
                     return true;
                 }
