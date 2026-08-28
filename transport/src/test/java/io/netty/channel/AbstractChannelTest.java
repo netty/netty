@@ -220,8 +220,11 @@ public class AbstractChannelTest {
             ByteBuf msg = Unpooled.wrappedBuffer(new byte[16]);
             assertEquals(1, msg.refCnt());
             ChannelPromise promise = channel.newPromise();
-            loop.execute(() -> {
-                channel.unsafe().write(msg, promise);
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.unsafe().write(msg, promise);
+                }
             });
 
             assertTrue(promise.await(2, TimeUnit.SECONDS));
