@@ -431,8 +431,8 @@ public class BootstrapTest {
     public void testCancelBeforeRegistrationDoesNotResolveAddress() throws Exception {
         DefaultEventLoop group = new DefaultEventLoop();
         PendingAddressResolverGroup resolverGroup = new PendingAddressResolverGroup();
-        CountDownLatch eventLoopBlocked = new CountDownLatch(1);
-        CountDownLatch releaseEventLoop = new CountDownLatch(1);
+        final CountDownLatch eventLoopBlocked = new CountDownLatch(1);
+        final CountDownLatch releaseEventLoop = new CountDownLatch(1);
         ChannelFuture connectFuture = null;
         try {
             group.execute(new Runnable() {
