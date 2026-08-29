@@ -116,7 +116,11 @@ final class QpackUtil {
     }
 
     static boolean firstByteEquals(ByteBuf in, byte mask) {
-        return (in.getByte(in.readerIndex()) & mask) == mask;
+        return byteEquals(in, in.readerIndex(), mask);
+    }
+
+    static boolean byteEquals(ByteBuf in, int offset, byte mask) {
+        return (in.getByte(offset) & mask) == mask;
     }
 
     /**
