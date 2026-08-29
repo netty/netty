@@ -227,13 +227,13 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
 
     @Nullable
     private CharSequence decodeLiteralValue(ByteBuf in) throws QpackException {
-        final boolean valueHuffEncoded = QpackUtil.firstByteEquals(in, (byte) 0b1000_0000);
+        int readerIndex = in.readerIndex();
         int valueLength = decodePrefixedIntegerAsInt(in, 7);
         if (valueLength < 0 || in.readableBytes() < valueLength) {
             // Not enough readable bytes
             return null;
         }
-
+        final boolean valueHuffEncoded = QpackUtil.byteEquals(in, readerIndex, (byte) 0b1000_0000);
         return decodeStringLiteral(in, valueHuffEncoded, valueLength);
     }
 
