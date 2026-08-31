@@ -53,6 +53,15 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 RUN yum -y install devtoolset-11-gcc devtoolset-11-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-11/enable' >> ~/.bashrc
 
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. EPEL is enabled here rather
+# than next to the dependency list above so that it cannot change what those packages resolve to.
+# The version call is not decoration: it fails the image build if EPEL ever stops resolving,
+# instead of leaving that to be discovered halfway through a maven run.
+RUN yum -y install epel-release && \
+  yum -y install patchelf && \
+  patchelf --version
+
 RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
 RUN wget -q https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
 RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
