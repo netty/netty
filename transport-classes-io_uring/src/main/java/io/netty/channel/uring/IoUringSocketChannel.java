@@ -111,6 +111,27 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         return true;
     }
 
+    /**
+     * Returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
+     */
+    public IoUringTcpInfo tcpInfo() {
+        return tcpInfo(new IoUringTcpInfo());
+    }
+
+    /**
+     * Updates and returns the {@code TCP_INFO} for the current socket.
+     * See <a href="https://linux.die.net//man/7/tcp">man 7 tcp</a>.
+     */
+    public IoUringTcpInfo tcpInfo(IoUringTcpInfo info) {
+        try {
+            socket.getTcpInfo(info);
+            return info;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
