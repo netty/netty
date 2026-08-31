@@ -1515,7 +1515,7 @@ public final class ByteBufUtil {
     private static final class HexUtil {
 
         private static final char[] BYTE2CHAR = new char[256];
-        private static final char[] HEXDUMP_TABLE = new char[256 * 4];
+        private static final char[] HEXDUMP_TABLE = new char[256 * 2];
         private static final String[] HEXPADDING = new String[16];
         private static final String[] HEXDUMP_ROWPREFIXES = new String[65536 >>> 4];
         private static final String[] BYTE2HEX = new String[256];
