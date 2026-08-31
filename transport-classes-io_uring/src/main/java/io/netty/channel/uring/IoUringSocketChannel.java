@@ -33,6 +33,7 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -43,8 +44,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -52,9 +51,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringSocketChannel.class);
     private final IoUringSocketChannelConfig config;
-
-    // Marker object that is used to mark a batch of buffers that were used with zero-copy write operations.
-    private static final Object ZC_BATCH_MARKER = new Object();
 
     /**
      * Maximum bytes per chunk when converting a generic {@link FileRegion} to a {@link ByteBuf}
@@ -81,11 +77,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     // The configured buffer ring if any
     private IoUringBufferRing bufferRing;
-
-    /**
-     * Queue that holds buffers that we can't release yet as the kernel still holds a reference to these.
-     */
-    private Queue<Object> zcWriteQueue;
 
     public IoUringSocketChannel(EventLoop eventLoop) {
        this(eventLoop, null);
@@ -144,7 +135,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+    protected void doShutdown0(ChannelShutdownType type, Promise<Void> promise) {
         if (type.data() != null) {
             promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
             return;
@@ -198,39 +189,49 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
-            // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
-            // buffers.
-            iovArray.maxCount(Native.MAX_SKB_FRAGS);
+            IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
             try {
-                in.forEachFlushedMessage((ChannelOutboundBuffer.MessageProcessor) msg -> {
-                    if (msg instanceof ByteBuf) {
-                        ByteBuf buf = (ByteBuf) msg;
-                        int length = buf.readableBytes();
-                        if (config.shouldWriteZeroCopy(length)) {
-                            return iovArray.processMessage(msg);
+                // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
+                // buffers.
+                iovArray.maxCount(Native.MAX_SKB_FRAGS);
+                try {
+                    in.forEachFlushedMessage((ChannelOutboundBuffer.MessageProcessor) msg -> {
+                        if (msg instanceof ByteBuf) {
+                            ByteBuf buf = (ByteBuf) msg;
+                            int length = buf.readableBytes();
+                            if (config.shouldWriteZeroCopy(length)) {
+                                return collector.processMessage(msg);
+                            }
                         }
-                    }
-                    return false;
-                });
-            } catch (Exception e) {
-                // This should never happen, anyway fallback to single write.
-                return scheduleWriteSingle(in.current());
-            }
-            long iovArrayAddress = iovArray.memoryAddress(offset);
-            int iovArrayLength = iovArray.count() - offset;
+                        return false;
+                    });
+                } catch (Exception e) {
+                    // This should never happen, anyway fallback to single write.
+                    return scheduleWriteSingle(in.current());
+                }
+                long iovArrayAddress = iovArray.memoryAddress(offset);
+                int iovArrayLength = iovArray.count() - offset;
 
-            MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
-            MsgHdrMemory hdr = msgHdrArray.nextHdr();
-            assert hdr != null;
-            hdr.set(iovArrayAddress, iovArrayLength);
-            IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), nextOpsId());
-            byte opCode = ops.opcode();
-            writeId = registration().submit(ops);
-            writeOpCode = opCode;
-            if (writeId == 0) {
-                return 0;
+                MsgHdrMemoryArray msgHdrArray = handler.msgHdrMemoryArray();
+                MsgHdrMemory hdr = msgHdrArray.nextHdr();
+                assert hdr != null;
+                hdr.set(iovArrayAddress, iovArrayLength);
+                long opsId = writeTracker.nextZeroCopyId();
+                IoUringIoOps ops = IoUringIoOps.newSendmsgZc(fd().intValue(), (byte) 0, 0, hdr.address(), opsId);
+                byte opCode = ops.opcode();
+                writeTracker.record(opsId, opCode, collector.referencesArray(), collector.referencesCount());
+                writeId = registration().submit(ops);
+                writeOpCode = opCode;
+                if (writeId == 0) {
+                    writeTracker.abandon(opsId, opCode);
+                    return 0;
+                }
+                return 1;
+            } finally {
+                // The slot copied the references it needs, and an exception must not leave the event loop's
+                // shared collector holding this write's buffers.
+                collector.reset();
             }
-            return 1;
         }
 
         int fd = fd().intValue();
@@ -238,25 +239,35 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         IoUringIoHandler handler = registration.attachment();
         IovArray iovArray = handler.iovArray();
         int offset = iovArray.count();
+        IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
 
         try {
-            in.forEachFlushedMessage(iovArray);
-        } catch (Exception e) {
-            // This should never happen, anyway fallback to single write.
-            return scheduleWriteSingle(in.current());
-        }
-        long iovArrayAddress = iovArray.memoryAddress(offset);
-        int iovArrayLength = iovArray.count() - offset;
-        // Should not use sendmsg_zc, just use normal writev.
-        IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+            try {
+                in.forEachFlushedMessage(collector);
+            } catch (Exception e) {
+                // This should never happen, anyway fallback to single write.
+                return scheduleWriteSingle(in.current());
+            }
+            long iovArrayAddress = iovArray.memoryAddress(offset);
+            int iovArrayLength = iovArray.count() - offset;
+            // Should not use sendmsg_zc, just use normal writev.
+            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
 
-        byte opCode = ops.opcode();
-        writeId = registration.submit(ops);
-        writeOpCode = opCode;
-        if (writeId == 0) {
-            return 0;
+            byte opCode = ops.opcode();
+            // record(...) copies the collector's references into the slot, so the collector stays reusable.
+            writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
+            writeId = registration.submit(ops);
+            writeOpCode = opCode;
+            if (writeId == 0) {
+                writeTracker.abandonStream();
+                return 0;
+            }
+            return 1;
+        } finally {
+            // The slot copied the references it needs, and an exception must not leave the event loop's
+            // shared collector holding this write's buffers.
+            collector.reset();
         }
-        return 1;
     }
 
     @Override
@@ -287,11 +298,14 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             int length = buf.readableBytes();
             if (((IoUringSocketChannelConfig) config()).shouldWriteZeroCopy(length)) {
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
-                IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, nextOpsId(), 0);
+                long opsId = writeTracker.nextZeroCopyId();
+                IoUringIoOps ops = IoUringIoOps.newSendZc(fd().intValue(), address, length, 0, opsId, 0);
                 byte opCode = ops.opcode();
+                writeTracker.record(opsId, opCode, buf);
                 writeId = registration().submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
+                    writeTracker.abandon(opsId, opCode);
                     return 0;
                 }
                 return 1;
@@ -322,9 +336,15 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
         }
         byte opCode = ops.opcode();
+        // A splice picks its own data to tell its two stages apart, so it never enters the channel-level
+        // slot array used for zero-copy writes. It still has to occupy this single slot though: the file and
+        // pipe descriptors it splices between have to outlive the SQE, and writeTracker.retainAll()
+        // only retains what was recorded here.
+        writeTracker.recordStream(opCode, (ReferenceCounted) msg);
         writeId = registration.submit(ops);
         writeOpCode = opCode;
         if (writeId == 0) {
+            writeTracker.abandonStream();
             return 0;
         }
         return 1;
@@ -375,13 +395,15 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         int length = buf.readableBytes();
         IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
         byte opCode = ops.opcode();
+        writeTracker.recordStream(opCode, buf);
         writeId = registration.submit(ops);
         writeOpCode = opCode;
         if (writeId == 0) {
+            writeTracker.abandonStream();
             // Submission only fails when the registration is no longer valid (channel is
-            // being deregistered). unregistered() will release fileRegionChunkBuf and the
-            // outbound buffer will release the FileRegion, so nothing to clean up here --
-            // mirroring the plain ByteBuf path above.
+            // being deregistered). Ending the slot above is the only cleanup needed here:
+            // unregistered() will release fileRegionChunkBuf and the outbound buffer will
+            // release the FileRegion -- mirroring the plain ByteBuf path above.
             return 0;
         }
         return 1;
@@ -704,7 +726,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+    boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
         if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
             // We only want to reset these if IORING_CQE_F_NOTIF is not set.
             // If it's set we know this is only an extra notification for a write but we already handled
@@ -712,10 +734,17 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
             writeId = 0;
             writeOpCode = 0;
+            // A completion that never went through the slot finds it inactive, which makes this a no-op.
+            writeTracker.completeStream(flags);
         }
         ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
         if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
-            return handleWriteCompleteZeroCopy(op, channelOutboundBuffer, res, flags);
+            return handleWriteCompleteZeroCopy(op, channelOutboundBuffer, res, flags, data);
+        }
+        if (channelOutboundBuffer == null) {
+            // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
+            releaseFileRegionChunkBuf();
+            return true;
         }
         if (op == Native.IORING_OP_SENDMSG) {
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -735,7 +764,8 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         Object current = channelOutboundBuffer.current();
         if (current instanceof IoUringFileRegion) {
             IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-            return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
+            // A splice picks its own data to tell its two stages apart, so narrowing here can not drop bits.
+            return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, (short) data);
         }
 
         if (current instanceof FileRegion) {
@@ -818,124 +848,32 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     private boolean handleWriteCompleteZeroCopy(byte op, ChannelOutboundBuffer channelOutboundBuffer,
-                                                int res, int flags) {
-        if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
-            // We only want to reset these if IORING_CQE_F_NOTIF is not set.
-            // If it's set we know this is only an extra notification for a write but we already handled
-            // the write completions before.
-            // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
-            writeId = 0;
-            writeOpCode = 0;
-
-            boolean more = (flags & Native.IORING_CQE_F_MORE) != 0;
-            if (more) {
-                // This is the result of send_sz or sendmsg_sc but there will also be another notification
-                // which will let us know that we can release the buffer(s). In this case let's retain the
-                // buffer(s) once and store it in an internal queue. Once we receive the notification we will
-                // call release() on the buffer(s) as it's not used by the kernel anymore.
-                if (zcWriteQueue == null) {
-                    zcWriteQueue = new ArrayDeque<>(8);
-                }
-            }
-            if (res >= 0) {
-                if (more) {
-
-                    // Loop through all the buffers that were part of the operation so we can add them to our
-                    // internal queue to release later.
-                    do {
-                        ByteBuf currentBuffer = (ByteBuf) channelOutboundBuffer.current();
-                        assert currentBuffer != null;
-                        zcWriteQueue.add(currentBuffer);
-                        currentBuffer.retain();
-                        int readable = currentBuffer.readableBytes();
-                        int skip = Math.min(readable, res);
-                        currentBuffer.skipBytes(skip);
-                        if (readable <= res) {
-                            boolean removed = channelOutboundBuffer.remove();
-                            assert removed;
-                        }
-                        res -= readable;
-                    } while (res > 0);
-                    // Add the marker so we know when we need to stop releasing
-                    zcWriteQueue.add(ZC_BATCH_MARKER);
-                } else {
-                    // We don't expect any extra notification, just directly let the buffer be released.
-                    channelOutboundBuffer.removeBytes(res);
-                }
-                return true;
-            } else {
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                    if (more) {
-                        // The send was cancelled but we expect another notification. Just add the marker to the
-                        // queue so we don't get into trouble once the final notification for this operation is
-                        // received.
-                        zcWriteQueue.add(ZC_BATCH_MARKER);
-                    }
-                    return true;
-                }
-                try {
-                    String msg = op == Native.IORING_OP_SEND_ZC ? "io_uring sendzc" : "io_uring sendmsg_zc";
-                    int result = ioResult(msg, res);
-                    if (more) {
-                        try {
-                            // We expect another notification so we need to ensure we retain these buffers
-                            // so we can release these once we see IORING_CQE_F_NOTIF set.
-                            addFlushedToZcWriteQueue(channelOutboundBuffer);
-                        } catch (Exception e) {
-                            // should never happen but let's handle it anyway.
-                            handleWriteError(e);
-                        }
-                    }
-                    if (result == 0) {
-                        return false;
-                    }
-                } catch (Throwable cause) {
-                    if (more) {
-                        try {
-                            // We expect another notification as handleWriteError(...) will fail all flushed writes
-                            // and also release any buffers we need to ensure we retain these buffers
-                            // so we can release these once we see IORING_CQE_F_NOTIF set.
-                            addFlushedToZcWriteQueue(channelOutboundBuffer);
-                        } catch (Exception e) {
-                            // should never happen but let's handle it anyway.
-                            cause.addSuppressed(e);
-                        }
-                    }
-                    handleWriteError(cause);
-                }
-            }
-        } else {
-            if (zcWriteQueue != null) {
-                for (;;) {
-                    Object queued = zcWriteQueue.remove();
-                    assert queued != null;
-                    if (queued == ZC_BATCH_MARKER) {
-                        // Done releasing the buffers of the zero-copy batch.
-                        break;
-                    }
-                    // The buffer can now be released.
-                    ((ByteBuf) queued).release();
-                }
-            }
+                                                int res, int flags, long data) {
+        if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
+            return true;
         }
-        return true;
-    }
-
-    private void addFlushedToZcWriteQueue(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
-        // We expect another notification as handleWriteError(...) will fail all flushed writes
-        // and also release any buffers we need to ensure we retain these buffers
-        // so we can release these once we see IORING_CQE_F_NOTIF set.
+        if ((flags & Native.IORING_CQE_F_MORE) != 0) {
+            // Even errored requests may generate a notification, so the kernel still owns the memory
+            // until the follow-up IORING_CQE_F_NOTIF arrives. Retain before any release below.
+            // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
+            writeTracker.retainReferences(data, op);
+        }
+        if (channelOutboundBuffer == null) {
+            return true;
+        }
+        if (res >= 0) {
+            channelOutboundBuffer.removeBytes(res);
+            return true;
+        }
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            return true;
+        }
         try {
-            channelOutboundBuffer.forEachFlushedMessage(m -> {
-                if (!(m instanceof ByteBuf)) {
-                    return false;
-                }
-                zcWriteQueue.add(m);
-                ((ByteBuf) m).retain();
-                return true;
-            });
-        } finally {
-            zcWriteQueue.add(ZC_BATCH_MARKER);
+            String msg = op == Native.IORING_OP_SEND_ZC ? "io_uring sendzc" : "io_uring sendmsg_zc";
+            return ioResult(msg, res) != 0;
+        } catch (Throwable cause) {
+            handleWriteError(cause);
+            return true;
         }
     }
 
@@ -1010,6 +948,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
 
     @Override
     protected void unregistered() {
+        // super.unregistered() releases every in-flight write's references through writeTracker.releaseAll()
+        // before the chunk buffer is dropped below, so a reference a shutdown retained on that buffer is
+        // released first.
         super.unregistered();
         releaseFileRegionChunkBuf();
         if (readMsgHdrMemory != null) {
