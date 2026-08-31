@@ -16,7 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,8 +43,8 @@ public class IoUringSocketChannelTest {
             Bootstrap bootstrap = new Bootstrap();
             IoUringSocketChannel ch = (IoUringSocketChannel) bootstrap.group(group)
                     .channel(IoUringSocketChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .handler(new ChannelInboundHandler() { })
+                    .bind(new InetSocketAddress(0)).get();
             IoUringTcpInfo info = ch.tcpInfo();
             assertTcpInfo0(info);
             ch.close().syncUninterruptibly();
@@ -61,8 +61,8 @@ public class IoUringSocketChannelTest {
             Bootstrap bootstrap = new Bootstrap();
             IoUringSocketChannel ch = (IoUringSocketChannel) bootstrap.group(group)
                     .channel(IoUringSocketChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .handler(new ChannelInboundHandler() { })
+                    .bind(new InetSocketAddress(0)).get();
             IoUringTcpInfo info = new IoUringTcpInfo();
             ch.tcpInfo(info);
             assertTcpInfo0(info);
