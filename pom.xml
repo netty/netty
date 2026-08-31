@@ -919,7 +919,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.10.Final</version>
+        <version>0.0.11.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
