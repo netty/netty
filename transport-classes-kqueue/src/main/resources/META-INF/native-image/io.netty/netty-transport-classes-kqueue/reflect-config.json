@@ -1,0 +1,51 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueServerSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueServerDomainSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueDomainSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueDatagramChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name":"io.netty.channel.kqueue.KQueueDomainDatagramChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.kqueue.Native"
+    },
+    "name": "io.netty.util.internal.NativeLibraryUtil",
+    "allDeclaredMethods": true
+  }
+]
