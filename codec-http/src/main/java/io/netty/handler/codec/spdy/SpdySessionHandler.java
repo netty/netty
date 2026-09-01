@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SESSION_STREAM_ID;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.isServerId;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -46,19 +47,39 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     private final SpdySession spdySession = new SpdySession(initialSendWindowSize, initialReceiveWindowSize);
     private int lastGoodStreamId;
 
-    private static final int DEFAULT_MAX_CONCURRENT_STREAMS = Integer.MAX_VALUE;
-    private int remoteConcurrentStreams = DEFAULT_MAX_CONCURRENT_STREAMS;
+    // See https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2 for why 100 was chosen as a safe default.
+    private static final int DEFAULT_MAX_CONCURRENT_STREAMS = 100;
+    private int remoteConcurrentStreams = Integer.MAX_VALUE;
     private int localConcurrentStreams  = DEFAULT_MAX_CONCURRENT_STREAMS;
 
     private final AtomicInteger pings = new AtomicInteger();
 
     private boolean sentGoAwayFrame;
     private boolean receivedGoAwayFrame;
+    private boolean sentInitialSettingsFrame;
 
     private ChannelFutureListener closeSessionFutureListener;
 
     private final boolean server;
     private final int minorVersion;
+
+    /**
+     * Creates a new session handler.
+     * <p>
+     * Remote-initiated streams are accepted up to {@value #DEFAULT_MAX_CONCURRENT_STREAMS}
+     * concurrently (matching the HTTP/2 default, see
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">RFC 7540, Section 6.5.2</a>).
+     * Use {@link #SpdySessionHandler(SpdyVersion, boolean, int)} to configure a different limit.
+     *
+     * @param version the protocol version
+     * @param server  {@code true} if and only if this session handler should
+     *                handle the server endpoint of the connection.
+     *                {@code false} if and only if this session handler should
+     *                handle the client endpoint of the connection.
+     */
+    public SpdySessionHandler(SpdyVersion version, boolean server) {
+        this(version, server, DEFAULT_MAX_CONCURRENT_STREAMS);
+    }
 
     /**
      * Creates a new session handler.
@@ -68,10 +89,16 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
      *                handle the server endpoint of the connection.
      *                {@code false} if and only if this session handler should
      *                handle the client endpoint of the connection.
+     * @param maxLocalConcurrentStreams the maximum number of concurrent remote-initiated streams
+     *                that will be accepted. This bounds the memory a remote peer can force this
+     *                handler to allocate by opening streams. {@code SYN_STREAM} frames received
+     *                once this limit is reached are rejected with a {@code RST_STREAM} carrying
+     *                {@link SpdyStreamStatus#REFUSED_STREAM}. Must be positive.
      */
-    public SpdySessionHandler(SpdyVersion version, boolean server) {
+    public SpdySessionHandler(SpdyVersion version, boolean server, int maxLocalConcurrentStreams) {
         this.minorVersion = ObjectUtil.checkNotNull(version, "version").minorVersion();
         this.server = server;
+        this.localConcurrentStreams = checkPositive(maxLocalConcurrentStreams, "maxLocalConcurrentStreams");
     }
 
     public void setSessionReceiveWindowSize(int sessionReceiveWindowSize) {
@@ -83,6 +110,31 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         // If this value decreases the allowed receive window size,
         // the window will be reduced as data frames are processed.
         initialSessionReceiveWindowSize = sessionReceiveWindowSize;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (ctx.channel().isActive()) {
+            sendInitialSettingsFrame(ctx);
+        }
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        sendInitialSettingsFrame(ctx);
+        super.channelActive(ctx);
+    }
+
+    private void sendInitialSettingsFrame(ChannelHandlerContext ctx) {
+        if (sentInitialSettingsFrame) {
+            return;
+        }
+        sentInitialSettingsFrame = true;
+        // Advertise the accept limit to the remote peer. This is advisory only -- the limit is
+        // enforced locally by acceptStream(...) regardless of whether the peer honors it.
+        SpdySettingsFrame settingsFrame = new DefaultSpdySettingsFrame();
+        settingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, localConcurrentStreams);
+        ctx.writeAndFlush(settingsFrame);
     }
 
     @Override
