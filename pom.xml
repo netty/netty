@@ -1503,6 +1503,14 @@
                   <superClass>io.netty.handler.codec.ByteToMessageDecoder</superClass>
                   <justification>Change is tolerated for compatibility. Part of a security fix.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelActive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.spdy.SpdySessionHandler</old>
+                  <new>method void io.netty.handler.codec.spdy.SpdySessionHandler::channelActive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
