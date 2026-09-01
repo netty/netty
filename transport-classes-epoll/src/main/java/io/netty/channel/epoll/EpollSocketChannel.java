@@ -66,6 +66,11 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         config = new EpollSocketChannelConfig(this);
     }
 
+    public EpollSocketChannel(SocketProtocolFamily family, boolean mptcp) {
+        super(newSocketStream(family, mptcp), false);
+        config = new EpollSocketChannelConfig(this);
+    }
+
     public EpollSocketChannel(int fd) {
         super(fd);
         config = new EpollSocketChannelConfig(this);
