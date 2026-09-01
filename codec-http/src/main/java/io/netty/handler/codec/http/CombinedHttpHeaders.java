@@ -29,6 +29,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_MODIFIED_SINCE;
+import static io.netty.handler.codec.http.HttpHeaderNames.IF_UNMODIFIED_SINCE;
+import static io.netty.handler.codec.http.HttpHeaderNames.LAST_MODIFIED;
+import static io.netty.handler.codec.http.HttpHeaderNames.RETRY_AFTER;
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -75,7 +81,33 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
     @Override
     public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
-        return super.containsValue(name, StringUtil.trimOws(value), ignoreCase);
+        CharSequence trimmed = StringUtil.trimOws(value);
+        if (cannotBeCombined(name)) {
+            return contains(name, trimmed, ignoreCase);
+        }
+        return super.containsValue(name, trimmed, ignoreCase);
+    }
+
+    private static boolean cannotBeCombined(CharSequence name) {
+        int len = name.length();
+        switch (len) {
+            case 4:
+                return DATE.contentEqualsIgnoreCase(name);
+            case 7:
+                return EXPIRES.contentEqualsIgnoreCase(name);
+            case 10:
+                return SET_COOKIE.contentEqualsIgnoreCase(name);
+            case 11:
+                return RETRY_AFTER.contentEqualsIgnoreCase(name);
+            case 13:
+                return LAST_MODIFIED.contentEqualsIgnoreCase(name);
+            case 17:
+                return IF_MODIFIED_SINCE.contentEqualsIgnoreCase(name);
+            case 19:
+                return IF_UNMODIFIED_SINCE.contentEqualsIgnoreCase(name);
+            default:
+                return false;
+        }
     }
 
     private static final class CombinedHttpHeadersImpl
@@ -216,66 +248,95 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence value) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, value);
+            }
             return addEscapedValue(name, charSequenceEscaper().escape(name, value));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence... values) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, Iterable<? extends CharSequence> values) {
+            if (cannotBeCombined(name)) {
+                return super.add(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object value) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, value);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), value));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Iterable<?> values) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object... values) {
+            if (cannotBeCombined(name)) {
+                return super.addObject(name, values);
+            }
             return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, CharSequence... values) {
+            if (cannotBeCombined(name)) {
+                return super.set(name, values);
+            }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, Iterable<? extends CharSequence> values) {
+            if (cannotBeCombined(name)) {
+                return super.set(name, values);
+            }
             set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object value) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, value);
+            }
             set(name, commaSeparate(name, objectEscaper(), value));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object... values) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, values);
+            }
             set(name, commaSeparate(name, objectEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Iterable<?> values) {
+            if (cannotBeCombined(name)) {
+                return super.setObject(name, values);
+            }
             set(name, commaSeparate(name, objectEscaper(), values));
             return this;
-        }
-
-        private static boolean cannotBeCombined(CharSequence name) {
-            return SET_COOKIE.contentEqualsIgnoreCase(name);
         }
 
         private CombinedHttpHeadersImpl addEscapedValue(CharSequence name, CharSequence escapedValue) {
