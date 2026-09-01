@@ -684,7 +684,7 @@ public class DnsNameResolverTest {
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
-    public void testQueryMx(DnsNameResolverChannelStrategy strategy) {
+    public void testQueryMx(DnsNameResolverChannelStrategy strategy) throws Exception {
         DnsNameResolver resolver = newResolver(strategy).build();
         try {
             assertTrue(resolver.isRecursionDesired());
@@ -703,7 +703,7 @@ public class DnsNameResolverTest {
                 String hostname = e.getKey();
                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = e.getValue().awaitUninterruptibly();
 
-                DnsResponse response = f.getNow().content();
+                DnsResponse response = f.get().content();
                 assertEquals(DnsResponseCode.NOERROR, response.code());
 
                 final int answerCount = response.count(DnsSection.ANSWER);
@@ -3996,7 +3996,7 @@ public class DnsNameResolverTest {
             dnsServer2.start();
             resolver = newNonCachedResolver(strategy, ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(4)
-                    .searchDomains(Collections.<String>emptyList())
+                    .searchDomains(Collections.emptyList())
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
                     .build();
 
@@ -4478,6 +4478,621 @@ public class DnsNameResolverTest {
             resolver.close();
             group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
             server.stop();
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesBasic(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "cname.example.com";
+        final String cnameTarget = "target.example.com";
+        final String ipv4Addr = "10.0.0.1";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    Set<ResourceRecord> records = new LinkedHashSet<>(2);
+
+                    // Add CNAME record
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cnameTarget);
+                    records.add(new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+
+                    // Add A record for the target
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    records.add(new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+
+                    return records;
+                } else if (question.getDomainName().equals(cnameTarget)) {
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .build();
+
+            // Test new CNAME-aware API
+            Future<List<DnsResolveResult>> future = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results = future.syncUninterruptibly().getNow();
+            DnsResolveResult result = results.get(0);
+
+            assertNotNull(result);
+            assertNotNull(result.address());
+            assertNotNull(result.cnameChain());
+            assertEquals(ipv4Addr, result.address().getHostAddress());
+            assertTrue(result.hasCnameIndirection());
+            assertFalse(result.cnameChain().isEmpty());
+            assertTrue(result.cnameChain().contains(cnameTarget));
+
+            // Test resolveAllWithCnames
+            Future<List<DnsResolveResult>> allFuture = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> allResults = allFuture.syncUninterruptibly().getNow();
+
+            assertFalse(allResults.isEmpty());
+            DnsResolveResult firstResult = allResults.get(0);
+            assertEquals(result.address(), firstResult.address());
+            assertEquals(result.cnameChain(), firstResult.cnameChain());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesDirectRecord(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "direct.example.com";
+        final String ipv4Addr = "10.0.0.2";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    // Direct A record, no CNAME
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(hostname, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .build();
+
+            Future<List<DnsResolveResult>> future = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results = future.syncUninterruptibly().getNow();
+            DnsResolveResult result = results.get(0);
+
+            assertNotNull(result);
+            assertNotNull(result.address());
+            assertNotNull(result.cnameChain());
+            assertEquals(ipv4Addr, result.address().getHostAddress());
+            assertFalse(result.hasCnameIndirection());
+            assertTrue(result.cnameChain().isEmpty());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesChainedRecords(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "alias.example.com";
+        final String cname1 = "cdn.example.com";
+        final String cname2 = "server.example.com";
+        final String ipv4Addr = "10.0.0.3";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                String qName = question.getDomainName();
+                if (qName.equals(hostname)) {
+                    // CNAME: alias -> cdn
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cname1);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+                } else if (qName.equals(cname1)) {
+                    // CNAME: cdn -> server
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cname2);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cname1, RecordType.CNAME, cnameAttrs));
+                } else if (qName.equals(cname2)) {
+                    // A record: server -> IP
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cname2, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .build();
+
+            Future<List<DnsResolveResult>> future = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results = future.syncUninterruptibly().getNow();
+            DnsResolveResult result = results.get(0);
+
+            assertNotNull(result);
+            assertEquals(ipv4Addr, result.address().getHostAddress());
+            assertTrue(result.hasCnameIndirection());
+
+            List<String> cnameChain = result.cnameChain();
+            assertEquals(2, cnameChain.size());
+            assertEquals(cname1, cnameChain.get(0));
+            assertEquals(cname2, cnameChain.get(1));
+
+            // Verify no trailing dots in CNAME chain
+            for (String cname : cnameChain) {
+                assertFalse(cname.endsWith("."),
+                        "CNAME chain entries should not have trailing dots: " + cname);
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesCacheIntegration(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "cached.example.com";
+        final String cnameTarget = "target.example.com";
+        final String ipv4Addr = "10.0.0.4";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    Set<ResourceRecord> records = new LinkedHashSet<>(2);
+
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cnameTarget);
+                    records.add(new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    records.add(new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+
+                    return records;
+                } else if (question.getDomainName().equals(cnameTarget)) {
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .ttl(Integer.MAX_VALUE, Integer.MAX_VALUE) // Cache for eternity
+                    .build();
+
+            // First resolution - should hit DNS server
+            Future<List<DnsResolveResult>> future1 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results1 = future1.syncUninterruptibly().getNow();
+            DnsResolveResult result1 = results1.get(0);
+
+            assertTrue(result1.hasCnameIndirection());
+            assertFalse(result1.cnameChain().isEmpty());
+
+            // Second resolution - should hit cache
+            Future<List<DnsResolveResult>> future2 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results2 = future2.syncUninterruptibly().getNow();
+            DnsResolveResult result2 = results2.get(0);
+
+            // Both should have identical results
+            assertEquals(result1.address(), result2.address());
+            assertEquals(result1.cnameChain(), result2.cnameChain());
+            assertTrue(result2.hasCnameIndirection());
+            assertFalse(result2.cnameChain().isEmpty());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesCacheNormalization(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "normtest.example.com";
+        final String cnameTarget = "target.example.com";
+        final String ipv4Addr = "10.0.0.5";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cnameTarget);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+                } else if (question.getDomainName().equals(cnameTarget)) {
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .ttl(Integer.MAX_VALUE, Integer.MAX_VALUE)
+                    .build();
+
+            // First resolution - populates cache from DNS
+            Future<List<DnsResolveResult>> future1 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results1 = future1.syncUninterruptibly().getNow();
+            DnsResolveResult result1 = results1.get(0);
+            List<String> cnameChain1 = result1.cnameChain();
+
+            // Clear only the address cache but keep CNAME cache to force cache-based CNAME resolution
+            resolver.resolveCache().clear();
+
+            // Second resolution - should use cached CNAMEs
+            Future<List<DnsResolveResult>> future2 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results2 = future2.syncUninterruptibly().getNow();
+            DnsResolveResult result2 = results2.get(0);
+            List<String> cnameChain2 = result2.cnameChain();
+
+            // The critical test: CNAME chains should be identical regardless of source
+            assertEquals(cnameChain1, cnameChain2,
+                    "CNAME chains should be identical regardless of DNS vs cache source");
+
+            // All CNAMEs should have consistent formatting (no trailing dots in chain)
+            for (String cname : cnameChain1) {
+                assertFalse(cname.endsWith("."),
+                        "CNAME chain entries should not have trailing dots: " + cname);
+            }
+
+            for (String cname : cnameChain2) {
+                assertFalse(cname.endsWith("."),
+                        "CNAME chain entries should not have trailing dots: " + cname);
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
+    public void testDnsResolveResultEquality() throws Exception {
+        // Test DnsResolveResult equality and behavior
+        DnsResolveResult result1 = new DnsResolveResult(
+            InetAddress.getByName("127.0.0.1"),
+            asList("alias1.example.com", "alias2.example.com")
+        );
+
+        DnsResolveResult result2 = new DnsResolveResult(
+            InetAddress.getByName("127.0.0.1"),
+            asList("alias1.example.com", "alias2.example.com")
+        );
+
+        assertEquals(result1, result2);
+        assertEquals(result1.hashCode(), result2.hashCode());
+        assertTrue(result1.hasCnameIndirection());
+
+        // Test empty CNAME chain
+        DnsResolveResult result3 = new DnsResolveResult(
+            InetAddress.getByName("127.0.0.1"),
+            Collections.emptyList()
+        );
+
+        assertFalse(result3.hasCnameIndirection());
+        assertEquals(0, result3.cnameChain().size());
+
+        // Test with null CNAME chain
+        DnsResolveResult result4 = new DnsResolveResult(
+            InetAddress.getByName("127.0.0.1"),
+            null
+        );
+
+        assertFalse(result4.hasCnameIndirection());
+        assertEquals(0, result4.cnameChain().size());
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesAddressCacheBehavior(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "cacheable.example.com";
+        final String cnameTarget = "target.example.com";
+        final String ipv4Addr = "10.0.0.10";
+        final AtomicInteger dnsQueryCount = new AtomicInteger();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                dnsQueryCount.incrementAndGet();
+                if (question.getDomainName().equals(hostname)) {
+                    Set<ResourceRecord> records = new LinkedHashSet<>(2);
+
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cnameTarget);
+                    records.add(new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    records.add(new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+
+                    return records;
+                } else if (question.getDomainName().equals(cnameTarget)) {
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .ttl(Integer.MAX_VALUE, Integer.MAX_VALUE) // Cache forever
+                    .build();
+
+            // First resolution - should query DNS
+            Future<List<DnsResolveResult>> future1 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results1 = future1.syncUninterruptibly().getNow();
+            DnsResolveResult result1 = results1.get(0);
+
+            assertEquals(ipv4Addr, result1.address().getHostAddress());
+            assertTrue(result1.hasCnameIndirection());
+            assertEquals(1, result1.cnameChain().size());
+            assertEquals(cnameTarget, result1.cnameChain().get(0));
+
+            int queriesAfterFirstResolve = dnsQueryCount.get();
+            assertTrue(queriesAfterFirstResolve > 0);
+
+            // Second resolution - should hit address cache, no new DNS queries
+            Future<List<DnsResolveResult>> future2 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results2 = future2.syncUninterruptibly().getNow();
+            DnsResolveResult result2 = results2.get(0);
+
+            // Results should be identical
+            assertEquals(result1.address(), result2.address());
+            assertEquals(result1.cnameChain(), result2.cnameChain());
+
+            // Should not have made additional DNS queries (cached)
+            assertEquals(queriesAfterFirstResolve, dnsQueryCount.get());
+
+            // Verify address is in cache for the CNAME target
+            List<? extends DnsCacheEntry> cachedEntries = resolver.resolveCache().get(hostname + ".", null);
+            assertNotNull(cachedEntries);
+            assertFalse(cachedEntries.isEmpty());
+            assertEquals(InetAddress.getByName(ipv4Addr), cachedEntries.get(0).address());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesCnameCacheBehavior(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "cnamecache.example.com";
+        final String cname1 = "alias1.example.com";
+        final String cname2 = "alias2.example.com";
+        final String ipv4Addr = "10.0.0.11";
+        final AtomicInteger dnsQueryCount = new AtomicInteger();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                dnsQueryCount.incrementAndGet();
+                String qName = question.getDomainName();
+
+                if (qName.equals(hostname)) {
+                    // Return CNAME: hostname -> cname1
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cname1);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+                } else if (qName.equals(cname1)) {
+                    // Return CNAME: cname1 -> cname2
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cname2);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cname1, RecordType.CNAME, cnameAttrs));
+                } else if (qName.equals(cname2)) {
+                    // Return A record: cname2 -> IP
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cname2, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .resolveCache(NoopDnsCache.INSTANCE) // Disable DNS address cache to test CNAME cache specifically
+                    // CNAME cache enabled by default with ttl
+                    .build();
+
+            // First resolution - should query DNS for all CNAMEs and final A record
+            Future<List<DnsResolveResult>> future1 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results1 = future1.syncUninterruptibly().getNow();
+            DnsResolveResult result1 = results1.get(0);
+
+            assertEquals(ipv4Addr, result1.address().getHostAddress());
+            assertTrue(result1.hasCnameIndirection());
+            assertEquals(2, result1.cnameChain().size());
+            assertEquals(cname1, result1.cnameChain().get(0));
+            assertEquals(cname2, result1.cnameChain().get(1));
+
+            int queriesAfterFirstResolve = dnsQueryCount.get();
+            assertEquals(3, queriesAfterFirstResolve); // One query for each step
+
+            // Verify CNAME cache is populated
+            String cachedCname1 = resolver.cnameCache().get(hostname + ".");
+            assertEquals(cname1 + ".", cachedCname1);
+            String cachedCname2 = resolver.cnameCache().get(cname1 + ".");
+            assertEquals(cname2 + ".", cachedCname2);
+
+            // Second resolution - should use CNAME cache, only query final A record again
+            Future<List<DnsResolveResult>> future2 = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results2 = future2.syncUninterruptibly().getNow();
+            DnsResolveResult result2 = results2.get(0);
+
+            // Results should be identical
+            assertEquals(result1.address(), result2.address());
+            assertEquals(result1.cnameChain(), result2.cnameChain());
+
+            // Should have made only 1 additional query for the final A record (CNAME cache hit)
+            int queriesAfterSecondResolve = dnsQueryCount.get();
+            assertEquals(4, queriesAfterSecondResolve); // 3 from first + 1 for final A record
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllWithCnamesBothDnsAndCnameCaches(
+            DnsNameResolverChannelStrategy strategy) throws Exception {
+        final String hostname = "separation.example.com";
+        final String cnameTarget = "final.example.com";
+        final String ipv4Addr = "10.0.0.12";
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    Map<String, Object> cnameAttrs = new HashMap<>();
+                    cnameAttrs.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), cnameTarget);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(hostname, RecordType.CNAME, cnameAttrs));
+                } else if (question.getDomainName().equals(cnameTarget)) {
+                    Map<String, Object> aAttrs = new HashMap<>();
+                    aAttrs.put(DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr);
+                    return Collections.singleton(
+                            new TestDnsServer.TestResourceRecord(cnameTarget, RecordType.A, aAttrs));
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = null;
+        try {
+            resolver = newResolver(strategy)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .ttl(Integer.MAX_VALUE, Integer.MAX_VALUE) // Cache forever
+                    .build();
+
+            // Initial resolution to populate caches
+            resolver.resolveAllWithCnames(hostname).syncUninterruptibly().getNow();
+
+            // Verify both caches are populated
+            assertNotNull(resolver.cnameCache().get(hostname + "."));
+            List<? extends DnsCacheEntry> addressCacheEntries = resolver.resolveCache().get(hostname + ".", null);
+            assertNotNull(addressCacheEntries);
+            assertFalse(addressCacheEntries.isEmpty());
+
+            // Clear only the address cache
+            resolver.resolveCache().clear();
+
+            // CNAME cache should still be populated
+            assertNotNull(resolver.cnameCache().get(hostname + "."));
+
+            // Address cache should be empty
+            List<? extends DnsCacheEntry> clearedAddressEntries = resolver.resolveCache().get(cnameTarget + ".", null);
+            assertTrue(clearedAddressEntries == null || clearedAddressEntries.isEmpty());
+
+            // Resolution should still work (CNAME from cache, address from DNS)
+            Future<List<DnsResolveResult>> future = resolver.resolveAllWithCnames(hostname);
+            List<DnsResolveResult> results = future.syncUninterruptibly().getNow();
+            DnsResolveResult result = results.get(0);
+
+            assertEquals(ipv4Addr, result.address().getHostAddress());
+            assertTrue(result.hasCnameIndirection());
+            assertEquals(cnameTarget, result.cnameChain().get(0));
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
         }
     }
 }
