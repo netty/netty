@@ -649,6 +649,9 @@ static jint netty_quiche_stream_iter_next(JNIEnv* env, jclass clazz, jlong iter,
         return 0;
     }
     jlong* elements = (*env)->GetLongArrayElements(env, streams, NULL);
+    if (elements == NULL) {
+        return 0;
+    }
     int i = 0;
     while (i < len && quiche_stream_iter_next(it, (uint64_t*) elements + i)) {
         i++;
@@ -676,6 +679,9 @@ static jint netty_quiche_conn_dgram_send(JNIEnv* env, jclass clazz, jlong conn, 
 static jint netty_quiche_conn_set_session(JNIEnv* env, jclass clazz, jlong conn, jbyteArray sessionBytes) {
     int buf_len = (*env)->GetArrayLength(env, sessionBytes);
     uint8_t* buf = (uint8_t*) (*env)->GetByteArrayElements(env, sessionBytes, 0);
+    if (buf == NULL) {
+        return -1;
+    }
     int result = (jint) quiche_conn_set_session((quiche_conn *) conn, (uint8_t *) buf, (size_t) buf_len);
     (*env)->ReleaseByteArrayElements(env, sessionBytes, (jbyte*) buf, JNI_ABORT);
     return result;
@@ -691,6 +697,9 @@ static jint netty_quiche_conn_scids_left(JNIEnv* env, jclass clazz, jlong conn) 
 
 static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, jlong scid, jint scid_len, jbyteArray reset_token, jboolean retire_if_needed, jlong sequenceAddr) {
     uint8_t* buf = (uint8_t*) (*env)->GetByteArrayElements(env, reset_token, 0);
+    if (buf == NULL) {
+        return -1;
+    }
 
     uint64_t* seq;
     if (sequenceAddr < 0) {
@@ -1040,6 +1049,9 @@ static void netty_quiche_config_set_active_connection_id_limit(JNIEnv* env, jcla
 
 static void netty_quiche_config_set_stateless_reset_token(JNIEnv* env, jclass clazz, jlong config, jbyteArray token) {
     uint8_t* buf = (uint8_t*) (*env)->GetByteArrayElements(env, token, 0);
+    if (buf == NULL) {
+        return;
+    }
     quiche_config_set_stateless_reset_token((quiche_config*) config, buf);
     (*env)->ReleaseByteArrayElements(env, token, (jbyte*)buf, JNI_ABORT);
 }
