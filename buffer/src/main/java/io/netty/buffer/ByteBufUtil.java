@@ -827,8 +827,16 @@ public final class ByteBufUtil {
      * result.
      */
     public static ByteBuf writeUtf8(ByteBufAllocator alloc, CharSequence seq) {
-        // UTF-8 uses max. 3 bytes per char, so calculate the worst case.
-        ByteBuf buf = alloc.buffer(utf8MaxBytes(seq));
+        final int reserveBytes = utf8MaxBytes(seq);
+        if (seq instanceof AsciiString && reserveBytes >= 64 &&
+                reserveBytes <= Integer.MAX_VALUE / MAX_BYTES_PER_CHAR_UTF8) {
+            // Preserve the capacity selected by the existing UTF-8 reservation while avoiding a resize.
+            ByteBuf buf = alloc.buffer(alloc.calculateNewCapacity(utf8MaxBytes(seq.length()), Integer.MAX_VALUE));
+            reserveAndWriteUtf8(buf, seq, reserveBytes);
+            return buf;
+        }
+
+        ByteBuf buf = alloc.buffer(reserveBytes);
         writeUtf8(buf, seq);
         return buf;
     }
