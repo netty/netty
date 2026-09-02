@@ -229,10 +229,55 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     public static final DnsRecordType TLSA = new DnsRecordType(0x0034, "TLSA");
 
     /**
+     * S/MIME certificate association record. Uses the same RDATA format as {@link #TLSA}, but
+     * associates an S/MIME certificate with an email address. RFC 8162 is Experimental rather than
+     * standards-track, but the code point is assigned and the record is seen on the wire.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc8162.html">RFC 8162</a>.
+     */
+    public static final DnsRecordType SMIMEA = new DnsRecordType(0x0035, "SMIMEA");
+
+    /**
      * Host Identity Protocol record RFC 5205 Method of separating the end-point
      * identifier and locator roles of IP addresses.
      */
     public static final DnsRecordType HIP = new DnsRecordType(0x0037, "HIP");
+
+    /**
+     * Child DS record. Published in a child zone to signal the {@link #DS} record the child wishes
+     * its parent to publish, so that a delegation can be maintained without an out-of-band
+     * provisioning channel.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc7344.html">RFC 7344</a>.
+     */
+    public static final DnsRecordType CDS = new DnsRecordType(0x003b, "CDS");
+
+    /**
+     * Child DNSKEY record. The child-published counterpart of {@link #DNSKEY}, from which the
+     * parent may derive the delegation's {@link #DS} record.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc7344.html">RFC 7344</a>.
+     */
+    public static final DnsRecordType CDNSKEY = new DnsRecordType(0x003c, "CDNSKEY");
+
+    /**
+     * OpenPGP public key record. Associates an OpenPGP public key with an email address. RFC 7929 is
+     * Experimental rather than standards-track, but the code point is assigned and the record is seen
+     * on the wire.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc7929.html">RFC 7929</a>.
+     */
+    public static final DnsRecordType OPENPGPKEY = new DnsRecordType(0x003d, "OPENPGPKEY");
+
+    /**
+     * Child-to-parent synchronization record. Signals to a parent zone which records a child wishes
+     * the parent to keep in sync.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc7477.html">RFC 7477</a>.
+     */
+    public static final DnsRecordType CSYNC = new DnsRecordType(0x003e, "CSYNC");
+
+    /**
+     * Message digest for DNS zones. Carries a cryptographic digest over the zone's contents, so that
+     * a whole zone can be verified independently of the transport that delivered it.
+     * See <a href="https://www.rfc-editor.org/rfc/rfc8976.html">RFC 8976</a>.
+     */
+    public static final DnsRecordType ZONEMD = new DnsRecordType(0x003f, "ZONEMD");
 
     /**
      * Sender Policy Framework record RFC 4408 Specified as part of the SPF
@@ -320,11 +365,11 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     static {
         DnsRecordType[] all = {
                 A, NS, CNAME, SOA, PTR, MX, TXT, RP, AFSDB, SIG, KEY, AAAA, LOC, SRV, NAPTR, KX, CERT, DNAME, OPT, APL,
-                DS, SSHFP, IPSECKEY, RRSIG, NSEC, DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA, HIP, SPF, TKEY, TSIG, IXFR,
-                AXFR, ANY, CAA, TA, DLV, SVCB, HTTPS
+                DS, SSHFP, IPSECKEY, RRSIG, NSEC, DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA, SMIMEA, HIP, CDS, CDNSKEY,
+                OPENPGPKEY, CSYNC, ZONEMD, SPF, TKEY, TSIG, IXFR, AXFR, ANY, CAA, TA, DLV, SVCB, HTTPS
         };
 
-        final StringBuilder expected = new StringBuilder(512);
+        final StringBuilder expected = new StringBuilder(1024);
 
         expected.append(" (expected: ");
         for (DnsRecordType type: all) {
