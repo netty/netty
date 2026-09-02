@@ -256,6 +256,9 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the cache for resolution results.
+     * <p>
+     * The provided cache is not cleared when the resolver or a {@link DnsAddressResolverGroup} using this builder
+     * is closed. The caller is responsible for the cache lifecycle.
      *
      * @param resolveCache the DNS resolution results cache
      * @return {@code this}
@@ -267,6 +270,9 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the cache for {@code CNAME} mappings.
+     * <p>
+     * The provided cache is not cleared when the resolver or a {@link DnsAddressResolverGroup} using this builder
+     * is closed. The caller is responsible for the cache lifecycle.
      *
      * @param cnameCache the cache used to cache {@code CNAME} mappings for a domain.
      * @return {@code this}
@@ -289,6 +295,9 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the cache for authoritative NS servers
+     * <p>
+     * The provided cache is not cleared when the resolver or a {@link DnsAddressResolverGroup} using this builder
+     * is closed. The caller is responsible for the cache lifecycle.
      *
      * @param authoritativeDnsServerCache the authoritative NS servers cache
      * @return {@code this}
@@ -302,6 +311,9 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the cache for authoritative NS servers
+     * <p>
+     * The provided cache is not cleared when the resolver or a {@link DnsAddressResolverGroup} using this builder
+     * is closed. The caller is responsible for the cache lifecycle.
      *
      * @param authoritativeDnsServerCache the authoritative NS servers cache
      * @return {@code this}
@@ -588,6 +600,18 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+   boolean hasResolveCache() {
+        return resolveCache != null;
+    }
+
+   boolean hasCnameCache() {
+        return cnameCache != null;
+    }
+
+   boolean hasAuthoritativeDnsServerCache() {
+        return authoritativeDnsServerCache != null;
+    }
+
    DnsCache getOrNewCache() {
         if (this.resolveCache != null) {
             return this.resolveCache;
@@ -681,6 +705,13 @@ public final class DnsNameResolverBuilder {
             logger.debug("authoritativeDnsServerCache and TTLs are mutually exclusive. TTLs are ignored.");
         }
 
+        // Only clear caches on close that were created by the resolver itself. Caches that were provided by
+        // the user might still be shared with other resolvers and so must be left untouched on close.
+        // See https://github.com/netty/netty/issues/17040
+        boolean clearResolveCacheOnClose = this.resolveCache == null;
+        boolean clearCnameCacheOnClose = this.cnameCache == null;
+        boolean clearAuthoritativeDnsServerCacheOnClose = this.authoritativeDnsServerCache == null;
+
         DnsCache resolveCache = getOrNewCache();
         DnsCnameCache cnameCache = getOrNewCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = getOrNewAuthoritativeDnsServerCache();
@@ -694,8 +725,11 @@ public final class DnsNameResolverBuilder {
                 socketChannelFactory,
                 retryOnTimeout,
                 resolveCache,
+                clearResolveCacheOnClose,
                 cnameCache,
+                clearCnameCacheOnClose,
                 authoritativeDnsServerCache,
+                clearAuthoritativeDnsServerCacheOnClose,
                 localAddress,
                 dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
