@@ -77,6 +77,7 @@ public final class IoUringIoHandler implements IoHandler {
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
+    private boolean initialized;
     private boolean closeCompleted;
     private final PendingOpMap pendingOps;
     private int nextRegistrationId = 1;
@@ -153,6 +154,7 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public void initialize() {
         ringBuffer.enable();
+        initialized = true;
         // Fill all buffer rings now.
         for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
             bufferRing.initialize();
@@ -448,6 +450,15 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public void destroy() {
+        // Never-started event loops call destroy() from tryTerminateIfNeverStarted() without
+        // run() → initialize(). The ring is created disabled; io_uring_enter fails until enable().
+        if (!initialized) {
+            for (IoUringBufferRing ioUringBufferRing : registeredIoUringBufferRing.values()) {
+                ioUringBufferRing.close();
+            }
+            completeRingClose();
+            return;
+        }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         drainEventFd();
