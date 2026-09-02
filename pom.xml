@@ -824,6 +824,7 @@
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
+    <module>transport-selector</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>handler-ssl-ocsp</module>
