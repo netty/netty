@@ -95,12 +95,13 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
-    private static Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
+    private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
     private static final boolean EXPLICIT_NO_PREFER_DIRECT;
     private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
@@ -121,8 +122,6 @@ public final class PlatformDependent {
 
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
-    private static final boolean IS_J9_JVM = isJ9Jvm0();
-    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final int ADDRESS_SIZE = addressSize0();
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
@@ -1515,16 +1514,6 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static Pattern getMaxDirectMemorySizeArgPattern() {
-        // Pattern's is immutable so it's always safe published
-        Pattern pattern = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
-        if (pattern == null) {
-            pattern = Pattern.compile("\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
-            MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN =  pattern;
-        }
-        return pattern;
-    }
-
     /**
      * Compute an estimate of the maximum amount of direct memory available to this JVM.
      * <p>
@@ -1541,48 +1530,8 @@ public final class PlatformDependent {
             return maxDirectMemory;
         }
 
-        try {
-            // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
-            // Note that we are using reflection because Android doesn't have these classes.
-            ClassLoader systemClassLoader = getSystemClassLoader();
-            Class<?> mgmtFactoryClass = Class.forName(
-                    "java.lang.management.ManagementFactory", true, systemClassLoader);
-            Class<?> runtimeClass = Class.forName(
-                    "java.lang.management.RuntimeMXBean", true, systemClassLoader);
-
-            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-            MethodHandle getRuntime = lookup.findStatic(
-                    mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
-            MethodHandle getInputArguments = lookup.findVirtual(
-                    runtimeClass, "getInputArguments", methodType(List.class));
-            List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
-
-            Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
-
-            for (int i = vmArgs.size() - 1; i >= 0; i --) {
-                Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
-                if (!m.matches()) {
-                    continue;
-                }
-
-                maxDirectMemory = Long.parseLong(m.group(1));
-                switch (m.group(2).charAt(0)) {
-                    case 'k': case 'K':
-                        maxDirectMemory *= 1024;
-                        break;
-                    case 'm': case 'M':
-                        maxDirectMemory *= 1024 * 1024;
-                        break;
-                    case 'g': case 'G':
-                        maxDirectMemory *= 1024 * 1024 * 1024;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            }
-        } catch (Throwable ignored) {
-            // Ignore
+        if (!isAndroid() && !ignoreMaxDirectMemorySize()) {
+            maxDirectMemory = RuntimeJvmArgs.parseMaxDirectMemorySize(maxDirectMemory);
         }
 
         if (maxDirectMemory <= 0) {
@@ -1593,6 +1542,10 @@ public final class PlatformDependent {
         }
 
         return maxDirectMemory;
+    }
+
+    private static boolean ignoreMaxDirectMemorySize() {
+        return SystemPropertyUtil.getBoolean("io.netty.ignoreMaxDirectMemorySize", false);
     }
 
     private static File tmpdir0() {
