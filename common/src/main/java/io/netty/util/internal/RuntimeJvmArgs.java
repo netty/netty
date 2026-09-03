@@ -39,13 +39,10 @@ final class RuntimeJvmArgs {
                     .getInputArguments();
             for (int i = vmArgs.size() - 1; i >= 0; i--) {
                 String arg = vmArgs.get(i);
-                int idx = arg.indexOf(
-                        MAX_DIRECT_MEMORY_SIZE_ARG);
-                if (idx < 0) {
+                if (!arg.startsWith(MAX_DIRECT_MEMORY_SIZE_ARG)) {
                     continue;
                 }
-                return parseSize(arg, idx
-                        + MAX_DIRECT_MEMORY_SIZE_ARG.length());
+                return parseSize(arg, MAX_DIRECT_MEMORY_SIZE_ARG.length());
             }
         } catch (Throwable ignored) {
             // Ignore
