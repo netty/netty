@@ -43,6 +43,32 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class HttpPostMultiPartRequestDecoderTest {
 
     @Test
+    public void testHeaderlessFieldTrailingCrSplitAcrossChunks() throws Exception {
+        // A field without Content-Length (the RFC 7578 norm). The chunk boundary falls between the
+        // value's trailing CR and the boundary's LF; the CR must not leak into the decoded value.
+        String boundary = "boundary";
+        String prefix = "--" + boundary + "\r\n" +
+                        "Content-Disposition: form-data; name=\"field1\"\r\n\r\n";
+        String value = "value1";
+        String suffix = "\r\n--" + boundary + "--\r\n";
+        byte[] full = (prefix + value + suffix).getBytes(CharsetUtil.US_ASCII);
+        int afterCr = (prefix + value + "\r").length();
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        HttpDataFactory factory = new DefaultHttpDataFactory(false);
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(full, 0, afterCr)));
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(full, afterCr, full.length - afterCr)));
+        decoder.offer(new DefaultLastHttpContent());
+
+        Attribute field = (Attribute) decoder.getBodyHttpDatas().get(0);
+        assertEquals("value1", field.getValue());
+        decoder.destroy();
+    }
+
+    @Test
     public void testDecodeFullHttpRequestWithNoContentTypeHeader() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         try {
