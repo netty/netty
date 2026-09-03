@@ -161,6 +161,18 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameter() {
+        // RFC 9110 5.6.6: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the next parameter
+        testGetCharsetUtf8("text/html; charset=utf-8 ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetQuotedWithWhitespaceBeforeNextParameter() {
+        testGetCharsetUtf8("text/html; charset=\"utf-8\" ; action=\"foo\"");
+    }
+
+    @Test
     public void testGetCharsetNoLeadingQuotes() {
         testGetCharsetInvalidQuotes("text/html;charset=utf-8\"");
     }
