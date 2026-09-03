@@ -96,6 +96,39 @@ public class HttpPostMultiPartRequestDecoderTest {
     }
 
     @Test
+    public void testSplitCrlfBeforeDelimiterMustNotLeakCrIntoData() throws Exception {
+        String boundary = "861fbeab-cd20-470c-9609-d40a0f704466";
+        String delimiter = "--" + boundary;
+        // The first chunk ends with the CR of the CRLF that precedes the next delimiter.
+        String firstChunk = delimiter + "\r\n" +
+                "Content-Disposition: form-data; name=\"foo\"\r\n\r\n" +
+                "bar\r";
+        String secondChunk = "\n" + delimiter + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"file.txt\"\r\n" +
+                "Content-Type: text/plain\r\n\r\n" +
+                "hello world\r";
+        String thirdChunk = "\n" + delimiter + "--\r\n";
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set("content-type", "multipart/form-data; boundary=" + boundary);
+        request.headers().set("transfer-encoding", "chunked");
+        HttpPostMultipartRequestDecoder decoder =
+                new HttpPostMultipartRequestDecoder(new DefaultHttpDataFactory(false), request);
+        try {
+            decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(firstChunk, CharsetUtil.UTF_8)));
+            decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(secondChunk, CharsetUtil.UTF_8)));
+            decoder.offer(new DefaultLastHttpContent(Unpooled.copiedBuffer(thirdChunk, CharsetUtil.UTF_8)));
+
+            Attribute attribute = (Attribute) decoder.getBodyHttpData("foo");
+            assertEquals("bar", attribute.getValue());
+            FileUpload fileUpload = (FileUpload) decoder.getBodyHttpData("file");
+            assertEquals("hello world", fileUpload.getString(CharsetUtil.UTF_8));
+        } finally {
+            decoder.destroy();
+        }
+    }
+
+    @Test
     public void decodeMustCleanFilenameCharacters() {
         String content = "\n--861fbeab-cd20-470c-9609-d40a0f704466\r\n" +
                 "content-disposition: form-data; " +
