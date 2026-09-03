@@ -1,0 +1,62 @@
+diff --git a/quiche/src/lib.rs b/quiche/src/lib.rs
+index a93bfb5b..d9f8b9b6 100644
+--- a/quiche/src/lib.rs
++++ b/quiche/src/lib.rs
+@@ -4229,6 +4229,7 @@ impl<F: BufFactory> Connection<F> {
+         let mut in_flight = false;
+         let mut is_pmtud_probe = false;
+         let mut has_data = false;
++        let mut stream_data_skipped = false;
+ 
+         // Whether or not we should explicitly elicit an ACK via PING frame if we
+         // implicitly elicit one otherwise.
+@@ -4911,6 +4912,23 @@ impl<F: BufFactory> Connection<F> {
+                 let (len, fin) =
+                     stream.send.emit(&mut stream_payload.as_mut()[..max_len])?;
+ 
++                // Skip zero-length non-fin frames. Such frames carry no data,
++                // but their offset advances the peer's largest received
++                // offset and must be accounted for by the receiver.
++                if len == 0 && !fin {
++                    stream_data_skipped = true;
++
++                    let priority_key = Arc::clone(&stream.priority_key);
++                    if !stream.is_flushable() {
++                        self.streams.remove_flushable(&priority_key);
++                    } else if stream.incremental {
++                        self.streams.remove_flushable(&priority_key);
++                        self.streams.insert_flushable(&priority_key);
++                    }
++
++                    break;
++                }
++
+                 // Encode the frame's header.
+                 //
+                 // Due to how `OctetsMut::split_at()` works, `stream_hdr` starts
+@@ -4991,6 +5009,7 @@ impl<F: BufFactory> Connection<F> {
+         }
+ 
+         if !has_data &&
++            !stream_data_skipped &&
+             !dgram_emitted &&
+             cwnd_available > frame::MAX_STREAM_OVERHEAD
+         {
+diff --git a/quiche/src/stream/recv_buf.rs b/quiche/src/stream/recv_buf.rs
+index bc69dde6..fe12424a 100644
+--- a/quiche/src/stream/recv_buf.rs
++++ b/quiche/src/stream/recv_buf.rs
+@@ -123,8 +123,12 @@ impl RecvBuf {
+             self.fin_off = Some(buf.max_off());
+         }
+ 
+-        // No need to store empty buffer that doesn't carry the fin flag.
++        // No need to store empty buffer that doesn't carry the fin flag, but
++        // its offset still advances the largest received offset. The caller
++        // charges connection-level flow control from that offset, so the
++        // high-water mark must advance in lockstep.
+         if !buf.fin() && buf.is_empty() {
++            self.len = cmp::max(self.len, buf.max_off());
+             return Ok(());
+         }
+ 

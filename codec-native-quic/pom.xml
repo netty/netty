@@ -850,14 +850,25 @@
                           <arg value="${quicheRepository}" />
                           <arg value="${quicheSourceDir}" />
                         </exec>
-
-                        <!-- Use the known SHA of the commit -->
-                        <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg value="checkout" />
-                          <arg value="${quicheCommitSha}" />
-                        </exec>
                       </else>
                     </if>
+
+                    <!-- Use the known SHA of the commit and apply the fix for
+                         https://github.com/cloudflare/quiche/pull/2697. -->
+                    <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                      <arg value="checkout" />
+                      <arg value="--force" />
+                      <arg value="${quicheCommitSha}" />
+                    </exec>
+                    <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                      <arg value="apply" />
+                      <arg value="--check" />
+                      <arg value="${project.basedir}/src/main/patches/quiche-flow-control.patch" />
+                    </exec>
+                    <exec executable="git" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
+                      <arg value="apply" />
+                      <arg value="${project.basedir}/src/main/patches/quiche-flow-control.patch" />
+                    </exec>
                     <echo message="Building Quiche" />
                     <if>
                       <equals arg1="${platform}" arg2="android" />
