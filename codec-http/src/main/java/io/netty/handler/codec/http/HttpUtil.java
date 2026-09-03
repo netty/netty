@@ -451,6 +451,9 @@ public final class HttpUtil {
         if (contentTypeValue != null) {
             CharSequence charsetRaw = getCharsetAsSequence(contentTypeValue);
             if (charsetRaw != null) {
+                // Remove the optional whitespace (OWS) that RFC 9110 allows before the semicolon
+                // starting the next parameter, see https://www.rfc-editor.org/rfc/rfc9110#section-5.6.6
+                charsetRaw = AsciiString.trim(charsetRaw);
                 if (charsetRaw.length() > 2) { // at least contains 2 quotes(")
                     if (charsetRaw.charAt(0) == '"' && charsetRaw.charAt(charsetRaw.length() - 1) == '"') {
                         charsetRaw = charsetRaw.subSequence(1, charsetRaw.length() - 1);
