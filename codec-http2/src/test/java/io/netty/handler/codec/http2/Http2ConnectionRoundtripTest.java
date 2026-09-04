@@ -439,6 +439,28 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @Test
+    public void failedSettingsWriteDoesNotCorruptNextSettingsAck() throws Exception {
+        final AtomicReference<Throwable> failedSettingsWriteCause = new AtomicReference<Throwable>();
+        bootstrapEnv(0, 2, 0, 0);
+
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().pushEnabled(true),
+                        serverNewPromise()).addListener(future -> failedSettingsWriteCause.set(future.cause()));
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().initialWindowSize(100),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertInstanceOf(Http2Exception.class, failedSettingsWriteCause.get());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) failedSettingsWriteCause.get()).error());
+        assertEquals(100, http2Server.decoder().flowController().initialWindowSize());
+    }
+
+    @Test
     public void priorityUsingHigherValuedStreamIdDoesNotPreventUsingLowerStreamId() throws Exception {
         bootstrapEnv(1, 1, 3, 0);
 
