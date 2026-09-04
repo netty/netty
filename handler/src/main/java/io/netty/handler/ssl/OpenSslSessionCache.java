@@ -391,7 +391,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
 
         @Override
-        public void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
+        public void handshakeFinished(byte[] id, String cipher, int protocol, byte[] peerCertificate,
                                       byte[][] peerCertificateChain, long creationTime, long timeout) {
             throw new UnsupportedOperationException();
         }
