@@ -46,7 +46,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
-    private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
+    private final Queue<OutstandingLocalSettings> outstandingLocalSettingsQueue =
+            new ArrayDeque<OutstandingLocalSettings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
@@ -291,7 +292,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
             ChannelPromise promise) {
-        outstandingLocalSettingsQueue.add(settings);
         try {
             Boolean pushEnabled = settings.pushEnabled();
             if (pushEnabled != null && connection.isServer()) {
@@ -301,7 +301,23 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             return promise.setFailure(e);
         }
 
-        return frameWriter.writeSettings(ctx, settings, promise);
+        final OutstandingLocalSettings outstandingLocalSettings = new OutstandingLocalSettings(settings);
+        outstandingLocalSettingsQueue.add(outstandingLocalSettings);
+        final ChannelPromise writePromise = promise.unvoid();
+        final ChannelFuture future;
+        try {
+            future = frameWriter.writeSettings(ctx, settings, writePromise);
+        } catch (Throwable cause) {
+            outstandingLocalSettingsQueue.remove(outstandingLocalSettings);
+            writePromise.tryFailure(cause);
+            return writePromise;
+        }
+        if (future.isDone()) {
+            outstandingLocalSettings.operationComplete(future);
+        } else {
+            future.addListener(outstandingLocalSettings);
+        }
+        return future;
     }
 
     @Override
@@ -402,7 +418,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
     @Override
     public Http2Settings pollSentSettings() {
-        return outstandingLocalSettingsQueue.poll();
+        OutstandingLocalSettings outstandingLocalSettings = outstandingLocalSettingsQueue.poll();
+        return outstandingLocalSettings == null ? null : outstandingLocalSettings.settings;
     }
 
     @Override
@@ -422,6 +439,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             throw new IllegalArgumentException(message);
         }
         return stream;
+    }
+
+    private final class OutstandingLocalSettings implements ChannelFutureListener {
+        private final Http2Settings settings;
+
+        OutstandingLocalSettings(Http2Settings settings) {
+            this.settings = settings;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) {
+            if (!future.isSuccess()) {
+                outstandingLocalSettingsQueue.remove(this);
+            }
+        }
     }
 
     @Override
