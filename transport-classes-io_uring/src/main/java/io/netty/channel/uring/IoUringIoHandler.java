@@ -101,7 +101,7 @@ public final class IoUringIoHandler implements IoHandler {
         //The default cq size is always twice the ringSize.
         // It only makes sense when the user actually specifies the cq ring size.
         int cqSize = 2 * config.getRingSize();
-        if (config.needSetupCqeSize()) {
+        if (IoUring.isSetupCqeSizeSupported() && config.needSetupCqeSize()) {
             assert IoUring.isSetupCqeSizeSupported();
             setupFlags |= Native.IORING_SETUP_CQSIZE;
             cqSize = config.getCqSize();
