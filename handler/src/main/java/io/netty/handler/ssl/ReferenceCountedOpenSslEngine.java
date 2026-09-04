@@ -2113,7 +2113,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * Maps the numeric protocol version returned by {@link SSL#getVersionInt(long)} to the matching interned
      * {@link SslProtocols} constant, or {@code null} if the version is not known.
      */
-    private static String toJavaProtocolVersion(int version) {
+    private static String toJavaProtocolVersion(long ssl, int version) {
         switch (version) {
             case TLS1_3_VERSION:
                 return SslProtocols.TLS_v1_3;
@@ -2128,7 +2128,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             case SSL2_VERSION:
                 return SslProtocols.SSL_v2;
             default:
-                return "";
+                return SSL.getVersion(ssl);
         }
     }
 
@@ -2868,7 +2868,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
             }
-            return toJavaProtocolVersion(protocol);
+            return toJavaProtocolVersion(ssl, protocol);
         }
 
         @Override
