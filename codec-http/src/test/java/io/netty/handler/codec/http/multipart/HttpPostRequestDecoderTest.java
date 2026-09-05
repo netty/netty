@@ -1142,4 +1142,54 @@ public class HttpPostRequestDecoderTest {
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyBytes)));
         decoder.destroy();
     }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeStandardDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // memory only factory, so the attribute is not tracked by the factory either
+        HttpPostRequestDecoder decoder =
+                new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+
+        // not a LastHttpContent, so the value of "field" is still being decoded
+        decoder.offer(new DefaultHttpContent(
+                Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    @Test
+    public void testDestroyReleasesPartialFileUploadMultipartDecoder() {
+        String boundary = "be38b42a9ad2713f";
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        // memory only factory, so the file upload is not tracked by the factory either
+        HttpPostRequestDecoder decoder =
+                new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+
+        String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                "some partial content";
+
+        // not a LastHttpContent and the closing delimiter is missing, so the upload is still being decoded
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
 }
