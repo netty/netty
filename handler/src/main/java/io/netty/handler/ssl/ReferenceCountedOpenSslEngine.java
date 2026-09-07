@@ -2133,27 +2133,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     /**
-     * Converts the protocol version string returned by {@link SSL#getVersion(long)} to protocol family string.
-     */
-    private static String toJavaCipherSuitePrefix(String protocolVersion) {
-        final char c;
-        if (protocolVersion == null || protocolVersion.isEmpty()) {
-            c = 0;
-        } else {
-            c = protocolVersion.charAt(0);
-        }
-
-        switch (c) {
-            case 'T':
-                return "TLS";
-            case 'S':
-                return "SSL";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
-    /**
      * Converts the numeric protocol version returned by {@link SSL#getVersionInt(long)} to the cipher suite
      * protocol family prefix.
      */
@@ -2863,9 +2842,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             int protocol = this.protocol;
             if (protocol == 0) {
                 synchronized (ReferenceCountedOpenSslEngine.this) {
-                    if (!destroyed) {
-                        protocol = SSL.getVersionInt(ssl);
+                    if (destroyed) {
+                        return StringUtil.EMPTY_STRING;
                     }
+                    protocol = SSL.getVersionInt(ssl);
                 }
             }
             return toJavaProtocolVersion(ssl, protocol);
