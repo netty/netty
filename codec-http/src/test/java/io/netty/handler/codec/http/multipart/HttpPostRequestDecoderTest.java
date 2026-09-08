@@ -1192,4 +1192,52 @@ public class HttpPostRequestDecoderTest {
 
         assertEquals(0, partial.refCnt());
     }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeTrackedByFactory() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // the default factory checks the size, so it does track the attribute and cleanFiles()
+        // releases it before destroy() gets to it
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(), req);
+
+        decoder.offer(new DefaultHttpContent(
+                Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    @Test
+    public void testDestroyReleasesPartialFileUploadTrackedByFactory() {
+        String boundary = "be38b42a9ad2713f";
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        // the default factory checks the size, so it does track the upload and cleanFiles()
+        // releases it before destroy() gets to it
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(), req);
+
+        String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                "some partial content";
+
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
 }
