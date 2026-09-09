@@ -22,6 +22,15 @@ RUN microdnf install -y \
  zip \
  zlib-devel
 
+# patchelf drops the DT_NEEDED on ld-linux-<arch>.so from the linked native libraries, which is
+# what makes them loadable under musl; see codec-native-quic/pom.xml. EPEL is enabled here rather
+# than next to the dependency list above so that it cannot change what those packages resolve to.
+# The version call is not decoration: it fails the image build if EPEL ever stops resolving,
+# instead of leaving that to be discovered halfway through a maven run.
+RUN microdnf install -y patchelf && \
+  patchelf --version
+
+
 # Downloading and installing SDKMAN!
 RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
