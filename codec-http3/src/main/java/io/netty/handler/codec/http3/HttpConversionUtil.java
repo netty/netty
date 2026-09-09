@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
@@ -59,7 +60,6 @@ import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
-import static io.netty.util.internal.StringUtil.length;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 
 /**
@@ -391,7 +391,6 @@ public final class HttpConversionUtil {
         final Http3Headers out = new DefaultHttp3Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            out.method(request.method().asciiName());
             if (HttpMethod.CONNECT.equals(request.method())) {
                 // https://www.rfc-editor.org/rfc/rfc9114#section-4.4 requires that :scheme and :path are
                 // omitted, and that :authority is the authority-form request-target from the HTTP/1.x
@@ -409,18 +408,32 @@ public final class HttpConversionUtil {
                     out.authority(new AsciiString(authorityForm));
                 }
             } else {
-                URI requestTargetUri = URI.create(request.uri());
-                out.path(toHttp3Path(requestTargetUri));
-                setHttp3Scheme(inHeaders, requestTargetUri, out);
-
-                // Attempt to take from HOST header before taking from the request-line
                 String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                if (host != null && !host.isEmpty()) {
-                    setHttp3Authority(host, out);
-                } else if (!isOriginForm(request.uri()) && !isAsteriskForm(request.uri())) {
-                    setHttp3Authority(requestTargetUri.getAuthority(), out);
+                if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
+                    out.path(new AsciiString(request.uri()));
+                    setHttp3Scheme(inHeaders, out);
+                } else {
+                    String requestTarget = request.uri();
+                    out.path(toHttp3Path(requestTarget));
+                    if (hasSchemeAndAuthority(requestTarget)) {
+                        URI requestTargetUri = URI.create(http3PathlessRequestTarget(requestTarget));
+                        // The absolute-form request-target authority is authoritative and takes precedence over
+                        // a (potentially conflicting) HOST header, per RFC 9112 section 3.2 and RFC 9113 section 8.3.1.
+                        String requestTargetAuthority = requestTargetUri.getAuthority();
+                        host = isNullOrEmpty(requestTargetAuthority) ? host : requestTargetAuthority;
+                        setHttp3Scheme(inHeaders, requestTargetUri, out);
+                    } else {
+                        int schemeEnd = schemeEnd(requestTarget);
+                        if (schemeEnd != -1) {
+                            setHttp3Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                        } else {
+                            setHttp3Scheme(inHeaders, out);
+                        }
+                    }
                 }
+                setHttp3Authority(host, out);
             }
+            out.method(request.method().asciiName());
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
             out.status(response.status().codeAsText());
@@ -544,26 +557,144 @@ public final class HttpConversionUtil {
      * Generate an HTTP/3 {code :path} from a URI in accordance with
      * <a href="https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1.1">HTTP3 spec</a>.
      */
-    private static AsciiString toHttp3Path(URI uri) {
-        StringBuilder pathBuilder = new StringBuilder(length(uri.getRawPath()) +
-                length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
-        if (!isNullOrEmpty(uri.getRawPath())) {
-            pathBuilder.append(uri.getRawPath());
+    private static AsciiString toHttp3Path(String uri) {
+        String path = dropEmptyFragment(parsePath(uri));
+        String query = parseQuery(uri);
+        if (isNullOrEmpty(query)) {
+            return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
         }
-        if (!isNullOrEmpty(uri.getRawQuery())) {
-            pathBuilder.append('?');
-            pathBuilder.append(uri.getRawQuery());
+        StringBuilder pathBuilder = new StringBuilder(path.length() + query.length() + 1);
+        pathBuilder.append(path);
+        appendQuery(pathBuilder, query);
+        return new AsciiString(pathBuilder.toString());
+    }
+
+    /**
+     * Extract the path out of the request-target. Based on Vert.x' HttpUtils.parsePath logic.
+     */
+    private static String parsePath(String uri) {
+        if (uri.isEmpty()) {
+            return StringUtil.EMPTY_STRING;
         }
-        if (!isNullOrEmpty(uri.getRawFragment())) {
-            pathBuilder.append('#');
-            pathBuilder.append(uri.getRawFragment());
+        int i;
+        if (uri.charAt(0) == '/') {
+            i = 0;
+        } else {
+            i = uri.indexOf("://");
+            // Netty change: validate the scheme before treating :// as authority syntax.
+            if (!isValidScheme(uri, i)) {
+                i = 0;
+            } else {
+                int authorityStart = i + 3;
+                // Netty change: only accept '/' before query/fragment as path start.
+                int queryOrFragmentStart = queryOrFragmentStart(uri, authorityStart);
+                i = uri.indexOf('/', authorityStart);
+                if (i == -1 || (queryOrFragmentStart != -1 && queryOrFragmentStart < i)) {
+                    // contains no /
+                    return "/";
+                }
+            }
         }
-        String path = pathBuilder.toString();
-        return path.isEmpty() ? EMPTY_REQUEST_PATH : new AsciiString(path);
+
+        int queryStart = uri.indexOf('?', i);
+        if (queryStart == -1) {
+            queryStart = uri.length();
+            if (i == 0) {
+                return uri;
+            }
+        }
+        return uri.substring(i, queryStart);
+    }
+
+    /**
+     * Extract the query out of a request-target or returns {@code null} if no query was found.
+     */
+    private static String parseQuery(String uri) {
+        int i = uri.indexOf('?');
+        if (i == -1) {
+            return null;
+        } else {
+            return uri.substring(i + 1);
+        }
+    }
+
+    private static String dropEmptyFragment(String path) {
+        // Netty change: old URI-based conversion dropped an empty fragment delimiter.
+        return path.endsWith("#") ? path.substring(0, path.length() - 1) : path;
+    }
+
+    private static void appendQuery(StringBuilder pathBuilder, String query) {
+        int fragmentStart = query.indexOf('#');
+        if (fragmentStart == 0) {
+            // Netty change: old URI-based conversion skipped an empty query before a fragment.
+            pathBuilder.append(query);
+        } else if (fragmentStart == query.length() - 1) {
+            // Netty change: old URI-based conversion dropped an empty fragment delimiter after a query.
+            pathBuilder.append('?').append(query, 0, fragmentStart);
+        } else {
+            pathBuilder.append('?').append(query);
+        }
+    }
+
+    static int queryOrFragmentStart(String uri, int searchStart) {
+        int queryStart = uri.indexOf('?', searchStart);
+        int fragmentStart = uri.indexOf('#', searchStart);
+        return queryStart == -1 ? fragmentStart :
+            fragmentStart == -1 ? queryStart : Math.min(queryStart, fragmentStart);
+    }
+
+    // Netty addition: detect authority for HTTP/3 :scheme/:authority extraction.
+    static boolean hasSchemeAndAuthority(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf("://");
+        return isValidScheme(requestTarget, schemeEnd);
+    }
+
+    private static int schemeEnd(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf(':');
+        return isValidScheme(requestTarget, schemeEnd) ? schemeEnd : -1;
+    }
+
+    // Netty addition: prepare only scheme://authority for URI validation.
+    private static String http3PathlessRequestTarget(String requestTarget) {
+        int schemeEnd = requestTarget.indexOf("://");
+        int authorityStart = schemeEnd + 3;
+        // Netty addition: strip before path/query/fragment; Vert.x parsePath does not validate authority.
+        int pathStart = requestTarget.indexOf('/', authorityStart);
+        int delimiter = queryOrFragmentStart(requestTarget, authorityStart);
+        if (pathStart != -1 && (delimiter == -1 || pathStart < delimiter)) {
+            delimiter = pathStart;
+        }
+        if (delimiter == -1) {
+            return requestTarget;
+        }
+        return delimiter == authorityStart ? requestTarget.substring(0, delimiter + 1) :
+            requestTarget.substring(0, delimiter);
+    }
+
+    // Netty addition: validate the text before :// as a scheme.
+    static boolean isValidScheme(String uri, int schemeEnd) {
+        if (schemeEnd <= 0) {
+            return false;
+        }
+        char first = uri.charAt(0);
+        if (!isAlpha(first)) {
+            return false;
+        }
+        for (int i = 1; i < schemeEnd; ++i) {
+            char c = uri.charAt(i);
+            if (!isAlpha(c) && (c < '0' || c > '9') && c != '+' && c != '-' && c != '.') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isAlpha(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
     }
 
     // package-private for testing only
-    static void setHttp3Authority(@Nullable String authority, Http3Headers out) {
+    static void setHttp3Authority(String authority, Http3Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
             if (authority.isEmpty()) {
@@ -579,10 +710,17 @@ public final class HttpConversionUtil {
         }
     }
 
+    private static void setHttp3Scheme(HttpHeaders in, Http3Headers out) {
+        setHttp3Scheme(in, URI.create(""), out);
+    }
+
     private static void setHttp3Scheme(HttpHeaders in, URI uri, Http3Headers out) {
-        String value = uri.getScheme();
-        if (value != null) {
-            out.scheme(new AsciiString(value));
+        setHttp3Scheme(in, uri.getScheme(), uri.getPort(), out);
+    }
+
+    private static void setHttp3Scheme(HttpHeaders in, String scheme, int port, Http3Headers out) {
+        if (!isNullOrEmpty(scheme)) {
+            out.scheme(new AsciiString(scheme));
             return;
         }
 
@@ -593,13 +731,13 @@ public final class HttpConversionUtil {
             return;
         }
 
-        if (uri.getPort() == HTTPS.port()) {
+        if (port == HTTPS.port()) {
             out.scheme(HTTPS.name());
-        } else if (uri.getPort() == HTTP.port()) {
+        } else if (port == HTTP.port()) {
             out.scheme(HTTP.name());
         } else {
             throw new IllegalArgumentException(":scheme must be specified. " +
-                    "see https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1.1");
+                "see https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-4.1.1.1");
         }
     }
 
