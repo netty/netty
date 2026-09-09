@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -94,7 +96,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             super(maxThreads,
                   new ThreadPerTaskExecutor(Executors.defaultThreadFactory()),
                   new AutoScalingEventExecutorChooserFactory(
-                          minThreads, maxThreads, checkPeriod, unit, 0.4, 0.6,
+                          minThreads, maxThreads, checkPeriod, unit, 0.4, 0.7,
                           maxThreads, maxThreads, 2),
                   ARGS);
         }
@@ -333,6 +335,51 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                                   assertEquals(0.0, metric.utilization(),
                                                "Suspended executor should have 0.0 utilization.");
                               });
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    void testIdleExecutorsWithZeroMinChildren() throws InterruptedException {
+        int maxThreads = 2;
+        int minThreads = 0;
+        int timeWindowMs = 50;
+        TestEventExecutorGroup group = new TestEventExecutorGroup(minThreads, maxThreads,
+                timeWindowMs, TimeUnit.MILLISECONDS);
+        try {
+            startAllExecutors(group);
+            // With the idle cycles, the active executor count should be the minimum threads
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (group.activeExecutorCount() > minThreads && System.nanoTime() < deadline) {
+                Thread.sleep(timeWindowMs);
+            }
+            assertEquals(minThreads, group.activeExecutorCount(),
+                         "Group should scale down to 0 active executors");
+
+            // Ensure that all of the active executors are suspended
+            boolean executorActive = false;
+            for (EventExecutor executor: group) {
+                SingleThreadEventExecutor stee = (SingleThreadEventExecutor) executor;
+                executorActive |= !stee.isSuspended();
+            }
+            assertFalse(executorActive,
+                    "At least one executor was found to be active when all should be suspended.");
+
+            // Ensure the calling group.next() gives always an executor
+            TestEventExecutor activeExecutor = (TestEventExecutor) group.next();
+            assertNotNull(activeExecutor,
+                    "There should always be one executor returned when calling group.next().");
+            assertTrue(group.activeExecutorCount() > 0,
+                    "There should be at least one active executor after calling group.next().");
+
+            // After scaling up, the active executor count should go back down again to minChildren
+            while (group.activeExecutorCount() > minThreads && System.nanoTime() < deadline) {
+                Thread.sleep(timeWindowMs);
+            }
+            assertEquals(minThreads, group.activeExecutorCount(),
+                         "Group should scale down to 0 active executors");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
