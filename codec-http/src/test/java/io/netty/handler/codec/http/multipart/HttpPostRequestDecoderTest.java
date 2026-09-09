@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
@@ -1231,6 +1233,45 @@ public class HttpPostRequestDecoderTest {
                 "some partial content";
 
         decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    /**
+     * A factory shaped like the ones frameworks actually install: memory only, so nothing is tracked,
+     * with only the upload creation overridden. vert.x's NettyFileUploadDataFactory is this exact shape.
+     */
+    private static final class MemoryOnlyOverridingFactory extends DefaultHttpDataFactory {
+        MemoryOnlyOverridingFactory() {
+            super(false);
+        }
+
+        @Override
+        public FileUpload createFileUpload(HttpRequest request, String name, String filename,
+                                           String contentType, String contentTransferEncoding,
+                                           Charset charset, long size) {
+            return super.createFileUpload(request, name, filename, contentType,
+                    contentTransferEncoding, charset, size);
+        }
+    }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeAfterMaxBufferedBytes() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // the buffered bytes limit trips while "field" is still being decoded, which is the case a
+        // framework reaches when it catches the decoder exception and calls destroy() in response
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(
+                new MemoryOnlyOverridingFactory(), req, HttpConstants.DEFAULT_CHARSET, -1, 6);
+
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
 
         InterfaceHttpData partial = decoder.currentPartialHttpData();
         assertNotNull(partial);
