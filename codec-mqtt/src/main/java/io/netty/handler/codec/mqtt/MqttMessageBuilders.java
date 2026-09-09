@@ -73,7 +73,7 @@ public final class MqttMessageBuilders {
             MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, qos, retained, 0);
             MqttPublishVariableHeader mqttVariableHeader =
                     new MqttPublishVariableHeader(topic, messageId, mqttProperties);
-            return new MqttPublishMessage(mqttFixedHeader, mqttVariableHeader, Unpooled.buffer().writeBytes(payload));
+            return new MqttPublishMessage(mqttFixedHeader, mqttVariableHeader, payload);
         }
     }
 
