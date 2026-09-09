@@ -49,9 +49,21 @@
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
-    <!-- Lets use what we use in netty-tcnative-boringssl-static -->
+    <!-- Lets use what we use in netty-tcnative-boringssl-static. Bumped forward from
+         0226f30467f540a3f62ef48d453f93927da199b6 (2025-09-07) to d03dbc3e5d7de44183ff17018af22323af650fbc
+         (2026-05-12): boring 5.x (see quicheBoringVersionReplacement below) unconditionally calls
+         SSL_get_signature_algorithm_used, which BoringSSL only added upstream on 2026-05-12. -->
     <boringsslBranch>main</boringsslBranch>
-    <boringsslCommitSha>0226f30467f540a3f62ef48d453f93927da199b6</boringsslCommitSha>
+    <boringsslCommitSha>d03dbc3e5d7de44183ff17018af22323af650fbc</boringsslCommitSha>
+    <!-- quiche's Cargo.toml pins "boring = { version = \"4.3\" }", but boring 4.x's Rust source
+         hard-codes references to a handful of BoringSSL symbols (e.g. the old SslCurve API, and
+         a cloudflare-only unconditional Raw Public Key patch) that don't exist in a recent/vanilla
+         BoringSSL checkout like the one we build above. boring 5.x removed the SslCurve API and
+         reworked RPK support to use upstream's own SSL_CREDENTIAL API (feature-gated), so it
+         builds cleanly against our BoringSSL revision. We patch quiche's requirement up to "5"
+         below rather than pin BoringSSL to boring-sys's old vendored (2023) revision. -->
+    <quicheBoringVersionReq>boring = { version = "4.3" }</quicheBoringVersionReq>
+    <quicheBoringVersionReplacement>boring = { version = "5" }</quicheBoringVersionReplacement>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -60,7 +72,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>4f347477006bf7f928335d28f05056013f70b87e</quicheCommitSha>
+    <quicheCommitSha>55886df3be579579207104c8e645825b6347a209</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -858,6 +870,11 @@
                         </exec>
                       </else>
                     </if>
+
+                    <!-- See the comment next to quicheBoringVersionReq above: bump quiche's pinned
+                         "boring" dependency so it builds against our BoringSSL revision. -->
+                    <replace file="${quicheSourceDir}/Cargo.toml" token="${quicheBoringVersionReq}" value="${quicheBoringVersionReplacement}" summary="true" />
+
                     <echo message="Building Quiche" />
                     <if>
                       <equals arg1="${platform}" arg2="android" />
@@ -866,7 +883,8 @@
                           <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
-                          <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                          <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                          <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                         </exec>
                       </then>
                       <else>
@@ -879,7 +897,8 @@
                               <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
                               <env key="DEBUG" value="true" />
                               <env key="OPT_LEVEL" value="3" />
-                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                             </exec>
                           </then>
                           <elseif>
@@ -888,7 +907,8 @@
                               <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                                 <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                                 <arg value="${cargoTarget}" />
-                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                                <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                                 <env key="TARGET_CC" value="aarch64-none-linux-gnu-gcc" />
@@ -903,7 +923,8 @@
                                 <env key="CFLAGS" value="${extraCflags}" />
                                 <env key="CXXFLAGS" value="${extraCxxflags}" />
                                 <arg value="${cargoTarget}" />
-                                <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                                <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                                <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                                 <!-- Lets enable frame-pointers so we can profile better -->
                                 <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                                 <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
@@ -915,7 +936,8 @@
                               <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <env key="CFLAGS" value="${extraCflags}" />
                               <env key="CXXFLAGS" value="${extraCxxflags}" />
-                              <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
+                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
+                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
                               <!-- Lets enable frame-pointers so we can profile better -->
                               <env key="RUSTFLAGS" value="-Cforce-frame-pointers=yes" />
                               <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
