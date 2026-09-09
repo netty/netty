@@ -410,4 +410,77 @@ public class HttpConversionUtilTest {
         assertTrue(httpHeaders.contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
         assertEquals("meow", httpHeaders.get("cat"));
     }
+
+    @Test
+    public void absoluteFormRequestTargetAuthorityTakesPrecedenceOverConflictingHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://request-target.example/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("request-target.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetAuthorityMatchingHostIsUnaffected() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/admin", true);
+        msg.headers().add(HOST, "example.com");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
+    public void originFormRequestStillUsesHostAsAuthority() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+        msg.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("host-header.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithUserInfoStripsUserInfoFromAuthority() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://user:pass@request-target.example/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("request-target.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithIPv6LiteralTakesPrecedenceOverHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://[::1]:8080/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("[::1]:8080"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithExplicitPortTakesPrecedenceOverHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "http://request-target.example:8080/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http3Headers out = HttpConversionUtil.toHttp3Headers(msg, true);
+
+        assertEquals(new AsciiString("request-target.example:8080"), out.authority());
+    }
 }
