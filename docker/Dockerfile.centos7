@@ -57,6 +57,9 @@ RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSI
 RUN wget -q https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
 RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
+# Add pre-build clang so we can compile quiche.
+RUN wget -q https://github.com/netty/netty/releases/download/netty-clang-bin/centos-7-clang-18.1.8-bin.tar.xz && tar xf centos-7-clang-18.1.8-bin.tar.xz && mv clang-18.1.8 /opt/ && echo 'PATH=/opt/cclang-18.1.8/bin:$PATH' >> ~/.bashrc && echo 'export LIBCLANG_PATH=/opt/clang-18.1.8/lib' >>  ~/.bashrc && echo 'export BINDGEN_EXTRA_CLANG_ARGS="-I /opt/clang-18.1.8/lib/clang/18/include/"' >>  ~/.bashrc
+
 # Build OpenSSL 3.x from source using devtoolset-11
 RUN set -x && \
   source /opt/rh/devtoolset-11/enable && \

@@ -4,6 +4,7 @@ RUN microdnf install -y \
  apr-devel \
  autoconf \
  automake \
+ clang \
  cmake \
  g++ \
  gcc \
