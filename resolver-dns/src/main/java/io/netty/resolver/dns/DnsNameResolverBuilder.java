@@ -34,6 +34,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
@@ -556,7 +557,7 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
         checkNotNull(searchDomains, "searchDomains");
 
-        final LinkedHashSet<String> domains = new LinkedHashSet<String>(4);
+        final Set<String> domains = new LinkedHashSet<String>(4);
 
         for (String f : searchDomains) {
             if (f == null) {
