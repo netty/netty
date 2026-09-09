@@ -37,6 +37,9 @@ ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 # Install CMake
 RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
+# Add pre-build clang so we can compile quiche.
+RUN wget -q https://github.com/netty/netty/releases/download/netty-clang-bin/centos-7-clang-18.1.8-bin.tar.xz && tar xf centos-7-clang-18.1.8-bin.tar.xz && mv clang-18.1.8 /opt/ && echo 'PATH=/opt/cclang-18.1.8/bin:$PATH' >> ~/.bashrc && echo 'export LIBCLANG_PATH=/opt/clang-18.1.8/lib' >>  ~/.bashrc && echo 'export BINDGEN_EXTRA_CLANG_ARGS="-I /opt/clang-18.1.8/lib/clang/18/include/ --sysroot=/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc"' >>  ~/.bashrc
+
 # install rust and setup PATH and install correct toolchain
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="$HOME/.cargo/bin:${PATH}"
