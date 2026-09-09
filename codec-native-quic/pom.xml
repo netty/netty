@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.18.Final-SNAPSHOT</version>
+    <version>4.2.18.Final</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -1104,8 +1104,7 @@
                          The resourcecount check keeps a future layout change from turning this
                          into a silent no-op, which is the one failure mode that would ship a
                          broken artifact rather than break the build. -->
-                    <fileset id="nativeLibToPatch" dir="${nativeLibOnlyDir}/META-INF/native"
-                             includes="**/lib${jniLibName}.so" />
+                    <fileset id="nativeLibToPatch" dir="${nativeLibOnlyDir}/META-INF/native" includes="**/lib${jniLibName}.so" />
                     <fail message="expected exactly one lib${jniLibName}.so under ${nativeLibOnlyDir}/META-INF/native to patch">
                       <condition>
                         <not>
