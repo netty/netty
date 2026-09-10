@@ -851,7 +851,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            outer: while (!ctx.isRemoved()) {
+            outer: while (!ctx.isRemoved() && !pendingUnencryptedWrites.isEmpty()) {
                 ChannelPromise promise = ctx.newPromise();
                 ByteBuf buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
