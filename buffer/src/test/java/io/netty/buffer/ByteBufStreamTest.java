@@ -189,6 +189,21 @@ public class ByteBufStreamTest {
     }
 
     @Test
+    public void testSkipNegativeLength() throws Exception {
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeBytes(new byte[] { 1, 2, 3 });
+        ByteBufInputStream in = new ByteBufInputStream(buf);
+        try {
+            assertEquals(0, in.skip(-1));
+            assertEquals(0, in.skipBytes(-1));
+            assertEquals(0, buf.readerIndex());
+        } finally {
+            buf.release();
+            in.close();
+        }
+    }
+
+    @Test
     public void testReadLine() throws Exception {
         Charset utf8 = StandardCharsets.UTF_8;
         ByteBuf buf = Unpooled.buffer();
