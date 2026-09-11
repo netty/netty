@@ -28,7 +28,9 @@ import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * This ensures that Netty JFR support works in a modular runtime.
@@ -44,7 +46,7 @@ public class FlightRecorderTest {
     @Timeout(10)
     @Test
     public void testAdaptiveAllocatorEvent()  throws Exception {
-
+        assumeTrue(PlatformDependent.isJfrEnabled());
         ClassLoader cl = ClassLoader.getSystemClassLoader();
         Class<?> recordingStreamClass = cl.loadClass("jdk.jfr.consumer.RecordingStream");
         Constructor<?> ctor = recordingStreamClass.getConstructor();
