@@ -783,7 +783,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
     private static void testShutdownInputAllowsOutboundWrites(final boolean clientInitiates, final ServerBootstrap sb,
                                                               final Bootstrap cb)
-            throws InterruptedException {
+            throws Exception {
         final byte[] expectedBytes = new byte[100];
         ThreadLocalRandom.current().nextBytes(expectedBytes);
         final CountDownLatch readDoneLatch = new CountDownLatch(1);
@@ -808,8 +808,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     ch.pipeline().addLast(clientInitiates? shutdownInputWriter : shutdownInputReader);
                 }
             });
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             assertTrue(readDoneLatch.await(5, TimeUnit.SECONDS),
                        "Timed out waiting for inbound data after input shutdown");
             assertArrayEquals(expectedBytes, shutdownInputReader.receivedBytes());
@@ -855,7 +855,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
     }
 
-    private static final class ShutdownInputWriter extends ChannelInboundHandlerAdapter {
+    private static final class ShutdownInputWriter implements ChannelInboundHandler {
         private final byte[] expectedBytes;
 
         ShutdownInputWriter(final byte[] expectedBytes) {
@@ -864,7 +864,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            ((DuplexChannel) ctx.channel()).shutdownInput()
+            ctx.channel().shutdown(ChannelShutdownType.newInbound())
                                            .addListener(f -> {
                                                ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
                                            });
@@ -883,7 +883,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     }
 
     private static void testShutdownOutputAllowsInboundReads(final boolean clientInitiates, final ServerBootstrap sb,
-                                                             final Bootstrap cb) throws InterruptedException {
+                                                             final Bootstrap cb) throws Exception {
         final byte[] expectedBytes = new byte[100];
         ThreadLocalRandom.current().nextBytes(expectedBytes);
         final CountDownLatch readDoneLatch = new CountDownLatch(1);
@@ -911,8 +911,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             assertTrue(readDoneLatch.await(5, TimeUnit.SECONDS),
                        "Timed out waiting for inbound data after output shutdown");
             assertArrayEquals(expectedBytes, shutdownOutputReader.receivedBytes());
@@ -926,7 +926,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
     }
 
-    private static final class ShutdownOutputWriter extends ChannelInboundHandlerAdapter {
+    private static final class ShutdownOutputWriter implements ChannelInboundHandler {
         private final byte[] expectedBytes;
 
         ShutdownOutputWriter(final byte[] expectedBytes) {
@@ -934,11 +934,11 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if (evt == ChannelInputShutdownEvent.INSTANCE) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireChannelShutdown(type);
         }
     }
 
@@ -957,11 +957,11 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
-            ((DuplexChannel) ctx.channel()).shutdownOutput();
+            ctx.channel().shutdown(ChannelShutdownType.newOutbound());
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             receivedMsgs.writeBytes(msg);
             if (receivedMsgs.readableBytes() == expectedBytesCount) {
                 this.actualbytes = ByteBufUtil.getBytes(receivedMsgs);
