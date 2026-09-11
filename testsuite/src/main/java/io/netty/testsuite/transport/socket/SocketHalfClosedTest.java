@@ -898,11 +898,14 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
             ((DuplexChannel) ctx.channel()).shutdownInput()
-                                           .addListener(f -> {
-                                               ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
-                                           });
+                .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future){
+                        ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
+                    }
+                });
         }
     }
 
