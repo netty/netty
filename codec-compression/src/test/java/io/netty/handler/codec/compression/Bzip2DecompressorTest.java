@@ -15,9 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +44,35 @@ public class Bzip2DecompressorTest extends AbstractDecompressorTest {
 
             assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
             assertThrows(DecompressionException.class, decompressor::endOfInput);
+        }
+    }
+
+    @Test
+    public void rejectsTrailingData() throws DecompressionException {
+        EmbeddedChannel encoder = new EmbeddedChannel(createCompressor());
+        ByteBuf compressed = Unpooled.buffer();
+        try {
+            encoder.writeOutbound(Unpooled.wrappedBuffer(new byte[] { 1 }));
+            encoder.finish();
+
+            ByteBuf encoded;
+            while ((encoded = encoder.readOutbound()) != null) {
+                compressed.writeBytes(encoded);
+                encoded.release();
+            }
+        } finally {
+            encoder.finishAndReleaseAll();
+        }
+        compressed.writeByte(0);
+
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            decompressor.addInput(compressed);
+            assertThrows(DecompressionException.class, () -> {
+                while (decompressor.status() == Decompressor.Status.NEED_OUTPUT) {
+                    decompressor.takeOutput().release();
+                }
+            });
         }
     }
 }
