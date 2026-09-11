@@ -229,6 +229,12 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     public static final DnsRecordType TLSA = new DnsRecordType(0x0034, "TLSA");
 
     /**
+     * S/MIME certificate association record RFC 8162 Associates S/MIME certificates with email addresses
+     * to support certificate discovery via DNS.
+     */
+    public static final DnsRecordType SMIMEA = new DnsRecordType(0x0035, "SMIMEA");
+
+    /**
      * Host Identity Protocol record RFC 5205 Method of separating the end-point
      * identifier and locator roles of IP addresses.
      */
@@ -282,6 +288,11 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     public static final DnsRecordType ANY = new DnsRecordType(0x00ff, "ANY");
 
     /**
+     * URI record RFC 7553 Publishes a target URI for a name, including priority and weight.
+     */
+    public static final DnsRecordType URI = new DnsRecordType(0x0100, "URI");
+
+    /**
      * Certification Authority Authorization record RFC 6844 CA pinning,
      * constraining acceptable CAs for a host/domain.
      */
@@ -320,8 +331,8 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     static {
         DnsRecordType[] all = {
                 A, NS, CNAME, SOA, PTR, MX, TXT, RP, AFSDB, SIG, KEY, AAAA, LOC, SRV, NAPTR, KX, CERT, DNAME, OPT, APL,
-                DS, SSHFP, IPSECKEY, RRSIG, NSEC, DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA, HIP, SPF, TKEY, TSIG, IXFR,
-                AXFR, ANY, CAA, TA, DLV, SVCB, HTTPS
+                DS, SSHFP, IPSECKEY, RRSIG, NSEC, DNSKEY, DHCID, NSEC3, NSEC3PARAM, TLSA, SMIMEA, HIP, SPF, TKEY, TSIG,
+                IXFR, AXFR, ANY, URI, CAA, TA, DLV, SVCB, HTTPS
         };
 
         final StringBuilder expected = new StringBuilder(512);

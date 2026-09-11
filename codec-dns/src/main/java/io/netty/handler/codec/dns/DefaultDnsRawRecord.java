@@ -43,15 +43,7 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
      *
      * @param name the domain name
      * @param type the type of the record
-     * @param dnsClass the class of the record, usually one of the following:
-     *                 <ul>
-     *                     <li>{@link #CLASS_IN}</li>
-     *                     <li>{@link #CLASS_CSNET}</li>
-     *                     <li>{@link #CLASS_CHAOS}</li>
-     *                     <li>{@link #CLASS_HESIOD}</li>
-     *                     <li>{@link #CLASS_NONE}</li>
-     *                     <li>{@link #CLASS_ANY}</li>
-     *                 </ul>
+     * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
      */
     public DefaultDnsRawRecord(

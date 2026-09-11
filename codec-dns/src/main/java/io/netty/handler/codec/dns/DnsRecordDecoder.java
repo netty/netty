@@ -16,15 +16,24 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Decodes a DNS record into its object representation.
+ * <p>
+ * The behavior of the {@link #DEFAULT} decoder can be controlled via the system property
+ * {@code io.netty.dns.decoder.legacyMode}. When {@code true} (the default), the decoder uses
+ * legacy behavior (Netty &lt;=4.2.8) returning {@link DefaultDnsRawRecord} for most types.
+ * When {@code false}, structured record types are returned where implemented (e.g.,
+ * {@link DnsARecord}, {@link DnsMxRecord}); unsupported types still return
+ * {@link DefaultDnsRawRecord}.
  *
  * @see DatagramDnsResponseDecoder
  */
 public interface DnsRecordDecoder {
 
-    DnsRecordDecoder DEFAULT = new DefaultDnsRecordDecoder();
+    DnsRecordDecoder DEFAULT = new DefaultDnsRecordDecoder(
+            SystemPropertyUtil.getBoolean("io.netty.dns.decoder.legacyMode", true));
 
     /**
      * Decodes a DNS question into its object representation.

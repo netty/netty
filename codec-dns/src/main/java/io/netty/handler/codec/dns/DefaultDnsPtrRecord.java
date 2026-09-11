@@ -27,15 +27,7 @@ public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrReco
      * Creates a new PTR record.
      *
      * @param name the domain name
-     * @param dnsClass the class of the record, usually one of the following:
-     *                 <ul>
-     *                     <li>{@link #CLASS_IN}</li>
-     *                     <li>{@link #CLASS_CSNET}</li>
-     *                     <li>{@link #CLASS_CHAOS}</li>
-     *                     <li>{@link #CLASS_HESIOD}</li>
-     *                     <li>{@link #CLASS_NONE}</li>
-     *                     <li>{@link #CLASS_ANY}</li>
-     *                 </ul>
+     * @param dnsClass the class of the record, see {@link DnsRecord} for constants
      * @param timeToLive the TTL value of the record
      * @param hostname the hostname this PTR record resolves to.
      */

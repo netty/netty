@@ -184,4 +184,89 @@ public class DefaultDnsRecordEncoderTest {
     private static int nextInt(int max) {
         return ThreadLocalRandom.current().nextInt(max);
     }
+
+    @Test
+    public void testEncodeDecodeCnameRecord() throws Exception {
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(false);
+        DnsCnameRecord record = new DefaultDnsCnameRecord("a.netty.io.", DnsRecord.CLASS_IN, 60, "b.netty.io.");
+        ByteBuf out = Unpooled.buffer();
+        try {
+            encoder.encodeRecord(record, out);
+            DnsCnameRecord decoded = (DnsCnameRecord) decoder.decodeRecord(out.duplicate());
+            assertEquals("a.netty.io.", decoded.name());
+            assertEquals(DnsRecordType.CNAME, decoded.type());
+            assertEquals("b.netty.io.", decoded.canonicalName());
+
+            DnsRawRecord rawRecord = (DnsRawRecord) new DefaultDnsRecordDecoder(true).decodeRecord(out.duplicate());
+            try {
+                assertEquals("a.netty.io.", rawRecord.name());
+                assertEquals(DnsRecordType.CNAME, rawRecord.type());
+                assertEquals("b.netty.io.", DnsCodecUtil.decodeDomainName(rawRecord.content().duplicate()));
+            } finally {
+                rawRecord.release();
+            }
+        } finally {
+            out.release();
+        }
+    }
+
+    @Test
+    public void testEncodeDecodeNsRecord() throws Exception {
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(false);
+        DnsNsRecord record = new DefaultDnsNsRecord("netty.io.", DnsRecord.CLASS_IN, 60, "ns.netty.io.");
+        ByteBuf out = Unpooled.buffer();
+        try {
+            encoder.encodeRecord(record, out);
+            DnsNsRecord decoded = (DnsNsRecord) decoder.decodeRecord(out.duplicate());
+            assertEquals("netty.io.", decoded.name());
+            assertEquals(DnsRecordType.NS, decoded.type());
+            assertEquals("ns.netty.io.", decoded.nameServer());
+
+            DnsRawRecord rawRecord = (DnsRawRecord) new DefaultDnsRecordDecoder(true).decodeRecord(out.duplicate());
+            try {
+                assertEquals("netty.io.", rawRecord.name());
+                assertEquals(DnsRecordType.NS, rawRecord.type());
+                assertEquals("ns.netty.io.", DnsCodecUtil.decodeDomainName(rawRecord.content().duplicate()));
+            } finally {
+                rawRecord.release();
+            }
+        } finally {
+            out.release();
+        }
+    }
+
+    @Test
+    public void testEncodeDecodeMxRecord() throws Exception {
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(false);
+        DnsMxRecord record = new DefaultDnsMxRecord("netty.io.", DnsRecord.CLASS_IN, 60, 10, "mail.netty.io.");
+        ByteBuf out = Unpooled.buffer();
+        try {
+            encoder.encodeRecord(record, out);
+            DnsMxRecord decoded = (DnsMxRecord) decoder.decodeRecord(out.duplicate());
+            assertEquals("netty.io.", decoded.name());
+            assertEquals(DnsRecordType.MX, decoded.type());
+            assertEquals(10, decoded.preference());
+            assertEquals("mail.netty.io.", decoded.exchange());
+
+            DnsRawRecord rawRecord = (DnsRawRecord) new DefaultDnsRecordDecoder(true).decodeRecord(out.duplicate());
+            try {
+                assertEquals("netty.io.", rawRecord.name());
+                assertEquals(DnsRecordType.MX, rawRecord.type());
+                ByteBuf mxContent = rawRecord.content();
+                int mxIndex = mxContent.readerIndex();
+                assertEquals(10, mxContent.getUnsignedShort(mxIndex));
+                ByteBuf exchangeName = mxContent.duplicate()
+                        .setIndex(mxIndex + 2, mxContent.writerIndex());
+                assertEquals("mail.netty.io.", DnsCodecUtil.decodeDomainName(exchangeName));
+            } finally {
+                rawRecord.release();
+            }
+        } finally {
+            out.release();
+        }
+    }
+
 }
