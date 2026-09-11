@@ -902,7 +902,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             ((DuplexChannel) ctx.channel()).shutdownInput()
                 .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future){
+                    public void operationComplete(ChannelFuture future) {
                         ctx.writeAndFlush(Unpooled.wrappedBuffer(expectedBytes));
                     }
                 });
