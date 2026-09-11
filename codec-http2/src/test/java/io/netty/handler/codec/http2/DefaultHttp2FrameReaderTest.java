@@ -174,7 +174,7 @@ public class DefaultHttp2FrameReaderTest {
             frameReader.readFrame(ctx, input, listener);
 
             verify(listener).onUnknownFrame(
-                    ctx, (byte) 0xff, 0, new Http2Flags(), payload.slice(0, 1));
+                    ctx, (short) 0xff, 0, new Http2Flags(), payload.slice(0, 1));
         } finally {
             payload.release();
             input.release();
