@@ -115,7 +115,7 @@ abstract class Cache<E> {
      */
     final List<? extends E> get(String hostname) {
         Entries entries = resolveCache.get(hostname);
-        return entries == null ? null : entries.get();
+        return entries == null ? null : entries.getIfNotExpired();
     }
 
     /**
@@ -168,6 +168,19 @@ abstract class Cache<E> {
         Entries(String hostname) {
             super(Collections.<E>emptyList());
             this.hostname = hostname;
+        }
+
+        List<E> getIfNotExpired() {
+            ScheduledFuture<?> expirationFuture = this.expirationFuture;
+            // The expiration task may have been cancelled when its EventLoop was shut down. The future still
+            // tracks the original deadline, so also expire entries lazily to ensure we never return them past
+            // their TTL.
+            if (expirationFuture != null && expirationFuture.getDelay(TimeUnit.NANOSECONDS) <= 0) {
+                resolveCache.remove(hostname, this);
+                clearAndCancel();
+                return null;
+            }
+            return get();
         }
 
         void add(E e, int ttl, EventLoop loop) {

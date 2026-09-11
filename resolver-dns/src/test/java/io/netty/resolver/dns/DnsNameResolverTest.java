@@ -2780,14 +2780,14 @@ public class DnsNameResolverTest {
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
-    public void testCachesClearedOnClose(DnsNameResolverChannelStrategy strategy) throws Exception {
-        final CountDownLatch resolveLatch = new CountDownLatch(1);
-        final CountDownLatch authoritativeLatch = new CountDownLatch(1);
+    public void testProvidedCachesNotClearedOnClose(DnsNameResolverChannelStrategy strategy) throws Exception {
+        final AtomicInteger resolveClearCalls = new AtomicInteger();
+        final AtomicInteger authoritativeClearCalls = new AtomicInteger();
 
         DnsNameResolver resolver = newResolver(strategy).resolveCache(new DnsCache() {
             @Override
             public void clear() {
-                resolveLatch.countDown();
+                resolveClearCalls.incrementAndGet();
             }
 
             @Override
@@ -2814,7 +2814,7 @@ public class DnsNameResolverTest {
         }).authoritativeDnsServerCache(new DnsCache() {
             @Override
             public void clear() {
-                authoritativeLatch.countDown();
+                authoritativeClearCalls.incrementAndGet();
             }
 
             @Override
@@ -2840,8 +2840,8 @@ public class DnsNameResolverTest {
         }).build();
 
         resolver.close();
-        resolveLatch.await();
-        authoritativeLatch.await();
+        assertEquals(0, resolveClearCalls.get());
+        assertEquals(0, authoritativeClearCalls.get());
     }
 
     @ParameterizedTest
