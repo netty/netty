@@ -16,14 +16,22 @@
 package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.http.HttpHeadersTestUtils.HeaderValue;
+import io.netty.handler.codec.DateFormatter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.Date;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.EXPIRES;
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.AsciiString.contentEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -92,6 +100,60 @@ public class CombinedHttpHeadersTest {
     }
 
     @Test
+    public void dateHeadersStayRawWhenAddedAsDateObject() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        final Date date = new Date(784111777000L);
+        final String formatted = DateFormatter.format(date);
+
+        headers.set(DATE, date);
+
+        assertEquals(formatted, headers.get(DATE));
+        assertEquals(Collections.singletonList(formatted), headers.getAll(DATE));
+        assertTrue(headers.containsValue(DATE, formatted, true));
+        assertFalse(headers.containsValue(DATE, "Mon", true));
+    }
+
+    @Test
+    public void dateHeadersStayRawWhenAddedAsString() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        final String formatted = "Sun, 6 Nov 1994 08:49:37 GMT";
+
+        headers.add(EXPIRES, formatted);
+
+        assertEquals(formatted, headers.get(EXPIRES));
+        assertEquals(Collections.singletonList(formatted), headers.getAll(EXPIRES));
+        assertTrue(headers.containsValue(EXPIRES, formatted, true));
+        assertFalse(headers.containsValue(EXPIRES, "Sun", true));
+    }
+
+    @Test
+    public void fullHttpResponseWithSingleFieldHeadersPreservesDateHeader() {
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, true, true);
+        final String formatted = "Tue, 17 Sep 2019 17:52:01 GMT";
+
+        response.headers().add(DATE, formatted);
+
+        final String responseString = response.toString();
+        assertTrue(responseString.contains(DATE + ": " + formatted), responseString);
+        assertFalse(responseString.contains(DATE + ": \"" + formatted + '"'));
+    }
+
+    @Test
+    public void repeatedDateHeadersStaySeparate() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        final String first = "Sun, 6 Nov 1994 08:49:37 GMT";
+        final String second = "Mon, 7 Nov 1994 08:49:37 GMT";
+
+        headers.add(DATE, first);
+        headers.add(DATE, second);
+
+        assertEquals(Arrays.asList(first, second), headers.getAll(DATE));
+        assertTrue(headers.containsValue(DATE, first, true));
+        assertTrue(headers.containsValue(DATE, second, true));
+        assertFalse(headers.containsValue(DATE, "Sun", true));
+    }
+
+    @Test
     public void setCombinedHeadersWhenNotEmpty() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, "a");
@@ -122,6 +184,26 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "c");
         headers.set(otherHeaders);
         assertEquals("b,c", headers.get(HEADER_NAME));
+    }
+
+    @Test
+    public void acceptHeadersStillCombine() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(ACCEPT, "text/plain");
+        headers.add(ACCEPT, "text/html");
+
+        assertEquals("text/plain,text/html", headers.get(ACCEPT));
+        assertEquals(Arrays.asList("text/plain", "text/html"), headers.getAll(ACCEPT));
+    }
+
+    @Test
+    public void nonHttpDateHeadersStillCombine() {
+        final CombinedHttpHeaders headers = newCombinedHttpHeaders();
+        headers.add(CONTENT_TYPE, "text/plain");
+        headers.add(CONTENT_TYPE, "text/html");
+
+        assertEquals("text/plain,text/html", headers.get(CONTENT_TYPE));
+        assertEquals(Arrays.asList("text/plain", "text/html"), headers.getAll(CONTENT_TYPE));
     }
 
     @Test
