@@ -16,7 +16,6 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -198,16 +197,17 @@ public class QuicWritableTest extends AbstractQuicTest {
                                 assertEquals(before, newBefore + size);
                                 before = newBefore;
                             }
-                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(writePromise));
+                            ctx.write(ctx.alloc().buffer(firstWriteNumBytes).writeZero(firstWriteNumBytes))
+                                    .addListener(new PromiseNotifier<>(writePromise));
+                            ctx.writeAndFlush(ctx.alloc().buffer(maxData).writeZero(maxData));
                         }
                     }
 
                     @Override
                     public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                         if (ctx.channel().isWritable()) {
-                            if (ctx.channel().bytesBeforeUnwritable() > 0) {
-                                writableAgainLatch.countDown();
-                            }
+                            assertTrue(ctx.channel().bytesBeforeUnwritable() > 0);
+                            writableAgainLatch.countDown();
                         }
                     }
 
