@@ -33,6 +33,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -55,12 +56,12 @@ public class LocalChannel extends AbstractChannel {
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
+    private static final int CHUNK_SIZE = SystemPropertyUtil.getInt("io.netty.local.channel.chunkSize", 4 * 1024);
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    // To further optimize this we could write our own SPSC queue.
-    final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
+    final Queue<Object> inboundBuffer = newQueue();
     private final Runnable readTask = new Runnable() {
         @Override
         public void run() {
@@ -140,6 +141,10 @@ public class LocalChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return state == State.CONNECTED;
+    }
+
+    protected Queue<Object> newQueue() {
+        return PlatformDependent.newChunkedSpscQueue(CHUNK_SIZE);
     }
 
     @Override
