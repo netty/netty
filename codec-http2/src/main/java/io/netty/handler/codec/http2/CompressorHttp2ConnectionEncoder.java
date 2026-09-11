@@ -59,7 +59,13 @@ import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
  * stream. The compression provided by this class will be applied to the data for the entire stream.
+ *
+ * @deprecated This encoder decides compression from the response {@code content-encoding} header alone and cannot
+ * see the request's {@code accept-encoding}, which leads to double-encoding of already-encoded bodies
+ * (see #14277). Prefer {@link NegotiatingCompressorHttp2ConnectionEncoder} together with
+ * {@link Http2RequestAcceptEncodingFrameListener}.
  */
+@Deprecated
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
     // We cannot remove this because it'll be breaking change
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;
