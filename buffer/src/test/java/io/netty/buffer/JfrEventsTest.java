@@ -48,6 +48,49 @@ public class JfrEventsTest {
         return new AdaptiveByteBufAllocator(preferDirect);
     }
 
+    /**
+     * A chunk whose buffer goes to the {@code SizeClassChunkRecycler} has its {@code delegate}
+     * nulled before it is deallocated. {@code deallocate()} used to fire the FreeChunk event first,
+     * and {@code AbstractChunkEvent.fill} reads {@code isDirect()}/{@code memoryAddress()}, both of
+     * which dereference the delegate - so with chunk recording enabled this threw NPE straight out
+     * of {@link ByteBuf#release()}.
+     */
+    @SuppressWarnings("Since15")
+    @Test
+    public void adaptiveChunkRecyclingMustNotThrowWhileChunkEventsAreRecorded() throws Exception {
+        try (RecordingStream stream = new RecordingStream()) {
+            stream.enable(FreeChunkEvent.class);
+            stream.onEvent(FreeChunkEvent.NAME, e -> { });
+            stream.startAsync();
+
+            // useCacheForNonEventLoopThreads=false -> shared path, so chunkRecycler is non-null
+            AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(false, false);
+            int buffersPerChunk = 512;
+            List<ByteBuf> bufs = new ArrayList<ByteBuf>();
+
+            // A working set above the retention floor, then fully released, so eviction fires and
+            // recycleOrDeallocate hands buffers to the recycler.
+            for (int i = 0; i < 40 * buffersPerChunk; i++) {
+                bufs.add(alloc.heapBuffer(256));
+            }
+            for (ByteBuf b : bufs) {
+                b.release();
+            }
+            bufs.clear();
+
+            // keep allocating so purge ticks fire against the now-idle chunks
+            for (int round = 0; round < 80; round++) {
+                for (int i = 0; i < buffersPerChunk; i++) {
+                    bufs.add(alloc.heapBuffer(256));
+                }
+                for (ByteBuf b : bufs) {
+                    b.release();
+                }
+                bufs.clear();
+            }
+        }
+    }
+
     @SuppressWarnings("Since15")
     @Test
     public void pooledJfrChunkAllocation() throws Exception {

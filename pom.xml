@@ -1314,6 +1314,24 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.addedToInterface</code>
+                  <new>method int io.netty.util.concurrent.MpscIntQueue::capacity()</new>
+                  <justification>MpscIntQueue is not intended to be implemented outside of Netty: its only
+                    implementation, MpscAtomicIntegerArrayQueue, is nested inside the interface itself and is
+                    reachable only through the MpscIntQueue.create(int, int) factory. The type exists to serve
+                    the adaptive allocator's size-classed chunks.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.addedToInterface</code>
+                  <new>method void io.netty.util.concurrent.MpscIntQueue::resetAndFill(int, int)</new>
+                  <justification>MpscIntQueue is not intended to be implemented outside of Netty: its only
+                    implementation, MpscAtomicIntegerArrayQueue, is nested inside the interface itself and is
+                    reachable only through the MpscIntQueue.create(int, int) factory. The type exists to serve
+                    the adaptive allocator's size-classed chunks.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>
                   <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initBidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
                   <justification>Allow applications to customize initialization of bidirectional streams by subclassing.</justification>
