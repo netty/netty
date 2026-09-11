@@ -710,7 +710,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     }
                 }
                 if (written) {
-                    updateWritabilityIfNeeded(true);
+                    updateWritabilityIfNeeded(capacity > 0);
                 }
                 return written;
             } finally {
