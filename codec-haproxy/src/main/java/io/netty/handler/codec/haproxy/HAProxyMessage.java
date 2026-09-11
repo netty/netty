@@ -605,10 +605,28 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     int tlvNumBytes() {
         int tlvNumBytes = 0;
-        for (int i = 0; i < tlvs.size(); i++) {
+        for (int i = 0; i < tlvs.size(); i += 1 + flattenedChildren(tlvs, i)) {
             tlvNumBytes += tlvs.get(i).totalNumBytes();
         }
         return tlvNumBytes;
+    }
+
+    /**
+     * Returns how many entries directly following {@link HAProxySSLTLV} at {@code index}
+     * are its encapsulated TLVs.
+     */
+    static int flattenedChildren(List<HAProxyTLV> tlvs, int index) {
+        HAProxyTLV tlv = tlvs.get(index);
+        if (!(tlv instanceof HAProxySSLTLV)) {
+            return 0;
+        }
+        List<HAProxyTLV> children = ((HAProxySSLTLV) tlv).encapsulatedTLVs();
+        int n = 0;
+        while (n < children.size() && (index + 1 + n) < tlvs.size() &&
+                children.get(n) == tlvs.get(index + 1 + n)) {
+            n++;
+        }
+        return n;
     }
 
     @Override
