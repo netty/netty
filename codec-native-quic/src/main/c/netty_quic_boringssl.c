@@ -1327,6 +1327,55 @@ void netty_boringssl_SSL_cleanup(JNIEnv* env, jclass clazz, jlong ssl) {
     }
 }
 
+// Export keying material as defined in https://datatracker.ietf.org/doc/html/rfc5705 (aka a TLS exporter).
+// Returns null (and does not throw) when the exporter secret is not (yet) available or the export fails,
+// the caller is responsible for translating this into an exception.
+jbyteArray netty_boringssl_SSL_export_keying_material(JNIEnv* env, jclass clazz, jlong ssl,
+        jbyteArray labelArray, jbyteArray contextArray, jint length) {
+    uint8_t* label = (uint8_t*) (*env)->GetByteArrayElements(env, labelArray, 0);
+    if (label == NULL) {
+        return NULL;
+    }
+    int label_len = (*env)->GetArrayLength(env, labelArray);
+
+    // The context is optional. When it is not present at all (contextArray == NULL) we must set use_context to 0
+    // so BoringSSL does not mix an empty context into the derivation, which differs from "no context".
+    uint8_t* context = NULL;
+    int context_len = 0;
+    int use_context = 0;
+    if (contextArray != NULL) {
+        context = (uint8_t*) (*env)->GetByteArrayElements(env, contextArray, 0);
+        if (context == NULL) {
+            (*env)->ReleaseByteArrayElements(env, labelArray, (jbyte*) label, JNI_ABORT);
+            return NULL;
+        }
+        context_len = (*env)->GetArrayLength(env, contextArray);
+        use_context = 1;
+    }
+
+    jbyteArray result = NULL;
+    // OPENSSL_malloc(0) may return NULL, so ensure we always request at least one byte.
+    uint8_t* out = (uint8_t*) OPENSSL_malloc(length == 0 ? 1 : (size_t) length);
+    if (out != NULL &&
+            SSL_export_keying_material((SSL*) ssl, out, (size_t) length,
+                                       (const char*) label, (size_t) label_len,
+                                       context, (size_t) context_len, use_context) == 1) {
+        result = (*env)->NewByteArray(env, length);
+        if (result != NULL) {
+            (*env)->SetByteArrayRegion(env, result, 0, length, (jbyte*) out);
+        }
+    }
+
+    if (out != NULL) {
+        OPENSSL_free(out);
+    }
+    (*env)->ReleaseByteArrayElements(env, labelArray, (jbyte*) label, JNI_ABORT);
+    if (context != NULL) {
+        (*env)->ReleaseByteArrayElements(env, contextArray, (jbyte*) context, JNI_ABORT);
+    }
+    return result;
+}
+
 int netty_boringssl_password_callback(char *buf, int bufsiz, int verify, void *cb) {
     char *password = (char *) cb;
     if (password == NULL) {
@@ -1541,6 +1590,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
   { "SSL_getTask", "(J)Ljava/lang/Runnable;", (void *) netty_boringssl_SSL_getTask },
   { "SSL_cleanup", "(J)V", (void *) netty_boringssl_SSL_cleanup },
+  { "SSL_export_keying_material", "(J[B[BI)[B", (void *) netty_boringssl_SSL_export_keying_material },
   { "EVP_PKEY_parse", "([BLjava/lang/String;)J", (void *) netty_boringssl_EVP_PKEY_parse },
   { "EVP_PKEY_free", "(J)V", (void *) netty_boringssl_EVP_PKEY_free },
   { "CRYPTO_BUFFER_stack_new", "(J[[B)J", (void *) netty_boringssl_CRYPTO_BUFFER_stack_new },
