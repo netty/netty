@@ -100,7 +100,7 @@ final class Native {
     static final int NOTE_RDHUP = NOTE_READCLOSED | NOTE_CONNRESET | NOTE_DISCONNECTED;
 
     // Commonly used combinations of EV defines
-    static final short EV_ADD_CLEAR_ENABLE = (short) (EV_ADD | EV_CLEAR | EV_ENABLE);
+    static final short EV_ADD_ENABLE = (short) (EV_ADD | EV_ENABLE);
     static final short EV_DELETE_DISABLE = (short) (EV_DELETE | EV_DISABLE);
 
     static final short EVFILT_READ = evfiltRead();

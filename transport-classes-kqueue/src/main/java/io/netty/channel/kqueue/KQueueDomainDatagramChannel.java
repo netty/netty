@@ -246,7 +246,6 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
-            readReadyBefore();
 
             Throwable exception = null;
             try {
@@ -319,7 +318,9 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                readReadyFinally(config);
+                if (shouldStopReading(config)) {
+                    clearReadFilter0();
+                }
             }
         }
     }
