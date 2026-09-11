@@ -24,7 +24,6 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.InetSocketAddressResolver;
 import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
@@ -40,8 +39,14 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
     private final DnsNameResolverBuilder dnsResolverBuilder;
 
-    private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = new ConcurrentHashMap<>();
+    // The map values are intentionally InflightEntry (not raw Promise) so that the
+    // InflightNameResolver can attach multiple concurrent callers to a single in-flight
+    // resolution and clean up the slot when the last caller is done. See
+    // https://github.com/netty/netty/issues/17039.
+    private final ConcurrentMap<String, InflightNameResolver.InflightEntry<InetAddress>> resolvesInProgress =
+            new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, InflightNameResolver.InflightEntry<List<InetAddress>>>
+            resolveAllsInProgress = new ConcurrentHashMap<>();
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
