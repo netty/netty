@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
@@ -1141,5 +1143,142 @@ public class HttpPostRequestDecoderTest {
 
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyBytes)));
         decoder.destroy();
+    }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeStandardDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // memory only factory, so the attribute is not tracked by the factory either
+        HttpPostRequestDecoder decoder =
+                new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+
+        // not a LastHttpContent, so the value of "field" is still being decoded
+        decoder.offer(new DefaultHttpContent(
+                Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    @Test
+    public void testDestroyReleasesPartialFileUploadMultipartDecoder() {
+        String boundary = "be38b42a9ad2713f";
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        // memory only factory, so the file upload is not tracked by the factory either
+        HttpPostRequestDecoder decoder =
+                new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), req);
+
+        String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                "some partial content";
+
+        // not a LastHttpContent and the closing delimiter is missing, so the upload is still being decoded
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeTrackedByFactory() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // the default factory checks the size, so it does track the attribute and cleanFiles()
+        // releases it before destroy() gets to it
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(), req);
+
+        decoder.offer(new DefaultHttpContent(
+                Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    @Test
+    public void testDestroyReleasesPartialFileUploadTrackedByFactory() {
+        String boundary = "be38b42a9ad2713f";
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        // the default factory checks the size, so it does track the upload and cleanFiles()
+        // releases it before destroy() gets to it
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(), req);
+
+        String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+                "Content-Type: text/plain\r\n" +
+                "\r\n" +
+                "some partial content";
+
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
+    }
+
+    /**
+     * A factory shaped like the ones frameworks actually install: memory only, so nothing is tracked,
+     * with only the upload creation overridden. vert.x's NettyFileUploadDataFactory is this exact shape.
+     */
+    private static final class MemoryOnlyOverridingFactory extends DefaultHttpDataFactory {
+        MemoryOnlyOverridingFactory() {
+            super(false);
+        }
+
+        @Override
+        public FileUpload createFileUpload(HttpRequest request, String name, String filename,
+                                           String contentType, String contentTransferEncoding,
+                                           Charset charset, long size) {
+            return super.createFileUpload(request, name, filename, contentType,
+                    contentTransferEncoding, charset, size);
+        }
+    }
+
+    @Test
+    public void testDestroyReleasesPartialAttributeAfterMaxBufferedBytes() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+        // the buffered bytes limit trips while "field" is still being decoded, which is the case a
+        // framework reaches when it catches the decoder exception and calls destroy() in response
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(
+                new MemoryOnlyOverridingFactory(), req, HttpConstants.DEFAULT_CHARSET, -1, 6);
+
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer("field=partialvalue", CharsetUtil.UTF_8)));
+
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertNotNull(partial);
+        assertEquals(1, partial.refCnt());
+
+        decoder.destroy();
+
+        assertEquals(0, partial.refCnt());
     }
 }

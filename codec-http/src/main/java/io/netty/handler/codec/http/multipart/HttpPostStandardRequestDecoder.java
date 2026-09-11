@@ -632,6 +632,14 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 httpData.release();
             }
         }
+        // An Attribute that is still being decoded was never added to bodyListHttpData, and a memory based
+        // one is not tracked by the factory either, so cleanFiles() above does not cover it.
+        if (currentAttribute != null) {
+            if (currentAttribute.refCnt() > 0) {
+                currentAttribute.release();
+            }
+            currentAttribute = null;
+        }
 
         destroyed = true;
 
