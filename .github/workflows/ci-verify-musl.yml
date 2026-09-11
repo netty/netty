@@ -1,0 +1,159 @@
+# ----------------------------------------------------------------------------
+# Copyright 2026 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+# The Linux native artifacts are glibc-built but are expected to load from the same jar on musl.
+# Nothing in the normal build notices when that stops being true: the build hosts are CentOS, the
+# test hosts are Ubuntu, and musl does not fail a dlopen on a relocation it cannot resolve, so a
+# broken artifact still loads and only dies later. These legs run the real thing on real Alpine.
+name: Verify native library loading on musl
+
+on:
+  push:
+    branches: [ "4.1", "4.2", "5.0" ]
+
+  pull_request:
+    branches: [ "4.1", "4.2", "5.0" ]
+
+  workflow_dispatch:
+
+env:
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-jars:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-native-quic"
+          - arch: aarch64
+            docker-compose-build: "-f docker/docker-compose.centos-7.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-build-native-quic"
+
+    name: build-jars-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
+
+      - name: Build docker image
+        run: docker compose ${{ matrix.docker-compose-build }}
+
+      - name: Build the native quic jars
+        run: docker compose ${{ matrix.docker-compose-run }}
+
+      - name: Upload the netty jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: netty-jars-${{ matrix.arch }}
+          path: ~/.m2/repository/io/netty/
+          if-no-files-found: error
+
+  musl-verify:
+    runs-on: ubuntu-latest
+    needs: build-jars
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # bare is the case that matters: a stock Alpine JDK image, nothing added.
+          - leg: alpine-x86_64
+            arch: x86_64
+            platform: linux/amd64
+            image: eclipse-temurin:21-jdk-alpine
+            packages: ""
+            variant: bare
+          - leg: alpine-aarch64
+            arch: aarch64
+            platform: linux/arm64
+            image: eclipse-temurin:21-jdk-alpine
+            packages: ""
+            variant: bare
+          # gcompat is not expected to change the answer. It exists so that a bare failure is
+          # diagnostic: if bare fails and gcompat passes, the artifact has re-acquired a dependency
+          # on the shim, which is how netty-tcnative 2.0.65 appeared to work on Alpine.
+          - leg: alpine-x86_64-gcompat
+            arch: x86_64
+            platform: linux/amd64
+            image: eclipse-temurin:21-jdk-alpine
+            packages: "gcompat"
+            variant: gcompat
+          - leg: alpine-aarch64-gcompat
+            arch: aarch64
+            platform: linux/arm64
+            image: eclipse-temurin:21-jdk-alpine
+            packages: "gcompat"
+            variant: gcompat
+          # The control. Anything that fails on Alpine but also fails here is a broken harness, not
+          # a broken library.
+          - leg: glibc-control-x86_64
+            arch: x86_64
+            platform: linux/amd64
+            image: eclipse-temurin:21-jdk-noble
+            packages: ""
+            variant: glibc-control
+
+    name: musl-verify-${{ matrix.leg }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the netty jars
+        uses: actions/download-artifact@v4
+        with:
+          name: netty-jars-${{ matrix.arch }}
+          path: /home/runner/jars
+
+      # The runners are x86_64, so the aarch64 legs need binfmt.
+      - name: Set up QEMU
+        if: ${{ matrix.arch == 'aarch64' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Verify
+        run: |
+          docker run --rm --platform ${{ matrix.platform }} \
+            -v "$PWD/.github/scripts/musl-verify:/verify:ro" \
+            -v /home/runner/jars:/jars:ro \
+            -e MUSL_VARIANT='${{ matrix.variant }}' \
+            -e MUSL_DROP_ELFTOOLS=1 \
+            ${{ matrix.image }} \
+            sh -c '
+              set -e
+              if command -v apk >/dev/null 2>&1; then
+                # Virtual package so verify.sh can drop the ELF tools again before it executes
+                # anything: binutils depends on libgcc, and leaving it installed would silently
+                # satisfy a libgcc_s.so.1 DT_NEEDED that the bare leg exists to catch.
+                apk add --no-cache --virtual .elftools binutils >/dev/null
+                if [ -n "${{ matrix.packages }}" ]; then
+                  apk add --no-cache ${{ matrix.packages }} >/dev/null
+                fi
+              else
+                apt-get update -qq && apt-get install -qq -y binutils >/dev/null
+              fi
+              sh /verify/verify.sh /jars
+            '

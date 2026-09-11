@@ -11,8 +11,31 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 
 RUN yum -y install epel-release
 
-# Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
+# Install requirements. patchelf is what drops the DT_NEEDED on ld-linux-<arch>.so from the
+# linked native libraries, which is what makes them loadable under musl; see
+# codec-native-quic/pom.xml.
+RUN yum install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ bzip2 \
+ git \
+ glibc-devel \
+ golang \
+ gnupg \
+ libaio-devel \
+ libtool \
+ lksctp-tools \
+ redhat-lsb-core \
+ ninja-build \
+ make \
+ openssl-devel \
+ patchelf \
+ perl \
+ tar \
+ unzip \
+ wget \
+ zip
 
 # Downloading and installing SDKMAN!
 RUN curl -s  "https://get.sdkman.io" | bash
