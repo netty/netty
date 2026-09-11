@@ -37,6 +37,7 @@ import static io.netty.handler.codec.haproxy.HAProxyMessageEncoder.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -326,6 +327,69 @@ public class HaProxyMessageEncoderTest {
 
         byteBuf.release();
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testReencodeDecodedNestedSslTlvsRoundTrips() {
+        // PROXY v2 header with a top-level PP2_TYPE_SSL TLV that itself encapsulates a nested
+        // PP2_TYPE_SSL TLV (which in turn encapsulates a PP2_TYPE_SSL_VERSION TLV) and a
+        // PP2_TYPE_SSL_CN TLV. HAProxyMessage.readTlvs(...) flattens the two direct children of the
+        // top-level SSL TLV into HAProxyMessage.tlvs() alongside the SSL TLV itself.
+        byte[] bytes = {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10,
+                33, 17,
+                0, 43,
+                127, 0, 0, 1, 127, 0, 0, 1, -55, -90, 7, 89,
+                32, 0, 28,
+                5, 0, 0, 0, 0,
+                32, 0, 13,
+                1, 0, 0, 0, 0,
+                33, 0, 5, 84, 76, 83, 118, 49,
+                34, 0, 4, 76, 69, 65, 70
+        };
+        int originalPayloadLength = ((bytes[14] & 0xff) << 8) | (bytes[15] & 0xff);
+
+        ByteBuf original = Unpooled.wrappedBuffer(bytes);
+        HAProxyMessage decoded = HAProxyMessage.decodeHeader(original);
+        EmbeddedChannel encoder = new EmbeddedChannel(INSTANCE);
+        EmbeddedChannel downstream = new EmbeddedChannel(new HAProxyMessageDecoder());
+        try {
+            // 3 flattened entries: the top-level SSL TLV, its nested SSL TLV child, and the SSL_CN child.
+            assertEquals(3, decoded.tlvs().size());
+
+            assertTrue(encoder.writeOutbound(decoded.retain()));
+            ByteBuf encoded = encoder.readOutbound();
+
+            // The declared v2 payload length must equal the number of bytes actually written, and must
+            // match the original (valid) input length -- re-encoding a decoded message must not inflate
+            // or shrink the frame.
+            int declaredLength = encoded.getUnsignedShort(14);
+            int actualPayloadBytes = encoded.readableBytes() - V2_HEADER_BYTES_LENGTH;
+            assertEquals(originalPayloadLength, declaredLength);
+            assertEquals(originalPayloadLength, actualPayloadBytes);
+
+            // Append trailing application data that must never be consumed as PROXY protocol bytes.
+            ByteBuf input = encoder.alloc().buffer();
+            input.writeBytes(encoded, encoded.readerIndex(), encoded.readableBytes());
+            String appDataString = "GET /ok\r\n";
+            input.writeCharSequence(appDataString, CharsetUtil.US_ASCII);
+            encoded.release();
+
+            assertTrue(downstream.writeInbound(input));
+            HAProxyMessage downstreamMsg = downstream.readInbound();
+            assertEquals(3, downstreamMsg.tlvs().size());
+            downstreamMsg.release();
+
+            ByteBuf forwardedAppData = downstream.readInbound();
+            assertEquals(appDataString, forwardedAppData.toString(CharsetUtil.US_ASCII));
+            forwardedAppData.release();
+            assertNull(downstream.readInbound());
+        } finally {
+            decoded.release();
+            original.release();
+            encoder.finishAndReleaseAll();
+            downstream.finishAndReleaseAll();
+        }
     }
 
     @Test
