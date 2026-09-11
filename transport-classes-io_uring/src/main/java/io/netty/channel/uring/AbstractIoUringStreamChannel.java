@@ -242,7 +242,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
+        if (IoUring.isSpliceEnabled() && msg instanceof DefaultFileRegion) {
             return new IoUringFileRegion((DefaultFileRegion) msg);
         }
 
