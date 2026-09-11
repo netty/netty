@@ -659,4 +659,346 @@ public class SingleThreadEventExecutorTest {
 
         assertSame(exception, executor.terminationFuture().cause());
     }
+
+    /**
+     * Shutting down a never-started executor must not create a worker thread (#17135).
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testShutdownNeverStartedDoesNotStartThread() throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "never-started-shutdown-" + idx.getAndIncrement());
+            }
+        };
+
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(null, threadFactory, true) {
+                    @Override
+                    protected void run() {
+                        while (!confirmShutdown()) {
+                            Runnable task = takeTask();
+                            if (task != null) {
+                                task.run();
+                            }
+                        }
+                    }
+                };
+
+        assertEquals(0, threadsCreated.get());
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        assertTrue(executor.isTerminated());
+        assertEquals(0, threadsCreated.get(), "shutdown of never-started executor must not start a thread");
+    }
+
+    /**
+     * MultithreadEventExecutorGroup must not start every child thread just to shut down unused ones.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testDefaultEventExecutorGroupShutdownDoesNotStartUnusedThreads() throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "group-shutdown-" + idx.getAndIncrement());
+            }
+        };
+
+        final int nThreads = 64;
+        DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
+        try {
+            assertEquals(0, threadsCreated.get());
+            group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+            assertTrue(group.isTerminated());
+            assertEquals(0, threadsCreated.get(),
+                    "unused MultithreadEventExecutorGroup children must not be started on shutdown");
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * Never-started MultithreadEventExecutorGroup children honor a non-zero quiet period
+     * without starting all workers (#17135). execute() during the quiet period may start
+     * only the chosen child; idle children terminate without threads when quiet elapses.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testGroupShutdownNonZeroQuietPeriodAcceptsExecuteOnNeverStartedChildren()
+            throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "group-quiet-" + idx.getAndIncrement());
+            }
+        };
+
+        final int nThreads = 8;
+        DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
+        try {
+            assertEquals(0, threadsCreated.get());
+            group.shutdownGracefully(200, 500, TimeUnit.MILLISECONDS);
+            // Still within quiet period: task must be accepted and run (starts at most one child).
+            final CountDownLatch ran = new CountDownLatch(1);
+            group.execute(new Runnable() {
+                @Override
+                public void run() {
+                    ran.countDown();
+                }
+            });
+            assertTrue(ran.await(2, TimeUnit.SECONDS), "task submitted during quiet period must run");
+            assertTrue(threadsCreated.get() >= 1,
+                    "execute during quiet period starts the chosen child worker");
+            assertTrue(threadsCreated.get() < nThreads,
+                    "must not start every unused child — only the one that received work");
+            group.terminationFuture().syncUninterruptibly();
+            assertTrue(group.isTerminated());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * Never-started children with a non-zero quiet period and no late execute terminate
+     * without creating worker threads once the quiet period elapses.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testGroupShutdownNonZeroQuietPeriodTerminatesUnusedWithoutThreads()
+            throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "group-quiet-idle-" + idx.getAndIncrement());
+            }
+        };
+
+        final int nThreads = 8;
+        DefaultEventExecutorGroup group = new DefaultEventExecutorGroup(nThreads, threadFactory);
+        try {
+            assertEquals(0, threadsCreated.get());
+            group.shutdownGracefully(50, 200, TimeUnit.MILLISECONDS).syncUninterruptibly();
+            assertTrue(group.isTerminated());
+            assertEquals(0, threadsCreated.get(),
+                    "idle never-started children must not start workers on quiet-period shutdown");
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    /**
+     * execute() racing suspension must not leave the executor in ST_STARTED with no thread.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testExecuteRacingSuspensionDoesNotStrandExecutor() throws Exception {
+        final AtomicBoolean armed = new AtomicBoolean();
+        final AtomicInteger armedCanSuspendCalls = new AtomicInteger();
+        final CountDownLatch executorThreadAtReengage = new CountDownLatch(1);
+        final CountDownLatch externalDone = new CountDownLatch(1);
+
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                null, new DefaultThreadFactory("suspend-race"), false, true,
+                Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+            @Override
+            protected void run() {
+                for (;;) {
+                    if (confirmShutdown()) {
+                        return;
+                    }
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                    if (isSuspended()) {
+                        // Suspension requested: return so the base class can suspend this thread.
+                        // Note: run() intentionally does not call canSuspend() so that the only
+                        // canSuspend(int) calls after arming are the base class' two checks.
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            protected boolean canSuspend(int state) {
+                if (armed.get() && armedCanSuspendCalls.incrementAndGet() == 2) {
+                    // Second armed call is the re-engage check canSuspend(ST_SUSPENDED): at this
+                    // point the executor thread has already CAS'd the state to ST_SUSPENDED but
+                    // has not yet reset the start gate. Let an external execute() race in now.
+                    executorThreadAtReengage.countDown();
+                    boolean interrupted = false;
+                    while (externalDone.getCount() > 0) {
+                        try {
+                            externalDone.await();
+                        } catch (InterruptedException e) {
+                            interrupted = true;
+                        }
+                    }
+                    if (interrupted) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                return super.canSuspend(state);
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                interruptThread();
+            }
+        };
+
+        // Start the executor thread and make sure it is parked in takeTask().
+        LatchTask started = new LatchTask();
+        executor.execute(started);
+        started.await();
+
+        // Arm the interception, then request suspension, then wait for executor to hit suspension point.
+        armed.set(true);
+        assertTrue(executor.trySuspend());
+        assertTrue(executorThreadAtReengage.await(5, TimeUnit.SECONDS));
+
+        // Racy external submission: CASing state from ST_SUSPENDED to ST_STARTED.
+        // Despite the race, this *should* punt the executor thread back to started *or* start a new executor
+        // thread (which will wait for the existing one to completely finish its suspension).
+        LatchTask raced = new LatchTask();
+        executor.execute(raced);
+
+        // Let the old executor thread finish suspending.
+        externalDone.countDown();
+
+        // The expected behavior is that the raced task must eventually run, and not leave the executor stuck
+        // in ST_STARTED state with no actual thread started.
+        assertTrue(raced.await(10, TimeUnit.SECONDS));
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    }
+
+    /**
+     * execute() after canSuspend(ST_SUSPENDED) returns true must not leave ST_STARTED with no thread.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testExecuteAfterSuspendDecisionDoesNotStrandExecutor() throws Exception {
+        final AtomicBoolean armed = new AtomicBoolean();
+        final AtomicInteger armedCanSuspendCalls = new AtomicInteger();
+        final CountDownLatch executorThreadPastSuspendDecision = new CountDownLatch(1);
+        final CountDownLatch externalDone = new CountDownLatch(1);
+
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                null, new DefaultThreadFactory("suspend-post-decision"), false, true,
+                Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+            @Override
+            protected void run() {
+                for (;;) {
+                    if (confirmShutdown()) {
+                        return;
+                    }
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                    if (isSuspended()) {
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            protected boolean canSuspend(int state) {
+                if (armed.get() && armedCanSuspendCalls.incrementAndGet() == 2) {
+                    // Re-engage check passed; block before returning so execute() races during
+                    // wind-down while threadStartIssued is still held (e.g. in removeAll).
+                    boolean can = super.canSuspend(state);
+                    if (can) {
+                        executorThreadPastSuspendDecision.countDown();
+                        boolean interrupted = false;
+                        while (externalDone.getCount() > 0) {
+                            try {
+                                externalDone.await();
+                            } catch (InterruptedException e) {
+                                interrupted = true;
+                            }
+                        }
+                        if (interrupted) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    return can;
+                }
+                return super.canSuspend(state);
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                interruptThread();
+            }
+        };
+
+        LatchTask started = new LatchTask();
+        executor.execute(started);
+        started.await();
+
+        armed.set(true);
+        assertTrue(executor.trySuspend());
+        assertTrue(executorThreadPastSuspendDecision.await(5, TimeUnit.SECONDS));
+
+        LatchTask raced = new LatchTask();
+        executor.execute(raced);
+
+        externalDone.countDown();
+
+        assertTrue(raced.await(10, TimeUnit.SECONDS));
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    }
+
+    /**
+     * A never-started executor that receives a task before shutdown still starts a thread and runs it.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testShutdownAfterSubmitStillRunsTask() throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "submit-then-shutdown-" + idx.getAndIncrement());
+            }
+        };
+
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(null, threadFactory, true) {
+                    @Override
+                    protected void run() {
+                        while (!confirmShutdown()) {
+                            Runnable task = takeTask();
+                            if (task != null) {
+                                task.run();
+                            }
+                        }
+                    }
+                };
+
+        LatchTask task = new LatchTask();
+        executor.execute(task);
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        task.await();
+        assertTrue(threadsCreated.get() >= 1);
+        assertTrue(executor.isTerminated());
+    }
 }
