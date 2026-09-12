@@ -74,6 +74,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     private Queue<PendingWrite> queue;
     private volatile ChannelHandlerContext ctx;
+    private boolean inFlush;
+    private boolean flushPending;
 
     public ChunkedWriteHandler() {
     }
@@ -205,6 +207,31 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     private void doFlush(final ChannelHandlerContext ctx) {
+        if (inFlush) {
+            // doFlush() must not re-enter itself: ChunkedInput.readChunk(...) and isEndOfInput() run
+            // between queue.peek() and queue.remove(), and user code executed there may
+            // synchronously trigger flush(), resumeTransfer(), channelInactive(...) or
+            // channelWritabilityChanged(...) on this very handler. A nested doFlush() would peek
+            // and consume the same queue entry again, which made the outer invocation fail with
+            // NoSuchElementException and let both invocations read from the same (already closed)
+            // input. Remember the nested call instead: the outer invocation re-runs the drain
+            // loop before returning, so a resumeTransfer(...) that arrives while it is about to
+            // suspend is not lost (see the old lock-based guard and its flushRequired follow-up).
+            flushPending = true;
+            return;
+        }
+        inFlush = true;
+        try {
+            do {
+                flushPending = false;
+                doFlush0(ctx);
+            } while (flushPending);
+        } finally {
+            inFlush = false;
+        }
+    }
+
+    private void doFlush0(final ChannelHandlerContext ctx) {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             // Even after discarding all previous queued objects we should propagate the flush through
