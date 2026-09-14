@@ -914,6 +914,9 @@ public class DefaultHttp2Connection implements Http2Connection {
                         "Cannot create stream %d greater than Last-Stream-ID %d from GOAWAY.",
                         streamId, lastStreamKnownByPeer);
             }
+            if (isLocal() && goAwayReceived()) {
+                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
+            }
             if (!isValidStreamId(streamId)) {
                 if (streamId < 0) {
                     throw new Http2NoMoreStreamIdsException();

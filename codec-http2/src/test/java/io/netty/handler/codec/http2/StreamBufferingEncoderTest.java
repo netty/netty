@@ -21,6 +21,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
@@ -50,6 +51,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -279,6 +281,63 @@ public class StreamBufferingEncoderTest {
 
         assertInstanceOf(Http2GoAwayException.class, f.cause());
         assertEquals(0, encoder.numBufferedStreams());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void receivingGoAwayFailsNewStreamIfCapacityAvailable(boolean hasPriority) throws Http2Exception {
+        setMaxConcurrentStreams(2);
+        encoderWriteHeaders(3, newPromise());
+        connection.goAwayReceived(Integer.MAX_VALUE, NO_ERROR.code(), EMPTY_BUFFER);
+
+        ChannelFuture future = encoderWriteHeaders(5, newPromise(), hasPriority);
+
+        assertInstanceOf(Http2GoAwayException.class, future.cause());
+        assertEquals(0, encoder.numBufferedStreams());
+        assertNull(connection.stream(5));
+        writeVerifyWriteHeaders(never(), 5, hasPriority);
+
+        // The peer can still process a stream that was opened before GOAWAY.
+        ChannelPromise trailersPromise = newPromise();
+        encoder.writeHeaders(ctx, 3, new DefaultHttp2Headers(), 0, true, trailersPromise);
+        assertNull(trailersPromise.cause());
+        verify(writer).writeHeaders(eq(ctx), eq(3), any(Http2Headers.class), eq(0), eq(true),
+                                    any(ChannelPromise.class));
+    }
+
+    @Test
+    public void receivingGoAwayFailsAllBufferedStreamsEvenIfListenerCreatesCapacity() throws Http2Exception {
+        setMaxConcurrentStreams(1);
+        encoderWriteHeaders(3, newPromise());
+
+        ChannelFuture firstHeaders = encoderWriteHeaders(5, newPromise());
+        ByteBuf firstData = data();
+        ChannelFuture firstDataFuture = encoder.writeData(ctx, 5, firstData, 0, false, newPromise());
+        ChannelFuture secondHeaders = encoderWriteHeaders(7, newPromise());
+        ByteBuf secondData = data();
+        ChannelFuture secondDataFuture = encoder.writeData(ctx, 7, secondData, 0, false, newPromise());
+        assertEquals(2, encoder.numBufferedStreams());
+
+        firstHeaders.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                connection.stream(3).close();
+                setMaxConcurrentStreams(2);
+            }
+        });
+
+        connection.goAwayReceived(Integer.MAX_VALUE, NO_ERROR.code(), EMPTY_BUFFER);
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertInstanceOf(Http2GoAwayException.class, firstHeaders.cause());
+        assertInstanceOf(Http2GoAwayException.class, firstDataFuture.cause());
+        assertInstanceOf(Http2GoAwayException.class, secondHeaders.cause());
+        assertInstanceOf(Http2GoAwayException.class, secondDataFuture.cause());
+        assertEquals(0, firstData.refCnt());
+        assertEquals(0, secondData.refCnt());
+        assertEquals(0, connection.numActiveStreams());
+        writeVerifyWriteHeaders(never(), 5);
+        writeVerifyWriteHeaders(never(), 7);
     }
 
     @Test
