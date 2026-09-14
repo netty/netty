@@ -451,6 +451,18 @@ public final class HttpUtil {
         if (contentTypeValue != null) {
             CharSequence charsetRaw = getCharsetAsSequence(contentTypeValue);
             if (charsetRaw != null) {
+                // Remove only the trailing optional whitespace (OWS) that RFC 9110 allows before
+                // the semicolon starting the next parameter, see
+                // https://www.rfc-editor.org/rfc/rfc9110#section-5.6.6
+                // Leading whitespace after '=' is not grammar-legal and is deliberately kept, so
+                // such values keep failing the charset lookup below.
+                int end = charsetRaw.length();
+                while (end > 0 && isOws(charsetRaw.charAt(end - 1))) {
+                    end--;
+                }
+                if (end < charsetRaw.length()) {
+                    charsetRaw = charsetRaw.subSequence(0, end);
+                }
                 if (charsetRaw.length() > 2) { // at least contains 2 quotes(")
                     if (charsetRaw.charAt(0) == '"' && charsetRaw.charAt(charsetRaw.length() - 1) == '"') {
                         charsetRaw = charsetRaw.subSequence(1, charsetRaw.length() - 1);
@@ -466,6 +478,14 @@ public final class HttpUtil {
             }
         }
         return defaultCharset;
+    }
+
+    /**
+     * Whether the given character is optional whitespace (OWS) as defined by
+     * <a href="https://www.rfc-editor.org/rfc/rfc9110#section-5.6.3">RFC 9110 section 5.6.3</a>.
+     */
+    private static boolean isOws(char c) {
+        return c == ' ' || c == '\t';
     }
 
     /**
