@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -187,7 +188,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                         if (numBytesRead == firstWriteNumBytes) {
                             long before = ctx.channel().bytesBeforeUnwritable();
                             beforeWritableRef.set(before);
-                            assertTrue(before > 0);
+                            assertThat(before).isGreaterThan(0);
 
                             while (before != 0) {
                                 int size = (int) Math.min(before, 1024);
@@ -206,7 +207,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                     @Override
                     public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                         if (ctx.channel().isWritable()) {
-                            assertTrue(ctx.channel().bytesBeforeUnwritable() > 0);
+                            assertThat(ctx.channel().bytesBeforeUnwritable()).isGreaterThan(0);
                             writableAgainLatch.countDown();
                         }
                     }
