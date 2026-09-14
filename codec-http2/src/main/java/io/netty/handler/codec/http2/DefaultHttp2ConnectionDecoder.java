@@ -663,7 +663,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 throw streamError(promisedStreamId, PROTOCOL_ERROR,
-                    "Promised request on stream %d for promised stream %d  contains content-length header",
+                    "Promised request on stream %d for promised stream %d contains content-length header",
                     streamId, promisedStreamId);
             }
 

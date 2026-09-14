@@ -893,6 +893,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         assertThrows(Http2Exception.class, () ->
             dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0));
     }
+
     @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
