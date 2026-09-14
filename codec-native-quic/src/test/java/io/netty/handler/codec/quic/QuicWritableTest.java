@@ -16,7 +16,6 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -188,7 +188,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                         if (numBytesRead == firstWriteNumBytes) {
                             long before = ctx.channel().bytesBeforeUnwritable();
                             beforeWritableRef.set(before);
-                            assertTrue(before > 0);
+                            assertThat(before).isGreaterThan(0);
 
                             while (before != 0) {
                                 int size = (int) Math.min(before, 1024);
@@ -198,16 +198,17 @@ public class QuicWritableTest extends AbstractQuicTest {
                                 assertEquals(before, newBefore + size);
                                 before = newBefore;
                             }
-                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(writePromise));
+                            ctx.write(ctx.alloc().buffer(firstWriteNumBytes).writeZero(firstWriteNumBytes))
+                                    .addListener(new PromiseNotifier<>(writePromise));
+                            ctx.writeAndFlush(ctx.alloc().buffer(maxData).writeZero(maxData));
                         }
                     }
 
                     @Override
                     public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                         if (ctx.channel().isWritable()) {
-                            if (ctx.channel().bytesBeforeUnwritable() > 0) {
-                                writableAgainLatch.countDown();
-                            }
+                            assertThat(ctx.channel().bytesBeforeUnwritable()).isGreaterThan(0);
+                            writableAgainLatch.countDown();
                         }
                     }
 
