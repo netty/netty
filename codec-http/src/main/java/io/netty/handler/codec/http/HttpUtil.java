@@ -631,13 +631,13 @@ public final class HttpUtil {
      * general use, but is here to be shared between HTTP/1 and HTTP/2 parsing.
      *
      * @param contentLengthFields the content-length header fields.
-     * @param isHttp10OrEarlier {@code true} if we are handling HTTP/1.0 or earlier
+     * @param isHttp10OrEarlier unused
      * @param allowDuplicateContentLengths {@code true}  if multiple, identical-value content lengths should be allowed.
      * @return the normalized content length from the headers or {@code -1} if the fields were empty.
      * @throws IllegalArgumentException if the content-length fields are not valid
      */
     public static long normalizeAndGetContentLength(
-            List<? extends CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
+            List<? extends CharSequence> contentLengthFields, @SuppressWarnings("unused") boolean isHttp10OrEarlier,
             boolean allowDuplicateContentLengths) {
         if (contentLengthFields.isEmpty()) {
             return -1;
@@ -660,7 +660,7 @@ public final class HttpUtil {
         boolean multipleContentLengths =
                 contentLengthFields.size() > 1 || firstField.indexOf(COMMA) >= 0;
 
-        if (multipleContentLengths && !isHttp10OrEarlier) {
+        if (multipleContentLengths) {
             if (allowDuplicateContentLengths) {
                 // Find and enforce that all Content-Length values are the same
                 String firstValue = null;
