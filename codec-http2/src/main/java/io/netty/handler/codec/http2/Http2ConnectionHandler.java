@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -81,6 +83,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private long gracefulShutdownTimeoutMillis;
     private boolean inFlush;
     private boolean flushAgain;
+    private IntObjectMap<Integer> pendingStreamErrors;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -747,9 +750,20 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * @param http2Ex the {@link StreamException} that is embedded in the causality chain.
      */
     protected void onStreamError(ChannelHandlerContext ctx, boolean outbound,
-                                 @SuppressWarnings("unused") Throwable cause, StreamException http2Ex) {
+                                 Throwable cause, StreamException http2Ex) {
         final int streamId = http2Ex.streamId();
         Http2Stream stream = connection().stream(streamId);
+
+        if (!outbound && stream == null && !connection().streamMayHaveExisted(streamId) &&
+                (http2Ex.streamCreatingFrameType() != (connection().isServer() ?
+                        Http2FrameTypes.HEADERS : Http2FrameTypes.PUSH_PROMISE) ||
+                        !connection().remote().isValidStreamId(streamId))) {
+            // A stream error does not necessarily open the stream (for example an invalid PRIORITY frame).
+            // Escalate the error rather than send an RST_STREAM on an idle stream.
+            onConnectionError(ctx, false, cause,
+                    connectionError(http2Ex.error(), cause, "Stream error on idle stream %d", streamId));
+            return;
+        }
 
         //if this is caused by reading headers that are too large, send a header with status 431
         if (http2Ex instanceof Http2Exception.HeaderListSizeException &&
@@ -766,7 +780,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 try {
                     stream = encoder.connection().remote().createStream(streamId, true);
                 } catch (Http2Exception e) {
-                    encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+                    writeRstStreamForStreamError(ctx, streamId, http2Ex.error().code());
                     return;
                 }
             }
@@ -783,7 +797,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
         if (stream == null) {
             if (!outbound || connection().local().mayHaveCreatedStream(streamId)) {
-                encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+                if (outbound) {
+                    encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+                } else {
+                    writeRstStreamForStreamError(ctx, streamId, http2Ex.error().code());
+                }
             }
         } else {
             encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
@@ -803,6 +821,34 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     protected Http2FrameWriter frameWriter() {
         return encoder().frameWriter();
+    }
+
+    private void writeRstStreamForStreamError(ChannelHandlerContext ctx, int streamId, long errorCode) {
+        ChannelPromise promise = ctx.newPromise();
+        if (pendingStreamErrors == null) {
+            pendingStreamErrors = new IntObjectHashMap<Integer>();
+        }
+        // Encoder decorators may replace the promise or defer the write. Keep the received stream ID until
+        // completion, and count overlapping resets so one completion cannot revoke another pending write.
+        Integer pending = pendingStreamErrors.get(streamId);
+        pendingStreamErrors.put(streamId, Integer.valueOf(pending == null ? 1 : pending + 1));
+        promise.addListener(f -> {
+            int remaining = pendingStreamErrors.get(streamId) - 1;
+            if (remaining == 0) {
+                pendingStreamErrors.remove(streamId);
+                if (pendingStreamErrors.isEmpty()) {
+                    pendingStreamErrors = null;
+                }
+            } else {
+                pendingStreamErrors.put(streamId, Integer.valueOf(remaining));
+            }
+        });
+        try {
+            encoder().writeRstStream(ctx, streamId, errorCode, promise);
+        } catch (RuntimeException | Error e) {
+            promise.tryFailure(e);
+            throw e;
+        }
     }
 
     /**
@@ -827,9 +873,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
             // An RST_STREAM frame MUST NOT be sent for a stream in the "idle" state (RFC 9113, section 6.4):
-            // a stream that was never created is unknown to the peer as well. Non-positive stream ids keep
-            // going through the frame writer, which fails the promise during verification.
-            if (streamId > 0 && !connection().streamMayHaveExisted(streamId)) {
+            // Received HEADERS or PUSH_PROMISE can open or reserve a stream before it is added to the connection.
+            // Non-positive stream ids keep going through the frame writer, which fails during verification.
+            if (streamId > 0 && !connection().streamMayHaveExisted(streamId) &&
+                    (pendingStreamErrors == null || !pendingStreamErrors.containsKey(streamId))) {
                 return promise.setSuccess();
             }
             return resetUnknownStream(ctx, streamId, errorCode, promise.unvoid());
