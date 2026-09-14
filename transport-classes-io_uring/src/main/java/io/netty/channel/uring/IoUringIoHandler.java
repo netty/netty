@@ -91,6 +91,9 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final ThreadAwareExecutor executor;
 
+    // Caching completion callback to avoid creating a new instance for each poll.
+    private final CompletionCallback completionCallback = this::handle;
+
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
@@ -183,11 +186,13 @@ public final class IoUringIoHandler implements IoHandler {
         int ioCompletions;
         if (context.shouldReportActiveIoTime()) {
             long activeIoStartTimeNanos = System.nanoTime();
-            ioCompletions = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
             long activeIoEndTimeNanos = System.nanoTime();
             context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } else {
-            ioCompletions = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            ioCompletions = processCompletionsAndHandleOverflow(
+                    submissionQueue, completionQueue, completionCallback);
         }
         return ioCompletions;
     }
@@ -429,7 +434,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.submitAndGet();
 
         while (completionQueue.hasCompletions()) {
-            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, completionCallback);
             if (submissionQueue.count() > 0) {
                 submissionQueue.submitAndGetNow();
             }
@@ -455,7 +460,7 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), RINGFD_TOKEN);
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
-        completionQueue.process(this::handle);
+        completionQueue.process(completionCallback);
         for (IoUringBufferRing ioUringBufferRing : registeredIoUringBufferRing.values()) {
             ioUringBufferRing.close();
         }
