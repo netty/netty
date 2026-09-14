@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
@@ -48,6 +49,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
+    // Tracks streams for which the initial (request) HEADERS frame used the HEAD method, so the decoder
+    // can allow a content-length/DATA mismatch on the matching response (RFC 9113, 8.1.1).
+    private final Http2Connection.PropertyKey methodIsHeadKey;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
@@ -55,6 +59,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
+        methodIsHeadKey = connection.newKey();
+    }
+
+    /**
+     * Exposes the {@link Http2Connection.PropertyKey} used to record whether the initial HEADERS frame written
+     * for a stream was a HEAD request, so that {@link DefaultHttp2ConnectionDecoder} can look it up on the
+     * matching response. Package-private as this is purely an implementation detail shared between the two.
+     */
+    Http2Connection.PropertyKey methodIsHeadKey() {
+        return methodIsHeadKey;
     }
 
     @Override
@@ -231,6 +245,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
                 promise = promise.unvoid();
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
+
+                if (!stream.isHeadersSent() && !stream.isTrailersSent()) {
+                    // This is the initial (request) HEADERS frame for the stream. Remember if it used the
+                    // HEAD method so the decoder can allow a content-length/DATA mismatch on the response.
+                    CharSequence method = headers.method();
+                    if (method != null && HttpMethod.HEAD.asciiName().contentEquals(method)) {
+                        stream.setProperty(methodIsHeadKey, Boolean.TRUE);
+                    }
+                }
 
                 ChannelFuture future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
                         weight, exclusive, padding, endOfStream, promise);
