@@ -858,6 +858,32 @@ public class DefaultHttp2ConnectionDecoderTest {
                 eq(EmptyHttp2Headers.INSTANCE), eq(0));
     }
 
+    // A PUSH_PROMISE field block always carries a request header set (RFC 9113, 8.4.1). When required
+    // pseudo-header validation is enabled, an incomplete promised request MUST be rejected with a PROTOCOL_ERROR
+    // on the promised stream, not the stream that carried the PUSH_PROMISE frame.
+    @Test
+    public void pushPromiseIncompleteRequestRejectedWhenEnabled() throws Exception {
+        final Http2FrameListener dec = strictDecode();
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(ex));
+        verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
+    @Test
+    public void pushPromiseCompleteRequestAcceptedWhenEnabled() throws Exception {
+        Http2Headers headers = request();
+        strictDecode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(headers), eq(0));
+    }
+
     @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
