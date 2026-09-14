@@ -654,6 +654,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                       parentStream.id(), parentStream.state());
             }
 
+            if (validateRequiredPseudoHeaders) {
+                // A PUSH_PROMISE field block carries a complete set of request header fields, regardless of the
+                // role of the local endpoint. Reject an incomplete promised request on the promised stream
+                // (RFC 9113, 8.4.1).
+                validateRequiredPseudoHeaders(true, promisedStreamId, headers);
+            }
+
+            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                    "Promised request on stream %d for promised stream %d  contains content-length header",
+                    streamId, promisedStreamId);
+            }
+
             if (!requestVerifier.isAuthoritative(ctx, headers)) {
                 throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d is not authoritative",
@@ -668,12 +681,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d is not known to be safe",
                         streamId, promisedStreamId);
-            }
-            if (validateRequiredPseudoHeaders) {
-                // A PUSH_PROMISE field block carries a complete set of request header fields, regardless of the
-                // role of the local endpoint. Reject an incomplete promised request on the promised stream
-                // (RFC 9113, 8.4.1).
-                validateRequiredPseudoHeaders(true, promisedStreamId, headers);
             }
 
             // Reserve the push stream based with a priority based on the current stream's priority.
