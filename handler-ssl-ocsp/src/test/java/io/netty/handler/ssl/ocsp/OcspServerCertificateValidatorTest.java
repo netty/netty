@@ -370,6 +370,12 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                                     }
                                     verdictLatch.countDown();
                                 }
+
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    // Ensure forwarded bytes are released
+                                    ReferenceCountUtil.release(msg);
+                                }
                             });
                         }
                     })
