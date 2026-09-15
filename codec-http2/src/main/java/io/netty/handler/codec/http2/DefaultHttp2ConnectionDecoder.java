@@ -153,7 +153,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      *                        <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
      * @param validateRequiredPseudoHeaders {@code true} to reject request/response HEADERS that omit a mandatory
      *        pseudo-header field, according to
-     *        <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
+     *        <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>, and to reject
+     *        PUSH_PROMISE field blocks that do not carry a complete set of request pseudo-header fields, according
+     *        to <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.4.1">RFC 9113, 8.4.1</a>.
      */
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -280,8 +282,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     /**
-     * Validates that an initial request or response HEADERS frame carries the mandatory pseudo-header fields,
-     * as required by <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
+     * Validates that an initial request or response HEADERS frame, or a PUSH_PROMISE field block (which always
+     * carries a request header set, per <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.4.1">
+     * RFC 9113, 8.4.1</a>), carries the mandatory pseudo-header fields, as required by
+     * <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
      * Trailers and informational (1xx) responses are handled by the caller and do not reach this method.
      */
     private static void validateRequiredPseudoHeaders(boolean server, int streamId, Http2Headers headers)
@@ -648,6 +652,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                   throw connectionError(PROTOCOL_ERROR,
                       "Stream %d in unexpected state for receiving push promise: %s",
                       parentStream.id(), parentStream.state());
+            }
+
+            if (validateRequiredPseudoHeaders) {
+                // A PUSH_PROMISE field block carries a complete set of request header fields, regardless of the
+                // role of the local endpoint. Reject an incomplete promised request on the promised stream
+                // (RFC 9113, 8.4.1).
+                validateRequiredPseudoHeaders(true, promisedStreamId, headers);
+            }
+
+            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                    "Promised request on stream %d for promised stream %d contains content-length header",
+                    streamId, promisedStreamId);
             }
 
             if (!requestVerifier.isAuthoritative(ctx, headers)) {
