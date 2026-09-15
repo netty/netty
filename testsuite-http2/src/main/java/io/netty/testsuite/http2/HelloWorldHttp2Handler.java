@@ -160,7 +160,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     @Override
-    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+    public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId,
                                Http2Flags flags, ByteBuf payload) {
     }
 }
