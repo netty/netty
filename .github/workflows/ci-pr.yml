@@ -38,16 +38,19 @@ jobs:
   verify-pr:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        # Pinned to v6.0.1
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: 'zulu'
           java-version: '25'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        # Pinned to v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -75,10 +78,12 @@ jobs:
       # failures sometimes due the fact that not enough memory could be reserved.
       RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        # Pinned to v6.0.1
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: 'zulu'
           java-version: '25'
@@ -89,7 +94,8 @@ jobs:
           targets: x86_64-pc-windows-msvc
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        # Pinned to v3
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
 
       - name: Configuring Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
@@ -97,13 +103,15 @@ jobs:
           arch: x86_amd64
 
       - name: Install tools
-        uses: crazy-max/ghaction-chocolatey@v3
+        # Pinned to v4.1.0
+        uses: crazy-max/ghaction-chocolatey@dfdcf5bba9c0a16358a21c13a06ec5c89024b3ac
         with:
           args: install ninja nasm
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        # Pinned to v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -124,12 +132,14 @@ jobs:
 
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        # Pinned to v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: test-results-windows-x86_64-java25-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-windows-target
@@ -146,11 +156,13 @@ jobs:
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        # Pinned to v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -221,11 +233,13 @@ jobs:
       run:
         working-directory: netty
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: netty
 
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: ${{ endsWith(matrix.setup, '-awslc') }}
         with:
           repository: netty/netty-tcnative
@@ -235,7 +249,8 @@ jobs:
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        # Pinned to v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         if: ${{ !endsWith(matrix.setup, '-awslc') }}
         with:
@@ -246,7 +261,8 @@ jobs:
             cache-maven-
 
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        # Pinned to v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         if: ${{ endsWith(matrix.setup, '-awslc') }}
         with:
@@ -287,12 +303,14 @@ jobs:
 
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        # Pinned to v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: test-results-${{ matrix.setup }}
           path: 'netty/**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
@@ -317,17 +335,20 @@ jobs:
     needs: verify-pr
 
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        # Pinned to v6.0.1
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: 'zulu'
           java-version: '25'
 
       # Cache .m2/repository
       # Caching of maven dependencies
-      - uses: actions/cache@v4
+      # Pinned to v6.1.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -351,12 +372,14 @@ jobs:
 
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        # Pinned to v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-${{ matrix.setup }}-target
