@@ -53,8 +53,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -69,8 +70,9 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
 
+      # Pinned to v4.38.0
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63
         with:
           tools: linked
           build-mode: manual
@@ -82,5 +84,6 @@ jobs:
       - name: Compile project
         run: ./mvnw -B -ntp clean package -DskipTests=true -DskipH3Spec=true
 
+      # Pinned to v4.38.0
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63

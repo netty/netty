@@ -51,9 +51,11 @@ jobs:
 
     name: build-jars-${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
-      - uses: actions/cache@v4
+      # Pinned to v5.1.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -68,8 +70,9 @@ jobs:
       - name: Build the native quic jars
         run: docker compose ${{ matrix.docker-compose-run }}
 
+      # Pinned to v6.0.0
       - name: Upload the netty jars
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: netty-jars-${{ matrix.arch }}
           path: ~/.m2/repository/io/netty/
@@ -121,18 +124,21 @@ jobs:
 
     name: musl-verify-${{ matrix.leg }}
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
+      # Pinned to v7.0.0
       - name: Download the netty jars
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
           name: netty-jars-${{ matrix.arch }}
           path: /home/runner/jars
 
       # The runners are x86_64, so the aarch64 legs need binfmt.
+      # Pinned to v4.3.0
       - name: Set up QEMU
         if: ${{ matrix.arch == 'aarch64' }}
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a
 
       - name: Verify
         run: |
