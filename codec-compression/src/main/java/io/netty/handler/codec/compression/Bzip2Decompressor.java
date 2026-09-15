@@ -132,6 +132,9 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
                     if (storedCombinedCRC != streamCRC) {
                         throw new DecompressionException("stream CRC error");
                     }
+                    if (reader.hasReadableBits(8)) {
+                        throw new DecompressionException("Unexpected data after end of stream");
+                    }
                     currentState = State.EOF;
                     break;
                 }
