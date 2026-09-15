@@ -67,7 +67,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      */
     private boolean readError;
     private byte frameType;
+    private byte headerBlockType;
     private int streamId;
+    private int promisedStreamId;
     private Http2Flags flags;
     private int payloadLength;
     private HeadersContinuation headersContinuation;
@@ -175,6 +177,18 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             } while (input.isReadable());
         } catch (Http2Exception e) {
             readError = !Http2Exception.isStreamError(e);
+            if (!readError) {
+                Http2Exception.StreamException streamError = (Http2Exception.StreamException) e;
+                // Validation can fail before the connection decoder creates or reserves the stream. Keep
+                // the initiating frame type and the promised stream ID across CONTINUATION frames.
+                byte type = frameType == CONTINUATION ? headerBlockType : frameType;
+                if (type == HEADERS && streamError.streamId() == streamId ||
+                        type == PUSH_PROMISE && streamError.streamId() == promisedStreamId) {
+                    streamError.streamCreatingFrameType(type);
+                } else {
+                    streamError.streamCreatingFrameType((byte) -1);
+                }
+            }
             throw e;
         } catch (RuntimeException e) {
             readError = true;
@@ -427,6 +441,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void readHeadersFrame(final ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
+        headerBlockType = HEADERS;
         final int headersStreamId = streamId;
         final Http2Flags headersFlags = flags;
         final int padding = readPadding(payload);
@@ -549,9 +564,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void readPushPromiseFrame(final ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
+        headerBlockType = PUSH_PROMISE;
         final int pushPromiseStreamId = streamId;
         final int padding = readPadding(payload);
         final int promisedStreamId = readUnsignedInt(payload);
+        this.promisedStreamId = promisedStreamId;
 
         // Create a handler that invokes the listener when the header block is complete.
         headersContinuation = new HeadersContinuation() {

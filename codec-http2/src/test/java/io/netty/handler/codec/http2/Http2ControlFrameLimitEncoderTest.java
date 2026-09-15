@@ -129,6 +129,9 @@ public class Http2ControlFrameLimitEncoderTest {
         Http2Connection connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
+        // Use an unknown stream ID that may have existed so the RST_STREAM reaches the frame writer and exercises
+        // the control-frame limit. An untouched positive stream ID is now correctly treated as idle.
+        connection.local().createStream(1, false).close();
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);

@@ -622,8 +622,10 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
             "Header size exceeded max allowed size 8196", true);
+        ((Http2Exception.StreamException) e).streamCreatingFrameType(Http2FrameTypes.HEADERS);
 
         when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(remote.isValidStreamId(STREAM_ID)).thenReturn(true);
         when(remote.createStream(STREAM_ID, true)).thenReturn(stream);
         when(stream.id()).thenReturn(STREAM_ID);
 
@@ -654,10 +656,32 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstOnNonExistantStreamShouldSucceed() throws Exception {
         handler = newHandler();
+        when(connection.streamMayHaveExisted(NON_EXISTANT_STREAM_ID)).thenReturn(true);
         when(frameWriter.writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID),
                                         eq(STREAM_CLOSED.code()), eq(promise))).thenReturn(future);
         handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(STREAM_CLOSED.code()), eq(promise));
+    }
+
+    @Test
+    public void writeRstOnIdleStreamIdShouldNotWriteButSucceed() throws Exception {
+        handler = newHandler();
+        when(connection.streamMayHaveExisted(NON_EXISTANT_STREAM_ID)).thenReturn(false);
+        handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(), promise);
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ChannelPromise.class));
+        assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void writeRstOnInvalidStreamIdShouldStillGoThroughFrameWriter() throws Exception {
+        handler = newHandler();
+        when(connection.streamMayHaveExisted(0)).thenReturn(false);
+        when(frameWriter.writeRstStream(eq(ctx), eq(0),
+                                        eq(STREAM_CLOSED.code()), any(ChannelPromise.class))).thenReturn(future);
+        handler.resetStream(ctx, 0, STREAM_CLOSED.code(), promise);
+        verify(frameWriter).writeRstStream(eq(ctx), eq(0), eq(STREAM_CLOSED.code()),
+                any(ChannelPromise.class));
     }
 
     @Test
@@ -954,6 +978,9 @@ public class Http2ConnectionHandlerTest {
     private void writeRstStreamUsingVoidPromise(int streamId) throws Exception {
         handler = newHandler();
         when(stream.id()).thenReturn(STREAM_ID);
+        // the unknown stream is one that existed before (e.g. closed and collected),
+        // not one that was never created
+        when(connection.streamMayHaveExisted(streamId)).thenReturn(true);
         when(frameWriter.writeRstStream(eq(ctx), eq(streamId), anyLong(), any(ChannelPromise.class)))
                 .then(new Answer<ChannelFuture>() {
                     @Override
