@@ -106,6 +106,23 @@ public interface MpscIntQueue {
     int size();
 
     /**
+     * Return the fixed capacity of this queue.
+     */
+    int capacity();
+
+    /**
+     * Reset the queue and fill with {@code count} values: 0, stride, 2*stride, ...
+     * <p>
+     * Must only be called once no <em>new</em> producer or consumer can start. Producers that
+     * have already claimed a slot are awaited: a producer that has won the race for its slot is
+     * visible to {@link #size()} straight away, but its value may not have been stored yet, so a
+     * caller has no way to observe that it is still in flight. Resetting underneath such a
+     * producer would let its store land in the reset queue, so this method waits for those
+     * stores to complete before resetting.
+     */
+    void resetAndFill(int count, int stride);
+
+    /**
      * This implementation is based on MpscAtomicUnpaddedArrayQueue from JCTools.
      */
     final class MpscAtomicIntegerArrayQueue extends AtomicIntegerArray implements MpscIntQueue {
@@ -264,7 +281,7 @@ public interface MpscIntQueue {
             Objects.requireNonNull(op, "op");
             ObjectUtil.checkPositiveOrZero(limit, "limit");
             if (limit == 0) {
-                return 0;
+                return initial;
             }
             int result = initial;
 
@@ -306,6 +323,48 @@ public interface MpscIntQueue {
                 }
             }
             return size < 0 ? 0 : size > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) size;
+        }
+
+        @Override
+        public int capacity() {
+            return mask + 1;
+        }
+
+        /**
+         * Wait until every slot claimed by a producer holds its value.
+         *
+         * <p>{@link #offer(int)} publishes the producer index before the element, so a slot in
+         * {@code [consumerIndex, producerIndex)} still reading as the empty value belongs to a
+         * producer that has claimed it but has not stored into it yet. The claim is already
+         * counted by {@link #size()}, so callers cannot tell such a producer apart from a
+         * completed one -- only the queue can, by looking at the slots.
+         */
+        private void awaitClaimedSlotsPublished(int mask) {
+            final long pIndex = producerIndex;
+            for (long i = consumerIndex; i < pIndex; i++) {
+                final int offset = (int) (i & mask);
+                while (get(offset) == emptyValue) {
+                    // Spin: the producer is a couple of instructions away from publishing.
+                }
+            }
+        }
+
+        @Override
+        public void resetAndFill(int count, int stride) {
+            final int mask = this.mask;
+            awaitClaimedSlotsPublished(mask);
+            int offset = 0;
+            for (int i = 0; i < count; i++) {
+                lazySet(i & mask, offset);
+                offset += stride;
+            }
+            int capacity = mask + 1;
+            for (int i = count; i < capacity; i++) {
+                lazySet(i & mask, emptyValue);
+            }
+            CONSUMER_INDEX.lazySet(this, 0);
+            PRODUCER_LIMIT.lazySet(this, mask + 1);
+            PRODUCER_INDEX.set(this, count);
         }
     }
 }
