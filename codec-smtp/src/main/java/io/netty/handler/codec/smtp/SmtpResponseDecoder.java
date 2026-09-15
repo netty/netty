@@ -19,7 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -32,13 +34,41 @@ import java.util.List;
 @UnstableApi
 public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
 
+    private static final int DEFAULT_MAX_RESPONSE_SIZE = 64 * 1024;
+
+    // Charged per accumulated line so the limit bounds retained heap rather than payload bytes alone.
+    private static final int DETAIL_ENTRY_OVERHEAD = 48;
+
+    private final int maxResponseSize;
+
     private List<CharSequence> details;
+    private long responseSize;
 
     /**
-     * Creates a new instance that enforces the given {@code maxLineLength}.
+     * Creates a new instance that enforces the given {@code maxLineLength} and a default limit of 64 KiB on the
+     * accumulated size of a multi-line response.
+     *
+     * @param maxLineLength the maximum length of a single response line, in bytes.
      */
     public SmtpResponseDecoder(int maxLineLength) {
+        this(maxLineLength, DEFAULT_MAX_RESPONSE_SIZE);
+    }
+
+    /**
+     * Creates a new instance that enforces the given {@code maxLineLength} and {@code maxResponseSize}.
+     * <p>
+     * The lines of a multi-line response are buffered until its terminating line arrives.
+     * {@code maxResponseSize} bounds that buffering. Once it is exceeded, decoding fails with a
+     * {@link TooLongFrameException}. The limit is approximate and tracks retained memory rather than bytes
+     * received, as it charges each buffered line a fixed object overhead in addition to its detail bytes, and
+     * ignores the response code, the separator and the terminating line.
+     *
+     * @param maxLineLength   the maximum length of a single response line, in bytes.
+     * @param maxResponseSize the maximum accumulated size of a multi-line response, in bytes.
+     */
+    public SmtpResponseDecoder(int maxLineLength, int maxResponseSize) {
         super(maxLineLength);
+        this.maxResponseSize = ObjectUtil.checkPositive(maxResponseSize, "maxResponseSize");
     }
 
     @Override
@@ -52,6 +82,7 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
             final int readable = frame.readableBytes();
             final int readerIndex = frame.readerIndex();
             if (readable < 3) {
+                reset();
                 throw newDecoderException(buffer, readerIndex, readable);
             }
             final int code = parseCode(frame);
@@ -63,7 +94,7 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
             switch (separator) {
             case ' ':
                 // Marks the end of a response.
-                this.details = null;
+                reset();
                 if (details != null) {
                     if (detail != null) {
                         details.add(detail);
@@ -79,6 +110,11 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
             case '-':
                 // Multi-line response.
                 if (detail != null) {
+                    responseSize += (long) detail.length() + DETAIL_ENTRY_OVERHEAD;
+                    if (responseSize > maxResponseSize) {
+                        reset();
+                        throw new TooLongFrameException("SMTP response exceeds " + maxResponseSize + " bytes");
+                    }
                     if (details == null) {
                         // Using initial capacity as it is very unlikely that we will receive a multi-line response
                         // with more then 3 lines.
@@ -88,12 +124,18 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
                 }
                 break;
             default:
+                reset();
                 throw newDecoderException(buffer, readerIndex, readable);
             }
         } finally {
             frame.release();
         }
         return null;
+    }
+
+    private void reset() {
+        this.details = null;
+        this.responseSize = 0;
     }
 
     private static DecoderException newDecoderException(ByteBuf buffer, int readerIndex, int readable) {

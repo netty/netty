@@ -20,15 +20,22 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 
 public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return new InetSocketAddress(0);
+        // Explicit use IPv4 wildcard for bind while the channel is using SocketProtocolFamily.INET6.
+        try {
+            return new InetSocketAddress(InetAddress.getByAddress(new byte[] {0, 0 , 0, 0}), 0);
+        } catch (UnknownHostException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.resolver.dns.Cache.MAX_SUPPORTED_TTL_SECS;
@@ -54,6 +55,13 @@ class DnsNameResolverBuilderTest {
     @AfterAll
     static void shutdownEventLoopGroup() {
         GROUP.shutdownGracefully();
+    }
+
+    @Test
+    void searchDomainsPreservesOrderCaseAndHashCollisions() {
+        resolver = builder.searchDomains(Arrays.asList("Aa", "BB", "Aa", "aa", null, "ignored")).build();
+
+        assertThat(resolver.searchDomains()).containsExactly("Aa", "BB", "aa");
     }
 
     @Test

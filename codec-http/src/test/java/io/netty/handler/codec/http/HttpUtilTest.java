@@ -27,6 +27,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,6 +159,38 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, UPPER_CASE_NORMAL_CONTENT_TYPE);
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(message));
         assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(UPPER_CASE_NORMAL_CONTENT_TYPE));
+    }
+
+    @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameter() {
+        // RFC 9110 5.6.6: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the next parameter
+        testGetCharsetUtf8("text/html; charset=utf-8 ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetQuotedWithWhitespaceBeforeNextParameter() {
+        testGetCharsetUtf8("text/html; charset=\"utf-8\" ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameterNonStringCharSequence() {
+        // must behave identically for a general CharSequence implementation
+        CharSequence contentType = CharBuffer.wrap("text/html; charset=utf-8 ; action=\"foo\"");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(contentType, CharsetUtil.ISO_8859_1));
+
+        CharSequence emptyCharset = CharBuffer.wrap("text/html; charset= ; action=\"foo\"");
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(emptyCharset, CharsetUtil.ISO_8859_1));
+    }
+
+    @Test
+    public void testGetCharsetWithLeadingWhitespaceIsNotAccepted() {
+        // Only trailing OWS is grammar-legal per RFC 9110 5.6.6; whitespace after '='
+        // is not, so such values keep falling back to the default charset.
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= utf-8 ; action=\"foo\"", CharsetUtil.ISO_8859_1));
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= ; action=\"foo\"", CharsetUtil.ISO_8859_1));
     }
 
     @Test

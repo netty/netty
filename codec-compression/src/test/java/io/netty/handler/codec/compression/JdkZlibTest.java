@@ -25,7 +25,10 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +37,10 @@ import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -196,6 +202,102 @@ public class JdkZlibTest extends ZlibTest {
             decoded.close();
         } finally {
             assertFalse(ch.finish());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("highlyCompressibleStreams")
+    public void testHighlyCompressibleStreamIsFullyDecoded(ZlibWrapper wrapper, int size, int chunkSize)
+            throws Exception {
+        // Every output buffer is sized from the number of remaining input bytes. That is generous at
+        // ordinary compression ratios, but at a high ratio the inflater can pull the last input byte into
+        // its internal state while it still holds decoded data, and then the proposed size is zero and
+        // inflate(...) cannot make progress. The tail stayed inside the inflater and was dropped together
+        // with the input, without any exception, so a peer simply saw a short body.
+        assertFullyDecoded(wrapper, size, chunkSize);
+    }
+
+    private static Object[][] highlyCompressibleStreams() {
+        // The two payload shapes reach the two places a buffer is taken. 65537 bytes written in one go
+        // crosses the threshold at which the decoder forwards the buffer downstream and then allocates a
+        // fresh one; 33333 bytes arriving in 7-byte reads stays under that threshold but starts every
+        // decode(...) call with a fresh buffer. Only ZlibWrapper.NONE actually lost bytes before the fix,
+        // because the ZLIB and GZIP trailers keep bytes in the input buffer while output is still pending.
+        return new Object[][] {
+                { ZlibWrapper.NONE, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.NONE, 33333, 7 },
+                { ZlibWrapper.ZLIB, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.ZLIB, 33333, 7 },
+                { ZlibWrapper.GZIP, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.GZIP, 33333, 7 },
+        };
+    }
+
+    private void assertFullyDecoded(ZlibWrapper wrapper, int size, int chunkSize) throws Exception {
+        byte[] data = new byte[size];
+        Arrays.fill(data, (byte) 'a');
+        byte[] compressed = compress(wrapper, data);
+
+        // Cross-check the fixture with the JDK itself, so a failure below cannot be blamed on it.
+        assertArrayEquals(data, jdkInflate(wrapper, compressed));
+
+        EmbeddedChannel ch = new EmbeddedChannel(createDecoder(wrapper));
+        ByteArrayOutputStream decoded = new ByteArrayOutputStream();
+        try {
+            ByteBuf in = Unpooled.wrappedBuffer(compressed);
+            try {
+                while (in.isReadable()) {
+                    ch.writeInbound(in.readRetainedSlice(Math.min(chunkSize, in.readableBytes())));
+                }
+            } finally {
+                in.release();
+            }
+            ch.finish();
+
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                msg.readBytes(decoded, msg.readableBytes());
+                msg.release();
+            }
+            assertArrayEquals(data, decoded.toByteArray());
+        } finally {
+            decoded.close();
+            ch.close();
+        }
+    }
+
+    private static byte[] compress(ZlibWrapper wrapper, byte[] data) throws IOException {
+        if (wrapper == ZlibWrapper.GZIP) {
+            return gzip(data);
+        }
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        DeflaterOutputStream deflaterOut = new DeflaterOutputStream(bytesOut,
+                new Deflater(Deflater.BEST_COMPRESSION, wrapper == ZlibWrapper.NONE));
+        deflaterOut.write(data);
+        deflaterOut.close();
+        return bytesOut.toByteArray();
+    }
+
+    private static byte[] jdkInflate(ZlibWrapper wrapper, byte[] compressed) throws IOException {
+        if (wrapper == ZlibWrapper.GZIP) {
+            return jdkGunzip(compressed);
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            InflaterInputStream in = new InflaterInputStream(new ByteArrayInputStream(compressed),
+                    new Inflater(wrapper == ZlibWrapper.NONE));
+            try {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            } finally {
+                in.close();
+            }
+            return out.toByteArray();
+        } finally {
+            out.close();
         }
     }
 

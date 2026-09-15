@@ -1468,4 +1468,78 @@ public class HAProxyMessageDecoderTest {
             data.release();
         }
     }
+
+    @Test
+    public void grandchildByteBufIsReleasedOnErrorPath() {
+        byte[] wire = new byte[] {
+            // -- 12-byte v2 signature (decodeHeader only skipBytes(12); contents unchecked) --
+            0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+            0x21,             // verCmd: version 2, PROXY command
+            0x11,             // protFam: AF_IPv4 + STREAM (TCP4)
+            0x00, 0x0C,       // addressInfoLen = 12 (min for IPv4; does not bound the TLV region)
+            0x00, 0x00, 0x00, 0x00,  // src addr 0.0.0.0
+            0x00, 0x00, 0x00, 0x00,  // dst addr 0.0.0.0
+            0x00, 0x00,       // src port
+            0x00, 0x00,       // dst port
+            // -- outer SSL TLV: type 0x20, len 21 --
+            0x20, 0x00, 0x15,
+            0x00,                     //   client
+            0x00, 0x00, 0x00, 0x00,   //   verify
+            // ---- child SSL TLV: type 0x20, len 9 (a grandchild-holder) ----
+            0x20, 0x00, 0x09,
+            0x00,                     //     client
+            0x00, 0x00, 0x00, 0x00,   //     verify
+            // ------ ALPN grandchild TLV: type 0x01, len 1 -> readRetainedSlice(1) leaks here
+            0x01, 0x00, 0x01,
+            (byte) 0xAA,              //       1 sentinel content byte (the leaked slice)
+            // ---- malformed sibling SSL TLV: type 0x20, len 1 (< 5) -> throws ----
+            0x20, 0x00, 0x01,
+            (byte) 0xFF               //     pad so readableBytes() >= 4 at the loop re-entry guard
+        };
+        final ByteBuf header = Unpooled.buffer().writeBytes(wire);
+        assertEquals(1, header.refCnt(), "precondition: freshly allocated buffer");
+
+        assertThrows(HAProxyProtocolException.class, () -> HAProxyMessage.decodeHeader(header));
+        int refCnt = header.refCnt();
+
+        // Regression gate: the fix must return the shared buffer to refCnt 1.
+        assertEquals(1, refCnt,
+            "grandchild TLV ByteBuf leaked on the readNextTLV error path (refCnt should be 1)");
+        assertTrue(header.release(), "buffer should be fully released");
+        assertEquals(0, header.refCnt());
+    }
+
+    /**
+     * Negative control: the SAME nesting (outer SSL -> child SSL -> ALPN grandchild) WITHOUT the
+     * malformed sibling decodes successfully and releases cleanly on both trees. This isolates the
+     * defect to the error path, not the nesting itself.
+     */
+    @Test
+    public void wellFormedNestedHeaderDecodesAndReleasesCleanly() {
+        byte[] wire = {
+            0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+            0x21, 0x11, 0x00, 0x0C,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+            0x00, 0x00,
+            // outer SSL TLV: type 0x20, len 17 (client+verify+child, NO malformed sibling)
+            0x20, 0x00, 0x11,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            // child SSL TLV: type 0x20, len 9
+            0x20, 0x00, 0x09,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            // ALPN grandchild: type 0x01, len 1
+            0x01, 0x00, 0x01, (byte) 0xAA
+        };
+        ByteBuf header = Unpooled.buffer().writeBytes(wire);
+
+        HAProxyMessage msg = HAProxyMessage.decodeHeader(header);
+        assertTrue(header.refCnt() > 1, "decode retains slices of the header");
+        assertFalse(msg.tlvs().isEmpty(), "expected the top-level SSL TLV");
+        assertTrue(msg.release(), "message should be fully released");
+        assertEquals(1, header.refCnt(), "no leak on the happy path (only the test's own ref remains)");
+        assertTrue(header.release(), "buffer fully released");
+        assertEquals(0, header.refCnt());
+    }
 }

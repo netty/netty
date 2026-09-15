@@ -11,6 +11,9 @@ services:
   build:
     image: netty:centos-7-1.11
 
+  build-native-quic:
+    image: netty:centos-7-1.11
+
   build-leak:
     image: netty:centos-7-1.11
 

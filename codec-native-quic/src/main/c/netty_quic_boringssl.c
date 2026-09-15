@@ -187,9 +187,15 @@ static STACK_OF(CRYPTO_BUFFER)* arrayToStack(JNIEnv* env, jobjectArray array, CR
         return NULL;
     }
     STACK_OF(CRYPTO_BUFFER) *stack = sk_CRYPTO_BUFFER_new_null();
+    if (stack == NULL) {
+        return NULL;
+    }
     int arrayLen = (*env)->GetArrayLength(env, array);
     for (int i = 0; i < arrayLen; i++) {
         jbyteArray bytes = (*env)->GetObjectArrayElement(env, array, i);
+        if (bytes == NULL) {
+            goto cleanup;
+        }
         int data_len = (*env)->GetArrayLength(env, bytes);
         uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, bytes, 0);
         if (data == NULL) {

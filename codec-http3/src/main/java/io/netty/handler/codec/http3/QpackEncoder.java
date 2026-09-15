@@ -41,6 +41,18 @@ final class QpackEncoder {
                     "QPACK - section acknowledgment received for unknown stream.");
     private static final int DYNAMIC_TABLE_ENCODE_NOT_DONE = -1;
     private static final int DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE = -2;
+    /**
+     * Maximum number of field sections for which we will track dynamic-table references while waiting for the
+     * peer's Section Acknowledgment or Stream Cancellation instruction. Both instructions are optional per
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2">RFC 9204, section 2.2.2.2</a>, so a
+     * remote peer that never sends them (while still acknowledging dynamic-table insertions) must not be able to
+     * grow this per-connection state without bound. Once the limit is reached we stop referencing the dynamic
+     * table for new field sections (falling back to literal encoding, which is always legal, see
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.4">section 4.5.4</a>) until enough
+     * outstanding sections are acknowledged or cancelled to free up tracking capacity again.
+     */
+    // Visible for tests
+    static final int MAX_OUTSTANDING_SECTIONS = 10_000;
 
     private final QpackHuffmanEncoder huffmanEncoder;
     private final QpackEncoderDynamicTable dynamicTable;
@@ -48,6 +60,7 @@ final class QpackEncoder {
     private int maxBlockedStreams;
     private int blockedStreams;
     private LongObjectHashMap<Queue<Indices>> streamSectionTrackers;
+    private int outstandingSections;
 
     QpackEncoder(@Nullable QpackSensitivityDetector sensitivityDetector) {
         this(new QpackEncoderDynamicTable(), sensitivityDetector);
@@ -106,6 +119,7 @@ final class QpackEncoder {
                 assert streamSectionTrackers != null;
                 streamSectionTrackers.computeIfAbsent(streamId, __ -> new ArrayDeque<>())
                         .add(dynamicTableIndices);
+                outstandingSections++;
             }
 
             // https://www.rfc-editor.org/rfc/rfc9204.html#name-encoded-field-section-prefi
@@ -169,6 +183,7 @@ final class QpackEncoder {
         if (dynamicTableIndices == null) {
             throw INVALID_SECTION_ACKNOWLEDGMENT;
         }
+        outstandingSections--;
 
         dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnAck);
     }
@@ -193,6 +208,7 @@ final class QpackEncoder {
                 if (dynamicTableIndices == null) {
                     break;
                 }
+                outstandingSections--;
                 dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnCancellation);
             }
         }
@@ -247,7 +263,7 @@ final class QpackEncoder {
                              CharSequence value) {
         int index = QpackStaticTable.findFieldIndex(name, value);
         if (index == QpackStaticTable.NOT_FOUND) {
-            if (qpackAttributes.dynamicTableDisabled()) {
+            if (isDynamicTableUnavailable(qpackAttributes)) {
                 encodeLiteral(out, name, value, false);
                 return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
             }
@@ -271,7 +287,7 @@ final class QpackEncoder {
         } else {
             encodeIndexedStaticTable(out, index);
         }
-        return qpackAttributes.dynamicTableDisabled() ? DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE :
+        return isDynamicTableUnavailable(qpackAttributes) ? DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE :
                 DYNAMIC_TABLE_ENCODE_NOT_DONE;
     }
 
@@ -322,7 +338,7 @@ final class QpackEncoder {
      */
     private int tryEncodeWithDynamicTable(QpackAttributes qpackAttributes, ByteBuf out, int base, CharSequence name,
                                           CharSequence value) {
-        if (qpackAttributes.dynamicTableDisabled()) {
+        if (isDynamicTableUnavailable(qpackAttributes)) {
             return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
         }
         assert qpackAttributes.encoderStreamAvailable();
@@ -386,7 +402,7 @@ final class QpackEncoder {
      */
     private int tryAddToDynamicTable(QpackAttributes qpackAttributes, boolean staticTableNameRef, int nameIdx,
                                      CharSequence name, CharSequence value) {
-        if (qpackAttributes.dynamicTableDisabled()) {
+        if (isDynamicTableUnavailable(qpackAttributes)) {
             return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
         }
         assert qpackAttributes.encoderStreamAvailable();
@@ -571,6 +587,23 @@ final class QpackEncoder {
 
     private boolean mayNotBlockStream() {
         return blockedStreams >= maxBlockedStreams - 1;
+    }
+
+    /**
+     * Whether the dynamic table must not be used to encode the next header field: either because it was disabled
+     * for this connection, or because we are already tracking {@link #MAX_OUTSTANDING_SECTIONS} field sections
+     * that are awaiting a Section Acknowledgment or Stream Cancellation instruction from the peer.
+     *
+     * @param qpackAttributes  the attributes used.
+     * @return {@code true} if the dynamic table can't be used, {@code false} otherwise.
+     */
+    private boolean isDynamicTableUnavailable(QpackAttributes qpackAttributes) {
+        return qpackAttributes.dynamicTableDisabled() || outstandingSections >= MAX_OUTSTANDING_SECTIONS;
+    }
+
+    // Visible for tests
+    int outstandingSectionCount() {
+        return outstandingSections;
     }
 
     private static final class Indices {

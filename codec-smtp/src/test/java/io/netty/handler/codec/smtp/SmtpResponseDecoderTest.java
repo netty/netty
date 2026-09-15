@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -142,6 +143,39 @@ public class SmtpResponseDecoderTest {
                 channel.writeInbound(newBuffer("Ok\r\n"));
             }
         });
+    }
+
+    @Test
+    public void testDecodeMultiLineResponseExceedingMaxResponseSize() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        assertThrows(TooLongFrameException.class, () -> {
+            for (int i = 0; i < 1000; i++) {
+                channel.writeInbound(newBuffer("250-A\r\n"));
+            }
+        });
+    }
+
+    @Test
+    public void testDecodeMultiLineResponseWithinMaxResponseSize() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        assertTrue(channel.writeInbound(newBuffer("250-Hello\r\n250-World\r\n250 Ok\r\n")));
+        assertTrue(channel.finish());
+
+        SmtpResponse response = channel.readInbound();
+        assertEquals(250, response.code());
+        assertEquals(3, response.details().size());
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testMaxResponseSizeAppliesPerResponse() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SmtpResponseDecoder(Integer.MAX_VALUE, 256));
+        for (int i = 0; i < 100; i++) {
+            assertTrue(channel.writeInbound(newBuffer("250-Hello\r\n250 Ok\r\n")));
+            SmtpResponse response = channel.readInbound();
+            assertEquals(2, response.details().size());
+        }
+        assertFalse(channel.finish());
     }
 
     private static EmbeddedChannel newChannel() {

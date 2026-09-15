@@ -148,7 +148,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
@@ -158,8 +158,11 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
+                        // The completion may arrive after close() or shutdownOutput() dropped the buffer.
                         ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-                        channelOutboundBuffer.remove();
+                        if (channelOutboundBuffer != null) {
+                            channelOutboundBuffer.remove();
+                        }
                     }
                 } catch (Throwable throwable) {
                    handleWriteError(throwable);
