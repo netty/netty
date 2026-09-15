@@ -155,6 +155,14 @@ public class DefaultHttp2ConnectionDecoderTest {
                 return properties.put(invocationOnMock.getArgument(0), invocationOnMock.getArgument(1));
             }
         });
+        // Each call must return a distinct key so that properties stored under different keys (e.g. content-length
+        // vs. CONNECT-tunnel tracking) don't collide in the IdentityHashMap above.
+        when(connection.newKey()).thenAnswer(new Answer<Http2Connection.PropertyKey>() {
+            @Override
+            public Http2Connection.PropertyKey answer(InvocationOnMock invocationOnMock) {
+                return mock(Http2Connection.PropertyKey.class);
+            }
+        });
 
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         doAnswer(new Answer<Boolean>() {
@@ -698,6 +706,30 @@ public class DefaultHttp2ConnectionDecoderTest {
         strictDecode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+    }
+
+    // See Http2ConnectTunnelTest for coverage of HEADERS being rejected once a CONNECT tunnel is established:
+    // that requires a real DefaultHttp2ConnectionEncoder so the decoder can learn that the local endpoint sent a
+    // successful response, which this file's mocked Http2ConnectionEncoder cannot provide.
+
+    @Test
+    public void headersAfterExtendedConnectStillAllowedAsTrailersWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2FrameListener dec = strictDecode();
+
+        // Extended CONNECT (RFC 8441), identified by :protocol, is not a tunnel under RFC 9113, 8.5 and must
+        // keep allowing a normal trailing HEADERS frame.
+        Http2Headers connect = new DefaultHttp2Headers().method("CONNECT").scheme("https")
+                .authority("example.org").path("/chat");
+        connect.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        dec.onHeadersRead(ctx, STREAM_ID, connect, 0, false);
+
+        when(stream.isHeadersSent()).thenReturn(true);
+
+        Http2Headers trailers = new DefaultHttp2Headers().add("x-trailer", "value");
+        dec.onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(trailers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
 
     @Test
