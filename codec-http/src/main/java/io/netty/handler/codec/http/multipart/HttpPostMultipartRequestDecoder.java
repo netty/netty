@@ -1217,9 +1217,12 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
             posDelimiter = HttpPostBodyUtil.findLastLineBreak(undecodedChunk, startReaderIndex + lastPosition);
             // No LineBreak, however CR can be at the end of the buffer, LF not yet there (issue #11668)
-            // Check if last CR (if any) shall not be in the content (definedLength vs actual length + buffer - 1)
+            // Check if last CR (if any) shall not be in the content (definedLength vs actual length + buffer - 1).
+            // For length-less parts (definedLength == 0, e.g. a field without Content-Length) we can't use the
+            // length equality, so hold a trailing CR back too: it may be the CR of a future boundary CRLF.
             if (posDelimiter < 0 &&
-                httpData.definedLength() == httpData.length() + readableBytes - 1 &&
+                (httpData.definedLength() == httpData.length() + readableBytes - 1 ||
+                 httpData.definedLength() == 0) &&
                 undecodedChunk.getByte(readableBytes + startReaderIndex - 1) == HttpConstants.CR) {
                 // Last CR shall precede a future LF
                 lastPosition = 0;
