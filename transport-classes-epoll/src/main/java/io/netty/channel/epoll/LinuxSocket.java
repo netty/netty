@@ -398,19 +398,24 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketStream(boolean ipv6) {
-        return new LinuxSocket(newSocketStream0(ipv6));
+        return new LinuxSocket(newSocketStream0(ipv6, false));
     }
 
     /**
      * @deprecated use {@link #newSocketStream(SocketProtocolFamily)}
      */
     @Deprecated
-    public static LinuxSocket newSocketStream(InternetProtocolFamily protocol) {
-        return new LinuxSocket(newSocketStream0(protocol));
+    public static LinuxSocket newSocketStream(InternetProtocolFamily family) {
+        return new LinuxSocket(newSocketStream0(family));
     }
 
-    public static LinuxSocket newSocketStream(SocketProtocolFamily protocol) {
-        return new LinuxSocket(newSocketStream0(protocol));
+    public static LinuxSocket newSocketStream(SocketProtocolFamily family) {
+        return new LinuxSocket(newSocketStream0(family));
+    }
+
+    public static LinuxSocket newSocketStream(SocketProtocolFamily family, boolean mptcp) {
+        int fd = newSocketStream0(family, mptcp);
+        return new LinuxSocket(fd);
     }
 
     public static LinuxSocket newSocketStream() {
