@@ -248,7 +248,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         if (src.hasMemoryAddress() && PlatformDependent.hasUnsafe()) {
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, array, index, length);
         } else  if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
+            System.arraycopy(src.array(), src.arrayOffset() + srcIndex, array, index, length);
         } else {
             src.getBytes(srcIndex, array, index, length);
         }
