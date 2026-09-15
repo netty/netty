@@ -40,11 +40,12 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
     // 100 preserves the pre-existing behaviour of always using maxTaskProcessingQuantumNs as the task budget.
-    private static final int DEFAULT_IO_RATIO = Math.max(1, Math.min(100,
+    static final int DEFAULT_IO_RATIO = Math.max(1, Math.min(100,
         SystemPropertyUtil.getInt("io.netty.eventLoop.ioRatio", 100)));
 
     private final long maxTaskProcessingQuantumNs;
     private volatile int ioRatio = DEFAULT_IO_RATIO;
+    private long activeIoTimeNanos = -1;
     private final IoHandlerContext context = new IoHandlerContext() {
         @Override
         public boolean canBlock() {
@@ -66,12 +67,15 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
         @Override
         public void reportActiveIoTime(long activeNanos) {
+            if (activeNanos >= 0) {
+                activeIoTimeNanos = activeNanos;
+            }
             SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
         }
 
         @Override
         public boolean shouldReportActiveIoTime() {
-            return isSuspensionSupported();
+            return isSuspensionSupported() || ioRatio != DEFAULT_IO_RATIO;
         }
     };
 
@@ -200,16 +204,13 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         do {
             final int ioRatio = this.ioRatio;
             final long taskQuantumNs;
-            if (ioRatio == 100) {
-                runIo();
+            runIo();
+            if (ioRatio == 100 || activeIoTimeNanos == -1) {
                 taskQuantumNs = maxTaskProcessingQuantumNs;
             } else {
-                final long ioStartTime = System.nanoTime();
-                runIo();
-                final long ioTime = System.nanoTime() - ioStartTime;
                 // Give tasks a budget proportional to the time just spent on IO, still bounded by the
                 // configured maximum so a burst of IO activity cannot starve the task queue indefinitely.
-                taskQuantumNs = Math.min(maxTaskProcessingQuantumNs, ioTime * (100 - ioRatio) / ioRatio);
+                taskQuantumNs = Math.min(maxTaskProcessingQuantumNs, activeIoTimeNanos * (100 - ioRatio) / ioRatio);
             }
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();

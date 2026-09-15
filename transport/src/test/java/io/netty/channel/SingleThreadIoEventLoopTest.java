@@ -35,7 +35,7 @@ public class SingleThreadIoEventLoopTest {
     void testDefaultIoRatio() {
         SingleThreadIoEventLoop loop = new SingleThreadIoEventLoop(null,
                 Executors.defaultThreadFactory(), TestIoHandler::new);
-        assertEquals(100, loop.getIoRatio());
+        assertEquals(SingleThreadIoEventLoop.DEFAULT_IO_RATIO, loop.getIoRatio());
         loop.shutdownGracefully();
     }
 
