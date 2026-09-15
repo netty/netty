@@ -87,6 +87,6 @@ interface OpenSslInternalSession extends OpenSslSession {
     /**
      * Called once the handshake has completed.
      */
-    void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
+    void handshakeFinished(byte[] id, String cipher, int protocol, byte[] peerCertificate,
                            byte[][] peerCertificateChain, long creationTime, long timeout) throws SSLException;
 }
