@@ -389,6 +389,42 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void writeHeadersMarksOrdinaryConnectRequest() throws Exception {
+        createStream(STREAM_ID, false);
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT").authority("example.org:443");
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, false, newPromise());
+        assertTrue(encoder.isConnectStream(stream(STREAM_ID)));
+        assertFalse(encoder.isSuccessfulResponseSent(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void writeHeadersDoesNotMarkExtendedConnectRequest() throws Exception {
+        createStream(STREAM_ID, false);
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT").scheme("https")
+                .authority("example.org").path("/chat");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, false, newPromise());
+        assertFalse(encoder.isConnectStream(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void writeHeadersMarksSuccessfulResponse() throws Exception {
+        createStream(STREAM_ID, false);
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, false, newPromise());
+        assertTrue(encoder.isSuccessfulResponseSent(stream(STREAM_ID)));
+        assertFalse(encoder.isConnectStream(stream(STREAM_ID)));
+    }
+
+    @Test
+    public void writeHeadersDoesNotMarkRejectedResponse() throws Exception {
+        createStream(STREAM_ID, false);
+        Http2Headers headers = new DefaultHttp2Headers().status("403");
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, true, newPromise());
+        assertFalse(encoder.isSuccessfulResponseSent(stream(STREAM_ID)));
+    }
+
+    @Test
     public void writeDataFailsStreamWhenFlowControlledQueueUnderDelivers() throws Exception {
         createStream(STREAM_ID, false);
         ByteBuf data = wrappedBuffer(new byte[10]);

@@ -17,11 +17,9 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
-import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -64,6 +62,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
+    private final Http2Connection.PropertyKey connectStreamKey;
+    private final Http2Connection.PropertyKey successfulResponseKey;
     private final boolean validateHeaders;
     private final boolean validateRequiredPseudoHeaders;
 
@@ -177,6 +177,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
         this.connection = checkNotNull(connection, "connection");
         contentLengthKey = this.connection.newKey();
+        connectStreamKey = this.connection.newKey();
+        successfulResponseKey = this.connection.newKey();
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
         this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
@@ -279,6 +281,42 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
     }
 
+    private static DefaultHttp2ConnectionEncoder castEncoderIfPossible(Http2ConnectionEncoder encoder)  {
+        while (encoder instanceof DecoratingHttp2ConnectionEncoder) {
+            encoder = ((DecoratingHttp2ConnectionEncoder) encoder).delegate;
+        }
+        if (encoder instanceof DefaultHttp2ConnectionEncoder) {
+            return (DefaultHttp2ConnectionEncoder) encoder;
+        }
+        return null;
+    }
+
+    /**
+     * Returns {@code true} if {@code stream} is an established CONNECT tunnel, i.e. an ordinary CONNECT request
+     * (RFC 9113, 8.5) that was answered with a successful (2xx) response. From this point on, RFC 9113, 8.5
+     * forbids any further HEADERS frame on the stream.
+     */
+    private boolean isConnectTunnelEstablished(Http2Stream stream) {
+        if (connection.isServer()) {
+            // successfully decoded
+            if (stream.getProperty(connectStreamKey) != null) {
+                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
+                if (defaultEncoder != null) {
+                    return defaultEncoder.isSuccessfulResponseSent(stream);
+                }
+            }
+        } else {
+            if (stream.getProperty(successfulResponseKey) != null) {
+                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
+                if (defaultEncoder != null) {
+                    return defaultEncoder.isConnectStream(stream);
+                }
+            }
+        }
+        // We don't know for sure if the tunnel is fully established yet.
+        return false;
+    }
+
     /**
      * Validates that an initial request or response HEADERS frame carries the mandatory pseudo-header fields,
      * as required by <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.3">RFC 9113, 8.3</a>.
@@ -295,8 +333,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
             // CONNECT (RFC 9113, 8.5) omits :scheme/:path and carries :authority; extended CONNECT (RFC 8441),
             // identified by :protocol, follows the regular :scheme/:path rules.
-            if (HttpMethod.CONNECT.asciiName().contentEquals(method) &&
-                    !headers.contains(PseudoHeaderName.PROTOCOL.value())) {
+            if (Http2CodecUtil.isOrdinaryConnect(headers)) {
                 if (headers.authority() == null) {
                     throw streamError(streamId, PROTOCOL_ERROR,
                             "CONNECT request is missing mandatory :authority pseudo-header field.");
@@ -469,6 +506,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
                 }
+                if (connection.isServer()) {
+                    if (Http2CodecUtil.isOrdinaryConnect(headers)) {
+                        // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so
+                        // that, combined with a successful response, any HEADERS frame received once the tunnel
+                        // is established can be rejected as a stream error below.
+                        stream.setProperty(connectStreamKey, Boolean.TRUE);
+                    }
+                } else if (!isInformational &&
+                        HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
+                    // Remember that this stream's (final) response was successful; combined with the request
+                    // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
+                    stream.setProperty(successfulResponseKey, Boolean.TRUE);
+                }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
                 if (contentLength != null && !contentLength.isEmpty()) {
@@ -485,15 +535,24 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 }
                 // Use size() instead of isEmpty() for backward compatibility with grpc-java prior to 1.59.1,
                 // see https://github.com/grpc/grpc-java/issues/10665
-            } else if (validateHeaders && headers.size() > 0) {
-                // Need to check trailers don't contain pseudo headers. According to RFC 9113
-                // Trailers MUST NOT include pseudo-header fields (Section 8.3).
-                for (Iterator<Entry<CharSequence, CharSequence>> iterator =
-                    headers.iterator(); iterator.hasNext();) {
-                    CharSequence name = iterator.next().getKey();
-                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
-                        throw streamError(stream.id(), PROTOCOL_ERROR,
-                                "Found invalid Pseudo-Header in trailers: %s", name);
+            } else {
+                // Once a CONNECT tunnel is established (RFC 9113, 8.5) -- an ordinary CONNECT request answered
+                // with a successful response -- no further HEADERS frame is permitted on the stream.
+                if (isConnectTunnelEstablished(stream)) {
+                    throw streamError(stream.id(), PROTOCOL_ERROR,
+                            "Received HEADERS frame on stream %d after the CONNECT tunnel was established; only " +
+                            "DATA and stream management frames are permitted (RFC 9113, 8.5)", stream.id());
+                }
+                if (validateHeaders && !headers.isEmpty()) {
+                    // Need to check trailers don't contain pseudo headers. According to RFC 9113
+                    // Trailers MUST NOT include pseudo-header fields (Section 8.3).
+                    for (Iterator<Entry<CharSequence, CharSequence>> iterator =
+                        headers.iterator(); iterator.hasNext();) {
+                        CharSequence name = iterator.next().getKey();
+                        if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+                            throw streamError(stream.id(), PROTOCOL_ERROR,
+                                    "Found invalid Pseudo-Header in trailers: %s", name);
+                        }
                     }
                 }
             }

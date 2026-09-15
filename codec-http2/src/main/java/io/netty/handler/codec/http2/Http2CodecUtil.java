@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.LeakPresenceDetector;
@@ -162,6 +163,18 @@ public final class Http2CodecUtil {
 
     static boolean isStreamIdValid(int streamId, boolean server) {
         return isStreamIdValid(streamId) && server == ((streamId & 1) == 0);
+    }
+
+    /**
+     * Returns {@code true} if {@code headers} represent an ordinary CONNECT request as defined by
+     * <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.5">RFC 9113, 8.5</a>, i.e. a request whose
+     * {@code :method} is {@code CONNECT} and which does not carry a {@code :protocol} pseudo-header field (which
+     * would instead identify it as an extended CONNECT request per RFC 8441).
+     */
+    static boolean isOrdinaryConnect(Http2Headers headers) {
+        CharSequence method = headers.method();
+        return method != null && HttpMethod.CONNECT.asciiName().contentEquals(method) &&
+                !headers.contains(Http2Headers.PseudoHeaderName.PROTOCOL.value());
     }
 
     /**
