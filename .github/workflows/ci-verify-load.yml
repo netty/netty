@@ -38,10 +38,12 @@ jobs:
   install-jars-linux-aarch64:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Caching of maven dependencies
-      - uses: actions/cache@v4
+      # Pinned to v5.1.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -56,8 +58,9 @@ jobs:
       - name: Build project and install jars
         run: docker compose -f docker/docker-compose.centos-7-cross.yaml run cross-compile-aarch64-install
 
+      # Pinned to v6.0.0
       - name: Upload the maven repository
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: maven-repository
           # We only need the netty jars.
@@ -69,10 +72,12 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [ install-jars-linux-aarch64 ]
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
+      # Pinned to v7.0.0
       - name: Download the maven repository
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
           name:  maven-repository
           path: /home/runner/jars
