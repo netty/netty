@@ -952,7 +952,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public byte getByte(int index) {
         Component c = findComponent(index);
-        return c.buf.getByte(c.idx(index));
+        return c.abuf != null ? c.abuf._getByte(c.idx(index)) : c.buf.getByte(c.idx(index));
     }
 
     @Override
