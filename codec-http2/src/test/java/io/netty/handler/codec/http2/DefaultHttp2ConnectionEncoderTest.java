@@ -46,6 +46,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
@@ -906,11 +907,64 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteHeaderFrameAfterGoAwayReceived() throws Http2Exception {
         writeAllFlowControlledFrames();
+        createStream(STREAM_ID, false);
         goAwayReceived(STREAM_ID);
         ChannelPromise promise = newPromise();
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false, promise);
         verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
                 eq(0), eq(false), eq(promise));
+    }
+
+    @Test
+    public void headersWriteAfterGoAwayReceivedShouldFail() throws Http2Exception {
+        headersWriteAfterGoAwayReceivedShouldFail(false);
+    }
+
+    @Test
+    public void headersWithPriorityWriteAfterGoAwayReceivedShouldFail() throws Http2Exception {
+        headersWriteAfterGoAwayReceivedShouldFail(true);
+    }
+
+    private void headersWriteAfterGoAwayReceivedShouldFail(boolean hasPriority) throws Http2Exception {
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
+        writeAllFlowControlledFrames();
+
+        ChannelPromise headersPromise = newPromise();
+        encoder.writeHeaders(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, false, headersPromise);
+        assertTrue(headersPromise.isSuccess());
+        goAwayReceived(Integer.MAX_VALUE);
+
+        ChannelPromise promise = newPromise();
+        if (hasPriority) {
+            encoder.writeHeaders(ctx, 3, EmptyHttp2Headers.INSTANCE, 0, DEFAULT_PRIORITY_WEIGHT,
+                    false, 0, false, promise);
+        } else {
+            encoder.writeHeaders(ctx, 3, EmptyHttp2Headers.INSTANCE, 0, false, promise);
+        }
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        Http2Exception.StreamException cause = assertInstanceOf(Http2Exception.StreamException.class, promise.cause());
+        assertEquals(REFUSED_STREAM, cause.error());
+        assertEquals(3, cause.streamId());
+        assertNull(stream(3));
+        verify(writer, never()).writeHeaders(eq(ctx), eq(3), any(Http2Headers.class), anyInt(),
+                anyBoolean(), any(ChannelPromise.class));
+        verify(writer, never()).writeHeaders(eq(ctx), eq(3), any(Http2Headers.class), anyInt(), anyShort(),
+                anyBoolean(), anyInt(), anyBoolean(), any(ChannelPromise.class));
+
+        ChannelPromise dataPromise = newPromise();
+        encoder.writeData(ctx, 1, dummyData(), 0, false, dataPromise);
+        assertTrue(dataPromise.isSuccess());
+        assertEquals("abcdefgh", writtenData.get(0));
+
+        ChannelPromise trailersPromise = newPromise();
+        encoder.writeHeaders(ctx, 1, EmptyHttp2Headers.INSTANCE, 0, true, trailersPromise);
+        assertTrue(trailersPromise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(1), eq(EmptyHttp2Headers.INSTANCE),
+                eq(0), eq(true), eq(trailersPromise));
     }
 
     @Test
