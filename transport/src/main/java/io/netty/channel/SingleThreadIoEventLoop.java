@@ -75,7 +75,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
         @Override
         public boolean shouldReportActiveIoTime() {
-            return isSuspensionSupported() || ioRatio != DEFAULT_IO_RATIO;
+            return isSuspensionSupported() || ioRatio != 100;
         }
     };
 
@@ -204,6 +204,9 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         do {
             final int ioRatio = this.ioRatio;
             final long taskQuantumNs;
+
+            // reset before calling runIo() which is responsible for calling reportActiveIoTime(...).
+            activeIoTimeNanos = -1;
             runIo();
             if (ioRatio == 100 || activeIoTimeNanos == -1) {
                 taskQuantumNs = maxTaskProcessingQuantumNs;
