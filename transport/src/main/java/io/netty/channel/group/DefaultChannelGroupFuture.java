@@ -42,6 +42,12 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
 
     private final ChannelGroup group;
     private final Map<Channel, ChannelFuture> futures;
+    /**
+     * Guards the two counters below. This is a lock of its own rather than the monitor of this future, as that
+     * monitor is also visible to whoever awaits this future: locking on it here would let an application that awaits
+     * while holding it keep the child listener from ever completing this future.
+     */
+    private final Object countersLock = new Object();
     private int successCount;
     private int failureCount;
 
@@ -50,7 +56,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
         public void operationComplete(ChannelFuture future) throws Exception {
             boolean success = future.isSuccess();
             boolean callSetDone;
-            synchronized (DefaultChannelGroupFuture.this) {
+            synchronized (countersLock) {
                 if (success) {
                     successCount ++;
                 } else {
@@ -133,13 +139,17 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
     }
 
     @Override
-    public synchronized boolean isPartialSuccess() {
-        return successCount != 0 && successCount != futures.size();
+    public boolean isPartialSuccess() {
+        synchronized (countersLock) {
+            return successCount != 0 && successCount != futures.size();
+        }
     }
 
     @Override
-    public synchronized boolean isPartialFailure() {
-        return failureCount != 0 && failureCount != futures.size();
+    public boolean isPartialFailure() {
+        synchronized (countersLock) {
+            return failureCount != 0 && failureCount != futures.size();
+        }
     }
 
     @Override
