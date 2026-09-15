@@ -55,6 +55,7 @@ public final class IoUring {
     private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
     private static final boolean IORING_ENTER_NO_IOWAIT_ENABLED;
+    private static final boolean IORING_SPLICE_ENABLED;
     static final int NUM_ELEMENTS_IOVEC;
     static final int DEFAULT_RING_SIZE;
     static final int DEFAULT_CQ_SIZE;
@@ -189,6 +190,8 @@ public final class IoUring {
                "io.netty.iouring.pollAddMultishotEnabled", true);
         IORING_ENTER_NO_IOWAIT_ENABLED = IORING_ENTER_NO_IOWAIT_SUPPORTED && SystemPropertyUtil.getBoolean(
                 "io.netty.iouring.enterNoIoWaitEnabled", false);
+        IORING_SPLICE_ENABLED = IORING_SPLICE_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.spliceEnabled", true);
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
 
         DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
@@ -399,6 +402,15 @@ public final class IoUring {
      */
     public static boolean isPollAddMultishotEnabled() {
         return IORING_POLL_ADD_MULTISHOT_ENABLED;
+    }
+
+    /**
+     * Returns if SPLICE is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isSpliceEnabled() {
+        return IORING_SPLICE_ENABLED;
     }
 
     public static void ensureAvailability() {
