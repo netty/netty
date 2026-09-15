@@ -1027,6 +1027,48 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
     }
 
+    // See https://www.rfc-editor.org/rfc/rfc9113.html#section-8.1.1: a normal response is malformed if its
+    // content-length does not match the amount of DATA received, even if no DATA was received at all.
+    @Test
+    public void dataContentLengthZeroMismatchNotAllowedForNormalResponse() throws Exception {
+        mockFlowControl(0);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+                .status(HttpResponseStatus.OK.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L), 0, false);
+
+        assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onDataRead(ctx, STREAM_ID, EMPTY_BUFFER, 0, true);
+            }
+        });
+        verify(listener, never()).onDataRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_BUFFER), eq(0), eq(true));
+    }
+
+    // 204/304 responses are defined as having no content, so a non-zero content-length is allowed even without
+    // any DATA received.
+    @Test
+    public void dataContentLengthZeroMismatchAllowedForNoContentResponse() throws Exception {
+        dataContentLengthZeroMismatchAllowed(HttpResponseStatus.NO_CONTENT);
+    }
+
+    @Test
+    public void dataContentLengthZeroMismatchAllowedForNotModifiedResponse() throws Exception {
+        dataContentLengthZeroMismatchAllowed(HttpResponseStatus.NOT_MODIFIED);
+    }
+
+    private void dataContentLengthZeroMismatchAllowed(HttpResponseStatus status) throws Exception {
+        mockFlowControl(0);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers()
+                .status(status.codeAsText())
+                .setLong(HttpHeaderNames.CONTENT_LENGTH, 5L), 0, false);
+
+        decode().onDataRead(ctx, STREAM_ID, EMPTY_BUFFER, 0, true);
+
+        verify(listener).onDataRead(eq(ctx), eq(STREAM_ID), eq(EMPTY_BUFFER), eq(0), eq(true));
+        verify(lifecycleManager).closeStreamRemote(eq(stream), eq(future));
+    }
+
     @Test
     public void dataContentLengthMissmatch() throws Exception {
         dataContentLengthInvalid(false);
