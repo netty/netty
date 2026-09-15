@@ -40,8 +40,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
     // 100 preserves the pre-existing behaviour of always using maxTaskProcessingQuantumNs as the task budget.
-    private static final int DEFAULT_IO_RATIO =
-            SystemPropertyUtil.getInt("io.netty.eventLoop.ioRatio", 100);
+    private static final int DEFAULT_IO_RATIO = Math.max(1, Math.min(100,
+        SystemPropertyUtil.getInt("io.netty.eventLoop.ioRatio", 100)));
 
     private final long maxTaskProcessingQuantumNs;
     private volatile int ioRatio = DEFAULT_IO_RATIO;
@@ -244,7 +244,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      * queue does not delay IO processing (and so response handling) for extended stretches of time.
      */
     public void setIoRatio(int ioRatio) {
-        this.ioRatio = ObjectUtil.checkInRange(ioRatio, 0, 100, "ioRatio");
+        this.ioRatio = ObjectUtil.checkInRange(ioRatio, 1, 100, "ioRatio");
     }
 
     @Override
