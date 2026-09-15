@@ -103,6 +103,11 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
         super(WebSocketVersion.V13, webSocketURL, subprotocols, decoderConfig);
     }
 
+    WebSocketServerHandshaker13(boolean isSecure, String host, String path,
+                                String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V13, isSecure, host, path, subprotocols, decoderConfig);
+    }
+
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
