@@ -281,29 +281,14 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
     }
 
-    /**
-     * Returns {@code true} if {@code stream}'s initial request was an ordinary CONNECT request (RFC 9113, 8.5),
-     * whether that request was decoded by this endpoint (server side) or written by this endpoint's encoder
-     * (client side).
-     */
-    private boolean isConnectStream(Http2Stream stream) {
-        if (stream.getProperty(connectStreamKey) != null) {
-            return true;
+    private static DefaultHttp2ConnectionEncoder castEncoderIfPossible(Http2ConnectionEncoder encoder)  {
+        while (encoder instanceof DecoratingHttp2ConnectionEncoder) {
+            encoder = ((DecoratingHttp2ConnectionEncoder) encoder).delegate;
         }
-        return encoder instanceof DefaultHttp2ConnectionEncoder &&
-                ((DefaultHttp2ConnectionEncoder) encoder).isConnectStream(stream);
-    }
-
-    /**
-     * Returns {@code true} if {@code stream}'s initial response used a successful (2xx) status code, whether that
-     * response was decoded by this endpoint (client side) or written by this endpoint's encoder (server side).
-     */
-    private boolean isSuccessfulResponse(Http2Stream stream) {
-        if (stream.getProperty(successfulResponseKey) != null) {
-            return true;
+        if (encoder instanceof DefaultHttp2ConnectionEncoder) {
+            return (DefaultHttp2ConnectionEncoder) encoder;
         }
-        return encoder instanceof DefaultHttp2ConnectionEncoder &&
-                ((DefaultHttp2ConnectionEncoder) encoder).isSuccessfulResponseSent(stream);
+        return null;
     }
 
     /**
@@ -312,7 +297,24 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      * forbids any further HEADERS frame on the stream.
      */
     private boolean isConnectTunnelEstablished(Http2Stream stream) {
-        return isConnectStream(stream) && isSuccessfulResponse(stream);
+        if (connection.isServer()) {
+            // successfully decoded
+            if (stream.getProperty(connectStreamKey) != null) {
+                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
+                if (defaultEncoder != null) {
+                    return defaultEncoder.isSuccessfulResponseSent(stream);
+                }
+            }
+        } else {
+            if (stream.getProperty(successfulResponseKey) != null) {
+                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
+                if (defaultEncoder != null) {
+                    return defaultEncoder.isConnectStream(stream);
+                }
+            }
+        }
+        // We don't know for sure if the tunnel is fully established yet.
+        return false;
     }
 
     /**
