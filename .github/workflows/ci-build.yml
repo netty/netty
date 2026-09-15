@@ -52,11 +52,13 @@ jobs:
 
     name: ${{ matrix.setup }}
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -78,7 +80,8 @@ jobs:
         uses: ./.github/actions/thread-dump-jvms
         if: cancelled()
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v6.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: ${{ failure() }}
         with:
           name: target
