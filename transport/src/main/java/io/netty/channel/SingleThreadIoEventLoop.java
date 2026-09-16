@@ -213,7 +213,13 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             } else {
                 // Give tasks a budget proportional to the time just spent on IO, still bounded by the
                 // configured maximum so a burst of IO activity cannot starve the task queue indefinitely.
-                taskQuantumNs = Math.min(maxTaskProcessingQuantumNs, activeIoTimeNanos * (100 - ioRatio) / ioRatio);
+                long quantum = Math.min(maxTaskProcessingQuantumNs, activeIoTimeNanos * (100 - ioRatio) / ioRatio);
+                if (quantum == 0) {
+                    // Ensure we always use a "deadline"
+                    taskQuantumNs = maxTaskProcessingQuantumNs;
+                } else {
+                    taskQuantumNs = quantum;
+                }
             }
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();
