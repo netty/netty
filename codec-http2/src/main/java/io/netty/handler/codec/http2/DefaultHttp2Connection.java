@@ -914,9 +914,6 @@ public class DefaultHttp2Connection implements Http2Connection {
                         "Cannot create stream %d greater than Last-Stream-ID %d from GOAWAY.",
                         streamId, lastStreamKnownByPeer);
             }
-            if (isLocal() && goAwayReceived()) {
-                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
-            }
             if (!isValidStreamId(streamId)) {
                 if (streamId < 0) {
                     throw new Http2NoMoreStreamIdsException();
@@ -929,6 +926,9 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (streamId < nextStreamIdToCreate) {
                 throw closedStreamError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
                         streamId, nextStreamIdToCreate);
+            }
+            if (isLocal() && goAwayReceived()) {
+                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
             }
             if (nextStreamIdToCreate <= 0) {
                 // We exhausted the stream id space that we can use. Let's signal this back but also signal that

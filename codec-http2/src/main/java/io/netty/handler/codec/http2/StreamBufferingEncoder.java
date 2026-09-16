@@ -259,10 +259,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                 closed = true;
 
                 // Fail all buffered streams.
-                Http2ChannelClosedException e = new Http2ChannelClosedException();
-                while (!pendingStreams.isEmpty()) {
-                    PendingStream stream = pendingStreams.pollFirstEntry().getValue();
-                    stream.close(e);
+                if (!pendingStreams.isEmpty()) {
+                    failAllPendingStreams(pendingStreams, new Http2ChannelClosedException());
                 }
             }
         } finally {
@@ -283,7 +281,12 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     private void cancelGoAwayStreams(GoAwayDetail goAwayDetail) {
-        Exception e = new Http2GoAwayException(goAwayDetail);
+        if (!pendingStreams.isEmpty()) {
+            failAllPendingStreams(pendingStreams, new Http2GoAwayException(goAwayDetail));
+        }
+    }
+
+    private static void failAllPendingStreams(TreeMap<Integer, PendingStream> pendingStreams, Exception e) {
         while (!pendingStreams.isEmpty()) {
             PendingStream stream = pendingStreams.pollFirstEntry().getValue();
             stream.close(e);
