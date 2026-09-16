@@ -24,6 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
@@ -53,7 +54,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
@@ -189,6 +189,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private static final int STATE_FIRE_CHANNEL_READ = 1 << 8;
     private static final int STATE_UNWRAP_REENTRY = 1 << 9;
+    /**
+     * Set while a marker write used to detect downstream transport drain is in flight. Guards against scheduling
+     * more than one such marker at a time. See #suspendWrapUntilTransportDrains(ChannelHandlerContext).
+     */
+    private static final int STATE_WRAP_RESUME_SCHEDULED = 1 << 10;
+    /**
+     * Set for the duration of a wrap()+forceFlush() cycle driven from either {@link #wrapAndFlush} or
+     * {@link WrapResumeListener}. forceFlush(ctx) - or even the ctx.write(...) inside
+     * suspendWrapUntilTransportDrains(...) - can synchronously complete a resume marker's promise and invoke
+     * {@link WrapResumeListener} while a cycle is still active further down the stack; rather than recursing,
+     * such re-entrant attempts set {@link #STATE_WRAP_RETRY_PENDING} and return, and the active cycle loops
+     * again by itself once its current pass finishes. This turns what would otherwise be unbounded recursion
+     * (if the transport keeps freeing up just enough room for one more chunk at a time) into safe iteration.
+     */
+    private static final int STATE_WRAP_ACTIVE = 1 << 11;
+    /**
+     * Set by a re-entrant wrap()+forceFlush() attempt that deferred to the active cycle instead of recursing.
+     * See {@link #STATE_WRAP_ACTIVE}.
+     */
+    private static final int STATE_WRAP_RETRY_PENDING = 1 << 12;
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -434,6 +454,17 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
 
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
+    private WrapResumeListener wrapResumeListener;
+    // Bytes, counted from the head of pendingUnencryptedWrites, that have crossed an explicit flush() boundary and
+    // are therefore eligible to be wrapped. Bytes written after the most recent flush() are excluded until the next
+    // flush() call folds them in. See #maxPlaintextBytesForWrap(ChannelHandlerContext) and #wrapAndFlush(...).
+    private long flushedPlaintextBytes;
+    // Incremented once per genuine call to suspendWrapUntilTransportDrains(...) (i.e. past its dedup guard).
+    // Package-private purely so tests in this package can observe whether wrapping actually suspended, since that
+    // is otherwise not reliably observable from outside: e.g. EmbeddedChannel auto-drains its task queue after
+    // every flush()/write(), so a suspend that resumes immediately looks the same, from the outside, as never
+    // having suspended at all.
+    int wrapSuspendCount;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -719,6 +750,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                   new ChannelException("Pending write on removal of SslHandler"));
             }
             pendingUnencryptedWrites = null;
+            flushedPlaintextBytes = 0;
+            clearState(STATE_WRAP_RESUME_SCHEDULED);
 
             SSLException cause = null;
 
@@ -831,18 +864,157 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // See https://github.com/netty/netty/issues/3364
             pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
         }
+        // Everything currently sitting in the queue - including any backlog left over from a previous flush()
+        // that got backpressured, plus anything written since then - has now crossed a flush boundary and becomes
+        // eligible for wrapping. Bytes written *after* this point are excluded until the next flush() call.
+        flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
         if (!handshakePromise.isDone()) {
             setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
         }
+        if (isStateSet(STATE_WRAP_ACTIVE)) {
+            // A wrap()+forceFlush() cycle is already active further down the stack (this flush() call arrived
+            // synchronously from within its own forceFlush(), e.g. because a resume marker's promise completed
+            // inline). The flush-boundary update above still applies; let the active cycle pick up the newly
+            // flushed data itself instead of recursing here. See STATE_WRAP_ACTIVE.
+            setState(STATE_WRAP_RETRY_PENDING);
+            return;
+        }
+        setState(STATE_WRAP_ACTIVE);
         try {
-            wrap(ctx, false);
+            do {
+                clearState(STATE_WRAP_RETRY_PENDING);
+                try {
+                    wrap(ctx, false);
+                } finally {
+                    // We may have written some parts of data before an exception was thrown so ensure we always
+                    // flush. See https://github.com/netty/netty/issues/3900#issuecomment-172481830
+                    forceFlush(ctx);
+                }
+            } while (isStateSet(STATE_WRAP_RETRY_PENDING));
         } finally {
-            // We may have written some parts of data before an exception was thrown so ensure we always flush.
-            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
-            forceFlush(ctx);
+            clearState(STATE_WRAP_ACTIVE);
         }
     }
 
+    /**
+     * Returns the number of bytes currently queued in {@link #pendingUnencryptedWrites} that are attributable to
+     * the downstream transport, i.e. TLS output already handed off to the channel's outbound buffer. Plaintext
+     * still sitting in {@link #pendingUnencryptedWrites} also counts towards the channel's pending-write bytes
+     * (and therefore {@link Channel#isWritable()}), so it must be subtracted out to isolate genuine transport
+     * backpressure from backpressure caused by our own, not yet wrapped, plaintext backlog.
+     */
+    private long downstreamPendingBytes(ChannelHandlerContext ctx) {
+        ChannelOutboundBuffer outboundBuffer = ctx.channel().unsafe().outboundBuffer();
+        if (outboundBuffer == null) {
+            return 0;
+        }
+        long downstream = outboundBuffer.totalPendingWriteBytes() - pendingUnencryptedWrites.readableBytes();
+        return Math.max(0, downstream);
+    }
+
+    /**
+     * Returns the maximum number of bytes of the flushed plaintext backlog ({@link #flushedPlaintextBytes}) that
+     * may be composed into a single wrap call right now, bounded by the remaining downstream write-buffer
+     * capacity, or a negative value if the transport has no room left at all and wrapping should be suspended.
+     * Only meaningful when {@link #flushedPlaintextBytes} is positive and {@link #wrapDataSize} is positive; in
+     * every other case the caller decides how to remove the next entry from {@link #pendingUnencryptedWrites}.
+     */
+    private int maxPlaintextBytesForWrap(ChannelHandlerContext ctx) {
+        long available = (long) ctx.channel().config().getWriteBufferHighWaterMark() - downstreamPendingBytes(ctx);
+        if (available <= 0) {
+            return -1;
+        }
+        long desired = Math.min(wrapDataSize, flushedPlaintextBytes);
+        return (int) Math.max(1, Math.min(Math.min(desired, available), Integer.MAX_VALUE));
+    }
+
+    /**
+     * Resumes wrapping once {@code alreadyWrittenPromise} completes if non-{@code null} - a promise already
+     * attached to real TLS output written earlier in this same {@code wrap()} call, avoiding a redundant empty
+     * write purely to obtain one - otherwise writes a fresh empty marker downstream of this handler and waits on
+     * that instead. The state guard is armed, and {@code wrapSuspendCount} incremented, before that write happens:
+     * a downstream handler could complete the write's promise synchronously as part of {@code ctx.write(...)}
+     * itself, and anything that write triggers must see this suspend as already in flight. Either way, the
+     * promise waited on cannot complete until all TLS output already queued ahead of it - including itself - has
+     * drained from the transport, giving a transport-only resume signal that is independent of
+     * {@link Channel#isWritable()} (whose value is also influenced by our own queued plaintext).
+     */
+    private void suspendWrapUntilTransportDrains(ChannelHandlerContext ctx, ChannelPromise alreadyWrittenPromise) {
+        if (isStateSet(STATE_WRAP_RESUME_SCHEDULED)) {
+            return;
+        }
+        setState(STATE_WRAP_RESUME_SCHEDULED);
+        wrapSuspendCount++;
+
+        final ChannelPromise resumeSignal;
+        if (alreadyWrittenPromise != null) {
+            resumeSignal = alreadyWrittenPromise;
+        } else {
+            resumeSignal = ctx.newPromise();
+            ctx.write(Unpooled.EMPTY_BUFFER, resumeSignal);
+        }
+        resumeSignal.addListener(wrapResumeListener);
+    }
+
+    private final class WrapResumeListener implements ChannelFutureListener, Runnable {
+        private ChannelFuture future;
+
+        @Override
+        public void operationComplete(final ChannelFuture future) {
+            assert this.future == null;
+            this.future = future;
+            run();
+        }
+
+        @Override
+        public void run() {
+            // Set this.future to null before we clear the state as after the state is cleared we might re-use
+            // this listener again.
+            ChannelFuture future = this.future;
+            this.future = null;
+            clearState(STATE_WRAP_RESUME_SCHEDULED);
+            if (!future.isSuccess()) {
+                releaseAndFailAll(ctx, future.cause());
+                ctx.fireExceptionCaught(future.cause());
+                return;
+            }
+            if (ctx.isRemoved() || pendingUnencryptedWrites.isEmpty() ||
+                isStateSet(STATE_PROCESS_TASK)) {
+                // Either there is nothing left to do, or a delegated task is in flight and its
+                // completion path will resume wrapping once it finishes.
+                return;
+            }
+            if (isStateSet(STATE_WRAP_ACTIVE)) {
+                // A wrap()+forceFlush() cycle is already active further down the stack: this promise completed
+                // synchronously as part of that cycle's own forceFlush(ctx) (always true for EmbeddedChannel, and
+                // also possible for a real socket write that fits straight into the OS send buffer), invoking this
+                // listener while that cycle is still unwinding. Calling wrap() again from here would reenter it
+                // while already active, and if the transport keeps freeing up just enough room for one more chunk
+                // at a time, each resume would synchronously trigger the next one, recursing without bound instead
+                // of iterating. Deferring to the active cycle instead - it checks this flag itself after every
+                // pass - turns that recursion into safe iteration. See STATE_WRAP_ACTIVE.
+                setState(STATE_WRAP_RETRY_PENDING);
+                return;
+            }
+            setState(STATE_WRAP_ACTIVE);
+            try {
+                do {
+                    clearState(STATE_WRAP_RETRY_PENDING);
+                    try {
+                        wrap(ctx, false);
+                    } catch (Throwable cause) {
+                        setHandshakeFailure(ctx, cause);
+                        ctx.fireExceptionCaught(cause);
+                        return;
+                    } finally {
+                        forceFlush(ctx);
+                    }
+                } while (isStateSet(STATE_WRAP_RETRY_PENDING));
+            } finally {
+                clearState(STATE_WRAP_ACTIVE);
+            }
+        }
+    }
     // This method will not call setHandshakeFailure(...) !
     private void wrap(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
@@ -851,14 +1023,44 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            outer: while (!ctx.isRemoved() && !pendingUnencryptedWrites.isEmpty()) {
-                ChannelPromise promise = ctx.newPromise();
-                ByteBuf buf = wrapDataSize > 0 ?
-                        pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
-                        pendingUnencryptedWrites.removeFirst(promise);
+            ChannelPromise promise;
+            // The promise of the most recent real downstream write made by this wrap() call, if any. Reused as the
+            // resume signal if we later hit backpressure, instead of writing a redundant empty marker.
+            ChannelPromise lastWritePromise = null;
+            outer: while (!ctx.isRemoved()) {
+                ByteBuf buf;
+                if (flushedPlaintextBytes <= 0) {
+                    // Nothing flushed remains as real plaintext. Still attempt to drain a queued zero-length
+                    // control write (e.g. the alert/handshake trigger from #wrapAndFlush or the NEED_WRAP case
+                    // below) so it can complete its promise and give the engine a chance to produce output, but
+                    // without touching plaintext that has not yet crossed a flush() boundary: remove(..., 0, ...)
+                    // returns null as soon as the next queued entry is real, unflushed data.
+                    promise = ctx.newPromise();
+                    buf = pendingUnencryptedWrites.remove(alloc, 0, promise);
+                } else {
+                    int maxPlaintextBytes = maxPlaintextBytesForWrap(ctx);
+                    if (maxPlaintextBytes < 0) {
+                        // Flushed plaintext remains, but the downstream transport has no room left.
+                        // Let's try to flush and see if this will give us more room.
+                        forceFlush(ctx);
+
+                        maxPlaintextBytes = maxPlaintextBytesForWrap(ctx);
+                        // See if we have room again and if not stop wrapping more of it into TLS output and resume
+                        // once the already-queued TLS output has drained.
+                        if (maxPlaintextBytes < 0) {
+                            suspendWrapUntilTransportDrains(ctx, lastWritePromise);
+                            break;
+                        }
+                    }
+                    promise = ctx.newPromise();
+                    buf = wrapDataSize > 0 ?
+                            pendingUnencryptedWrites.remove(alloc, maxPlaintextBytes, promise) :
+                            pendingUnencryptedWrites.removeFirst(promise);
+                }
                 if (buf == null) {
                     break;
                 }
+                flushedPlaintextBytes -= buf.readableBytes();
 
                 SSLEngineResult result;
 
@@ -898,7 +1100,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
 
                 if (buf.isReadable()) {
+                    // Not all of it was consumed (e.g. it was larger than MAX_PLAINTEXT_LENGTH and the packet
+                    // estimate under-shot); the remainder goes back to the front of the queue and is still owed
+                    // to the flushed backlog for the purposes of future budget calculations.
                     pendingUnencryptedWrites.addFirst(buf, promise);
+                    flushedPlaintextBytes += buf.readableBytes();
                     // When we add the buffer/promise pair back we need to be sure we don't complete the promise
                     // later. We only complete the promise if the buffer is completely consumed.
                     promise = null;
@@ -913,11 +1119,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = null;
                     if (promise != null) {
                         ctx.write(b, promise);
+                        lastWritePromise = promise;
                     } else {
                         ctx.write(b);
                     }
                 } else if (promise != null) {
                     ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    lastWritePromise = promise;
                 }
                 // else out is not readable we can re-use it and so save an extra allocation
 
@@ -936,6 +1144,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         }
                         pendingUnencryptedWrites.releaseAndFailAll(ctx, exception);
                     }
+                    flushedPlaintextBytes = 0;
 
                     return;
                 } else {
@@ -2057,6 +2266,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }
+        flushedPlaintextBytes = 0;
     }
 
     private void notifyClosePromise(Throwable cause) {
@@ -2126,6 +2336,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return SslHandler.this.wrapDataSize;
             }
         };
+        wrapResumeListener = new WrapResumeListener();
 
         setOpensslEngineSocketFd(channel);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
