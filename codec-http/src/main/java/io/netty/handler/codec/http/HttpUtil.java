@@ -592,7 +592,13 @@ public final class HttpUtil {
 
         int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
         if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
-            return contentTypeValue.subSequence(0, indexOfSemicolon);
+            // Remove the trailing optional whitespace (OWS) that RFC 9110 allows before the semicolon
+            // starting the next parameter, see https://www.rfc-editor.org/rfc/rfc9110#section-8.3.1
+            int end = indexOfSemicolon;
+            while (end > 0 && isOws(contentTypeValue.charAt(end - 1))) {
+                end--;
+            }
+            return contentTypeValue.subSequence(0, end);
         } else {
             return contentTypeValue.length() > 0 ? contentTypeValue : null;
         }
