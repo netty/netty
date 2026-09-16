@@ -845,7 +845,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         });
         try {
             encoder().writeRstStream(ctx, streamId, errorCode, promise);
-        } catch (RuntimeException | Error e) {
+        } catch (Throwable e) {
             promise.tryFailure(e);
             throw e;
         }
@@ -870,6 +870,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public ChannelFuture resetStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
                                      ChannelPromise promise) {
+        promise = promise.unvoid();
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
             // An RST_STREAM frame MUST NOT be sent for a stream in the "idle" state (RFC 9113, section 6.4):
@@ -879,7 +880,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     (pendingStreamErrors == null || !pendingStreamErrors.containsKey(streamId))) {
                 return promise.setSuccess();
             }
-            return resetUnknownStream(ctx, streamId, errorCode, promise.unvoid());
+            return resetUnknownStream(ctx, streamId, errorCode, promise);
         }
 
        return resetStream(ctx, stream, errorCode, promise);

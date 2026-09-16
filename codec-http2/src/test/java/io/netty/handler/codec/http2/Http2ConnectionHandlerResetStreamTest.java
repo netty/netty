@@ -63,6 +63,17 @@ public class Http2ConnectionHandlerResetStreamTest {
     }
 
     @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void idleResetWithVoidPromiseReturnsListenableFuture(boolean server) {
+        try (Fixture f = new Fixture(server, Wrapping.NONE, false)) {
+            ChannelFuture future = f.handler.resetStream(f.ctx, 3, CANCEL.code(), f.ctx.voidPromise());
+            future.addListener(future1 -> { });
+            assertTrue(future.isSuccess());
+            assertEquals(emptyList(), f.writer.resets);
+        }
+    }
+
+    @ParameterizedTest
     @EnumSource(value = Wrapping.class, names = { "NONE", "REPLACE_PROMISE", "DEFERRED" })
     public void invalidInitialHeadersResetThroughEncoder(Wrapping wrapping) throws Exception {
         try (Fixture f = new Fixture(true, wrapping, false)) {
