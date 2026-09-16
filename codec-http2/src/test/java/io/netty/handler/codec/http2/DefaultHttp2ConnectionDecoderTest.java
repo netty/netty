@@ -894,6 +894,17 @@ public class DefaultHttp2ConnectionDecoderTest {
             dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0));
     }
 
+    // https://www.rfc-editor.org/rfc/rfc9113.html#name-server-push
+    // Promised requests cannot include any content or a trailer section.
+    @Test
+    public void testPromiseWithContentLengthOfZero() throws Exception {
+        Http2FrameListener dec = strictDecode();
+        Http2Headers headers = request().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+        dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+        verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID), eq(headers), eq(0));
+    }
+
     @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();

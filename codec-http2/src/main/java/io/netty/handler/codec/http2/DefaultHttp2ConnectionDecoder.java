@@ -661,10 +661,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 validateRequiredPseudoHeaders(true, promisedStreamId, headers);
             }
 
-            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                throw streamError(promisedStreamId, PROTOCOL_ERROR,
-                    "Promised request on stream %d for promised stream %d contains content-length header",
-                    streamId, promisedStreamId);
+            // extract the content-length header
+            List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
+            if (contentLength != null && !contentLength.isEmpty()) {
+                long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
+                if (cLength != -1 && cLength != 0) {
+                    throw streamError(promisedStreamId, PROTOCOL_ERROR,
+                        "Promised request on stream %d for promised stream %d contains invalid content-length header",
+                        streamId, promisedStreamId);
+                }
             }
 
             if (!requestVerifier.isAuthoritative(ctx, headers)) {
