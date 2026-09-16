@@ -351,19 +351,19 @@ public class Http2ConnectionHandlerTest {
         handler.handlerAdded(ctx);
         clearInvocations(ctx);
 
-        doAnswer(new Answer<ChannelFuture>() {
+        doAnswer(new Answer<Void>() {
             @Override
-            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) throws Throwable {
                 // Simulate close()'s own cascade (e.g. SslHandler flushing a close_notify) completing a write and
                 // firing channelWritabilityChanged synchronously, from outside any Http2ConnectionHandler.flush()
                 // frame - exactly what AbstractKQueueStreamChannel's write-drain loop does when a write it just
                 // performed flips writability.
                 handler.channelWritabilityChanged(ctx);
-                return future;
+                return null;
             }
-        }).when(ctx).close(any(ChannelPromise.class));
+        }).when(ctx).close(any(CompletionHandler.class));
 
-        handler.close(ctx, promise);
+        handler.close(ctx, CompletionHandler.ignore());
 
         verify(ctx, never()).flush();
     }
