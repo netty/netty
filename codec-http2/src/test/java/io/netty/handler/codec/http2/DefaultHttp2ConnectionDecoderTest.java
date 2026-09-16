@@ -858,6 +858,49 @@ public class DefaultHttp2ConnectionDecoderTest {
                 eq(EmptyHttp2Headers.INSTANCE), eq(0));
     }
 
+    // The promised stream must still be reserved (i.e. its existence tracked by the connection) even when the
+    // Http2PromisedRequestVerifier subsequently rejects the promised request, so that the stream ID cannot be
+    // silently reused or its book keeping lost.
+    @Test
+    public void pushPromiseReadRejectedByVerifierShouldStillReserveStream() throws Exception {
+        Http2PromisedRequestVerifier verifier = new Http2PromisedRequestVerifier() {
+            @Override
+            public boolean isAuthoritative(ChannelHandlerContext ctx, Http2Headers headers) {
+                return false;
+            }
+
+            @Override
+            public boolean isCacheable(Http2Headers headers) {
+                return true;
+            }
+
+            @Override
+            public boolean isSafe(Http2Headers headers) {
+                return true;
+            }
+        };
+        DefaultHttp2ConnectionDecoder rejecting =
+                new DefaultHttp2ConnectionDecoder(connection, encoder, reader, verifier);
+        rejecting.lifecycleManager(lifecycleManager);
+        rejecting.frameListener(listener);
+        // Prime the decoder past the connection preface so PUSH_PROMISE is not treated as an unexpected
+        // first frame.
+        decode(rejecting).onSettingsRead(ctx, new Http2Settings());
+        final Http2FrameListener dec = decode(rejecting);
+
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(ex));
+
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
     @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
