@@ -44,6 +44,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
@@ -860,7 +861,8 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     // The promised stream must still be reserved (i.e. its existence tracked by the connection) even when the
     // Http2PromisedRequestVerifier subsequently rejects the promised request, so that the stream ID cannot be
-    // silently reused or its book keeping lost.
+    // silently reused or its book keeping lost. A follow-up frame for that stream must then be rejected with a
+    // stream error rather than a connection error, since the connection is now aware of the stream.
     @Test
     public void pushPromiseReadRejectedByVerifierShouldStillReserveStream() throws Exception {
         Http2PromisedRequestVerifier verifier = new Http2PromisedRequestVerifier() {
@@ -899,6 +901,20 @@ public class DefaultHttp2ConnectionDecoderTest {
 
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+
+        // Because the promised stream was reserved despite the rejection, the connection now knows about its
+        // existence. A follow-up HEADERS frame for that stream (e.g. once it has been reset and closed) must
+        // therefore be rejected with a stream error scoped to that stream, rather than a connection error.
+        when(connection.stream(PUSH_STREAM_ID)).thenReturn(pushStream);
+        when(pushStream.state()).thenReturn(Http2Stream.State.CLOSED);
+        Http2Exception followUpEx = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onHeadersRead(ctx, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+            }
+        });
+        assertEquals(STREAM_CLOSED, followUpEx.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(followUpEx));
     }
 
     @Test
