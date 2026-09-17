@@ -310,7 +310,7 @@ public class SniHandlerTest {
 
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
-    public void testFallbackToDefaultContext(SslProvider provider) throws Exception {
+    public void testZeroLengthHandshakeRecordFailsHandshake(SslProvider provider) throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
         SslContext leanContext2 = makeSslContext(provider, false);
@@ -325,35 +325,27 @@ public class SniHandlerTest {
                     .add("chat4.leancloud.cn", leanContext2)
                     .build();
 
-            SniHandler handler = new SniHandler(mapping);
-            EmbeddedChannel ch = new EmbeddedChannel(handler);
+            final SniHandler handler = new SniHandler(mapping);
+            final EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-            // invalid
-            byte[] message = {22, 3, 1, 0, 0};
             try {
-                // Push the handshake message.
-                ch.writeInbound(Unpooled.wrappedBuffer(message));
-                // TODO(scott): This should fail because the engine should reject zero length records during handshake.
-                // See https://github.com/netty/netty/issues/6348.
-                // fail();
-            } catch (Exception e) {
-                // expected
+                // Zero-length handshake records are forbidden and must not fall back to the default context.
+                // Otherwise a TLS implementation that skips them could process a ClientHello that follows and
+                // bypass the SNI based selection.
+                DecoderException e = assertThrows(DecoderException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] {22, 3, 1, 0, 0}));
+                    }
+                });
+                assertInstanceOf(NotSslRecordException.class, e.getCause());
+                assertFalse(ch.isActive());
+            } finally {
+                ch.finishAndReleaseAll();
             }
 
-            ch.close();
-
-            // When the channel is closed the SslHandler will write an empty buffer to the channel.
-            ByteBuf buf = ch.readOutbound();
-            // TODO(scott): if the engine is shutdown correctly then this buffer shouldn't be null!
-            // See https://github.com/netty/netty/issues/6348.
-            if (buf != null) {
-                assertFalse(buf.isReadable());
-                buf.release();
-            }
-
-            assertFalse(ch.finish());
             assertNull(handler.hostname());
-            assertEquals(nettyContext, handler.sslContext());
+            assertNull(handler.sslContext());
         } finally {
             releaseAll(leanContext, leanContext2, nettyContext);
         }
