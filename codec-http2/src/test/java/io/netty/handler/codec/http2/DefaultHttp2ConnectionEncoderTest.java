@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -422,6 +423,27 @@ public class DefaultHttp2ConnectionEncoderTest {
         Http2Headers headers = new DefaultHttp2Headers().status("403");
         encoder.writeHeaders(ctx, STREAM_ID, headers, 0, true, newPromise());
         assertFalse(defaultStream(STREAM_ID).isSuccessfulResponse());
+    }
+
+    @Test
+    public void writeHeadersAfterConnectTunnelEstablishedFailsThePromise() throws Exception {
+        createStream(STREAM_ID, false);
+        // Simulate that the local decoder already recognized the peer's request as an ordinary CONNECT request;
+        // in practice the encoder only ever writes one side of the request/response pair itself.
+        defaultStream(STREAM_ID).connectStream();
+        Http2Headers response = new DefaultHttp2Headers().status("200");
+        encoder.writeHeaders(ctx, STREAM_ID, response, 0, false, newPromise());
+        assertTrue(defaultStream(STREAM_ID).isSuccessfulResponse());
+
+        // Once the tunnel is established, a local application trying to write more HEADERS should fail fast
+        // instead of emitting an invalid frame the peer would have to reset (RFC 9113, 8.5).
+        Http2Headers laterHeaders = new DefaultHttp2Headers().add("x-after-connect", "1");
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, STREAM_ID, laterHeaders, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertInstanceOf(IllegalStateException.class, promise.cause());
+        assertThat(promise.cause().getMessage()).contains("CONNECT tunnel");
     }
 
     @Test

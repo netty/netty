@@ -223,18 +223,33 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 }
             }
 
-            if (!stream.isHeadersSent() && stream instanceof DefaultHttp2Connection.DefaultStream) {
+            if (stream instanceof DefaultHttp2Connection.DefaultStream) {
                 DefaultHttp2Connection.DefaultStream defaultStream = (DefaultHttp2Connection.DefaultStream) stream;
-                if (Http2CodecUtil.isOrdinaryConnect(headers)) {
-                    // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so that
-                    // the decoder can reject any HEADERS frame received once the tunnel is established, even
-                    // when this endpoint (the client) never decodes the request itself.
-                    defaultStream.connectStream();
+                if (defaultStream.isConnectStream() && defaultStream.isSuccessfulResponse()) {
+                    // Fail fast instead of emitting a HEADERS frame the peer would have to treat as a stream
+                    // error and reset (RFC 9113, 8.5): once the CONNECT tunnel is established, only DATA and
+                    // stream management frames are permitted on the stream.
+                    throw new IllegalStateException("Cannot write a HEADERS frame on stream " + stream.id() +
+                            " after the CONNECT tunnel was established; only DATA and stream management frames " +
+                            "are permitted (RFC 9113, 8.5)");
                 }
-                if (HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
-                    // Remember that this stream's (final) response was successful; combined with the request
-                    // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
-                    defaultStream.successfulResponse();
+                if (!stream.isHeadersSent()) {
+                    if (Http2CodecUtil.isOrdinaryConnect(headers)) {
+                        // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so
+                        // that the decoder can reject any HEADERS frame received once the tunnel is established,
+                        // even when this endpoint (the client) never decodes the request itself.
+                        defaultStream.connectStream();
+                    }
+                    // Mirrors the decoder's isInformational computation so that client and server side CONNECT
+                    // tunnel tracking stay symmetric, rather than relying on isHeadersSent()'s exact semantics
+                    // for informational responses.
+                    boolean isInformational = connection.isServer() &&
+                            HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.INFORMATIONAL;
+                    if (!isInformational && HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
+                        // Remember that this stream's (final) response was successful; combined with the request
+                        // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
+                        defaultStream.successfulResponse();
+                    }
                 }
             }
 

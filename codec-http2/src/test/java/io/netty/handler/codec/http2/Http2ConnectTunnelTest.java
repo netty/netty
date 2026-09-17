@@ -191,4 +191,46 @@ public class Http2ConnectTunnelTest {
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(trailers), eq(0),
                 eq(Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
     }
+
+    @Test
+    public void headersAfterConnectTunnelEstablishedAreRejectedOnClientSide() throws Exception {
+        // The inverse direction from headersAfterConnectTunnelEstablishedAreRejected: this endpoint is the
+        // client, so it writes the ordinary CONNECT request itself (rather than decoding one) and decodes the
+        // server's response, exercising the encoder -> decoder bridge for the request side end-to-end.
+        Http2Connection clientConnection = new DefaultHttp2Connection(false);
+        DefaultHttp2ConnectionEncoder clientEncoder = new DefaultHttp2ConnectionEncoder(clientConnection, frameWriter);
+        clientEncoder.lifecycleManager(lifecycleManager);
+        DefaultHttp2ConnectionDecoder clientDecoder = new DefaultHttp2ConnectionDecoder(
+                clientConnection, clientEncoder, frameReader, ALWAYS_VERIFY, true, true, true, true);
+        clientDecoder.lifecycleManager(lifecycleManager);
+        clientDecoder.frameListener(listener);
+
+        ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
+        doNothing().when(frameReader).readFrame(eq(ctx), any(), internalListener.capture());
+        clientDecoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());
+        Http2FrameListener dec = internalListener.getValue();
+        dec.onSettingsRead(ctx, new Http2Settings());
+
+        // The client writes its own ordinary CONNECT request.
+        Http2Headers connectRequest = new DefaultHttp2Headers().method("CONNECT").authority("example.org:443");
+        clientEncoder.writeHeaders(ctx, STREAM_ID, connectRequest, 0, false, ctx.newPromise());
+
+        // The server's successful response is decoded.
+        Http2Headers response = new DefaultHttp2Headers().status("200");
+        dec.onHeadersRead(ctx, STREAM_ID, response, 0, false);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(response), eq(0),
+                eq(Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+
+        // The tunnel is now established: any further inbound HEADERS from the server must be a stream error.
+        final Http2Headers laterHeaders = new DefaultHttp2Headers().add("x-after-connect", "1");
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onHeadersRead(ctx, STREAM_ID, laterHeaders, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        verify(listener, never()).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(laterHeaders), anyInt(),
+                any(Short.class), anyBoolean(), anyInt(), anyBoolean());
+    }
 }
