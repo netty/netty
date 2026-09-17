@@ -71,6 +71,7 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -334,6 +335,37 @@ public class Http2ConnectionHandlerTest {
         verify(remoteFlow).writePendingBytes();
         verify(ctx).flush();
         verify(remoteFlow).channelWritabilityChanged();
+    }
+
+    /**
+     * See <a href="https://github.com/netty/netty/issues/17276">#17276</a>: {@code close()}'s own cascade
+     * (e.g. {@code SslHandler.closeOutboundAndChannel()} flushing a close_notify) can synchronously trigger
+     * {@code channelWritabilityChanged()} -&gt; {@code flush()} from outside any active {@code flush()} frame, so a
+     * reentrancy guard scoped only to {@code flush()} itself (as added for #17256) would never see it.
+     */
+    @Test
+    public void closeShouldNotAllowChannelWritabilityChangedToReenterFlush() throws Exception {
+        when(channel.isWritable()).thenReturn(true);
+        handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .decoupleCloseAndGoAway(true).build();
+        handler.handlerAdded(ctx);
+        clearInvocations(ctx);
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                // Simulate close()'s own cascade (e.g. SslHandler flushing a close_notify) completing a write and
+                // firing channelWritabilityChanged synchronously, from outside any Http2ConnectionHandler.flush()
+                // frame - exactly what AbstractKQueueStreamChannel's write-drain loop does when a write it just
+                // performed flips writability.
+                handler.channelWritabilityChanged(ctx);
+                return null;
+            }
+        }).when(ctx).close(any(CompletionHandler.class));
+
+        handler.close(ctx, CompletionHandler.ignore());
+
+        verify(ctx, never()).flush();
     }
 
     /**
