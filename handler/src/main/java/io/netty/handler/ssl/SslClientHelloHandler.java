@@ -113,9 +113,22 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                 if (readableBytes < packetLength) {
                                     // client hello incomplete; try again to decode once more data is ready.
                                     return;
-                                } else if (packetLength == SslUtils.SSL_RECORD_HEADER_LENGTH) {
-                                    select(ctx, null);
-                                    return;
+                                }
+
+                                if (packetLength == SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                                    // Zero-length handshake records are forbidden by
+                                    // https://www.rfc-editor.org/rfc/rfc8446#section-5.1 and we can't select
+                                    // the default context for them: some TLS implementations skip the empty
+                                    // record and still process a ClientHello that follows it, which would allow
+                                    // to bypass the SNI based selection. We also can't just skip them as this
+                                    // would allow to buffer an unbounded amount of data. Fail closed instead.
+                                    handshakeFailed = true;
+                                    NotSslRecordException e = new NotSslRecordException(
+                                            "zero-length handshake record: " + ByteBufUtil.hexDump(in));
+                                    in.skipBytes(in.readableBytes());
+                                    ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                                    SslUtils.handleHandshakeFailure(ctx, e, true);
+                                    throw e;
                                 }
 
                                 final int endOffset = readerIndex + packetLength;
