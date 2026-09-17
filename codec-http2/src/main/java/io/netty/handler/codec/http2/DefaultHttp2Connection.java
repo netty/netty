@@ -927,14 +927,14 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw closedStreamError(PROTOCOL_ERROR, "Request stream %d is behind the next expected stream %d",
                         streamId, nextStreamIdToCreate);
             }
-            if (isLocal() && goAwayReceived()) {
-                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
-            }
             if (nextStreamIdToCreate <= 0) {
                 // We exhausted the stream id space that we can use. Let's signal this back but also signal that
                 // we still may want to process active streams.
                 throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
                         Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
+            }
+            if (isLocal() && goAwayReceived()) {
+                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
             }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
             if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {

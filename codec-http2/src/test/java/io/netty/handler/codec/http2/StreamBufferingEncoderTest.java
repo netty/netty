@@ -258,7 +258,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
 
-        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
+        connection.goAwayReceived(Integer.MAX_VALUE, 8, EMPTY_BUFFER);
 
         assertEquals(5, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
