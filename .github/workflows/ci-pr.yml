@@ -35,25 +35,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-22.04
-    outputs:
-      full-build: ${{ steps.detect.outputs.full-build }}
-      reactor-args: ${{ steps.detect.outputs.reactor-args }}
-    steps:
-      # Pinned to v5.1.0
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          # We only need the merge commit and its two parents to diff base vs head.
-          fetch-depth: 2
-
-      - name: Detect affected modules
-        id: detect
-        run: ./.github/scripts/detect_affected_modules.sh
-
   verify-pr:
     runs-on: ubuntu-22.04
-    needs: detect-changes
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -77,7 +60,7 @@ jobs:
             cache-maven-
 
       - name: Verify with Maven
-        run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true -DskipH3Spec=true ${{ needs.detect-changes.outputs.reactor-args }}
+        run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true -DskipH3Spec=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
@@ -86,7 +69,7 @@ jobs:
   build-pr-windows:
     runs-on: windows-2022
     name: windows-x86_64-java11-boringssl
-    needs: [verify-pr, detect-changes]
+    needs: verify-pr
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
       # failures sometimes due the fact that not enough memory could be reserved.
@@ -139,7 +122,7 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true ${{ needs.detect-changes.outputs.reactor-args }}
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
@@ -176,7 +159,7 @@ jobs:
     permissions:
       contents: read  # for actions/checkout to fetch code
       packages: write  # for uraimo/run-on-arch-action to cache docker images
-    needs: [verify-pr, detect-changes]
+    needs: verify-pr
     steps:
       # Pinned to v5.1.0
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -218,7 +201,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier= ${{ needs.detect-changes.outputs.reactor-args }}
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-22.04
@@ -263,7 +246,7 @@ jobs:
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
 
     name: ${{ matrix.setup }} build
-    needs: [verify-pr, detect-changes]
+    needs: verify-pr
     defaults:
       run:
         working-directory: netty
@@ -324,8 +307,6 @@ jobs:
         run: docker compose ${{ matrix.docker-compose-update-tcnative-version }}
 
       - name: Build project with leak detection
-        env:
-          MVN_REACTOR_ARGS: ${{ needs.detect-changes.outputs.reactor-args }}
         run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures
@@ -369,7 +350,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name:  ${{ matrix.setup }}  build
-    needs: [verify-pr, detect-changes]
+    needs: verify-pr
 
     steps:
       # Pinned to v5.1.0
@@ -401,7 +382,7 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        run: ./mvnw -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true ${{ needs.detect-changes.outputs.reactor-args }} && ./mvnw -B -ntp --file pom.xml package -Pboringssl -pl transport-native-kqueue
+        run: ./mvnw -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true && ./mvnw -B -ntp --file pom.xml package -Pboringssl -pl transport-native-kqueue
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
