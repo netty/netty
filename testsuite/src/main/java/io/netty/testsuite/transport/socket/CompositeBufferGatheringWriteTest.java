@@ -64,9 +64,22 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                            ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
-                                    .addListener(f -> ctx.close());
+                        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                            ctx.writeAndFlush(newCompositeBuffer(ctx.alloc())).addListener(future -> {
+                                if (!future.isSuccess()) {
+                                    ctx.close();
+                                }
+                                // Otherwise wait for the client to ack that it received everything
+                                // (see channelRead below) before closing. Closing right after the write
+                                // completes races with the client actually having read the data.
+                            });
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            // Any inbound data from the client is the ack that it received everything.
+                            ReferenceCountUtil.release(msg);
+                            ctx.close();
                         }
                     });
                 }
@@ -76,6 +89,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelInboundHandler() {
                         private ByteBuf aggregator;
+                        private boolean acked;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
                             aggregator = ctx.alloc().buffer(EXPECTED_BYTES);
@@ -86,6 +100,14 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             try {
                                 if (msg instanceof ByteBuf) {
                                     aggregator.writeBytes((ByteBuf) msg);
+                                    if (!acked && aggregator.readableBytes() >= EXPECTED_BYTES) {
+                                        acked = true;
+                                        if (clientReceived.compareAndSet(null, aggregator)) {
+                                            latch.countDown();
+                                        }
+                                        // Ack so the server knows it is safe to close.
+                                        ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(0));
+                                    }
                                 }
                             } finally {
                                 ReferenceCountUtil.release(msg);
@@ -182,7 +204,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                             compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ctx.channel().config(),
                                     soSndBuf);
                             // First single write
@@ -207,7 +229,21 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             // Write the remainder of the content
                             ctx.writeAndFlush(expectedContent.retainedSlice(expectedContent.readerIndex() + offset,
                                     expectedContent.readableBytes() - expectedContent.readerIndex() - offset))
-                                    .addListener(f -> ctx.close());
+                                    .addListener(future -> {
+                                        if (!future.isSuccess()) {
+                                            ctx.close();
+                                        }
+                                        // Otherwise wait for the client to ack that it received everything
+                                        // (see channelRead below) before closing. Closing right after the write
+                                        // completes races with the client actually having read the data.
+                                    });
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            // Any inbound data from the client is the ack that it received everything.
+                            ReferenceCountUtil.release(msg);
+                            ctx.close();
                         }
 
                         @Override
@@ -229,6 +265,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new ChannelInboundHandler() {
                         private ByteBuf aggregator;
+                        private boolean acked;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
                             aggregator = ctx.alloc().buffer(expectedContent.readableBytes());
@@ -239,6 +276,14 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                             try {
                                 if (msg instanceof ByteBuf) {
                                     aggregator.writeBytes((ByteBuf) msg);
+                                    if (!acked && aggregator.readableBytes() >= expectedContent.readableBytes()) {
+                                        acked = true;
+                                        if (clientReceived.compareAndSet(null, aggregator)) {
+                                            latch.countDown();
+                                        }
+                                        // Ack so the server knows it is safe to close.
+                                        ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(0));
+                                    }
                                 }
                             } finally {
                                 ReferenceCountUtil.release(msg);
