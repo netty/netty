@@ -48,4 +48,13 @@ public final class SpdyHttpCodec extends CombinedChannelDuplexHandler<SpdyHttpDe
         super(new SpdyHttpDecoder(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(),
                 headersFactory, trailersFactory), new SpdyHttpEncoder(version));
     }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public SpdyHttpCodec(SpdyVersion version, int maxHeaderSize, int maxContentLength,
+                         HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        super(new SpdyHttpDecoder(version, maxHeaderSize, maxContentLength, new HashMap<Integer, FullHttpMessage>(),
+                headersFactory, trailersFactory), new SpdyHttpEncoder(version));
+    }
 }
