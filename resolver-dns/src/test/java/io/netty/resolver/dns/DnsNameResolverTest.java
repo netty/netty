@@ -3571,7 +3571,17 @@ public class DnsNameResolverTest {
             serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
             try {
                 dns.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
-                return serverSocket;
+                if (dns.localAddress() != null) {
+                    return serverSocket;
+                }
+                // The underlying UDP acceptor sometimes fails to bind without throwing (observed on Windows),
+                // leaving localAddress() null. Treat this the same as a failed bind and retry.
+                dns.stop();
+                serverSocket.close();
+                if (i == 10) {
+                    Assumptions.abort(
+                            "Unable to bind TestDnsServer and ServerSocket to the same address: localAddress is null");
+                }
             } catch (IOException e) {
                 serverSocket.close();
                 if (i == 10) {
