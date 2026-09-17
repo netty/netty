@@ -32,7 +32,7 @@ services:
   build:
     <<: *common
     command: '/bin/bash -cl "
-      ./mvnw -B -ntp ${MVN_REACTOR_ARGS:-} clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true &&
+      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true && 
       cd testsuite-shading &&
       ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
@@ -69,7 +69,7 @@ services:
 
   build-with-oio-testsuite:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp ${MVN_REACTOR_ARGS:-} -Pboringssl clean install -Dio.netty.testsuite.includeOio=true -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.includeOio=true -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   build-boringssl-static:
     <<: *common
@@ -77,11 +77,11 @@ services:
 
   build-leak-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp ${MVN_REACTOR_ARGS:-} -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   build-leak-pooled:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp ${MVN_REACTOR_ARGS:-} -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   build-boringssl-snapshot:
     <<: *common
@@ -89,7 +89,7 @@ services:
 
   build-boringssl-static-jdk8-tests:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp ${MVN_REACTOR_ARGS:-} -Pboringssl,jdk8-tests,\!testsuite-jpms clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,jdk8-tests,\!testsuite-jpms clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
 
   shell:
     <<: *common
