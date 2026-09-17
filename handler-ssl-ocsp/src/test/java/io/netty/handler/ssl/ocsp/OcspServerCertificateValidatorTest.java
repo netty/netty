@@ -109,12 +109,12 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
         final AtomicBoolean ocspStatus = new AtomicBoolean();
         EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        final SslContext sslContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
 
         try {
             final CountDownLatch latch = new CountDownLatch(1);
-            final SslContext sslContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .build();
 
             Bootstrap bootstrap = new Bootstrap()
                     .group(eventLoopGroup)
@@ -157,6 +157,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             channelFuture.getNow().closeFuture().sync();
         } finally {
             eventLoopGroup.shutdownGracefully();
+            ReferenceCountUtil.release(sslContext);
         }
     }
 
