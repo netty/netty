@@ -62,8 +62,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
-    private final Http2Connection.PropertyKey connectStreamKey;
-    private final Http2Connection.PropertyKey successfulResponseKey;
     private final boolean validateHeaders;
     private final boolean validateRequiredPseudoHeaders;
 
@@ -177,8 +175,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
         this.connection = checkNotNull(connection, "connection");
         contentLengthKey = this.connection.newKey();
-        connectStreamKey = this.connection.newKey();
-        successfulResponseKey = this.connection.newKey();
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
         this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
@@ -281,40 +277,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
     }
 
-    private static DefaultHttp2ConnectionEncoder castEncoderIfPossible(Http2ConnectionEncoder encoder)  {
-        while (encoder instanceof DecoratingHttp2ConnectionEncoder) {
-            encoder = ((DecoratingHttp2ConnectionEncoder) encoder).delegate;
-        }
-        if (encoder instanceof DefaultHttp2ConnectionEncoder) {
-            return (DefaultHttp2ConnectionEncoder) encoder;
-        }
-        return null;
-    }
-
     /**
      * Returns {@code true} if {@code stream} is an established CONNECT tunnel, i.e. an ordinary CONNECT request
      * (RFC 9113, 8.5) that was answered with a successful (2xx) response. From this point on, RFC 9113, 8.5
      * forbids any further HEADERS frame on the stream.
      */
-    private boolean isConnectTunnelEstablished(Http2Stream stream) {
-        if (connection.isServer()) {
-            // successfully decoded
-            if (stream.getProperty(connectStreamKey) != null) {
-                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
-                if (defaultEncoder != null) {
-                    return defaultEncoder.isSuccessfulResponseSent(stream);
-                }
-            }
-        } else {
-            if (stream.getProperty(successfulResponseKey) != null) {
-                DefaultHttp2ConnectionEncoder defaultEncoder = castEncoderIfPossible(encoder);
-                if (defaultEncoder != null) {
-                    return defaultEncoder.isConnectStream(stream);
-                }
-            }
-        }
-        // We don't know for sure if the tunnel is fully established yet.
-        return false;
+    private static boolean isConnectTunnelEstablished(Http2Stream stream) {
+        return stream instanceof DefaultHttp2Connection.DefaultStream &&
+                ((DefaultHttp2Connection.DefaultStream) stream).isConnectStream() &&
+                ((DefaultHttp2Connection.DefaultStream) stream).isSuccessfulResponse();
     }
 
     /**
@@ -507,17 +478,19 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
                 }
                 if (connection.isServer()) {
-                    if (Http2CodecUtil.isOrdinaryConnect(headers)) {
+                    if (Http2CodecUtil.isOrdinaryConnect(headers) &&
+                            stream instanceof DefaultHttp2Connection.DefaultStream) {
                         // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so
                         // that, combined with a successful response, any HEADERS frame received once the tunnel
                         // is established can be rejected as a stream error below.
-                        stream.setProperty(connectStreamKey, Boolean.TRUE);
+                        ((DefaultHttp2Connection.DefaultStream) stream).connectStream();
                     }
                 } else if (!isInformational &&
-                        HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
+                        HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS &&
+                        stream instanceof DefaultHttp2Connection.DefaultStream) {
                     // Remember that this stream's (final) response was successful; combined with the request
                     // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
-                    stream.setProperty(successfulResponseKey, Boolean.TRUE);
+                    ((DefaultHttp2Connection.DefaultStream) stream).successfulResponse();
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);

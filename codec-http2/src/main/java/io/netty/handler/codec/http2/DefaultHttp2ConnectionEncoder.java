@@ -48,14 +48,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
-    private final Http2Connection.PropertyKey connectStreamKey;
-    private final Http2Connection.PropertyKey successfulResponseKey;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
-        connectStreamKey = this.connection.newKey();
-        successfulResponseKey = this.connection.newKey();
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
@@ -74,22 +70,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public Http2Connection connection() {
         return connection;
-    }
-
-    /**
-     * Returns {@code true} if the local endpoint has written an ordinary CONNECT request (RFC 9113, 8.5) as the
-     * initial HEADERS frame on {@code stream}.
-     */
-    boolean isConnectStream(Http2Stream stream) {
-        return stream.getProperty(connectStreamKey) != null;
-    }
-
-    /**
-     * Returns {@code true} if the local endpoint has written a successful (2xx) status code as the initial
-     * (non-informational) response HEADERS frame on {@code stream}.
-     */
-    boolean isSuccessfulResponseSent(Http2Stream stream) {
-        return stream.getProperty(successfulResponseKey) != null;
     }
 
     @Override
@@ -243,17 +223,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 }
             }
 
-            if (!stream.isHeadersSent()) {
+            if (!stream.isHeadersSent() && stream instanceof DefaultHttp2Connection.DefaultStream) {
+                DefaultHttp2Connection.DefaultStream defaultStream = (DefaultHttp2Connection.DefaultStream) stream;
                 if (Http2CodecUtil.isOrdinaryConnect(headers)) {
                     // Remember that this stream's request is an ordinary CONNECT request (RFC 9113, 8.5) so that
                     // the decoder can reject any HEADERS frame received once the tunnel is established, even
                     // when this endpoint (the client) never decodes the request itself.
-                    stream.setProperty(connectStreamKey, Boolean.TRUE);
+                    defaultStream.connectStream();
                 }
                 if (HttpStatusClass.valueOf(headers.status()) == HttpStatusClass.SUCCESS) {
                     // Remember that this stream's (final) response was successful; combined with the request
                     // being an ordinary CONNECT request, this establishes the CONNECT tunnel (RFC 9113, 8.5).
-                    stream.setProperty(successfulResponseKey, Boolean.TRUE);
+                    defaultStream.successfulResponse();
                 }
             }
 
