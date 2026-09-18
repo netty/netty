@@ -126,8 +126,8 @@
         </os>
       </activation>
       <properties>
-        <!--  We need 10.13 as minimum to compile quiche and boringssl  -->
-        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
+        <!--  We need 11 as minimum to compile quiche and boringssl  -->
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCflags>-mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
@@ -148,7 +148,7 @@
         <jniLibName>${jniLibPrefix}_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
         <javaModuleNameClassifier>osx.aarch_64</javaModuleNameClassifier>
-        <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
         <extraCflags>-target arm64-apple-macos11</extraCflags>
         <extraCxxflags>-target arm64-apple-macos11</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
@@ -178,11 +178,11 @@
         <jniLibName>${jniLibPrefix}_osx_x86_64</jniLibName>
         <jni.classifier>osx-x86_64</jni.classifier>
         <javaModuleNameClassifier>osx.x86_64</javaModuleNameClassifier>
-        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
-        <extraCflags>-target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
-        <extraCxxflags>-target x86_64-apple-macos10.13</extraCxxflags>
+        <macosxDeploymentTarget>11</macosxDeploymentTarget>
+        <extraCflags>-target x86_64-apple-macos11 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
+        <extraCxxflags>-target x86_64-apple-macos11</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
-        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
+        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos11 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
         <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
