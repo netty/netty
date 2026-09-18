@@ -35,6 +35,10 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
+ * <p>
+ * Caches provided through the {@link DnsNameResolverBuilder} are not cleared when this group is closed. The caller
+ * that provides a cache is responsible for its lifecycle. Caches created internally by this group are shared by its
+ * member resolvers and cleared when the group is closed.
  */
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
@@ -42,6 +46,10 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
     private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = new ConcurrentHashMap<>();
+
+    private DnsCache ownedResolveCache;
+    private DnsCnameCache ownedCnameCache;
+    private AuthoritativeDnsServerCache ownedAuthoritativeDnsServerCache;
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
@@ -61,12 +69,48 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         dnsResolverBuilder.datagramChannelFactory(channelFactory).nameServerProvider(nameServerProvider);
     }
 
-    private static DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
+    private DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
         /// To avoid each member of the group having its own cache we either use the configured cache
         // or create a new one to share among the entire group.
-        return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
-                .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
+        boolean hasResolveCache = dnsResolverBuilder.hasResolveCache();
+        boolean hasCnameCache = dnsResolverBuilder.hasCnameCache();
+        boolean hasAuthoritativeDnsServerCache = dnsResolverBuilder.hasAuthoritativeDnsServerCache();
+
+        DnsCache resolveCache = dnsResolverBuilder.getOrNewCache();
+        DnsCnameCache cnameCache = dnsResolverBuilder.getOrNewCnameCache();
+        AuthoritativeDnsServerCache authoritativeDnsServerCache =
+                dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache();
+
+        // Remember the caches that were created for this group, so they can be cleared once the group is
+        // closed. Caches that were configured by the user might still be shared with other resolvers and so
+        // must be left untouched on close. See https://github.com/netty/netty/issues/17040
+        if (!hasResolveCache) {
+            ownedResolveCache = resolveCache;
+        }
+        if (!hasCnameCache) {
+            ownedCnameCache = cnameCache;
+        }
+        if (!hasAuthoritativeDnsServerCache) {
+            ownedAuthoritativeDnsServerCache = authoritativeDnsServerCache;
+        }
+
+        return dnsResolverBuilder.resolveCache(resolveCache)
+                .cnameCache(cnameCache)
+                .authoritativeDnsServerCache(authoritativeDnsServerCache);
+    }
+
+    @Override
+    public void close() {
+        super.close();
+        if (ownedResolveCache != null) {
+            ownedResolveCache.clear();
+        }
+        if (ownedCnameCache != null) {
+            ownedCnameCache.clear();
+        }
+        if (ownedAuthoritativeDnsServerCache != null) {
+            ownedAuthoritativeDnsServerCache.clear();
+        }
     }
 
     @SuppressWarnings("deprecation")

@@ -21,6 +21,7 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.util.NetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,6 +161,35 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
         assertThat(resolver.queryTimeoutMillis()).isEqualTo(0);
     }
 
+    @Test
+    void testCloseDoesNotClearProvidedCaches() {
+        TestDnsCache testDnsCache = new TestDnsCache();
+        TestDnsCnameCache testDnsCnameCache = new TestDnsCnameCache();
+        TestAuthoritativeDnsServerCache testAuthoritativeDnsServerCache = new TestAuthoritativeDnsServerCache();
+        resolver = builder.resolveCache(testDnsCache)
+                .cnameCache(testDnsCnameCache)
+                .authoritativeDnsServerCache(testAuthoritativeDnsServerCache)
+                .build();
+
+        resolver.close();
+
+        assertThat(testDnsCache.clearCalls).isZero();
+        assertThat(testDnsCnameCache.clearCalls).isZero();
+        assertThat(testAuthoritativeDnsServerCache.clearCalls).isZero();
+    }
+
+    @Test
+    void testCloseClearsCachesCreatedByResolver() {
+        resolver = builder.build();
+        DnsCache resolveCache = resolver.resolveCache();
+        resolveCache.cache("netty.io", null, NetUtil.LOCALHOST, 3600, GROUP.next());
+        assertThat(resolveCache.get("netty.io", null)).isNotEmpty();
+
+        resolver.close();
+
+        assertThat(resolveCache.get("netty.io", null)).isNullOrEmpty();
+    }
+
     private static void checkDefaultDnsCache(DefaultDnsCache dnsCache,
             int expectedMaxTtl, int expectedMinTtl, int expectedNegativeTtl) {
         assertThat(dnsCache.maxTtl()).isEqualTo(expectedMaxTtl);
@@ -182,9 +212,11 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
 
     private static final class TestDnsCache implements DnsCache {
 
+        int clearCalls;
+
         @Override
         public void clear() {
-            //no-op
+            clearCalls++;
         }
 
         @Override
@@ -211,6 +243,8 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
 
     private static final class TestDnsCnameCache implements DnsCnameCache {
 
+        int clearCalls;
+
         @Override
         public String get(String hostname) {
             return null;
@@ -223,7 +257,7 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
 
         @Override
         public void clear() {
-            //no-op
+            clearCalls++;
         }
 
         @Override
@@ -233,6 +267,8 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
     }
 
     private static final class TestAuthoritativeDnsServerCache implements AuthoritativeDnsServerCache {
+
+        int clearCalls;
 
         @Override
         public DnsServerAddressStream get(String hostname) {
@@ -246,7 +282,7 @@ assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameS
 
         @Override
         public void clear() {
-            //no-op
+            clearCalls++;
         }
 
         @Override
