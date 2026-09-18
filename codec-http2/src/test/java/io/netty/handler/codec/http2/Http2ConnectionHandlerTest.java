@@ -622,10 +622,8 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         Http2Exception e = new Http2Exception.HeaderListSizeException(STREAM_ID, PROTOCOL_ERROR,
             "Header size exceeded max allowed size 8196", true);
-        ((Http2Exception.StreamException) e).streamCreatingFrameType(Http2FrameTypes.HEADERS);
 
         when(connection.stream(STREAM_ID)).thenReturn(null);
-        when(remote.isValidStreamId(STREAM_ID)).thenReturn(true);
         when(remote.createStream(STREAM_ID, true)).thenReturn(stream);
         when(stream.id()).thenReturn(STREAM_ID);
 
@@ -671,6 +669,18 @@ public class Http2ConnectionHandlerTest {
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                 any(ChannelPromise.class));
         assertTrue(promise.isSuccess());
+    }
+
+    @Test
+    public void writeRstOnIdleStreamIdWithVoidPromiseReturnsListenableFuture() throws Exception {
+        handler = newHandler();
+        when(connection.streamMayHaveExisted(NON_EXISTANT_STREAM_ID)).thenReturn(false);
+        ChannelFuture future = handler.resetStream(ctx, NON_EXISTANT_STREAM_ID, STREAM_CLOSED.code(),
+                newVoidPromise(channel));
+        future.addListener(f -> { });
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                any(ChannelPromise.class));
+        assertTrue(future.isSuccess());
     }
 
     @Test

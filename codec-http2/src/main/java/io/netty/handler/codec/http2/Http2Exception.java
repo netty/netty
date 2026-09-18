@@ -258,7 +258,6 @@ public class Http2Exception extends Exception {
     public static class StreamException extends Http2Exception {
         private static final long serialVersionUID = 602472544416984384L;
         private final int streamId;
-        private byte streamCreatingFrameType = -1;
 
         StreamException(int streamId, Http2Error error, String message) {
             super(error, message, ShutdownHint.NO_SHUTDOWN);
@@ -272,14 +271,6 @@ public class Http2Exception extends Exception {
 
         public int streamId() {
             return streamId;
-        }
-
-        final byte streamCreatingFrameType() {
-            return streamCreatingFrameType;
-        }
-
-        final void streamCreatingFrameType(byte streamCreatingFrameType) {
-            this.streamCreatingFrameType = streamCreatingFrameType;
         }
     }
 
