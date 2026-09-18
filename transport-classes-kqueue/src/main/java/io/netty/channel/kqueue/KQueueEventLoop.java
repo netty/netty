@@ -271,7 +271,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 unsafe.writeReady();
             } else if (filter == Native.EVFILT_READ) {
                 // Check READ before EOF to ensure all data is read before shutting down the input.
-                unsafe.readReady(eventList.data(i));
+                unsafe.readReady();
             } else if (filter == Native.EVFILT_SOCK && (eventList.fflags(i) & Native.NOTE_RDHUP) != 0) {
                 unsafe.readEOF();
             }

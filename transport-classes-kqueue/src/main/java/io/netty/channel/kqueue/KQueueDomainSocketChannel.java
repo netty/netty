@@ -149,7 +149,6 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
-            readReadyBefore();
 
             try {
                 readLoop: do {
@@ -181,7 +180,9 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
             } finally {
-                readReadyFinally(config);
+                if (shouldStopReading(config)) {
+                    clearReadFilter0();
+                }
             }
         }
     }
