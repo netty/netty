@@ -26,7 +26,7 @@ public interface Http2UnknownFrame extends Http2StreamFrame, ByteBufHolder {
     @Override
     Http2UnknownFrame stream(Http2FrameStream stream);
 
-    byte frameType();
+    short frameType();
 
     Http2Flags flags();
 
