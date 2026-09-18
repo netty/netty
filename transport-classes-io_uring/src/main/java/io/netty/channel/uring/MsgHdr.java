@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -132,7 +133,16 @@ final class MsgHdr {
         }
     }
 
-    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
-        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset);
+    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) throws IOException {
+        int memoryPosition = memory.position();
+        long msgControlLen = Native.SIZEOF_SIZE_T == 4
+                ? memory.getInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN) & 0xFFFFFFFFL
+                : memory.getLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN);
+        if (msgControlLen <= 0) {
+            throw new IOException("Received no ancillary data while expecting a SCM_RIGHTS file descriptor");
+        }
+        int msgFlags = memory.getInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_FLAGS);
+        boolean truncated = (msgFlags & Native.MSG_CTRUNC) != 0;
+        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset, truncated);
     }
 }
