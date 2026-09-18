@@ -6,6 +6,10 @@ services:
         java_version: "25-zulu"
       context: .
       dockerfile: Dockerfile.ubi9
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:ubi9-5.0
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:ubi9-5.0,mode=max,ignore-error=true
 
   build:
     image: netty:ubi9
