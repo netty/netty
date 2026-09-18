@@ -7,6 +7,11 @@ services:
     build:
       args:
         java_version : "24.0.2-zulu"
+      # See docker-compose.centos-7.111.yaml for why this cache ref is shared across centos-7.*.yaml.
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7,mode=max,ignore-error=true
 
   build:
     image: netty:centos-7-24

@@ -247,6 +247,13 @@ jobs:
 
     name: ${{ matrix.setup }} build
     needs: verify-pr
+    permissions:
+      contents: read
+      packages: write  # to push the docker build cache to ghcr.io; no-op (ignored) for fork PRs
+    env:
+      # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
+      # entries in docker/docker-compose.centos-7.*.yaml are actually honored.
+      COMPOSE_BAKE: "true"
     defaults:
       run:
         working-directory: netty
@@ -294,6 +301,23 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
         with:
           working-directory: netty
+
+      # The default "docker" buildx driver can't export cache to a registry; switch to the
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
+      # Pinned to v4.4.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+      # Only succeeds for same-repo runs; fork PRs get a read-only GITHUB_TOKEN and simply won't
+      # get cache hits/pushes, which is fine since it only means a slower, non-cached build.
+      # Pinned to v4.6.0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
