@@ -8,6 +8,12 @@ services:
       dockerfile: Dockerfile.centos7
       args:
         java_version : "21.0.2-graalce"
+      # This overlay switches the dockerfile to Dockerfile.centos7, so it needs its own cache
+      # ref instead of inheriting docker-compose.yaml's centos6-4.1 one.
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7-4.1
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7-4.1,mode=max,ignore-error=true
 
   build:
     image: netty:centos-7-1.11

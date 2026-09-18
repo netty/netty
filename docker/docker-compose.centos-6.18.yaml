@@ -7,6 +7,14 @@ services:
     build:
       args:
         java_version : "8.0.482-zulu"
+      # Shared with the other centos-6.*.yaml / centos-7.117.yaml legs: they all build from
+      # Dockerfile.centos6, so the expensive prefix is cached once and reused by all java_version
+      # variants. Tagged distinctly from the 4.2 branch's cache so the two branches (which build
+      # different Dockerfile content) never overwrite each other's cache.
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos6-4.1
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos6-4.1,mode=max,ignore-error=true
 
   build:
     image: netty:centos-6-1.8
