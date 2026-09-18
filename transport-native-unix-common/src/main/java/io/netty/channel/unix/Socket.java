@@ -49,6 +49,8 @@ public class Socket extends FileDescriptor {
 
     private static volatile boolean isIpv6Preferred;
 
+    private static volatile boolean isSupportMptcp;
+
     @Deprecated
     public static final int UDS_SUN_PATH_SIZE = 100;
 
@@ -550,6 +552,10 @@ public class Socket extends FileDescriptor {
         return isIpv6Preferred;
     }
 
+    public static boolean isMptcpSupported() {
+        return isSupportMptcp;
+    }
+
     /**
      * @deprecated use {{@link #shouldUseIpv6(SocketProtocolFamily)}}
      */
@@ -593,28 +599,36 @@ public class Socket extends FileDescriptor {
 
     public static void initialize() {
         isIpv6Preferred = isIPv6Preferred0(NetUtil.isIpV4StackPreferred());
+        isSupportMptcp = isMptcpSupported0();
     }
 
     protected static int newSocketStream0() {
-        return newSocketStream0(isIPv6Preferred());
+        return newSocketStream0(isIPv6Preferred(), false);
     }
 
     /**
      * @deprecated use {@link #newSocketStream0(SocketProtocolFamily)}
-     * @param protocol
+     * @param family
      * @return
      */
     @Deprecated
-    protected static int newSocketStream0(InternetProtocolFamily protocol) {
-        return newSocketStream0(shouldUseIpv6(protocol));
+    protected static int newSocketStream0(InternetProtocolFamily family) {
+        return newSocketStream0(shouldUseIpv6(family), false);
     }
 
-    protected static int newSocketStream0(SocketProtocolFamily protocol) {
-        return newSocketStream0(shouldUseIpv6(protocol));
+    protected static int newSocketStream0(SocketProtocolFamily family) {
+        return newSocketStream0(shouldUseIpv6(family), false);
     }
 
-    protected static int newSocketStream0(boolean ipv6) {
-        int res = newSocketStreamFd(ipv6);
+    protected static int newSocketStream0(SocketProtocolFamily family, boolean mptcp) {
+        return newSocketStream0(shouldUseIpv6(family), mptcp);
+    }
+
+    protected static int newSocketStream0(boolean ipv6, boolean mptcp) {
+        if (mptcp && !isMptcpSupported()) {
+            throw new ChannelException("MPTCP not supported on this kernel");
+        }
+        int res = newSocketStreamFd(ipv6, mptcp);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketStream", res));
         }
@@ -713,7 +727,7 @@ public class Socket extends FileDescriptor {
     private static native int sendFd(int socketFd, int fd);
     private static native int msgFastopen();
 
-    private static native int newSocketStreamFd(boolean ipv6);
+    private static native int newSocketStreamFd(boolean ipv6, boolean mptcp);
     private static native int newSocketDgramFd(boolean ipv6);
     private static native int newSocketDomainFd();
     private static native int newSocketDomainDgramFd();
@@ -749,4 +763,5 @@ public class Socket extends FileDescriptor {
             throws IOException;
     private static native void getRawOptAddress(int fd, int level, int optname, long outMemoryAddress, int length)
             throws IOException;
+    private static native boolean isMptcpSupported0();
 }

@@ -58,6 +58,11 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         config = new EpollServerSocketChannelConfig(this);
     }
 
+    public EpollServerSocketChannel(SocketProtocolFamily family, boolean mptcp) {
+        super(newSocketStream(family, mptcp), false);
+        config = new EpollServerSocketChannelConfig(this);
+    }
+
     public EpollServerSocketChannel(int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.

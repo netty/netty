@@ -44,6 +44,11 @@
 #define MSG_FASTOPEN 0x20000000
 #endif
 
+// IPPROTO_MPTCP is defined in linux 5.6. We define this here so older kernels can compile.
+#ifndef IPPROTO_MPTCP
+#define IPPROTO_MPTCP 262
+#endif
+
 static jweak datagramSocketAddressClassWeak = NULL;
 static jweak domainDatagramSocketAddressClassWeak = NULL;
 static jmethodID datagramSocketAddrMethodId = NULL;
@@ -300,8 +305,8 @@ static int netty_unix_socket_setOption0(jint fd, int level, int optname, const v
     return setsockopt(fd, level, optname, optval, len);
 }
 
-static jint _socket(JNIEnv* env, jclass clazz, int domain, int type) {
-    int fd = netty_unix_socket_nonBlockingSocket(domain, type, 0);
+static jint _socket(JNIEnv* env, jclass clazz, int domain, int type, int protocol) {
+    int fd = netty_unix_socket_nonBlockingSocket(domain, type, protocol);
     if (fd == -1) {
         return -errno;
     } else if (domain == AF_INET6) {
@@ -746,12 +751,13 @@ static jbyteArray netty_unix_socket_localDomainSocketAddress(JNIEnv* env, jclass
 
 static jint netty_unix_socket_newSocketDgramFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
     int domain = ipv6 == JNI_TRUE ? AF_INET6 : AF_INET;
-    return _socket(env, clazz, domain, SOCK_DGRAM);
+    return _socket(env, clazz, domain, SOCK_DGRAM, 0);
 }
 
-static jint netty_unix_socket_newSocketStreamFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
+static jint netty_unix_socket_newSocketStreamFd(JNIEnv* env, jclass clazz, jboolean ipv6, jboolean mptcp) {
     int domain = ipv6 == JNI_TRUE ? AF_INET6 : AF_INET;
-    return _socket(env, clazz, domain, SOCK_STREAM);
+    int protocol = mptcp == JNI_TRUE ? IPPROTO_MPTCP : IPPROTO_TCP;
+    return _socket(env, clazz, domain, SOCK_STREAM, protocol);
 }
 
 static jint netty_unix_socket_newSocketDomainFd(JNIEnv* env, jclass clazz) {
@@ -1262,6 +1268,24 @@ static jint netty_unix_socket_msgFastopen(JNIEnv* env, jclass clazz) {
     return MSG_FASTOPEN;
 }
 
+static jboolean netty_unix_socket_isMptcpSupported0(JNIEnv* env, jclass clazz) {
+#ifdef __linux__
+    int fd = netty_unix_socket_nonBlockingSocket(AF_INET, SOCK_STREAM, IPPROTO_MPTCP);
+    if (fd == -1) {
+        return JNI_FALSE;
+    }
+    int proto = 0;
+    socklen_t len = sizeof(proto);
+    jboolean supported = (getsockopt(fd, SOL_SOCKET, SO_PROTOCOL, &proto, &len) == 0
+                          && proto == IPPROTO_MPTCP) ? JNI_TRUE : JNI_FALSE;
+    close(fd);
+    return supported;
+#else
+    // macOS/FreeBSD
+    return JNI_FALSE;
+#endif // __linux__
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -1278,7 +1302,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "remoteDomainSocketAddress", "(I)[B", (void *) netty_unix_socket_remoteDomainSocketAddress },
   { "localDomainSocketAddress", "(I)[B", (void *) netty_unix_socket_localDomainSocketAddress },
   { "newSocketDgramFd", "(Z)I", (void *) netty_unix_socket_newSocketDgramFd },
-  { "newSocketStreamFd", "(Z)I", (void *) netty_unix_socket_newSocketStreamFd },
+  { "newSocketStreamFd", "(ZZ)I", (void *) netty_unix_socket_newSocketStreamFd },
   { "newSocketDomainFd", "()I", (void *) netty_unix_socket_newSocketDomainFd },
   { "newSocketDomainDgramFd", "()I", (void *) netty_unix_socket_newSocketDomainDgramFd },
   { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIII)I", (void *) netty_unix_socket_sendTo },
@@ -1326,7 +1350,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_setRawOptAddress },
   { "getIntOpt", "(III)I", (void *) netty_unix_socket_getIntOpt },
   { "getRawOptArray", "(III[BII)V", (void *) netty_unix_socket_getRawOptArray },
-  { "getRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_getRawOptAddress }
+  { "getRawOptAddress", "(IIIJI)V", (void *) netty_unix_socket_getRawOptAddress },
+  { "isMptcpSupported0", "()Z", (void *) netty_unix_socket_isMptcpSupported0 }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 

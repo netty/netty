@@ -22,6 +22,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.IovArray;
 
 import java.io.IOException;
@@ -35,6 +36,11 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
     public IoUringSocketChannel() {
        super(null, LinuxSocket.newSocketStream(), false);
        this.config = new IoUringSocketChannelConfig(this);
+    }
+
+    public IoUringSocketChannel(SocketProtocolFamily family, boolean mptcp) {
+        super(null, LinuxSocket.newSocketStream(family, mptcp), false);
+        this.config = new IoUringSocketChannelConfig(this);
     }
 
     IoUringSocketChannel(Channel parent, LinuxSocket fd) {
