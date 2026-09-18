@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
@@ -634,22 +635,21 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream parentStream = connection.stream(streamId);
 
-            // RFC 9113, Section 5.1: an endpoint that has sent RST_STREAM for the parent stream could still
-            // receive a PUSH_PROMISE that the peer had already sent or enqueued before processing the
-            // RST_STREAM. Such a frame must still be minimally processed, which includes causing the promised
-            // stream to become "reserved (remote)", even though the parent stream is otherwise closed and the
-            // frame itself is discarded (never surfaced to the listener).
-            if (parentStream != null && parentStream.isResetSent()) {
-                connection.remote().reservePushStream(promisedStreamId, parentStream);
-                if (logger.isInfoEnabled()) {
-                    logger.info("{} ignoring PUSH_PROMISE frame for stream {}. RST_STREAM sent, but reserved " +
-                            "promised stream {} as required by RFC 9113 Section 5.1", ctx.channel(), streamId,
-                            promisedStreamId);
-                }
+            if (parentStream == null) {
+                // The parent is already gone, so we cannot tell whether we reset it. Section 5.1 lets us apply the
+                // same minimal processing to every closed stream, which keeps the promised id consumed either way.
+                verifyStreamMayHaveExisted(streamId, false, "PUSH_PROMISE");
+                rejectDiscardedPushStream(ctx, promisedStreamId, null);
                 return;
             }
 
             if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, false, "PUSH_PROMISE")) {
+                if (parentStream.isResetSent() && parentStream.state().remoteSideOpen()) {
+                    // Section 5.1 scopes this to a stream we reset while it was "open" or "half-closed (local)".
+                    // Anywhere else the peer was never allowed to promise (Section 6.6), so keep ignoring it
+                    // rather than escalate to the connection error reservePushStream() raises.
+                    rejectDiscardedPushStream(ctx, promisedStreamId, parentStream);
+                }
                 return;
             }
 
@@ -685,6 +685,21 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             connection.remote().reservePushStream(promisedStreamId, parentStream);
 
             listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+        }
+
+        /**
+         * Declines a PUSH_PROMISE that is discarded rather than surfaced to the listener.
+         *
+         * @param parentStream the stream the push was promised on, or {@code null} if it is no longer tracked.
+         */
+        private void rejectDiscardedPushStream(ChannelHandlerContext ctx, int promisedStreamId,
+                Http2Stream parentStream) throws Http2Exception {
+            // The peer promised before it saw our RST_STREAM, so it has already moved the promised stream to
+            // "reserved (remote)" (Section 5.1) and we consume the id to stay in step with it. Nothing above the
+            // decoder was told the stream exists though, so this is the only place that can release it, and
+            // Section 6.6 lets a recipient decline a promise by resetting the promised stream.
+            Http2Stream promisedStream = connection.remote().reservePushStream(promisedStreamId, parentStream);
+            lifecycleManager.resetStream(ctx, promisedStream.id(), CANCEL.code(), ctx.newPromise());
         }
 
         @Override

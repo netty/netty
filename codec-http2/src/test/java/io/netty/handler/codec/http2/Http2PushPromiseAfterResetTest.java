@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,20 +24,23 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Covers the promised stream when a PUSH_PROMISE arrives on a parent stream for which we have already sent
  * RST_STREAM. Unlike {@link DefaultHttp2ConnectionDecoderTest} these tests drive real frame bytes through a real
  * {@link DefaultHttp2Connection}, so they observe the resulting stream state rather than which methods the decoder
  * called.
- * <p>
- * Both tests assert the behaviour we want and currently fail: the promised stream is reserved and then never
- * released, because the frame is discarded without telling anything above the decoder that the stream exists.
  */
 public class Http2PushPromiseAfterResetTest {
 
@@ -46,11 +50,25 @@ public class Http2PushPromiseAfterResetTest {
     private Http2Connection connection;
     private EmbeddedChannel channel;
     private Http2FrameInboundWriter inboundWriter;
+    private Http2FrameWriter frameWriter;
     private RecordingFrameListener listener;
 
     private static final class RecordingFrameListener extends Http2FrameAdapter {
         final List<Integer> pushPromises = new ArrayList<Integer>();
+        final List<Integer> headersSeen = new ArrayList<Integer>();
 
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                                  boolean endOfStream) {
+            headersSeen.add(streamId);
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                                  int streamDependency, short weight, boolean exclusive, int padding,
+                                  boolean endOfStream) {
+            headersSeen.add(streamId);
+        }
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                                       Http2Headers headers, int padding) {
@@ -63,8 +81,8 @@ public class Http2PushPromiseAfterResetTest {
         connection = new DefaultHttp2Connection(false);
         listener = new RecordingFrameListener();
 
-        Http2ConnectionEncoder encoder =
-                new DefaultHttp2ConnectionEncoder(connection, Http2TestUtil.mockedFrameWriter());
+        frameWriter = Http2TestUtil.mockedFrameWriter();
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
         Http2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder, new DefaultHttp2FrameReader());
         Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
@@ -142,5 +160,58 @@ public class Http2PushPromiseAfterResetTest {
                 "server push is broken for the rest of the connection: the discarded promises exhausted "
                         + "maxActiveStreams + maxReservedStreams and are never released");
         assertEquals(singletonList(promisedStreamId), listener.pushPromises);
+    }
+
+    @Test
+    public void promiseOnAParentThatIsNoLongerOpenForPushDoesNotKillTheConnection() throws Exception {
+        Http2Stream parent = connection.local().createStream(PARENT_STREAM_ID, false);
+        parent.closeRemoteSide();
+        parent.resetSent();
+        assertEquals(HALF_CLOSED_REMOTE, parent.state());
+
+        // Promising after END_STREAM is out of spec, but we already reset the stream, so keep ignoring it instead
+        // of reserving a stream the connection would refuse to create.
+        inboundWriter.writePushPromise(PARENT_STREAM_ID, PROMISED_STREAM_ID, request(), 0);
+
+        assertTrue(channel.isActive(), "connection was torn down by a PUSH_PROMISE we had already chosen to ignore");
+        assertNull(connection.stream(PROMISED_STREAM_ID));
+        assertTrue(listener.pushPromises.isEmpty());
+    }
+
+    @Test
+    public void promiseOnAParentAlreadyRemovedStillConsumesThePromisedId() throws Exception {
+        Http2Stream parent = openAndResetParentStream();
+        parent.close();
+        assertNull(connection.stream(PARENT_STREAM_ID));
+
+        inboundWriter.writePushPromise(PARENT_STREAM_ID, PROMISED_STREAM_ID, request(), 0);
+
+        // We can no longer tell that we reset the parent, but Section 5.1 lets us apply the same minimal
+        // processing to any closed stream, so the promised id is consumed exactly as it is before the flush.
+        assertEquals(PROMISED_STREAM_ID, connection.remote().lastStreamCreated());
+        assertNull(connection.stream(PROMISED_STREAM_ID), "the declined promise must not stay reserved");
+        assertTrue(listener.pushPromises.isEmpty());
+
+        // The promise is declined on the promised stream. Resetting the closed parent instead would violate
+        // Section 5.1 and let a peer drive one control frame out of us per promise it sends.
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(PROMISED_STREAM_ID),
+                eq(Http2Error.CANCEL.code()), any(ChannelPromise.class));
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), eq(PARENT_STREAM_ID),
+                anyLong(), any(ChannelPromise.class));
+        assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void pushedResponseAfterADeclinedPromiseIsNotSurfacedAsANewStream() throws Exception {
+        Http2Stream parent = openAndResetParentStream();
+        parent.close();
+
+        inboundWriter.writePushPromise(PARENT_STREAM_ID, PROMISED_STREAM_ID, request(), 0);
+        inboundWriter.writeInboundHeaders(PROMISED_STREAM_ID, new DefaultHttp2Headers().status("200"), 0, true);
+
+        // Because the id was consumed, the pushed response is recognised as belonging to a promise we already
+        // declined rather than minted as a brand new server-initiated stream and handed to the application.
+        assertTrue(listener.headersSeen.isEmpty(),
+                "pushed response surfaced with no preceding onPushPromiseRead: " + listener.headersSeen);
     }
 }
