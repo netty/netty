@@ -230,7 +230,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     void buddyAllocationConsistency(RepetitionInfo info) {
         SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
         AdaptiveByteBufAllocator allocator = newAllocator(true);
-        int small = 32768;
+        int small = 256 * 1024; // above the largest size class, so every size here takes the buddy path
         int large = 2 * small;
         int xlarge = 2 * large;
 

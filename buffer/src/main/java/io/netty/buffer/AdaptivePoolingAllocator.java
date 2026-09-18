@@ -180,6 +180,12 @@ final class AdaptivePoolingAllocator {
             8704, // 8192 + 512
             16384,
             16896, // 16384 + 512
+            32768,
+            33792, // 32768 + 1024
+            65536,
+            67584, // 65536 + 2048
+            131072,
+            135168, // 131072 + 4096
     };
 
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
@@ -223,6 +229,16 @@ final class AdaptivePoolingAllocator {
         CHUNK_SIZES = Arrays.copyOf(chunkSizesTemp, poolCount);
         SIZE_CLASS_TO_CHUNK_POOL = mappingTemp;
     }
+
+    /**
+     * Largest size served by a size class in low-memory mode. Low-memory mode never pooled sizes above it (the buddy
+     * path is disabled there too), and the size classes above it use chunks of 1 MiB and more, so they stay unpooled.
+     */
+    private static final int LOW_MEM_MAX_SIZE_CLASS = 16896;
+
+    /** Number of size classes that are pooled: all of them, except in low-memory mode. */
+    private static final int POOLED_SIZE_CLASSES_COUNT =
+            IS_LOW_MEM ? sizeClassIndexOf(LOW_MEM_MAX_SIZE_CLASS) + 1 : SIZE_CLASSES_COUNT;
 
     private final ChunkAllocator chunkAllocator;
     private final ChunkRegistry chunkRegistry;
@@ -277,7 +293,7 @@ final class AdaptivePoolingAllocator {
         AdaptiveByteBuf allocated = null;
         if (size <= MAX_POOLED_BUF_SIZE) {
             final int index = sizeClassIndexOf(size);
-            if (index < SIZE_CLASSES_COUNT) {
+            if (index < POOLED_SIZE_CLASSES_COUNT) {
                 ThreadLocalSizeClassHeap heap = null;
                 if (!IS_LOW_MEM && FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
                     heap = threadLocalSizeClassHeap.get();
@@ -1281,7 +1297,7 @@ final class AdaptivePoolingAllocator {
     private static final class SizeClassChunkManagementStrategy {
         // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
         // We choose 32 because it seems neither too small nor too big.
-        // For segments of 16 KiB, the chunks will be half a megabyte.
+        // Chunks are 128 KiB up to 4 KiB segments; above that they hold exactly 32 segments, up to 4.1 MiB.
         private static final int MIN_SEGMENTS_PER_CHUNK = 32;
         private final int segmentSize;
         private final int chunkSize;
