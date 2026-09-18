@@ -7,6 +7,13 @@ services:
     build:
       args:
         java_version : "11.0.30-zulu"
+      # Shared with the other centos-7.*.yaml legs: they all build from Dockerfile.centos7, so the
+      # expensive prefix (devtoolset, OpenSSL, ninja/go/cmake/clang) is cached once and reused by all
+      # java_version variants instead of being rebuilt per matrix leg.
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos7,mode=max,ignore-error=true
 
   build:
     image: netty:centos-7-1.11
