@@ -51,6 +51,13 @@ jobs:
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-boringssl-snapshot"
 
     name: ${{ matrix.setup }}
+    permissions:
+      contents: read
+      packages: write  # to push the docker build cache to ghcr.io
+    env:
+      # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
+      # entries in the docker-compose*.yaml files are actually honored.
+      COMPOSE_BAKE: "true"
     steps:
       # Pinned to v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -66,6 +73,21 @@ jobs:
           restore-keys: |
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
+
+      # The default "docker" buildx driver can't export cache to a registry; switch to the
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
+      # Pinned to v4.4.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+      # Pinned to v4.6.0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}

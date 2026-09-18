@@ -5,6 +5,10 @@ services:
     build:
       context: ../
       dockerfile: docker/Dockerfile.al2023
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:al2023-4.1
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:al2023-4.1,mode=max,ignore-error=true
 
   common: &common
     image: netty-al2023:x86_64
