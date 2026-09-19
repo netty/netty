@@ -634,6 +634,21 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream parentStream = connection.stream(streamId);
 
+            // RFC 9113, Section 5.1: an endpoint that has sent RST_STREAM for the parent stream could still
+            // receive a PUSH_PROMISE that the peer had already sent or enqueued before processing the
+            // RST_STREAM. Such a frame must still be minimally processed, which includes causing the promised
+            // stream to become "reserved (remote)", even though the parent stream is otherwise closed and the
+            // frame itself is discarded (never surfaced to the listener).
+            if (parentStream != null && parentStream.isResetSent()) {
+                connection.remote().reservePushStream(promisedStreamId, parentStream);
+                if (logger.isInfoEnabled()) {
+                    logger.info("{} ignoring PUSH_PROMISE frame for stream {}. RST_STREAM sent, but reserved " +
+                            "promised stream {} as required by RFC 9113 Section 5.1", ctx.channel(), streamId,
+                            promisedStreamId);
+                }
+                return;
+            }
+
             if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, false, "PUSH_PROMISE")) {
                 return;
             }

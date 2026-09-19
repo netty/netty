@@ -859,6 +859,21 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void pushPromiseReadForStreamThatAlreadySentResetShouldStillReservePromisedStream() throws Exception {
+        // RFC 9113, Section 5.1: an endpoint that has sent RST_STREAM must still minimally process a
+        // PUSH_PROMISE that was already in flight from the peer. This means the promised stream must
+        // become "reserved (remote)", even though the PUSH_PROMISE frame itself is discarded.
+        when(stream.isResetSent()).thenReturn(true);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // The promised stream must still be reserved...
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+
+        // ...but the frame itself must be discarded rather than delivered to the listener.
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
+    @Test
     public void priorityReadAfterGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint() throws Exception {
         mockGoAwaySentShouldAllowFramesForStreamCreatedByLocalEndpoint();
         decode().onPriorityRead(ctx, STREAM_ID, 0, (short) 255, true);
