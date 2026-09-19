@@ -52,22 +52,6 @@
     ]
   },
   {
-    "name": "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
-    "fields": [
-      {
-        "name": "refCnt"
-      }
-    ]
-  },
-  {
-    "name": "io.netty.buffer.AdaptivePoolingAllocator$Magazine",
-    "fields": [
-      {
-        "name": "nextInLine"
-      }
-    ]
-  },
-  {
     "name":"io.netty.util.ReferenceCountUtil",
     "queryAllDeclaredMethods":true
   }
