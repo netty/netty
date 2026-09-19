@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
@@ -64,6 +65,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
+    private final Http2Connection.PropertyKey methodIsHeadKey;
     private final boolean validateHeaders;
     private final boolean validateRequiredPseudoHeaders;
 
@@ -179,6 +181,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         contentLengthKey = this.connection.newKey();
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
+        methodIsHeadKey = methodIsHeadKey(encoder);
         this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
             connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
@@ -270,13 +273,49 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         ContentLength contentLength = stream.getProperty(contentLengthKey);
         if (contentLength != null) {
             try {
-                contentLength.increaseReceivedBytes(connection.isServer(), stream.id(), data, isEnd);
+                contentLength.increaseReceivedBytes(stream.id(), data, isEnd);
             } finally {
                 if (isEnd) {
                     stream.removeProperty(contentLengthKey);
                 }
             }
         }
+    }
+
+    /**
+     * Unwraps any {@link DecoratingHttp2ConnectionEncoder} layers to find the {@link Http2Connection.PropertyKey}
+     * that {@link DefaultHttp2ConnectionEncoder} uses to record HEAD requests, so it can be read back here for the
+     * matching response. Returns {@code null} if the encoder chain does not bottom out in a
+     * {@link DefaultHttp2ConnectionEncoder} (e.g. a fully custom {@link Http2ConnectionEncoder} implementation), in
+     * which case the HEAD-response carve-out in {@link ContentLength} simply does not apply.
+     */
+    private static Http2Connection.PropertyKey methodIsHeadKey(Http2ConnectionEncoder encoder) {
+        while (encoder instanceof DecoratingHttp2ConnectionEncoder) {
+            encoder = ((DecoratingHttp2ConnectionEncoder) encoder).delegate();
+        }
+        if (encoder instanceof DefaultHttp2ConnectionEncoder) {
+            return ((DefaultHttp2ConnectionEncoder) encoder).methodIsHeadKey();
+        }
+        return null;
+    }
+
+    /**
+     * Determines whether a response is allowed to have a content-length header that does not match the amount of
+     * DATA received, per <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.1.1">RFC 9113, 8.1.1</a>:
+     * this is only the case for responses that are defined as having no content, such as a 204 or 304 response, or
+     * a response to a HEAD request.
+     */
+    private boolean isContentLengthMismatchAllowed(Http2Stream stream, Http2Headers headers) {
+        if (connection.isServer()) {
+            // The no-content carve-out only applies to responses, never to requests.
+            return false;
+        }
+        CharSequence status = headers.status();
+        if (HttpResponseStatus.NO_CONTENT.codeAsText().contentEquals(status) ||
+                HttpResponseStatus.NOT_MODIFIED.codeAsText().contentEquals(status)) {
+            return true;
+        }
+        return methodIsHeadKey != null && Boolean.TRUE.equals(stream.getProperty(methodIsHeadKey));
     }
 
     /**
@@ -476,7 +515,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         long cLength = HttpUtil.normalizeAndGetContentLength(contentLength, false, true);
                         if (cLength != -1) {
                             headers.setLong(HttpHeaderNames.CONTENT_LENGTH, cLength);
-                            stream.setProperty(contentLengthKey, new ContentLength(cLength));
+                            stream.setProperty(contentLengthKey,
+                                    new ContentLength(cLength, isContentLengthMismatchAllowed(stream, headers)));
                         }
                     } catch (IllegalArgumentException e) {
                         throw streamError(stream.id(), PROTOCOL_ERROR, e,
@@ -880,13 +920,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     private static final class ContentLength {
         private final long expected;
+        private final boolean mismatchAllowedIfNoDataReceived;
         private long seen;
 
-        ContentLength(long expected) {
+        ContentLength(long expected, boolean mismatchAllowedIfNoDataReceived) {
             this.expected = expected;
+            this.mismatchAllowedIfNoDataReceived = mismatchAllowedIfNoDataReceived;
         }
 
-        void increaseReceivedBytes(boolean server, int streamId, int bytes, boolean isEnd) throws Http2Exception {
+        void increaseReceivedBytes(int streamId, int bytes, boolean isEnd) throws Http2Exception {
             seen += bytes;
             // Check for overflow
             if (seen < 0) {
@@ -900,8 +942,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             }
 
             if (isEnd) {
-                if (seen == 0 && !server) {
-                    // This may be a response to a HEAD request, let's just allow it.
+                if (seen == 0 && mismatchAllowedIfNoDataReceived) {
+                    // This is a response that is defined to have no content (e.g. 204, 304, or a response to a
+                    // HEAD request), so a non-zero content-length is allowed even without any DATA received.
                     return;
                 }
 
