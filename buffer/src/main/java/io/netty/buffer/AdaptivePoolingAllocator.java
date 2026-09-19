@@ -125,7 +125,7 @@ final class AdaptivePoolingAllocator {
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
-     * The capacity of the buddy chunk cache (large buffer reuse).
+     * The capacity of each stripe's buddy chunk cache (large buffer reuse).
      */
     static final int CHUNK_REUSE_QUEUE = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
@@ -250,7 +250,6 @@ final class AdaptivePoolingAllocator {
     private final StripedHeap[] stripedHeaps;
     private volatile int stripeScanLength;
     private final BuddyChunkManagementStrategy buddyStrategy;
-    private final ConcurrentSkipListChunkCache sharedBuddyCache;
     private final AdaptiveRecycler fallbackRecycler;
     private final FastThreadLocal<ThreadLocalSizeClassHeap> threadLocalSizeClassHeap;
 
@@ -267,7 +266,6 @@ final class AdaptivePoolingAllocator {
         }
         stripeScanLength = INITIAL_MAGAZINES;
         buddyStrategy = new BuddyChunkManagementStrategy();
-        sharedBuddyCache = buddyStrategy.createChunkCache();
         fallbackRecycler = AdaptiveRecycler.sharedWith(MAGAZINE_BUFFER_QUEUE_CAPACITY);
 
         boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
@@ -432,7 +430,6 @@ final class AdaptivePoolingAllocator {
         for (StripedHeap stripe : stripedHeaps) {
             stripe.freeStripe();
         }
-        sharedBuddyCache.free();
     }
 
     /**
@@ -1732,8 +1729,8 @@ final class AdaptivePoolingAllocator {
 
     /**
      * The magazine for buffers above the largest size class, one per stripe, guarded by the stripe lock. It carves
-     * power-of-two buddies out of {@link BuddyChunk}s and shares one {@link ConcurrentSkipListChunkCache} with every
-     * other buddy magazine of the allocator.
+     * power-of-two buddies out of {@link BuddyChunk}s and keeps the chunks it gave up in its own
+     * {@link ConcurrentSkipListChunkCache}, used only under the stripe lock.
      */
     private static final class BuddyMagazine {
         private static final BuddyChunk MAGAZINE_FREED = BuddyChunk.newMagazineFreedSentinel();
@@ -1750,7 +1747,7 @@ final class AdaptivePoolingAllocator {
             this.allocator = allocator;
             this.bufRecycler = bufRecycler;
             this.chunkController = strategy.createController(allocator);
-            this.chunkCache = allocator.sharedBuddyCache;
+            this.chunkCache = strategy.createChunkCache();
         }
 
         boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
@@ -1880,7 +1877,8 @@ final class AdaptivePoolingAllocator {
                 current.releaseFromMagazine();
                 current = null;
             }
-            // The chunk cache is shared by every buddy magazine of the allocator, which frees it.
+            // After current and nextInLine, which go to the cache when released.
+            chunkCache.free();
         }
 
         AdaptiveByteBuf newBuffer() {
@@ -2439,10 +2437,7 @@ final class AdaptivePoolingAllocator {
      * is released.
      */
     private static final class BuddyChunk extends Chunk implements IntConsumer {
-        private static final int MIN_BUDDY_SIZE = 32768;
-        private static final byte IS_CLAIMED = (byte) (1 << 7);
-        private static final byte HAS_CLAIMED_CHILDREN = 1 << 6;
-        private static final byte SHIFT_MASK = ~(IS_CLAIMED | HAS_CLAIMED_CHILDREN);
+        private static final int MIN_BUDDY_SIZE = BuddyTree.MIN_BLOCK_SIZE;
         private static final int PACK_OFFSET_MASK = 0xFFFF;
         private static final int PACK_SIZE_SHIFT = Integer.SIZE - Integer.numberOfLeadingZeros(PACK_OFFSET_MASK);
 
@@ -2451,9 +2446,8 @@ final class AdaptivePoolingAllocator {
         final RefCnt refCnt = new RefCnt();
         // null for a one-shot chunk.
         private final MpscIntQueue freeList;
-        // The bits of each buddy: [1: is claimed][1: has claimed children][30: MIN_BUDDY_SIZE shift to get size].
         // null for a one-shot chunk.
-        private final byte[] buddies;
+        private final BuddyTree tree;
         private final int freeListCapacity;
         private BuddyMagazine magazine;
         private int allocatedBytes;
@@ -2463,7 +2457,7 @@ final class AdaptivePoolingAllocator {
          */
         private BuddyChunk() {
             freeList = null;
-            buddies = null;
+            tree = null;
             freeListCapacity = 0;
         }
 
@@ -2478,7 +2472,7 @@ final class AdaptivePoolingAllocator {
         BuddyChunk(AbstractByteBuf delegate, AdaptivePoolingAllocator allocator) {
             super(delegate, allocator);
             freeList = null;
-            buddies = null;
+            tree = null;
             freeListCapacity = 0;
         }
 
@@ -2487,23 +2481,8 @@ final class AdaptivePoolingAllocator {
             super(delegate, magazine.allocator, false);
             attachToMagazine(magazine);
             freeListCapacity = delegate.capacity() / MIN_BUDDY_SIZE;
-            int maxShift = Integer.numberOfTrailingZeros(freeListCapacity);
-            assert maxShift <= 30; // The top 2 bits are used for marking.
             freeList = MpscIntQueue.create(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
-            buddies = new byte[freeListCapacity << 1];
-
-            // Generate the buddies entries.
-            int index = 1;
-            int runLength = 1;
-            int currentRun = 0;
-            while (maxShift > 0) {
-                buddies[index++] = (byte) maxShift;
-                if (++currentRun == runLength) {
-                    currentRun = 0;
-                    runLength <<= 1;
-                    maxShift--;
-                }
-            }
+            tree = new BuddyTree(delegate.capacity());
         }
 
         void attachToMagazine(BuddyMagazine magazine) {
@@ -2524,7 +2503,7 @@ final class AdaptivePoolingAllocator {
             if (!freeList.isEmpty()) {
                 freeList.drain(freeListCapacity, this);
             }
-            int startIndex = chooseFirstFreeBuddy(1, startingCapacity, 0);
+            int startIndex = tree.claim(startingCapacity);
             if (startIndex == -1) {
                 return false;
             }
@@ -2536,7 +2515,7 @@ final class AdaptivePoolingAllocator {
                 chunk = null;
             } finally {
                 if (chunk != null) {
-                    unreserveMatchingBuddy(1, startingCapacity, startIndex, 0);
+                    tree.release(startIndex, startingCapacity);
                     // If chunk is not null we know that buf.init(...) failed and so we need to manually release
                     // the chunk again as we retained it before calling buf.init(...).
                     chunk.release();
@@ -2550,7 +2529,7 @@ final class AdaptivePoolingAllocator {
          * this chunk.
          */
         void readInitOneShot(AdaptiveByteBuf buf, int size, int maxCapacity) {
-            assert buddies == null : "not a one-shot chunk";
+            assert tree == null : "not a one-shot chunk";
             retain();
             boolean initialized = false;
             try {
@@ -2569,7 +2548,7 @@ final class AdaptivePoolingAllocator {
             // Called by allocating thread when draining freeList.
             int size = unpackSize(packed);
             int offset = unpackOffset(packed);
-            unreserveMatchingBuddy(1, size, offset, 0);
+            tree.release(offset, size);
             allocatedBytes -= size;
         }
 
@@ -2623,87 +2602,109 @@ final class AdaptivePoolingAllocator {
             freeList.drain(freeListCapacity, this);
         }
 
-        /**
-         * Claim a suitable buddy and return its start offset into the delegate chunk, or return -1 if nothing claimed.
-         */
-        private int chooseFirstFreeBuddy(int index, int size, int currOffset) {
-            byte[] buddies = this.buddies;
-            while (index < buddies.length) {
-                byte buddy = buddies[index];
-                int currValue = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
-                if (currValue < size || (buddy & IS_CLAIMED) == IS_CLAIMED) {
-                    return -1;
-                }
-                if (currValue == size && (buddy & HAS_CLAIMED_CHILDREN) == 0) {
-                    buddies[index] |= IS_CLAIMED;
-                    return currOffset;
-                }
-                int found = chooseFirstFreeBuddy(index << 1, size, currOffset);
-                if (found != -1) {
-                    buddies[index] |= HAS_CLAIMED_CHILDREN;
-                    return found;
-                }
-                index = (index << 1) + 1;
-                currOffset += currValue >> 1; // Bump offset to skip first half of this layer.
-            }
-            return -1;
-        }
-
-        /**
-         * Un-reserve the matching buddy and return whether there are any other child or sibling reservations.
-         */
-        private boolean unreserveMatchingBuddy(int index, int size, int offset, int currOffset) {
-            byte[] buddies = this.buddies;
-            if (buddies.length <= index) {
-                return false;
-            }
-            byte buddy = buddies[index];
-            int currSize = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
-
-            if (currSize == size) {
-                // We're at the right size level.
-                if (currOffset == offset) {
-                    buddies[index] &= SHIFT_MASK;
-                    return false;
-                }
-                throw new IllegalStateException("The intended segment was not found at index " +
-                        index + ", for size " + size + " and offset " + offset);
-            }
-
-            // We're at a parent size level. Use the target offset to guide our drill-down path.
-            boolean claims;
-            int siblingIndex;
-            if (offset < currOffset + (currSize >> 1)) {
-                // Must be down the left path.
-                claims = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
-                siblingIndex = (index << 1) + 1;
-            } else {
-                // Must be down the rigth path.
-                claims = unreserveMatchingBuddy((index << 1) + 1, size, offset, currOffset + (currSize >> 1));
-                siblingIndex = index << 1;
-            }
-            if (!claims) {
-                // No other claims down the path we took. Check if the sibling has claims.
-                byte sibling = buddies[siblingIndex];
-                if ((sibling & SHIFT_MASK) == sibling) {
-                    // No claims in the sibling. We can clear this level as well.
-                    buddies[index] &= SHIFT_MASK;
-                    return false;
-                }
-            }
-            return true;
-        }
-
         @Override
         public String toString() {
             int capacity = delegate.capacity();
-            if (buddies == null) {
+            if (tree == null) {
                 return "BuddyChunk[one-shot, capacity: " + capacity + ']';
             }
             int remaining = capacity - allocatedBytes;
             return "BuddyChunk[capacity: " + capacity +
                     ", remaining: " + remaining +
                     ", free list: " + freeList.size() + ']';
+        }
+    }
+
+    /**
+     * The buddy tree of a {@link BuddyChunk}: hands out power-of-two blocks of at least {@link #MIN_BLOCK_SIZE} from
+     * a capacity that is a power-of-two multiple of it, and merges freed buddies back. Not thread-safe: used by the
+     * chunk's magazine only (frees from other threads reach it through the chunk's free list).
+     * <p>
+     * An implicit binary tree over the blocks: node 1 is the whole chunk, the children of node {@code i} are its two
+     * halves {@code 2i} and {@code 2i + 1}, and the leaves are the {@link #MIN_BLOCK_SIZE} blocks. Each node stores
+     * the order of the largest free block in its subtree plus one, 0 when nothing in it is free (order {@code k} is a
+     * block of {@code MIN_BLOCK_SIZE << k}). A claim follows the leftmost child that fits down to the order asked
+     * for, and a release walks up merging buddies: both are one pass along a root-to-leaf path.
+     */
+    static final class BuddyTree {
+        static final int MIN_BLOCK_SIZE = 32768;
+
+        private final byte[] nodes;
+        private final int maxOrder;
+
+        BuddyTree(int capacity) {
+            int leaves = capacity / MIN_BLOCK_SIZE;
+            assert leaves > 0 && (leaves & leaves - 1) == 0 : "capacity " + capacity;
+            maxOrder = Integer.numberOfTrailingZeros(leaves);
+            byte[] nodes = new byte[leaves << 1];
+            // All free: the nodes at depth d, [2^d, 2^(d+1)), are whole blocks of order maxOrder - d.
+            // One constant per level. A loop computing each node's order (numberOfLeadingZeros of its index) into
+            // the byte array was miscompiled by JDK 21's C2 (SuperWord), which built corrupt trees.
+            for (int depth = 0; depth <= maxOrder; depth++) {
+                Arrays.fill(nodes, 1 << depth, 2 << depth, (byte) (maxOrder - depth + 1));
+            }
+            this.nodes = nodes;
+        }
+
+        /**
+         * Claim the leftmost free block of {@code size} and return its offset, or -1 if there is none. Blocks are
+         * powers of two of at least {@link #MIN_BLOCK_SIZE}: any other size is never claimed, and returns -1.
+         */
+        int claim(int size) {
+            if (size < MIN_BLOCK_SIZE || (size & size - 1) != 0) {
+                // BuddyMagazine asks for a chunk's remaining capacity, which is the sum of its free blocks.
+                return -1;
+            }
+            int order = Integer.numberOfTrailingZeros(size / MIN_BLOCK_SIZE);
+            byte[] nodes = this.nodes;
+            int wanted = order + 1;
+            if (order > maxOrder || nodes[1] < wanted) {
+                return -1;
+            }
+            int index = 1;
+            for (int depth = maxOrder - order; depth > 0; depth--) {
+                index <<= 1;
+                if (nodes[index] < wanted) {
+                    index++;
+                }
+            }
+            nodes[index] = 0;
+            updateAncestors(index, order);
+            return (index - (1 << maxOrder - order)) * size;
+        }
+
+        /**
+         * Give back the block of {@code size} at {@code offset}, claimed earlier.
+         */
+        void release(int offset, int size) {
+            int order = Integer.numberOfTrailingZeros(size / MIN_BLOCK_SIZE);
+            if ((offset & size - 1) != 0) {
+                throw new IllegalStateException("No block of size " + size + " at offset " + offset);
+            }
+            int index = (1 << maxOrder - order) + offset / size;
+            assert nodes[index] == 0 : "no block of size " + size + " claimed at offset " + offset;
+            nodes[index] = (byte) (order + 1);
+            updateAncestors(index, order);
+        }
+
+        /**
+         * Recompute the ancestors of {@code index}, a node of {@code order}, after its value changed; stops at the
+         * first ancestor whose value stays the same.
+         */
+        private void updateAncestors(int index, int order) {
+            byte[] nodes = this.nodes;
+            while (index > 1) {
+                index >>= 1;
+                order++;
+                int left = nodes[index << 1];
+                int right = nodes[(index << 1) + 1];
+                // Two whole free halves (each of this node's order minus one, stored plus one) merge into one block.
+                int value = left == order && right == order ? order + 1 : Math.max(left, right);
+                if (nodes[index] == value) {
+                    return;
+                }
+                nodes[index] = (byte) value;
+            }
         }
     }
 

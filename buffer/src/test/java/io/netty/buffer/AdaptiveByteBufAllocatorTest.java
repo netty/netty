@@ -296,6 +296,35 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
+    /**
+     * Buddy chunks given up by a magazine are reused by it: allocating and releasing the same set of large buffers
+     * over and over from one thread does not grow the memory held after the first round.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void buddyChunksAreReusedAcrossRounds(boolean direct) {
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        ByteBufAllocatorMetric metric = allocator.metric();
+        int size = 512 * 1024; // above the largest size class, below the unpooled fallback
+        ByteBuf[] bufs = new ByteBuf[24];
+        long afterFirstRound = -1;
+        for (int round = 0; round < 50; round++) {
+            for (int i = 0; i < bufs.length; i++) {
+                bufs[i] = direct ? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size);
+            }
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            long used = direct ? metric.usedDirectMemory() : metric.usedHeapMemory();
+            if (afterFirstRound < 0) {
+                afterFirstRound = used;
+                assertTrue(used >= (long) size * bufs.length, "used " + used);
+            } else {
+                assertEquals(afterFirstRound, used, "round " + round);
+            }
+        }
+    }
+
     @DisabledForSlowLeakDetection
     @RepeatedTest(100)
     void buddyAllocationConsistency(RepetitionInfo info) {
