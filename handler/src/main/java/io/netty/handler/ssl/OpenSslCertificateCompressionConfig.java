@@ -25,6 +25,8 @@ import java.util.List;
 
 /**
  * Configuration for TLS1.3 certificate compression extension.
+ * When no configuration is specified, zlib compression is enabled in both directions. Use an empty configuration
+ * to disable certificate compression.
  */
 public final class OpenSslCertificateCompressionConfig implements
         Iterable<OpenSslCertificateCompressionConfig.AlgorithmConfig> {
