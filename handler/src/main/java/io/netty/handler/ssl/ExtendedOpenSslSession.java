@@ -246,7 +246,7 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
-    public void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
+    public void handshakeFinished(byte[] id, String cipher, int protocol, byte[] peerCertificate,
                                   byte[][] peerCertificateChain, long creationTime, long timeout) throws SSLException {
         wrapped.handshakeFinished(id, cipher, protocol, peerCertificate, peerCertificateChain, creationTime, timeout);
     }
