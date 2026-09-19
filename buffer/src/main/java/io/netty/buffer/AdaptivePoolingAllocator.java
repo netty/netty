@@ -250,8 +250,8 @@ final class AdaptivePoolingAllocator {
     private final StripedHeap[] stripedHeaps;
     private volatile int stripeScanLength;
     private final BuddyChunkManagementStrategy buddyStrategy;
-    private final ChunkCache sharedBuddyCache;
-    private final Magazine.AdaptiveRecycler fallbackRecycler;
+    private final ConcurrentSkipListChunkCache sharedBuddyCache;
+    private final AdaptiveRecycler fallbackRecycler;
     private final FastThreadLocal<ThreadLocalSizeClassHeap> threadLocalSizeClassHeap;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
@@ -268,7 +268,7 @@ final class AdaptivePoolingAllocator {
         stripeScanLength = INITIAL_MAGAZINES;
         buddyStrategy = new BuddyChunkManagementStrategy();
         sharedBuddyCache = buddyStrategy.createChunkCache();
-        fallbackRecycler = Magazine.AdaptiveRecycler.sharedWith(MAGAZINE_BUFFER_QUEUE_CAPACITY);
+        fallbackRecycler = AdaptiveRecycler.sharedWith(MAGAZINE_BUFFER_QUEUE_CAPACITY);
 
         boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
         threadLocalSizeClassHeap = disableThreadLocalGroups ? null : new FastThreadLocal<ThreadLocalSizeClassHeap>() {
@@ -382,17 +382,15 @@ final class AdaptivePoolingAllocator {
         if (buf == null) {
             buf = newFallbackBuffer();
         }
-        // Create a one-off chunk for this allocation.
+        // Create a one-shot chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
-        Chunk chunk = new Chunk(innerChunk, this);
+        BuddyChunk chunk = new BuddyChunk(innerChunk, this);
         chunkRegistry.add(chunk);
         try {
-            boolean success = chunk.readInitInto(buf, size, size, maxCapacity);
-            assert success : "Failed to initialize ByteBuf with dedicated chunk";
+            chunk.readInitOneShot(buf, size, maxCapacity);
         } finally {
-            // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
-            // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
-            // completely release the Chunk and so the contained innerChunk.
+            // Drop the reference the chunk got at construction: readInitOneShot(...) took one for the buffer
+            // when successful, so the chunk and its innerChunk are freed when the AdaptiveByteBuf is released.
             chunk.release();
         }
         return buf;
@@ -564,53 +562,53 @@ final class AdaptivePoolingAllocator {
     // One StampedLock per stripe covers ALL size classes.
     private static final class StripedHeap {
         final StampedLock lock = new StampedLock();
-        Magazine[] magazines;
-        Magazine buddyMagazine;
-        Magazine.AdaptiveRecycler recycler;
+        SizeClassMagazine[] magazines;
+        BuddyMagazine buddyMagazine;
+        AdaptiveRecycler recycler;
         SizeClassChunkRecycler chunkRecycler;
 
-        Magazine getOrCreateMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
-            Magazine[] mags = magazines;
+        SizeClassMagazine getOrCreateMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
+            SizeClassMagazine[] mags = magazines;
             if (mags == null) {
                 return createFirstMagazine(sizeClassIndex, allocator);
             }
-            Magazine mag = mags[sizeClassIndex];
+            SizeClassMagazine mag = mags[sizeClassIndex];
             if (mag == null) {
                 mag = createMagazine(sizeClassIndex, allocator);
             }
             return mag;
         }
 
-        private Magazine createFirstMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
-            magazines = new Magazine[SIZE_CLASSES_COUNT];
+        private SizeClassMagazine createFirstMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
+            magazines = new SizeClassMagazine[SIZE_CLASSES_COUNT];
             chunkRecycler = new SizeClassChunkRecycler();
             return createMagazine(sizeClassIndex, allocator);
         }
 
-        private Magazine createMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
+        private SizeClassMagazine createMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
             if (recycler == null) {
-                recycler = Magazine.AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
+                recycler = AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex, null, recycler, lock,
-                    magazines);
+            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, sizeClassIndex,
+                    null, recycler, lock, magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
 
-        Magazine getOrCreateBuddyMagazine(AdaptivePoolingAllocator allocator) {
-            Magazine mag = buddyMagazine;
+        BuddyMagazine getOrCreateBuddyMagazine(AdaptivePoolingAllocator allocator) {
+            BuddyMagazine mag = buddyMagazine;
             if (mag == null) {
                 mag = createBuddyMagazine(allocator);
             }
             return mag;
         }
 
-        private Magazine createBuddyMagazine(AdaptivePoolingAllocator allocator) {
+        private BuddyMagazine createBuddyMagazine(AdaptivePoolingAllocator allocator) {
             if (recycler == null) {
-                recycler = Magazine.AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
+                recycler = AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
-            Magazine mag = new Magazine(allocator, allocator.buddyStrategy, recycler);
+            BuddyMagazine mag = new BuddyMagazine(allocator, allocator.buddyStrategy, recycler);
             buddyMagazine = mag;
             return mag;
         }
@@ -621,7 +619,7 @@ final class AdaptivePoolingAllocator {
             try {
                 if (magazines != null) {
                     for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                        Magazine mag = magazines[i];
+                        SizeClassMagazine mag = magazines[i];
                         if (mag != null) {
                             mag.free();
                             magazines[i] = null;
@@ -649,20 +647,25 @@ final class AdaptivePoolingAllocator {
                 return null;
             }
             try {
-                boolean sizeClassed = sizeClassIndex < SIZE_CLASSES_COUNT;
-                Magazine mag = sizeClassed
-                        ? getOrCreateMagazine(sizeClassIndex, allocator)
-                        : getOrCreateBuddyMagazine(allocator);
-                if (buf == null) {
-                    buf = mag.newBuffer();
-                }
-                if (mag.allocate(size, maxCapacity, buf)) {
-                    if (sizeClassed) {
-                        // Cache purging is size-class management: the buddy magazine has no size
-                        // class, no sibling magazines and no chunk recycler to feed.
-                        mag.tickAllocPurge();
+                if (sizeClassIndex < SIZE_CLASSES_COUNT) {
+                    SizeClassMagazine mag = getOrCreateMagazine(sizeClassIndex, allocator);
+                    if (buf == null) {
+                        buf = mag.newBuffer();
                     }
-                    return buf;
+                    if (mag.allocate(size, maxCapacity, buf)) {
+                        mag.tickAllocPurge();
+                        return buf;
+                    }
+                } else {
+                    // Cache purging is size-class management: the buddy magazine has no size
+                    // class, no sibling magazines and no chunk recycler to feed, so it never ticks.
+                    BuddyMagazine mag = getOrCreateBuddyMagazine(allocator);
+                    if (buf == null) {
+                        buf = mag.newBuffer();
+                    }
+                    if (mag.allocate(size, maxCapacity, buf)) {
+                        return buf;
+                    }
                 }
                 if (!reallocate) {
                     buf.release();
@@ -675,7 +678,7 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class ThreadLocalSizeClassHeap {
-        private final Magazine[] magazines = new Magazine[SIZE_CLASSES_COUNT];
+        private final SizeClassMagazine[] magazines = new SizeClassMagazine[SIZE_CLASSES_COUNT];
         private final SizeClassChunkRecycler chunkRecycler = new SizeClassChunkRecycler();
         private final AdaptivePoolingAllocator allocator;
 
@@ -684,7 +687,7 @@ final class AdaptivePoolingAllocator {
         }
 
         AdaptiveByteBuf allocate(int sizeClassIndex, int size, int maxCapacity, AdaptiveByteBuf buf) {
-            Magazine mag = getOrCreateMagazine(sizeClassIndex);
+            SizeClassMagazine mag = getOrCreateMagazine(sizeClassIndex);
             boolean reallocate = buf != null;
             if (!reallocate) {
                 buf = mag.newBuffer();
@@ -695,17 +698,17 @@ final class AdaptivePoolingAllocator {
             return buf;
         }
 
-        Magazine getOrCreateMagazine(int sizeClassIndex) {
-            Magazine mag = magazines[sizeClassIndex];
+        SizeClassMagazine getOrCreateMagazine(int sizeClassIndex) {
+            SizeClassMagazine mag = magazines[sizeClassIndex];
             if (mag == null) {
                 mag = createMagazine(sizeClassIndex);
             }
             return mag;
         }
 
-        private Magazine createMagazine(int sizeClassIndex) {
+        private SizeClassMagazine createMagazine(int sizeClassIndex) {
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            Magazine mag = new Magazine(allocator, strategy, chunkRecycler, sizeClassIndex,
+            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, sizeClassIndex,
                                        Thread.currentThread(), null, null, magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
@@ -713,26 +716,13 @@ final class AdaptivePoolingAllocator {
 
         void free() {
             for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                Magazine mag = magazines[i];
+                SizeClassMagazine mag = magazines[i];
                 if (mag != null) {
                     mag.free();
                     magazines[i] = null;
                 }
             }
             chunkRecycler.freeAll();
-        }
-    }
-
-    interface ChunkCache {
-        Chunk pollChunk(int size);
-
-        boolean offerChunk(Chunk chunk);
-
-        void free();
-
-        boolean isEmpty();
-
-        default void tickPurge() {
         }
     }
 
@@ -748,17 +738,31 @@ final class AdaptivePoolingAllocator {
      * <ul>
      *   <li><b>Reusable</b> — chunks known to have free segments. {@link #pollChunk} takes the
      *       head, O(1). Fully-free chunks at or below the retention floor stay here rather than
-     *       being evicted, so a burst does not have to re-allocate immediately after draining.</li>
+     *       being evicted, so a burst does not have to re-allocate immediately after draining.
+     *       While the magazine has a chunk to allocate from, that chunk is here too, as the head:
+     *       the <em>active</em> chunk ({@code CACHE_ACTIVE}), see below.</li>
      *   <li><b>Exhausted</b> — chunks with no free segments when they were filed. Primarily an
      *       ownership registry: it keeps chunks reachable for {@link #free()} and gives the
      *       notification drain somewhere to move a chunk out of. It is <em>not</em> the discovery
      *       mechanism, and is never walked.</li>
      * </ul>
      *
-     * <p><b>Why the reusable list is trustworthy.</b> A cached chunk can only <em>gain</em>
-     * capacity: segments are handed out only by {@code readInitInto} on a magazine's chunk, and
-     * {@link #pollChunk} removes a chunk from the cache before it is attached to a magazine. So a
-     * chunk filed with capacity still has it, and the head of the reusable list is always usable.
+     * <p><b>The active chunk.</b> The chunk the magazine allocates from is linked at the head of the
+     * reusable list with state {@code CACHE_ACTIVE}; the magazine's {@code current} field is only the
+     * fast path's alias of it. {@link #activate} makes a polled or freshly allocated chunk active, and
+     * {@link #deactivate} unlinks it and files it by capacity, like {@link #offerChunk}, when the
+     * magazine runs it out of segments or is freed. Every chunk linked into the reusable list while
+     * one is active goes after it. The active chunk is the magazine's, not a retention candidate: no
+     * cache decision touches it (the release paths and the drain act only on states above
+     * {@code CACHE_ACTIVE}, and {@link #tickPurge} skips it), and it is left out of the count that is
+     * compared with {@link #purgeRetentionFloor}.
+     *
+     * <p><b>Why the reusable list is trustworthy.</b> A cached chunk other than the active one can
+     * only <em>gain</em> capacity: segments are handed out only by {@code readInitInto} on the active
+     * chunk, and a chunk becomes active only through {@link #activate}, after the magazine gave up the
+     * previous one. So a non-active chunk filed with capacity still has it, and the head of the
+     * reusable list is always usable when there is no active chunk, which is the only time
+     * {@link #pollChunk} runs.
      *
      * <p><b>Why the exhausted list is not.</b> {@code offerChunk} files a chunk by reading its
      * capacity, and a cross-thread return landing just after that read leaves it filed as exhausted
@@ -803,7 +807,7 @@ final class AdaptivePoolingAllocator {
      * and idle chunks leave via Signal B rather than a byte threshold. Evicted buffers go to the
      * {@link SizeClassChunkRecycler}, which every size class on the heap draws from.
      */
-    static final class SizeClassedChunkCache implements ChunkCache {
+    static final class SizeClassedChunkCache {
         private static final AtomicReferenceFieldUpdater<SizeClassedChunkCache, SizeClassedChunk>
                 PENDING_HEAD = AtomicReferenceFieldUpdater.newUpdater(
                         SizeClassedChunkCache.class, SizeClassedChunk.class, "pendingHead");
@@ -813,9 +817,15 @@ final class AdaptivePoolingAllocator {
 
         SizeClassedChunk exhaustedHead;
         SizeClassedChunk reusableHead;
+        /**
+         * The chunk the magazine allocates from ({@link SizeClassedChunk#CACHE_ACTIVE}), or {@code null}.
+         * When set it is {@link #reusableHead} and stays there: {@link #addToReusable} links new chunks after it.
+         */
+        SizeClassedChunk active;
         /** Treiber stack of chunks that a releasing thread asked us to look at. */
         private volatile SizeClassedChunk pendingHead;
         int exhaustedCount;
+        /** Chunks linked in the reusable list, the active one included. */
         int reusableCount;
 
         final SizeClassChunkRecycler chunkRecycler;
@@ -843,8 +853,12 @@ final class AdaptivePoolingAllocator {
             purgeRetentionFloor = Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize);
         }
 
+        /**
+         * The chunks that count against {@link #purgeRetentionFloor}: every linked chunk except the active one,
+         * which is the magazine's to use and is not a retention candidate.
+         */
         private int totalCount() {
-            return exhaustedCount + reusableCount;
+            return exhaustedCount + reusableCount - (active != null ? 1 : 0);
         }
 
         // --- Intrusive doubly-linked list operations ---
@@ -860,14 +874,24 @@ final class AdaptivePoolingAllocator {
             exhaustedCount++;
         }
 
+        /**
+         * Link {@code chunk} at the front of the reusable list: right after the active chunk if there is one, so
+         * the active chunk stays the head, otherwise as the head.
+         */
         private void addToReusable(SizeClassedChunk chunk) {
             chunk.cacheListState = SizeClassedChunk.CACHE_REUSABLE;
-            chunk.prevInCache = null;
-            chunk.nextInCache = reusableHead;
-            if (reusableHead != null) {
-                reusableHead.prevInCache = chunk;
+            SizeClassedChunk prev = active;
+            SizeClassedChunk next = prev == null ? reusableHead : prev.nextInCache;
+            chunk.prevInCache = prev;
+            chunk.nextInCache = next;
+            if (next != null) {
+                next.prevInCache = chunk;
             }
-            reusableHead = chunk;
+            if (prev == null) {
+                reusableHead = chunk;
+            } else {
+                prev.nextInCache = chunk;
+            }
             reusableCount++;
         }
 
@@ -910,6 +934,8 @@ final class AdaptivePoolingAllocator {
         }
 
         void evictIfAboveFloor(SizeClassedChunk chunk) {
+            // Every caller filters on CACHE_REUSABLE, which the active chunk (CACHE_ACTIVE) never is.
+            assert chunk != active : "the active chunk must never be evicted";
             if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
                 removeFromReusable(chunk);
                 detachFromCache(chunk);
@@ -929,7 +955,7 @@ final class AdaptivePoolingAllocator {
         //     drainer that pops the note is guaranteed to see the segment.
         //  2. Notes are state-independent: "look at this chunk", never "this specific thing changed".
         //     One note therefore covers any number of later returns, and a note left while the chunk
-        //     was still CACHE_NONE stays correct once the chunk is classified. Do not optimise the
+        //     was still active (or CACHE_NONE) stays correct once the chunk is classified. Do not optimise the
         //     note to carry state. This is also why a releaser that finds the claim already taken can
         //     simply walk away: the in-flight note covers its return too.
         //  3. Re-arm before processing (see drainPending).
@@ -939,8 +965,15 @@ final class AdaptivePoolingAllocator {
         //     insert: the chunk is filed as exhausted while holding capacity, and the note -- which
         //     cannot be consumed in between -- is what fixes it.
         //
-        // A drain that finds CACHE_NONE and no-ops is benign, not a lost signal: the chunk is in a
-        // magazine, which consumes its own returned segments through nextAvailableSegmentOffset.
+        // A drain that finds CACHE_ACTIVE and no-ops is benign, not a lost signal: the chunk is the
+        // magazine's, which consumes its own returned segments through nextAvailableSegmentOffset, and
+        // when the magazine gives it up, deactivate files it by capacity -- an offerChunk, so property 4
+        // covers it: a note consumed before deactivate made its segment visible to deactivate's capacity
+        // read, and a note still outstanding is processed after it, against the list it was filed on.
+        // That includes a return that lands from another thread while the chunk is being deactivated.
+        // A drain that finds CACHE_NONE is benign too: the chunk is gone (evicted, recycled, or its cache
+        // freed). A polled chunk is never seen in that state, because pollChunk and activate run back to
+        // back under the same lock or on the same owner thread, with no drain in between.
 
         /**
          * Queue {@code chunk} for the next drain. Called by a releasing thread that holds no lock,
@@ -1012,9 +1045,12 @@ final class AdaptivePoolingAllocator {
 
         private void processPending(SizeClassedChunk chunk) {
             int cls = chunk.cacheListState;
-            if (cls == SizeClassedChunk.CACHE_NONE) {
-                // Attached to a magazine, already polled, or gone: not ours to move. Checked first,
-                // because such a chunk may have had its free lists stripped by recycleOrDeallocate.
+            if (cls <= SizeClassedChunk.CACHE_ACTIVE) {
+                // CACHE_NONE: gone (evicted, recycled, or its cache freed), not ours to move; a polled chunk
+                // is activated before any drain can run. Checked first, because such a chunk may have had
+                // its free lists stripped by recycleOrDeallocate.
+                // CACHE_ACTIVE: the magazine's chunk, which consumes its own returned segments; it is
+                // filed by capacity when the magazine gives it up (see deactivate).
                 return;
             }
             if (cls == SizeClassedChunk.CACHE_EXHAUSTED && chunk.hasRemainingCapacity()) {
@@ -1066,8 +1102,7 @@ final class AdaptivePoolingAllocator {
             return pollChunkInternal();
         }
 
-        @Override
-        public SizeClassedChunk pollChunk(int size) {
+        SizeClassedChunk pollChunk(int size) {
             // Slow-path only (once per chunk-worth of allocations), which is exactly where a chunk is
             // wanted. Draining per allocation is what made the old notification cache expensive.
             drainPending();
@@ -1081,6 +1116,8 @@ final class AdaptivePoolingAllocator {
          * says it gained capacity.
          */
         private SizeClassedChunk pollChunkInternal() {
+            // The magazine gives up its active chunk before it asks for another one.
+            assert active == null : "poll with an active chunk";
             if (reusableHead != null) {
                 SizeClassedChunk chunk = reusableHead;
                 removeFromReusable(chunk);
@@ -1127,16 +1164,17 @@ final class AdaptivePoolingAllocator {
             return null;
         }
 
-        @Override
-        public void tickPurge() {
+        void tickPurge() {
             drainPending();
             // Exhausted→reusable is applied by the drain above. All that is left is evicting
-            // fully-free reusable chunks above the retention floor.
+            // fully-free reusable chunks above the retention floor. The active chunk is linked here
+            // too, but it is the magazine's and not a candidate: it is skipped, and not counted.
             int total = totalCount();
+            final SizeClassedChunk active = this.active;
             SizeClassedChunk cur = reusableHead;
             while (cur != null && total > purgeRetentionFloor) {
                 SizeClassedChunk next = cur.nextInCache;
-                if (cur.hasFullCapacity()) {
+                if (cur != active && cur.hasFullCapacity()) {
                     removeFromReusable(cur);
                     detachFromCache(cur);
                     cur.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
@@ -1146,22 +1184,67 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        @Override
-        public boolean offerChunk(Chunk chunk) {
-            SizeClassedChunk sc = (SizeClassedChunk) chunk;
-            if (sc.hasRemainingCapacity()) {
-                addToReusable(sc);
+        boolean offerChunk(SizeClassedChunk chunk) {
+            if (chunk.hasRemainingCapacity()) {
+                addToReusable(chunk);
             } else {
-                addToExhausted(sc);
+                addToExhausted(chunk);
             }
             return true;
         }
 
-        @Override
-        public void free() {
+        /**
+         * Make {@code chunk}, which is not in this cache, the active chunk: the head of the reusable list, which
+         * the magazine allocates from until {@link #deactivate} files it by capacity like any other chunk.
+         * Caller holds the stripe lock or is the owner thread, like every list operation.
+         */
+        void activate(SizeClassedChunk chunk) {
+            assert active == null : "the magazine already has an active chunk";
+            assert chunk.cacheListState == SizeClassedChunk.CACHE_NONE;
+            addToReusable(chunk);
+            chunk.cacheListState = SizeClassedChunk.CACHE_ACTIVE;
+            active = chunk;
+        }
+
+        /**
+         * The magazine is done allocating from its active chunk (it ran out of segments, or the magazine is
+         * being freed): unlink it and file it by capacity, exactly as {@link #offerChunk} files any chunk.
+         *
+         * <p>Invariant N holds across this step as it does for any {@code offerChunk}. While the chunk was
+         * active, a return that could not synchronise left a note, and the drain ignored it
+         * ({@code processPending} skips {@code CACHE_ACTIVE}). Such a note was either
+         * <ul>
+         *   <li>consumed before this call: then the segment was offered before the note was pushed (property
+         *       1), the push happens-before the drain that popped it, and that drain ran on this thread or
+         *       under this lock before this call. So the segment is visible here: either the magazine already
+         *       allocated it again, or the capacity read below sees it and files the chunk reusable; or</li>
+         *   <li>still outstanding (or pushed after this call started): the drain that pops it runs after
+         *       this call, under the same lock or on the same owner thread (property 4), and finds the
+         *       chunk on the list this call filed it on, so an exhausted-but-not-really chunk is moved; or</li>
+         *   <li>never pushed: the releaser found {@code pendingNext} already non-null and walked away. If that
+         *       link is a note still outstanding, the previous case covers this segment too. If it is a note a
+         *       drain already popped, the releaser read the link before that drain's re-arm store: the releaser
+         *       offered first (a CAS on the MPSC queue) and read {@code pendingNext} second, and the drain's
+         *       full volatile re-arm store precedes every later volatile read of the queue indices on the
+         *       draining side, this call's capacity read included. So the segment is visible here (see the
+         *       comment on the re-arm in {@link #drainPending}).</li>
+         * </ul>
+         * A return that took the lock or came from the owner thread cannot interleave with this call at all.
+         */
+        void deactivate(SizeClassedChunk chunk) {
+            assert chunk == active && chunk == reusableHead : "not the active chunk";
+            removeFromReusable(chunk);
+            active = null;
+            detachFromCache(chunk);
+            offerChunk(chunk);
+        }
+
+        void free() {
             // Drop any outstanding notes: every chunk they point at is about to be marked for
             // deallocation, and this cache is dead afterwards.
             PENDING_HEAD.lazySet(this, null);
+            // The magazine gives up its active chunk before it frees its cache.
+            assert active == null : "free with an active chunk";
             freeList(exhaustedHead);
             exhaustedHead = null;
             exhaustedCount = 0;
@@ -1182,39 +1265,38 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        @Override
-        public boolean isEmpty() {
-            return totalCount() == 0;
+        // Visible for testing: no chunk linked on either list, the active one included.
+        boolean isEmpty() {
+            return exhaustedCount + reusableCount == 0;
         }
     }
 
-    private static final class ConcurrentSkipListChunkCache implements ChunkCache {
-        private final ConcurrentSkipListIntObjMultimap<Chunk> chunks;
+    private static final class ConcurrentSkipListChunkCache {
+        private final ConcurrentSkipListIntObjMultimap<BuddyChunk> chunks;
 
         private ConcurrentSkipListChunkCache() {
             chunks = new ConcurrentSkipListIntObjMultimap<>(-1);
         }
 
-        @Override
-        public Chunk pollChunk(int size) {
+        BuddyChunk pollChunk(int size) {
             if (chunks.isEmpty()) {
                 return null;
             }
-            IntEntry<Chunk> entry = chunks.pollCeilingEntry(size);
+            IntEntry<BuddyChunk> entry = chunks.pollCeilingEntry(size);
             if (entry != null) {
-                Chunk chunk = entry.getValue();
+                BuddyChunk chunk = entry.getValue();
                 if (chunk.hasUnprocessedFreelistEntries()) {
                     chunk.processFreelistEntries();
                 }
                 return chunk;
             }
 
-            Chunk bestChunk = null;
+            BuddyChunk bestChunk = null;
             int bestRemainingCapacity = 0;
-            Iterator<IntEntry<Chunk>> itr = chunks.iterator();
+            Iterator<IntEntry<BuddyChunk>> itr = chunks.iterator();
             while (itr.hasNext()) {
                 entry = itr.next();
-                final Chunk chunk;
+                final BuddyChunk chunk;
                 if (entry != null && (chunk = entry.getValue()).hasUnprocessedFreelistEntries()) {
                     if (!chunks.remove(entry.getKey(), entry.getValue())) {
                         continue;
@@ -1237,16 +1319,15 @@ final class AdaptivePoolingAllocator {
             return bestChunk;
         }
 
-        @Override
-        public boolean offerChunk(Chunk chunk) {
+        void offerChunk(BuddyChunk chunk) {
             chunks.put(chunk.remainingCapacity(), chunk);
 
             int size = chunks.size();
             while (size > CHUNK_REUSE_QUEUE) {
                 int key = -1;
-                Chunk toDeallocate = null;
-                for (IntEntry<Chunk> entry : chunks) {
-                    Chunk candidate = entry.getValue();
+                BuddyChunk toDeallocate = null;
+                for (IntEntry<BuddyChunk> entry : chunks) {
+                    BuddyChunk candidate = entry.getValue();
                     if (candidate != null && RefCnt.refCnt(candidate.refCnt) == 1) {
                         toDeallocate = candidate;
                         key = entry.getKey();
@@ -1261,35 +1342,16 @@ final class AdaptivePoolingAllocator {
                 }
                 size = chunks.size();
             }
-            return true;
         }
 
-        @Override
-        public void free() {
-            for (IntEntry<Chunk> entry : chunks) {
-                Chunk chunk = entry.getValue();
+        void free() {
+            for (IntEntry<BuddyChunk> entry : chunks) {
+                BuddyChunk chunk = entry.getValue();
                 if (chunk != null && chunks.remove(entry.getKey(), chunk)) {
                     chunk.markToDeallocate();
                 }
             }
         }
-
-        @Override
-        public boolean isEmpty() {
-            return chunks.isEmpty();
-        }
-    }
-
-    private interface ChunkController {
-        /**
-         * Compute the "fast max capacity" value for the buffer.
-         */
-        int computeBufferCapacity(int requestedSize, int maxCapacity);
-
-        /**
-         * Allocate a new {@link Chunk} for the given {@link Magazine}.
-         */
-        Chunk newChunkAllocation(int promptingSize, Magazine magazine);
     }
 
     private static final class SizeClassChunkManagementStrategy {
@@ -1301,18 +1363,18 @@ final class AdaptivePoolingAllocator {
             chunkSize = chunkSizeOf(segmentSize);
         }
 
-        ChunkController createController(AdaptivePoolingAllocator allocator) {
+        SizeClassChunkController createController(AdaptivePoolingAllocator allocator) {
             return new SizeClassChunkController(
                     allocator.chunkAllocator, allocator.chunkRegistry, segmentSize, chunkSize);
         }
 
-        ChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
-                                    StampedLock stripeLock) {
+        SizeClassedChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
+                                               StampedLock stripeLock) {
             return new SizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex, stripeLock);
         }
     }
 
-    private static final class SizeClassChunkController implements ChunkController {
+    private static final class SizeClassChunkController {
 
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
@@ -1359,24 +1421,28 @@ final class AdaptivePoolingAllocator {
             return new IntStack(offsets, -1);
         }
 
-        @Override
-        public int computeBufferCapacity(int requestedSize, int maxCapacity) {
+        /**
+         * Compute the "fast max capacity" value for the buffer: one segment, or less if the buffer may not grow
+         * that far.
+         */
+        int computeBufferCapacity(int maxCapacity) {
             return Math.min(segmentSize, maxCapacity);
         }
 
-        @Override
-        public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            if (magazine.chunkRecycler != null) {
-                SizeClassChunkRecycler recycler = magazine.chunkRecycler;
-                if (recycler.poll(magazine.sizeClassIndex)) {
-                    AbstractByteBuf recycledBuf = recycler.takeBuffer();
-                    MpscIntQueue recycledFL = recycler.takeFreeList();
-                    IntStack recycledLocal = recycler.takeLocalFreeList();
-                    SizeClassedChunk chunk = new SizeClassedChunk(
-                            recycledBuf, recycledFL, recycledLocal, magazine, this);
-                    chunkRegistry.add(chunk);
-                    return chunk;
-                }
+        /**
+         * Allocate a new {@link SizeClassedChunk} for the given {@link SizeClassMagazine}: re-create one from a
+         * buffer of its heap's {@link SizeClassChunkRecycler}, or allocate a new buffer.
+         */
+        SizeClassedChunk newChunkAllocation(SizeClassMagazine magazine) {
+            SizeClassChunkRecycler recycler = magazine.chunkRecycler;
+            if (recycler.poll(magazine.sizeClassIndex)) {
+                AbstractByteBuf recycledBuf = recycler.takeBuffer();
+                MpscIntQueue recycledFL = recycler.takeFreeList();
+                IntStack recycledLocal = recycler.takeLocalFreeList();
+                SizeClassedChunk chunk = new SizeClassedChunk(
+                        recycledBuf, recycledFL, recycledLocal, magazine, this);
+                chunkRegistry.add(chunk);
+                return chunk;
             }
             AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
             assert chunkBuffer.capacity() == chunkSize;
@@ -1389,17 +1455,17 @@ final class AdaptivePoolingAllocator {
     private static final class BuddyChunkManagementStrategy {
         private final AtomicInteger maxChunkSize = new AtomicInteger();
 
-        ChunkController createController(AdaptivePoolingAllocator allocator) {
+        BuddyChunkController createController(AdaptivePoolingAllocator allocator) {
             return new BuddyChunkController(
                     allocator.chunkAllocator, allocator.chunkRegistry, maxChunkSize);
         }
 
-        ChunkCache createChunkCache() {
+        ConcurrentSkipListChunkCache createChunkCache() {
             return new ConcurrentSkipListChunkCache();
         }
     }
 
-    private static final class BuddyChunkController implements ChunkController {
+    private static final class BuddyChunkController {
         private final ChunkAllocator chunkAllocator;
         private final ChunkRegistry chunkRegistry;
         private final AtomicInteger maxChunkSize;
@@ -1411,13 +1477,17 @@ final class AdaptivePoolingAllocator {
             this.maxChunkSize = maxChunkSize;
         }
 
-        @Override
-        public int computeBufferCapacity(int requestedSize, int maxCapacity) {
+        /**
+         * Compute the "fast max capacity" value for the buffer.
+         */
+        int computeBufferCapacity(int requestedSize, int maxCapacity) {
             return MathUtil.safeFindNextPositivePowerOfTwo(requestedSize);
         }
 
-        @Override
-        public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
+        /**
+         * Allocate a new {@link BuddyChunk} for the given {@link BuddyMagazine}.
+         */
+        BuddyChunk newChunkAllocation(int promptingSize, BuddyMagazine magazine) {
             int maxChunkSize = this.maxChunkSize.get();
             int proposedChunkSize = MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize);
             int chunkSize = Math.min(MAX_CHUNK_SIZE, Math.max(maxChunkSize, proposedChunkSize));
@@ -1436,76 +1506,77 @@ final class AdaptivePoolingAllocator {
         return id ^ (id >>> 16);
     }
 
-    private static final class Magazine {
-        private static final Chunk MAGAZINE_FREED = new Chunk();
+    static final class AdaptiveRecycler extends Recycler<AdaptiveByteBuf> {
 
-        static final class AdaptiveRecycler extends Recycler<AdaptiveByteBuf> {
-
-            private AdaptiveRecycler(boolean unguarded, int interval) {
-                // uses fast thread local
-                super(unguarded, interval);
-            }
-
-            private AdaptiveRecycler(int maxCapacity, boolean unguarded) {
-                // doesn't use fast thread local, shared MPMC
-                super(maxCapacity, unguarded);
-            }
-
-            private AdaptiveRecycler(int maxCapacity, boolean unguarded, boolean exclusiveGet) {
-                // doesn't use fast thread local, exclusive-get mode
-                super(maxCapacity, unguarded, exclusiveGet);
-            }
-
-            @Override
-            protected AdaptiveByteBuf newObject(final Handle<AdaptiveByteBuf> handle) {
-                return new AdaptiveByteBuf((EnhancedHandle<AdaptiveByteBuf>) handle);
-            }
-
-            public static AdaptiveRecycler threadLocal() {
-                // Interval 0: pool every recycled buffer, matching what the shared-stripe recycler
-                // gets from sharedExclusiveGet. The global default interval of 8 admits one buffer
-                // in eight and pays a stateful counter plus a data-dependent branch per allocation;
-                // retention is already bounded by the recycler's capacity, so the interval buys
-                // nothing here. Measured on SOCKET_PROXY, t=1: -15.0 ns/op at MLB=65536,
-                // -3.3 ns/op at MLB=1024, neutral on API_GATEWAY.
-                return new AdaptiveRecycler(true, 0);
-            }
-
-            public static AdaptiveRecycler sharedWith(int maxCapacity) {
-                return new AdaptiveRecycler(maxCapacity, true);
-            }
-
-            public static AdaptiveRecycler sharedExclusiveGet(int maxCapacity) {
-                return new AdaptiveRecycler(maxCapacity, true, true);
-            }
+        private AdaptiveRecycler(boolean unguarded, int interval) {
+            // uses fast thread local
+            super(unguarded, interval);
         }
 
+        private AdaptiveRecycler(int maxCapacity, boolean unguarded) {
+            // doesn't use fast thread local, shared MPMC
+            super(maxCapacity, unguarded);
+        }
+
+        private AdaptiveRecycler(int maxCapacity, boolean unguarded, boolean exclusiveGet) {
+            // doesn't use fast thread local, exclusive-get mode
+            super(maxCapacity, unguarded, exclusiveGet);
+        }
+
+        @Override
+        protected AdaptiveByteBuf newObject(final Handle<AdaptiveByteBuf> handle) {
+            return new AdaptiveByteBuf((EnhancedHandle<AdaptiveByteBuf>) handle);
+        }
+
+        public static AdaptiveRecycler threadLocal() {
+            // Interval 0: pool every recycled buffer, matching what the shared-stripe recycler
+            // gets from sharedExclusiveGet. The global default interval of 8 admits one buffer
+            // in eight and pays a stateful counter plus a data-dependent branch per allocation;
+            // retention is already bounded by the recycler's capacity, so the interval buys
+            // nothing here. Measured on SOCKET_PROXY, t=1: -15.0 ns/op at MLB=65536,
+            // -3.3 ns/op at MLB=1024, neutral on API_GATEWAY.
+            return new AdaptiveRecycler(true, 0);
+        }
+
+        public static AdaptiveRecycler sharedWith(int maxCapacity) {
+            return new AdaptiveRecycler(maxCapacity, true);
+        }
+
+        public static AdaptiveRecycler sharedExclusiveGet(int maxCapacity) {
+            return new AdaptiveRecycler(maxCapacity, true, true);
+        }
+    }
+
+    /**
+     * The magazine of one size class, on a shared stripe (guarded by the stripe lock) or on a thread-local heap
+     * (used by its owner thread only). It carves fixed-size segments out of {@link SizeClassedChunk}s, keeps its
+     * chunks in its own {@link SizeClassedChunkCache} (the one it allocates from as the cache's active chunk, which
+     * {@link #current} aliases), and feeds evicted chunk buffers to the {@link SizeClassChunkRecycler} of its heap.
+     */
+    private static final class SizeClassMagazine {
         private static final AdaptiveRecycler EVENT_LOOP_LOCAL_BUFFER_POOL = AdaptiveRecycler.threadLocal();
 
-        private Chunk current;
-        private Chunk nextInLine;
+        private SizeClassedChunk current;
         final AdaptivePoolingAllocator allocator;
         final Thread ownerThread;
-        private final ChunkController chunkController;
-        private final ChunkCache chunkCache;
+        private final SizeClassChunkController chunkController;
+        private final SizeClassedChunkCache chunkCache;
         /**
-         * Every size-classed magazine of the heap this magazine belongs to, including this one, or
-         * {@code null} for the buddy magazine. The whole array is covered by the one lock (shared
-         * stripe) or the one owner thread (thread-local heap) that guards this magazine, which is
-         * what makes the heap-wide drain legal from here.
+         * Every size-classed magazine of the heap this magazine belongs to, including this one. The whole array is
+         * covered by the one lock (shared stripe) or the one owner thread (thread-local heap) that guards this
+         * magazine, which is what makes the heap-wide drain legal from here.
          */
-        private final Magazine[] heapMagazines;
+        private final SizeClassMagazine[] heapMagazines;
         final int sizeClassIndex;
         final SizeClassChunkRecycler chunkRecycler;
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
 
-        // Size-classed magazine constructor (both thread-local and shared-stripe)
-        Magazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
-                 SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
-                 Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock,
-                 Magazine[] heapMagazines) {
+        SizeClassMagazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
+                          SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
+                          Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock,
+                          SizeClassMagazine[] heapMagazines) {
             this.heapMagazines = heapMagazines;
             this.allocator = allocator;
             this.ownerThread = ownerThread;
@@ -1518,29 +1589,13 @@ final class AdaptivePoolingAllocator {
                     CHUNK_PURGE_POLLS_THREAD_LOCAL * (strategy.chunkSize / strategy.segmentSize));
         }
 
-        // Buddy (large buffer) magazine constructor
-        Magazine(AdaptivePoolingAllocator allocator,
-                 BuddyChunkManagementStrategy strategy, AdaptiveRecycler bufRecycler) {
-            this.heapMagazines = null;
-            this.allocator = allocator;
-            this.ownerThread = null;
-            this.sizeClassIndex = -1;
-            this.chunkRecycler = null;
-            this.bufRecycler = bufRecycler;
-            this.chunkController = strategy.createController(allocator);
-            this.chunkCache = allocator.sharedBuddyCache;
-            this.purgeTickThreshold = 0;
-        }
-
         /**
          * Count one successful allocation and, when the budget is spent, purge this magazine's cache
          * and those of every other size class on this heap.
          *
-         * <p>Call exactly once per successful {@link #allocate}. Size-classed magazines only: the
-         * buddy magazine has no size class and no siblings, so it never ticks.
+         * <p>Call exactly once per successful {@link #allocate}.
          */
         void tickAllocPurge() {
-            assert sizeClassIndex >= 0 : "tickAllocPurge is size-class management";
             if (++allocCount >= purgeTickThreshold) {
                 allocCount = 0;
                 chunkCache.tickPurge();
@@ -1555,9 +1610,9 @@ final class AdaptivePoolingAllocator {
          * that every size class on this heap draws from.
          */
         private void purgeHeapSiblings() {
-            Magazine[] mags = heapMagazines;
+            SizeClassMagazine[] mags = heapMagazines;
             for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                Magazine sibling = mags[i];
+                SizeClassMagazine sibling = mags[i];
                 if (sibling != null && sibling != this) {
                     sibling.chunkCache.tickPurge();
                 }
@@ -1570,25 +1625,137 @@ final class AdaptivePoolingAllocator {
          * own notes — and those are exactly the chunks worth reclaiming, because their backing
          * buffers go to the {@link SizeClassChunkRecycler} that every size class draws from.
          *
-         * <p>Called on the allocation slow path only, right before {@link ChunkCache#pollChunk},
+         * <p>Called on the allocation slow path only, right before {@link SizeClassedChunkCache#pollChunk},
          * which is once per chunk-worth of allocations.
          */
         private void drainHeapPending() {
-            Magazine[] mags = heapMagazines;
-            if (mags == null) {
-                return;
-            }
+            SizeClassMagazine[] mags = heapMagazines;
             for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-                Magazine mag = mags[i];
+                SizeClassMagazine mag = mags[i];
                 if (mag != null) {
-                    ((SizeClassedChunkCache) mag.chunkCache).drainPending();
+                    mag.chunkCache.drainPending();
                 }
             }
         }
 
         boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
+            int startingCapacity = chunkController.computeBufferCapacity(maxCapacity);
+            SizeClassedChunk curr = current;
+            if (curr != null) {
+                boolean success = curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                if (!success || curr.remainingCapacity() == 0) {
+                    // Out of segments: give the chunk up. If a segment comes back from another thread after the
+                    // count above, deactivate files the chunk as reusable by its capacity, so a later poll can hand
+                    // it back. The !success case is defensive: the previous call left remainingCapacity() > 0,
+                    // which counts only free segments, and this magazine is the only consumer of its chunk's free
+                    // lists, so the read above always finds a segment.
+                    current = null;
+                    curr.releaseFromMagazine();
+                }
+                if (success) {
+                    return true;
+                }
+            }
+            return allocateSlow(size, maxCapacity, buf, startingCapacity);
+        }
+
+        /**
+         * The current chunk (if any) had no room. Poll the cache, then fall back to allocating a fresh chunk.
+         * Whichever chunk ends up serving the allocation becomes the cache's active chunk, which no cache decision
+         * touches, and is aliased by {@link #current} for the fast path.
+         */
+        private boolean allocateSlow(int size, int maxCapacity, AdaptiveByteBuf buf, int startingCapacity) {
+            assert current == null;
+            SizeClassedChunk curr;
+            boolean polledChunkWithoutSegment = false;
+
+            // Now try to poll from the cache first
+            drainHeapPending();
+            curr = chunkCache.pollChunk(size);
+            if (curr != null) {
+                chunkCache.activate(curr);
+                // The size-class cache only hands out chunks with a free segment, and a segment always fits the size,
+                // so this never happens; if that invariant ever broke, fall back to a fresh chunk rather than fail.
+                if (curr.remainingCapacity() < size) {
+                    polledChunkWithoutSegment = true;
+                    curr.releaseFromMagazine();
+                    curr = null;
+                }
+            }
+            if (curr == null) {
+                curr = chunkController.newChunkAllocation(this);
+                chunkCache.activate(curr);
+            }
+
+            // The active chunk stays in the cache, at the head of its reusable list; current is only the fast
+            // path's alias of it.
+            current = curr;
+            // Checked only now, with the fallback chunk active and aliased, so that with assertions enabled the
+            // failure leaves the magazine and its cache consistent.
+            assert !polledChunkWithoutSegment : "the cache handed out a chunk without a free segment";
+            boolean success;
+            try {
+                int remainingCapacity = curr.remainingCapacity();
+                assert remainingCapacity >= size;
+                if (remainingCapacity > startingCapacity) {
+                    success = curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                    curr = null;
+                } else {
+                    success = curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                }
+            } finally {
+                if (curr != null) {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
+                    curr.releaseFromMagazine();
+                    current = null;
+                }
+            }
+            return success;
+        }
+
+        void free() {
+            if (current != null) {
+                current.releaseFromMagazine();
+                current = null;
+            }
+            chunkCache.free();
+        }
+
+        AdaptiveByteBuf newBuffer() {
+            AdaptiveByteBuf buf = bufRecycler != null ? bufRecycler.get() : EVENT_LOOP_LOCAL_BUFFER_POOL.get();
+            buf.resetRefCnt();
+            buf.discardMarks();
+            return buf;
+        }
+    }
+
+    /**
+     * The magazine for buffers above the largest size class, one per stripe, guarded by the stripe lock. It carves
+     * power-of-two buddies out of {@link BuddyChunk}s and shares one {@link ConcurrentSkipListChunkCache} with every
+     * other buddy magazine of the allocator.
+     */
+    private static final class BuddyMagazine {
+        private static final BuddyChunk MAGAZINE_FREED = BuddyChunk.newMagazineFreedSentinel();
+
+        private BuddyChunk current;
+        private BuddyChunk nextInLine;
+        final AdaptivePoolingAllocator allocator;
+        private final BuddyChunkController chunkController;
+        private final ConcurrentSkipListChunkCache chunkCache;
+        private final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling
+
+        BuddyMagazine(AdaptivePoolingAllocator allocator,
+                      BuddyChunkManagementStrategy strategy, AdaptiveRecycler bufRecycler) {
+            this.allocator = allocator;
+            this.bufRecycler = bufRecycler;
+            this.chunkController = strategy.createController(allocator);
+            this.chunkCache = allocator.sharedBuddyCache;
+        }
+
+        boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity);
-            Chunk curr = current;
+            BuddyChunk curr = current;
             if (curr != null) {
                 boolean success = curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                 int remainingCapacity = curr.remainingCapacity();
@@ -1613,7 +1780,7 @@ final class AdaptivePoolingAllocator {
          */
         private boolean allocateSlow(int size, int maxCapacity, AdaptiveByteBuf buf, int startingCapacity) {
             assert current == null;
-            Chunk curr = nextInLine;
+            BuddyChunk curr = nextInLine;
             nextInLine = null;
             if (curr != null) {
                 if (curr == MAGAZINE_FREED) {
@@ -1643,7 +1810,6 @@ final class AdaptivePoolingAllocator {
             }
 
             // Now try to poll from the cache first
-            drainHeapPending();
             curr = chunkCache.pollChunk(size);
             if (curr == null) {
                 curr = chunkController.newChunkAllocation(size, this);
@@ -1687,15 +1853,15 @@ final class AdaptivePoolingAllocator {
         }
 
         private void restoreMagazineFreed() {
-            Chunk next = nextInLine;
+            BuddyChunk next = nextInLine;
             nextInLine = MAGAZINE_FREED;
             if (next != null && next != MAGAZINE_FREED) {
                 next.releaseFromMagazine();
             }
         }
 
-        private void transferToNextInLineOrRelease(Chunk chunk) {
-            Chunk next = nextInLine;
+        private void transferToNextInLineOrRelease(BuddyChunk chunk) {
+            BuddyChunk next = nextInLine;
             if (next == null) {
                 nextInLine = chunk;
                 return;
@@ -1714,23 +1880,21 @@ final class AdaptivePoolingAllocator {
                 current.releaseFromMagazine();
                 current = null;
             }
-            if (chunkCache != allocator.sharedBuddyCache) {
-                chunkCache.free();
-            }
+            // The chunk cache is shared by every buddy magazine of the allocator, which frees it.
         }
 
-        public AdaptiveByteBuf newBuffer() {
-            AdaptiveByteBuf buf = bufRecycler != null ? bufRecycler.get() : EVENT_LOOP_LOCAL_BUFFER_POOL.get();
+        AdaptiveByteBuf newBuffer() {
+            AdaptiveByteBuf buf = bufRecycler.get();
             buf.resetRefCnt();
             buf.discardMarks();
             return buf;
         }
 
-        boolean offerToCache(Chunk chunk) {
+        void offerToCache(BuddyChunk chunk) {
             if (chunk.hasUnprocessedFreelistEntries()) {
                 chunk.processFreelistEntries();
             }
-            return chunkCache.offerChunk(chunk);
+            chunkCache.offerChunk(chunk);
         }
     }
 
@@ -1750,26 +1914,28 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    static class Chunk implements ChunkInfo {
+    /**
+     * What every chunk has in common, pooled or not: the buffer it carves allocations out of, the allocator that
+     * owns it, and its accounting in the {@link ChunkRegistry} and the JFR events.
+     */
+    abstract static class Chunk implements ChunkInfo {
         protected AbstractByteBuf delegate;
-        protected Magazine magazine;
+        // We need the top-level allocator so ByteBuf.capacity(int) can call reallocate()
         final AdaptivePoolingAllocator allocator;
-        // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
-        // This is safe to do even on native-image.
-        final RefCnt refCnt = new RefCnt();
-        private final int capacity;
+        final int capacity;
         private final boolean pooled;
-        protected int allocatedBytes;
 
         Chunk() {
             // Constructor only used by sentinel instances (MAGAZINE_FREED, PENDING_SENTINEL).
             delegate = null;
-            magazine = null;
             allocator = null;
             capacity = 0;
             pooled = false;
         }
 
+        /**
+         * Constructor for an unpooled chunk: a one-shot {@link BuddyChunk}.
+         */
         Chunk(AbstractByteBuf delegate, AdaptivePoolingAllocator allocator) {
             this.delegate = delegate;
             this.pooled = false;
@@ -1777,63 +1943,38 @@ final class AdaptivePoolingAllocator {
             this.allocator = allocator;
         }
 
-        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
+        /**
+         * Constructor for a pooled chunk, created by a magazine.
+         *
+         * @param threadLocal whether the creating magazine belongs to a thread-local heap, for the JFR event.
+         */
+        Chunk(AbstractByteBuf delegate, AdaptivePoolingAllocator allocator, boolean threadLocal) {
             this.delegate = delegate;
-            this.pooled = pooled;
+            this.pooled = true;
             capacity = delegate.capacity();
-            attachToMagazine(magazine);
-
-            // We need the top-level allocator so ByteBuf.capacity(int) can call reallocate()
-            allocator = magazine.allocator;
+            this.allocator = allocator;
 
             if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
                 if (event.shouldCommit()) {
                     event.fill(this, AdaptiveByteBufAllocator.class);
-                    event.pooled = pooled;
-                    event.threadLocal = magazine.ownerThread != null;
+                    event.pooled = true;
+                    event.threadLocal = threadLocal;
                     event.commit();
                 }
-            }
-        }
-
-        void attachToMagazine(Magazine magazine) {
-            assert this.magazine == null;
-            this.magazine = magazine;
-        }
-
-        /**
-         * Called when a magazine is done using this chunk, probably because it was emptied.
-         */
-        void releaseFromMagazine() {
-            Magazine mag = magazine;
-            magazine = null;
-            if (!mag.offerToCache(this)) {
-                markToDeallocate();
             }
         }
 
         /**
          * Called when a ByteBuf is done using its allocation in this chunk.
          */
-        void releaseSegment(int ignoredSegmentId, int size) {
-            release();
-        }
+        abstract void releaseSegment(int startIndex, int size);
 
-        void markToDeallocate() {
-            release();
-        }
-
-        private void retain() {
-            RefCnt.retain(refCnt);
-        }
-
-        protected boolean release() {
-            boolean deallocate = RefCnt.release(refCnt);
-            if (deallocate) {
-                deallocate();
-            }
-            return deallocate;
+        /**
+         * Whether this chunk is attached to a magazine of a thread-local heap right now, for the JFR events.
+         */
+        boolean inThreadLocalMagazine() {
+            return false;
         }
 
         protected void deallocate() {
@@ -1860,37 +2001,6 @@ final class AdaptivePoolingAllocator {
                     event.commit();
                 }
             }
-        }
-
-        public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
-            int startIndex = allocatedBytes;
-            allocatedBytes = startIndex + startingCapacity;
-            Chunk chunk = this;
-            chunk.retain();
-            try {
-                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
-                chunk = null;
-            } finally {
-                if (chunk != null) {
-                    // If chunk is not null we know that buf.init(...) failed and so we need to manually release
-                    // the chunk again as we retained it before calling buf.init(...). Beside this we also need to
-                    // restore the old allocatedBytes value.
-                    allocatedBytes = startIndex;
-                    chunk.release();
-                }
-            }
-            return true;
-        }
-
-        public int remainingCapacity() {
-            return capacity - allocatedBytes;
-        }
-
-        public boolean hasUnprocessedFreelistEntries() {
-            return false;
-        }
-
-        public void processFreelistEntries() {
         }
 
         @Override
@@ -1990,11 +2100,24 @@ final class AdaptivePoolingAllocator {
         MpscIntQueue externalFreeList;
         private IntStack localFreeList;
         private final Thread ownerThread;
+        /**
+         * Snapshot behind {@link #remainingCapacity()}: bytes handed out since the last refresh from the free lists.
+         * Segments returned since then are not subtracted, so {@code capacity - allocatedBytes} never counts a
+         * segment that is not free.
+         */
+        private int allocatedBytes;
 
         // Intrusive doubly-linked list pointers for cache membership
         static final int CACHE_NONE = 0;
-        static final int CACHE_EXHAUSTED = 1;
-        static final int CACHE_REUSABLE = 2;
+        /**
+         * Linked at the head of the reusable list and serving its magazine's allocations: the magazine's
+         * {@code current}. Ordered right after {@link #CACHE_NONE} so the release paths can tell "a cache
+         * decision may be due" ({@code cacheListState > CACHE_ACTIVE}) with the one compare they paid when
+         * the magazine's chunk was {@code CACHE_NONE}.
+         */
+        static final int CACHE_ACTIVE = 1;
+        static final int CACHE_EXHAUSTED = 2;
+        static final int CACHE_REUSABLE = 3;
         SizeClassedChunk prevInCache;
         SizeClassedChunk nextInCache;
         int cacheListState;
@@ -2027,14 +2150,14 @@ final class AdaptivePoolingAllocator {
             owningCache = null;
         }
 
-        SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
+        SizeClassedChunk(AbstractByteBuf delegate, SizeClassMagazine magazine,
                          SizeClassChunkController controller) {
-            super(delegate, magazine, true);
+            super(delegate, magazine.allocator, magazine.ownerThread != null);
             segmentSize = controller.segmentSize;
             segments = controller.chunkSize / segmentSize;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
-            owningCache = (SizeClassedChunkCache) magazine.chunkCache;
+            owningCache = magazine.chunkCache;
             if (ownerThread == null) {
                 externalFreeList = controller.createFreeList();
                 localFreeList = controller.createEmptyLocalFreeList();
@@ -2051,8 +2174,8 @@ final class AdaptivePoolingAllocator {
          */
         SizeClassedChunk(AbstractByteBuf recycledDelegate, MpscIntQueue recycledFreeList,
                          IntStack recycledLocalFreeList,
-                         Magazine magazine, SizeClassChunkController controller) {
-            super(recycledDelegate, magazine, true);
+                         SizeClassMagazine magazine, SizeClassChunkController controller) {
+            super(recycledDelegate, magazine.allocator, magazine.ownerThread != null);
             segmentSize = controller.segmentSize;
             segments = controller.chunkSize / segmentSize;
             MpscIntQueue externalFreeList = recycledFreeList.capacity() >= segments ?
@@ -2061,7 +2184,7 @@ final class AdaptivePoolingAllocator {
             this.externalFreeList = externalFreeList;
             STATE.lazySet(this, AVAILABLE);
             ownerThread = magazine.ownerThread;
-            owningCache = (SizeClassedChunkCache) magazine.chunkCache;
+            owningCache = magazine.chunkCache;
             if (ownerThread != null) {
                 if (reuseLocal) {
                     localFreeList = recycledLocalFreeList;
@@ -2081,8 +2204,26 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        /**
+         * Called when a magazine is done using this chunk, probably because it was emptied: it stops being the
+         * cache's active chunk and is filed by capacity. {@link #owningCache} is the cache of the one magazine that
+         * ever allocates from this chunk.
+         */
+        void releaseFromMagazine() {
+            owningCache.deactivate(this);
+        }
+
+        /**
+         * Only read from {@link AdaptiveByteBuf#init}, reached from {@link #readInitInto} on the magazine's active
+         * chunk, so this chunk is always attached to its magazine here, and that magazine is a thread-local one exactly
+         * when this chunk has an owner thread.
+         */
         @Override
-        public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
+        boolean inThreadLocalMagazine() {
+            return ownerThread != null;
+        }
+
+        boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             assert state == AVAILABLE;
             final int startIndex = nextAvailableSegmentOffset();
             if (startIndex == FREE_LIST_EMPTY) {
@@ -2107,11 +2248,12 @@ final class AdaptivePoolingAllocator {
             return externalFreeList.poll();
         }
 
-        // this can be used by the ConcurrentQueueChunkCache to find the first buffer to use:
-        // it doesn't update the remaining capacity and it's not consider a single segmentSize
-        // case as not suitable to be reused
+        /**
+         * Whether this chunk has a free segment, as the cache files it (reusable or exhausted) and probes it.
+         * Unlike {@link #remainingCapacity()} it never refreshes the snapshot.
+         */
         public boolean hasRemainingCapacity() {
-            int remaining = super.remainingCapacity();
+            int remaining = capacity - allocatedBytes;
             if (remaining > 0) {
                 return true;
             }
@@ -2123,9 +2265,14 @@ final class AdaptivePoolingAllocator {
             return localSize == segments || localSize + externalFreeList.size() == segments;
         }
 
-        @Override
+        /**
+         * The free bytes of this chunk as the magazine sees it after each allocation. While the snapshot is above
+         * one segment it is returned as is, without touching the free lists; at or below one segment the free lists
+         * are counted and the snapshot refreshed. Before the first refresh the snapshot also counts the tail of the
+         * chunk that is too small for a segment, when the chunk size is not a multiple of the segment size.
+         */
         public int remainingCapacity() {
-            int remaining = super.remainingCapacity();
+            int remaining = capacity - allocatedBytes;
             return remaining > segmentSize ? remaining : updateRemainingCapacity(remaining);
         }
 
@@ -2192,7 +2339,9 @@ final class AdaptivePoolingAllocator {
                 return;
             }
             int cls = cacheListState;
-            if (cls != CACHE_NONE) {
+            // Neither a chunk out of the cache nor the magazine's active chunk is ever moved or evicted
+            // by a segment return: the active chunk consumes its own returned segments.
+            if (cls > CACHE_ACTIVE) {
                 detectCacheTransition(cls);
             }
         }
@@ -2205,7 +2354,7 @@ final class AdaptivePoolingAllocator {
                 return;
             }
             int cls = cacheListState;
-            if (cls != CACHE_NONE) {
+            if (cls > CACHE_ACTIVE) {
                 cache.transitionAfterRelease(this, cls);
             }
         }
@@ -2266,7 +2415,6 @@ final class AdaptivePoolingAllocator {
             markToDeallocate();
         }
 
-        @Override
         void markToDeallocate() {
             MpscIntQueue fl = externalFreeList;
             if (fl == null) {
@@ -2283,6 +2431,13 @@ final class AdaptivePoolingAllocator {
         }
     }
 
+    /**
+     * A ref-counted chunk handing out power-of-two blocks from a buddy tree, for sizes above the size classes.
+     * <p>
+     * A chunk without a tree is <em>one-shot</em>: it holds exactly one buffer spanning the whole chunk, for
+     * allocations that are not pooled. It belongs to no magazine, is never cached, and is freed when its buffer
+     * is released.
+     */
     private static final class BuddyChunk extends Chunk implements IntConsumer {
         private static final int MIN_BUDDY_SIZE = 32768;
         private static final byte IS_CLAIMED = (byte) (1 << 7);
@@ -2291,13 +2446,46 @@ final class AdaptivePoolingAllocator {
         private static final int PACK_OFFSET_MASK = 0xFFFF;
         private static final int PACK_SIZE_SHIFT = Integer.SIZE - Integer.numberOfLeadingZeros(PACK_OFFSET_MASK);
 
+        // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
+        // This is safe to do even on native-image.
+        final RefCnt refCnt = new RefCnt();
+        // null for a one-shot chunk.
         private final MpscIntQueue freeList;
-        // The bits of each buddy: [1: is claimed][1: has claimed children][30: MIN_BUDDY_SIZE shift to get size]
+        // The bits of each buddy: [1: is claimed][1: has claimed children][30: MIN_BUDDY_SIZE shift to get size].
+        // null for a one-shot chunk.
         private final byte[] buddies;
         private final int freeListCapacity;
+        private BuddyMagazine magazine;
+        private int allocatedBytes;
 
-        BuddyChunk(AbstractByteBuf delegate, Magazine magazine) {
-            super(delegate, magazine, true);
+        /**
+         * Constructor only used by the magazine's {@code MAGAZINE_FREED} sentinel. Never a usable chunk.
+         */
+        private BuddyChunk() {
+            freeList = null;
+            buddies = null;
+            freeListCapacity = 0;
+        }
+
+        static BuddyChunk newMagazineFreedSentinel() {
+            return new BuddyChunk();
+        }
+
+        /**
+         * Constructor for a one-shot chunk: no tree, no magazine. The caller owns the reference it gets here and
+         * must {@link #release()} it once {@link #readInitOneShot} returned.
+         */
+        BuddyChunk(AbstractByteBuf delegate, AdaptivePoolingAllocator allocator) {
+            super(delegate, allocator);
+            freeList = null;
+            buddies = null;
+            freeListCapacity = 0;
+        }
+
+        BuddyChunk(AbstractByteBuf delegate, BuddyMagazine magazine) {
+            // Buddy magazines live on the shared stripes only, so a buddy chunk is never thread-local.
+            super(delegate, magazine.allocator, false);
+            attachToMagazine(magazine);
             freeListCapacity = delegate.capacity() / MIN_BUDDY_SIZE;
             int maxShift = Integer.numberOfTrailingZeros(freeListCapacity);
             assert maxShift <= 30; // The top 2 bits are used for marking.
@@ -2318,8 +2506,21 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        @Override
-        public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
+        void attachToMagazine(BuddyMagazine magazine) {
+            assert this.magazine == null;
+            this.magazine = magazine;
+        }
+
+        /**
+         * Called when a magazine is done using this chunk, probably because it was emptied.
+         */
+        void releaseFromMagazine() {
+            BuddyMagazine mag = magazine;
+            magazine = null;
+            mag.offerToCache(this);
+        }
+
+        boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             if (!freeList.isEmpty()) {
                 freeList.drain(freeListCapacity, this);
             }
@@ -2327,7 +2528,7 @@ final class AdaptivePoolingAllocator {
             if (startIndex == -1) {
                 return false;
             }
-            Chunk chunk = this;
+            BuddyChunk chunk = this;
             chunk.retain();
             try {
                 buf.init(delegate, this, 0, 0, startIndex, size, startingCapacity, maxCapacity);
@@ -2342,6 +2543,25 @@ final class AdaptivePoolingAllocator {
                 }
             }
             return true;
+        }
+
+        /**
+         * Initialize {@code buf} over the whole of this one-shot chunk. On success the buffer holds a reference to
+         * this chunk.
+         */
+        void readInitOneShot(AdaptiveByteBuf buf, int size, int maxCapacity) {
+            assert buddies == null : "not a one-shot chunk";
+            retain();
+            boolean initialized = false;
+            try {
+                buf.init(delegate, this, 0, 0, 0, size, size, maxCapacity);
+                initialized = true;
+            } finally {
+                if (!initialized) {
+                    // buf.init(...) failed: drop the reference taken for the buffer.
+                    release();
+                }
+            }
         }
 
         @Override
@@ -2363,30 +2583,43 @@ final class AdaptivePoolingAllocator {
 
         @Override
         void releaseSegment(int startingIndex, int size) {
-            int packedOffset = startingIndex / MIN_BUDDY_SIZE;
-            int packedSize = Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << PACK_SIZE_SHIFT;
-            int packed = packedOffset | packedSize;
-            freeList.offer(packed);
+            MpscIntQueue freeList = this.freeList;
+            if (freeList != null) {
+                int packedOffset = startingIndex / MIN_BUDDY_SIZE;
+                int packedSize = Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << PACK_SIZE_SHIFT;
+                freeList.offer(packedOffset | packedSize);
+            }
             release();
         }
 
-        @Override
-        public int remainingCapacity() {
+        void markToDeallocate() {
+            release();
+        }
+
+        private void retain() {
+            RefCnt.retain(refCnt);
+        }
+
+        void release() {
+            if (RefCnt.release(refCnt)) {
+                deallocate();
+            }
+        }
+
+        int remainingCapacity() {
             int capacityInFreeList = 0;
             if (!freeList.isEmpty()) {
                 capacityInFreeList = freeList.weakPeekReduce(freeListCapacity, 0,
                         (sum, entry) -> sum + unpackSize(entry));
             }
-            return super.remainingCapacity() + capacityInFreeList;
+            return capacity - allocatedBytes + capacityInFreeList;
         }
 
-        @Override
-        public boolean hasUnprocessedFreelistEntries() {
+        boolean hasUnprocessedFreelistEntries() {
             return !freeList.isEmpty();
         }
 
-        @Override
-        public void processFreelistEntries() {
+        void processFreelistEntries() {
             freeList.drain(freeListCapacity, this);
         }
 
@@ -2464,6 +2697,9 @@ final class AdaptivePoolingAllocator {
         @Override
         public String toString() {
             int capacity = delegate.capacity();
+            if (buddies == null) {
+                return "BuddyChunk[one-shot, capacity: " + capacity + ']';
+            }
             int remaining = capacity - allocatedBytes;
             return "BuddyChunk[capacity: " + capacity +
                     ", remaining: " + remaining +
@@ -2508,8 +2744,7 @@ final class AdaptivePoolingAllocator {
                 if (event.shouldCommit()) {
                     event.fill(this, AdaptiveByteBufAllocator.class);
                     event.chunkPooled = wrapped.pooled;
-                    Magazine m = wrapped.magazine;
-                    event.chunkThreadLocal = m != null && m.ownerThread != null;
+                    event.chunkThreadLocal = wrapped.inThreadLocalMagazine();
                     event.commit();
                 }
             }
