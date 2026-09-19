@@ -195,7 +195,7 @@ public class Http2PushPromiseAfterResetTest {
         // The promise is declined on the promised stream. Resetting the closed parent instead would violate
         // Section 5.1 and let a peer drive one control frame out of us per promise it sends.
         verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(PROMISED_STREAM_ID),
-                eq(Http2Error.CANCEL.code()), any(ChannelPromise.class));
+                eq(Http2Error.REFUSED_STREAM.code()), any(ChannelPromise.class));
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), eq(PARENT_STREAM_ID),
                 anyLong(), any(ChannelPromise.class));
         assertTrue(channel.isActive());

@@ -43,8 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
@@ -850,7 +850,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         // We can no longer tell whether we reset this stream, but RFC 9113, Section 5.1 lets us apply the same
         // minimal processing to any closed stream, so the promised id is consumed and the promise declined.
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), isNull());
-        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(CANCEL.code()), eq(promise));
+        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(REFUSED_STREAM.code()), eq(promise));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
@@ -893,7 +893,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         // RFC 9113, Section 5.1: the promised stream is reserved even though the frame is discarded rather than
         // delivered, and Section 6.6: we decline the push we cannot surface instead of stranding the reservation.
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
-        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(CANCEL.code()), eq(promise));
+        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(REFUSED_STREAM.code()), eq(promise));
         verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 

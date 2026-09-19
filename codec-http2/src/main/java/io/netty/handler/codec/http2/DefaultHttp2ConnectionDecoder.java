@@ -31,9 +31,9 @@ import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -697,9 +697,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             // The peer promised before it saw our RST_STREAM, so it has already moved the promised stream to
             // "reserved (remote)" (Section 5.1) and we consume the id to stay in step with it. Nothing above the
             // decoder was told the stream exists though, so this is the only place that can release it, and
-            // Section 6.6 lets a recipient decline a promise by resetting the promised stream.
+            // Section 6.6 lets a recipient decline a promise by resetting the promised stream. REFUSED_STREAM
+            // rather than CANCEL because we never asked the application: the push was not processed, as opposed
+            // to not wanted, and the promise is safe and cacheable so the application can still request it.
             Http2Stream promisedStream = connection.remote().reservePushStream(promisedStreamId, parentStream);
-            lifecycleManager.resetStream(ctx, promisedStream.id(), CANCEL.code(), ctx.newPromise());
+            lifecycleManager.resetStream(ctx, promisedStream.id(), REFUSED_STREAM.code(), ctx.newPromise());
         }
 
         @Override
