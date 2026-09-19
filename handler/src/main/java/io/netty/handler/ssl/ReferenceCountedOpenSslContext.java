@@ -89,6 +89,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
+
+    private static final OpenSslCertificateCompressionConfig DEFAULT_CERTIFICATE_COMPRESSION_CONFIG =
+            OpenSslCertificateCompressionConfig.newBuilder()
+                    .addAlgorithm(ZlibCertificateCompressionAlgorithm.INSTANCE,
+                            OpenSslCertificateCompressionConfig.AlgorithmMode.Both)
+                    .build();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
@@ -286,6 +292,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             throw new IllegalArgumentException("You can either only use "
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
+        }
+        if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+            certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
         }
 
         this.tlsFalseStart = tlsFalseStart;

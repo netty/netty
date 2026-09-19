@@ -63,8 +63,10 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * Set the {@link OpenSslCertificateCompressionConfig} to use. This allows for the configuration of certificate
      * compression algorithms which should be used, the priority of those algorithms and the directions in which
      * they should be used.
+     * If this option is not specified, zlib compression is enabled in both directions. An empty configuration
+     * disables certificate compression.
      *
-     * This is currently only supported when {@code BoringSSL} is used.
+     * This is currently only supported when {@code BoringSSL} or {@code AWS-LC} is used.
      */
     public static final OpenSslContextOption<OpenSslCertificateCompressionConfig> CERTIFICATE_COMPRESSION_ALGORITHMS =
             new OpenSslContextOption<OpenSslCertificateCompressionConfig>("CERTIFICATE_COMPRESSION_ALGORITHMS");
