@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,13 +39,12 @@ public class PreferredAddressTypeComparatorTest {
 
         PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(SocketProtocolFamily.INET);
 
-        List<InetAddress> addressList = new ArrayList<InetAddress>();
-        Collections.addAll(addressList, ipv4Address1, ipv4Address2, ipv6Address1,
-                ipv6Address2, ipv4Address3, ipv6Address3);
-        Collections.sort(addressList, ipv4);
+        List<DnsResolveResult> resultList = makeAddresses(
+                ipv4Address1, ipv4Address2, ipv6Address1, ipv6Address2, ipv4Address3, ipv6Address3);
+        Collections.sort(resultList, ipv4);
 
-        assertEquals(Arrays.asList(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
-                ipv6Address2, ipv6Address3), addressList);
+        assertEquals(makeAddresses(ipv4Address1, ipv4Address2, ipv4Address3, ipv6Address1,
+                ipv6Address2, ipv6Address3), resultList);
     }
 
     @Test
@@ -60,12 +58,19 @@ public class PreferredAddressTypeComparatorTest {
 
         PreferredAddressTypeComparator ipv4 = PreferredAddressTypeComparator.comparator(SocketProtocolFamily.INET6);
 
-        List<InetAddress> addressList = new ArrayList<InetAddress>();
-        Collections.addAll(addressList, ipv4Address1, ipv4Address2, ipv6Address1,
+        List<DnsResolveResult> resultList = makeAddresses(ipv4Address1, ipv4Address2, ipv6Address1,
                 ipv6Address2, ipv4Address3, ipv6Address3);
-        Collections.sort(addressList, ipv4);
+        Collections.sort(resultList, ipv4);
 
-        assertEquals(Arrays.asList(ipv6Address1,
-                ipv6Address2, ipv6Address3, ipv4Address1, ipv4Address2, ipv4Address3), addressList);
+        assertEquals(makeAddresses(ipv6Address1,
+                ipv6Address2, ipv6Address3, ipv4Address1, ipv4Address2, ipv4Address3), resultList);
+    }
+
+    private List<DnsResolveResult> makeAddresses(InetAddress... addresses) {
+        List<DnsResolveResult> resultList = new ArrayList<>(addresses.length);
+        for (InetAddress addr : addresses) {
+            resultList.add(new DnsResolveResult(addr, Collections.emptyList()));
+        }
+        return resultList;
     }
 }
