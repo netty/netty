@@ -725,8 +725,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         // Every worker has been joined, so the lists are quiescent and safe to walk from here.
         for (SizeClassedChunkCache cache : sizeClassChunkCaches(allocator)) {
             int stranded = 0;
-            for (SizeClassedChunk c = cache.exhaustedHead; c != null; c = c.nextInCache) {
-                if (c.hasRemainingCapacity()) {
+            for (AdaptivePoolingAllocator.Chunk c = cache.exhausted.head; c != null; c = c.nextInQueue) {
+                if (((SizeClassedChunk) c).hasRemainingCapacity()) {
                     stranded++;
                 }
             }
