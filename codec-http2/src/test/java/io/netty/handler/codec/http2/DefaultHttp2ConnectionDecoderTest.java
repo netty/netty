@@ -44,7 +44,9 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
@@ -840,8 +842,33 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
-    public void pushPromiseReadForUnknownStreamShouldThrow() throws Exception {
+    public void pushPromiseReadForStreamThatMayHaveExistedShouldReserveAndRejectPromisedStream() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(remote.reservePushStream(eq(PUSH_STREAM_ID), isNull())).thenReturn(pushStream);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // We can no longer tell whether we reset this stream, but RFC 9113, Section 5.1 lets us apply the same
+        // minimal processing to any closed stream, so the promised id is consumed and the promise declined.
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), isNull());
+        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(REFUSED_STREAM.code()), eq(promise));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
+    @Test
+    public void pushPromiseReadForStreamThatMayHaveExistedShouldNotResetTheParent() throws Exception {
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(remote.reservePushStream(eq(PUSH_STREAM_ID), isNull())).thenReturn(pushStream);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // Section 5.1 forbids sending anything but PRIORITY on a closed stream.
+        verify(lifecycleManager, never()).resetStream(any(ChannelHandlerContext.class), eq(STREAM_ID), anyLong(),
+                any(ChannelPromise.class));
+    }
+
+    @Test
+    public void pushPromiseReadForStreamThatCouldNeverHaveExistedShouldThrow() throws Exception {
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -856,6 +883,30 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
                 eq(EmptyHttp2Headers.INSTANCE), eq(0));
+    }
+
+    @Test
+    public void pushPromiseReadForStreamThatAlreadySentResetShouldReserveAndRejectPromisedStream() throws Exception {
+        when(stream.isResetSent()).thenReturn(true);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // RFC 9113, Section 5.1: the promised stream is reserved even though the frame is discarded rather than
+        // delivered, and Section 6.6: we decline the push we cannot surface instead of stranding the reservation.
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+        verify(lifecycleManager).resetStream(eq(ctx), eq(PUSH_STREAM_ID), eq(REFUSED_STREAM.code()), eq(promise));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+    }
+
+    @Test
+    public void pushPromiseReadForResetStreamNoLongerOpenForPushShouldBeIgnored() throws Exception {
+        when(stream.isResetSent()).thenReturn(true);
+        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
+        decode().onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+
+        // Promising here is out of spec, but we already reset the stream, so this must not escalate to the
+        // connection error reservePushStream() raises for a parent that is not open for push.
+        verify(remote, never()).reservePushStream(anyInt(), any(Http2Stream.class));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
     }
 
     @Test
