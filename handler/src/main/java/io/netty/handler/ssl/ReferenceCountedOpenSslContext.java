@@ -103,6 +103,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
+    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -474,7 +475,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateList > 0 ?
+                        Math.max(maxCertificateList, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateList);
             }
 
             // Set the curves / groups if anything is configured.

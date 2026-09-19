@@ -72,7 +72,8 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
             new OpenSslContextOption<OpenSslCertificateCompressionConfig>("CERTIFICATE_COMPRESSION_ALGORITHMS");
 
     /**
-     * Set the maximum number of bytes that is allowed during the handshake for certificate chain.
+     * Set the maximum number of bytes that is allowed during the handshake for certificate chain. Positive values
+     * below {@code 16 KiB} are treated as {@code 16 KiB}.
      */
     public static final OpenSslContextOption<Integer> MAX_CERTIFICATE_LIST_BYTES =
             new OpenSslContextOption<Integer>("MAX_CERTIFICATE_LIST_BYTES");
