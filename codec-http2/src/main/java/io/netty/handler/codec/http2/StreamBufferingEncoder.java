@@ -23,7 +23,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
@@ -42,9 +41,8 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * buffer and create as many new streams as possible.
  * <p/>
  * <p>
- * If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes for streams
- * with an ID less than the specified {@code lastStreamId} will immediately fail with a
- * {@link Http2GoAwayException}.
+ * If a {@code GOAWAY} frame is received from the remote endpoint, all buffered writes will immediately
+ * fail with a {@link Http2GoAwayException}.
  * <p/>
  * <p>
  * If the channel/encoder gets closed, all new and buffered writes will immediately fail with a
@@ -261,10 +259,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
                 closed = true;
 
                 // Fail all buffered streams.
-                Http2ChannelClosedException e = new Http2ChannelClosedException();
-                while (!pendingStreams.isEmpty()) {
-                    PendingStream stream = pendingStreams.pollFirstEntry().getValue();
-                    stream.close(e);
+                if (!pendingStreams.isEmpty()) {
+                    failAllPendingStreams(pendingStreams, new Http2ChannelClosedException());
                 }
             }
         } finally {
@@ -285,14 +281,15 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     private void cancelGoAwayStreams(GoAwayDetail goAwayDetail) {
-        Iterator<PendingStream> iter = pendingStreams.values().iterator();
-        Exception e = new Http2GoAwayException(goAwayDetail);
-        while (iter.hasNext()) {
-            PendingStream stream = iter.next();
-            if (stream.streamId > goAwayDetail.lastStreamId) {
-                iter.remove();
-                stream.close(e);
-            }
+        if (!pendingStreams.isEmpty()) {
+            failAllPendingStreams(pendingStreams, new Http2GoAwayException(goAwayDetail));
+        }
+    }
+
+    private static void failAllPendingStreams(TreeMap<Integer, PendingStream> pendingStreams, Exception e) {
+        while (!pendingStreams.isEmpty()) {
+            PendingStream stream = pendingStreams.pollFirstEntry().getValue();
+            stream.close(e);
         }
     }
 
@@ -300,7 +297,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * Determines whether or not we're allowed to create a new stream right now.
      */
     private boolean canCreateStream() {
-        return connection().local().numActiveStreams() < maxConcurrentStreams;
+        return goAwayDetail == null && connection().local().numActiveStreams() < maxConcurrentStreams;
     }
 
     private boolean isExistingStream(int streamId) {

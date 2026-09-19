@@ -933,6 +933,9 @@ public class DefaultHttp2Connection implements Http2Connection {
                 throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
                         Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
             }
+            if (isLocal() && goAwayReceived()) {
+                throw streamError(streamId, REFUSED_STREAM, "Cannot create stream %d after GOAWAY received.", streamId);
+            }
             boolean isReserved = state == RESERVED_LOCAL || state == RESERVED_REMOTE;
             if (!isReserved && !canOpenStream() || isReserved && numStreams >= maxStreams) {
                 throw streamError(streamId, REFUSED_STREAM, "Maximum active streams violated for this endpoint: " +
