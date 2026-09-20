@@ -65,6 +65,8 @@ class AdaptiveBuddyTreeTest {
                 tree.release(block[0], block[1]);
                 reference.release(block[0], block[1]);
             }
+            assertEquals(largestFreeOrder(capacity, claimed), tree.largestFreeOrder(), "op " + op);
+            assertEquals(claimed.isEmpty(), tree.isWhollyFree(), "op " + op);
         }
         for (int[] block : claimed) {
             tree.release(block[0], block[1]);
@@ -86,6 +88,28 @@ class AdaptiveBuddyTreeTest {
             assertEquals(0, tree.claim(MIN_BLOCK_SIZE), "tree " + i);
             assertEquals(capacity / 2, tree.claim(capacity / 2), "tree " + i);
         }
+    }
+
+    /**
+     * The order of the largest aligned block overlapping no claimed block, by brute force; -1 when there is none.
+     */
+    private static int largestFreeOrder(int capacity, List<int[]> claimed) {
+        for (int order = Integer.numberOfTrailingZeros(capacity / MIN_BLOCK_SIZE); order >= 0; order--) {
+            int size = MIN_BLOCK_SIZE << order;
+            for (int offset = 0; offset < capacity; offset += size) {
+                boolean free = true;
+                for (int[] block : claimed) {
+                    if (block[0] < offset + size && offset < block[0] + block[1]) {
+                        free = false;
+                        break;
+                    }
+                }
+                if (free) {
+                    return order;
+                }
+            }
+        }
+        return -1;
     }
 
     @Test
