@@ -208,11 +208,15 @@ public class ProtobufVarint32FrameDecoderTest {
         // allocate the whole frame, the TooLongFrameException proves the complete prefix was decoded.
         byte[] prefix = { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, 0x01 };
         for (int split = 1; split < prefix.length; split++) {
-            EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(1024));
+            final EmbeddedChannel channel = new EmbeddedChannel(new ProtobufVarint32FrameDecoder(1024));
             assertFalse(channel.writeInbound(wrappedBuffer(prefix, 0, split)), "split after: " + split);
             final ByteBuf remaining = wrappedBuffer(prefix, split, prefix.length - split);
-            TooLongFrameException e = assertThrows(TooLongFrameException.class,
-                    () -> channel.writeInbound(remaining), "split after: " + split);
+            TooLongFrameException e = assertThrows(TooLongFrameException.class, new Executable() {
+                @Override
+                public void execute() {
+                    channel.writeInbound(remaining);
+                }
+            }, "split after: " + split);
             assertTrue(e.getMessage().contains(String.valueOf(0x10000000)), e.getMessage());
             assertFalse(channel.finish());
         }
@@ -236,8 +240,13 @@ public class ProtobufVarint32FrameDecoderTest {
 
     @Test
     public void testReadRawVarint32RejectsSixByteVarint() {
-        ByteBuf buf = wrappedBuffer(new byte[] { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80 });
-        assertThrows(CorruptedFrameException.class, () -> ProtobufVarint32FrameDecoder.readRawVarint32(buf));
+        final ByteBuf buf = wrappedBuffer(new byte[] { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80 });
+        assertThrows(CorruptedFrameException.class, new Executable() {
+            @Override
+            public void execute() {
+                ProtobufVarint32FrameDecoder.readRawVarint32(buf);
+            }
+        });
         buf.release();
     }
 }
