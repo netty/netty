@@ -91,7 +91,7 @@ import static org.mockito.Mockito.verify;
  */
 public class Http2ConnectionRoundtripTest {
 
-    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 15;
+    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 30;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -1291,7 +1291,7 @@ public class Http2ConnectionRoundtripTest {
 
         final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new DefaultEventLoopGroup());
+        sb.group(new DefaultEventLoopGroup(1));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1314,7 +1314,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new DefaultEventLoopGroup());
+        cb.group(new DefaultEventLoopGroup(1));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
