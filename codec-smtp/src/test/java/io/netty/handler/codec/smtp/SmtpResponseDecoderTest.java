@@ -135,6 +135,24 @@ public class SmtpResponseDecoderTest {
     }
 
     @Test
+    public void testDecodeLineWithOnlyCodeAndNoSeparator() {
+        final EmbeddedChannel channel = newChannel();
+        // A line consisting of just the 3-digit code (no separator, no detail) must be rejected as an invalid
+        // line rather than crash the decoder: ByteToMessageDecoder wraps any *unexpected* exception thrown out
+        // of decode() (e.g. an IndexOutOfBoundsException from reading past the line) into a DecoderException
+        // with that exception as its cause, whereas the intentional "invalid line" rejection path throws a
+        // DecoderException with no cause. Asserting there is no cause distinguishes the two.
+        DecoderException exception = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(newBuffer("250\r\n"));
+            }
+        });
+        assertNull(exception.getCause());
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
     public void testDecodeInvalidLine() {
         final EmbeddedChannel channel = newChannel();
         assertThrows(DecoderException.class, new Executable() {
