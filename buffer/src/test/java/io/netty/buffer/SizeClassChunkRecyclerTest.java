@@ -176,11 +176,13 @@ public class SizeClassChunkRecyclerTest {
      * to the recycler, and a different size class with the same chunk size must reuse them with the free lists that
      * came along - smaller than it needs (4096 then 32), larger (32 then 4096), or one of each (1152: 113 segments,
      * an external list rounded up to 128 entries and a local one of exactly 113; then 1024: 128 segments).
+     * Size classes that are not adjacent share chunks too: 16896 then 67584. From 16 KiB up a whole family (2^n, and
+     * 2^n plus header) shares one chunk size, as the blocks of a mimalloc medium page do: 131072 then 16384.
      */
     @ParameterizedTest
     @CsvSource({
-            "4096, 32, false", "32, 4096, false", "1152, 1024, false",
-            "4096, 32, true", "32, 4096, true", "1152, 1024, true",
+            "4096, 32, false", "32, 4096, false", "1152, 1024, false", "16896, 67584, false", "131072, 16384, false",
+            "4096, 32, true", "32, 4096, true", "1152, 1024, true", "16896, 67584, true", "131072, 16384, true",
     })
     public void chunksAreReusedAcrossSizeClassesWithTheirFreeLists(int freedSize, int reusingSize, boolean threadLocal)
             throws Exception {
