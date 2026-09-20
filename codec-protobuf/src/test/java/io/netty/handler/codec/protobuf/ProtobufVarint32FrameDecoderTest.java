@@ -147,7 +147,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testLengthPrefixSplitAtEveryPosition() {
+    public void testLengthPrefixSplitAtEveryPosition() throws Exception {
         // Cover 1, 2, 3 and 4 byte prefixes, including lengths whose low 21 bits are all zero (multiples of 2 MiB).
         // For these the partial varint read of the first 3 prefix bytes evaluates to 0.
         int[] lengths = {
@@ -187,7 +187,7 @@ public class ProtobufVarint32FrameDecoderTest {
     }
 
     @Test
-    public void testFiveByteLengthPrefixSplitAtEveryPosition() {
+    public void testFiveByteLengthPrefixSplitAtEveryPosition() throws Exception {
         // 0x10000000 needs a 5 byte prefix: 80 80 80 80 01. Use a small maxFrameLength so we do not need to
         // allocate the whole frame, the TooLongFrameException proves the complete prefix was decoded.
         byte[] prefix = { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, 0x01 };
