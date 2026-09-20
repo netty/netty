@@ -62,24 +62,29 @@ class AdaptivePoolingAllocatorTest {
      * recorded on 004e4cc8a3, before the magazine's current chunk became the cache's active chunk, and must not
      * change. They move when the retention floor counts the active chunk, or when a poll takes the oldest reusable
      * chunk instead of the newest. The chunk counts were re-recorded when the recycler got one byte budget per heap
-     * instead of a bound per chunk size: the same memory is used at every checkpoint, with 43 chunk buffers
-     * allocated over the trace instead of 59.
+     * instead of a bound per chunk size (43 chunk buffers over the trace instead of 59, same used memory), and both
+     * columns when the size classes from 32 KiB up went from 32 to 8 segments per chunk: the trace's 64 KiB buffers
+     * come from chunks a quarter of the size, so less memory is used at every checkpoint and more chunk buffers are
+     * allocated (73). The used-memory column moved once more when the retention floor became "never give up the last
+     * chunk of a size class" instead of 4 MiB per class: the same 73 chunk buffers are allocated, the peaks are the
+     * same, and the troughs hold 7 to 13 MiB instead of 15 to 19. One chunk buffer fewer is allocated (72) since the
+     * trace's 16 KiB and 64 KiB size classes, which both use 512 KiB chunks, share a recycler pool.
      */
     private static final long[][] EXPECTED_SHARED = {
-            {0, 0}, {23, 19136512}, {38, 32505856}, {38, 32505856},
-            {38, 16777216}, {38, 20971520}, {41, 37224448}, {41, 37224448},
-            {41, 20971520}, {41, 27262976}, {41, 27262976}, {41, 23068672},
-            {41, 20971520}, {41, 27262976}, {43, 38928384}, {43, 38928384},
-            {43, 21102592}, {43, 27394048}, {43, 36831232}, {43, 36831232},
-            {43, 21626880}, {43, 21626880}, {43, 21626880},
+            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 29360128},
+            {67, 7208960}, {67, 19267584}, {69, 36044800}, {69, 36175872},
+            {69, 13500416}, {69, 25559040}, {69, 25690112}, {69, 17956864},
+            {69, 11403264}, {69, 23986176}, {72, 37355520}, {72, 35782656},
+            {72, 11403264}, {72, 23461888}, {72, 36175872}, {72, 34603008},
+            {72, 11403264}, {72, 11403264}, {72, 11403264},
     };
     private static final long[][] EXPECTED_THREAD_LOCAL = {
-            {0, 0}, {23, 19136512}, {38, 32505856}, {38, 32505856},
-            {38, 17301504}, {38, 20971520}, {41, 37224448}, {41, 37224448},
-            {41, 21495808}, {41, 27262976}, {41, 27262976}, {41, 23068672},
-            {41, 20971520}, {41, 27262976}, {43, 38928384}, {43, 38928384},
-            {43, 23724032}, {43, 27918336}, {43, 36831232}, {43, 36831232},
-            {43, 21626880}, {43, 21626880}, {43, 21626880},
+            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 30932992},
+            {67, 7208960}, {67, 19267584}, {69, 36044800}, {69, 36175872},
+            {69, 12976128}, {69, 25559040}, {69, 25690112}, {69, 18481152},
+            {69, 11403264}, {69, 23986176}, {72, 37355520}, {72, 35782656},
+            {72, 11403264}, {72, 23461888}, {72, 36175872}, {72, 34603008},
+            {72, 11403264}, {72, 11403264}, {72, 11403264},
     };
 
     private static final int[] TRACE_SIZES = {64, 1024, 4096, 16384, 65536};
@@ -187,6 +192,30 @@ class AdaptivePoolingAllocatorTest {
             return checkpoints.toArray(new long[0][]);
         } finally {
             helper.shutdown();
+        }
+    }
+
+    /**
+     * What a heap pays to hold one buffer of each size class from 16 KiB up: a 512 KiB chunk for each 2^n class and
+     * a 528 KiB one for each class that adds a header, whatever the segment size, as mimalloc's 512 KiB medium page
+     * serves every block size to 128 KiB. At 32 segments per chunk the six classes from 32 KiB up alone cost 14.2 MiB.
+     */
+    @Test
+    void sizeClassesFromSixteenKibShareTheChunkSizeOfTheirFamily() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode pools fewer size classes");
+        AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(new CountingChunkAllocator(), true);
+        List<ByteBuf> live = new ArrayList<ByteBuf>();
+        long expected = 0;
+        for (int size : AdaptivePoolingAllocator.getSizeClasses()) {
+            if (size >= 16384) {
+                live.add(allocator.allocate(size, size));
+                expected += Integer.bitCount(size) == 1 ? 512 * 1024 : 528 * 1024;
+            }
+        }
+        assertEquals(8, live.size(), "size classes from 16 KiB up");
+        assertEquals(expected, allocator.usedMemory());
+        for (ByteBuf buf : live) {
+            buf.release();
         }
     }
 

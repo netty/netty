@@ -38,6 +38,9 @@ import static org.mockito.Mockito.when;
 
 public class SizeClassedChunkCacheTest {
 
+    /** The cache never gives up the last chunk of its size class; everything above that may go. */
+    private static final int RETENTION_FLOOR = 1;
+
     private static SizeClassedChunk chunkWithCapacity() {
         SizeClassedChunk chunk = mock(SizeClassedChunk.class);
         when(chunk.remainingCapacity()).thenReturn(512);
@@ -195,7 +198,7 @@ public class SizeClassedChunkCacheTest {
     void purgeEvictsFullyFreeChunksAboveFloor() {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
 
-        int floor = cache.purgeRetentionFloor;
+        int floor = RETENTION_FLOOR;
 
         // Fill to floor with working-set chunks
         for (int i = 0; i < floor; i++) {
@@ -227,7 +230,7 @@ public class SizeClassedChunkCacheTest {
     void cacheEvictsExcessFullyFreeChunksAfterBurst() {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
 
-        int floor = cache.purgeRetentionFloor;
+        int floor = RETENTION_FLOOR;
         int excess = 10;
 
         // Working set at floor
@@ -260,7 +263,7 @@ public class SizeClassedChunkCacheTest {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
 
         // Pad above retention floor
-        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
+        for (int i = 0; i < RETENTION_FLOOR; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
 
@@ -315,7 +318,7 @@ public class SizeClassedChunkCacheTest {
     void activeChunkIsNotEvictedByTheDrainOrThePurge() {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
         // Well above the retention floor, so any fully-free reusable chunk would be evicted.
-        for (int i = 0; i < cache.purgeRetentionFloor + 2; i++) {
+        for (int i = 0; i < RETENTION_FLOOR + 2; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
         SizeClassedChunk active = fullChunk();
@@ -338,7 +341,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void activeChunkDoesNotCountAgainstTheRetentionFloor() {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
-        int floor = cache.purgeRetentionFloor;
+        int floor = RETENTION_FLOOR;
         for (int i = 0; i < floor - 1; i++) {
             cache.offerChunk(chunkWithCapacity());
         }
@@ -465,7 +468,7 @@ public class SizeClassedChunkCacheTest {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
 
         // Fill above retention floor
-        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
+        for (int i = 0; i < RETENTION_FLOOR; i++) {
             cache.offerChunk(chunkWithCapacity());
         }
 
@@ -649,7 +652,7 @@ public class SizeClassedChunkCacheTest {
         SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
 
         // Pad above the retention floor so eviction is allowed.
-        for (int i = 0; i < cache.purgeRetentionFloor; i++) {
+        for (int i = 0; i < RETENTION_FLOOR; i++) {
             cache.offerChunk(chunkWithCapacity());
         }
         SizeClassedChunk chunk = chunkWithCapacity();

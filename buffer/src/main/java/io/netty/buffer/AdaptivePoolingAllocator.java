@@ -105,6 +105,13 @@ final class AdaptivePoolingAllocator {
      * We choose 32 because it seems neither too small nor too big.
      */
     private static final int MIN_SEGMENTS_PER_CHUNK = 32;
+    /**
+     * From this segment size up, every size class uses the chunk size of the first one of its family: 512 KiB for
+     * 16, 32, 64 and 128 KiB, and 528 KiB for the four that add a header. This is mimalloc's medium page, which holds
+     * 32 blocks of 16 KiB down to 4 of 128 KiB: a heap pays the same for its first buffer of any of these classes,
+     * and a chunk given up by one of them is reused by the other three.
+     */
+    private static final int MEDIUM_SEGMENT_SIZE = 16 * 1024;
     private static final AtomicIntegerFieldUpdater<AdaptivePoolingAllocator> STRIPE_SCAN_LENGTH =
             AtomicIntegerFieldUpdater.newUpdater(AdaptivePoolingAllocator.class, "stripeScanLength");
     private static final int EXPANSION_ATTEMPTS = 3;
@@ -220,19 +227,21 @@ final class AdaptivePoolingAllocator {
         }
 
         // Precompute per-chunkSize pool mapping for O(1) recycled chunk routing.
-        // Each size class maps to chunkSizeOf(segmentSize).
-        // Multiple small size classes share the same chunkSize (MIN_CHUNK_SIZE),
-        // while larger ones get their own pool.
+        // Each size class maps to chunkSizeOf(segmentSize), and all the size classes with the same chunk size share
+        // one pool, adjacent or not: the small ones (MIN_CHUNK_SIZE), and each family from MEDIUM_SEGMENT_SIZE up.
         int[] chunkSizesTemp = new int[SIZE_CLASSES_COUNT];
         byte[] mappingTemp = new byte[SIZE_CLASSES_COUNT];
         int poolCount = 0;
         for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
             int chunkSize = chunkSizeOf(SIZE_CLASSES[i]);
-            if (poolCount == 0 || chunkSizesTemp[poolCount - 1] != chunkSize) {
-                chunkSizesTemp[poolCount] = chunkSize;
-                poolCount++;
+            int pool = 0;
+            while (pool < poolCount && chunkSizesTemp[pool] != chunkSize) {
+                pool++;
             }
-            mappingTemp[i] = (byte) (poolCount - 1);
+            if (pool == poolCount) {
+                chunkSizesTemp[poolCount++] = chunkSize;
+            }
+            mappingTemp[i] = (byte) pool;
         }
         CHUNK_POOL_COUNT = poolCount;
         CHUNK_SIZES = Arrays.copyOf(chunkSizesTemp, poolCount);
@@ -241,7 +250,7 @@ final class AdaptivePoolingAllocator {
 
     /**
      * Largest size served by a size class in low-memory mode. Low-memory mode never pooled sizes above it (the buddy
-     * path is disabled there too), and the size classes above it use chunks of 1 MiB and more, so they stay unpooled.
+     * path is disabled there too), so the size classes above it stay unpooled.
      */
     private static final int LOW_MEM_MAX_SIZE_CLASS = 16896;
 
@@ -362,10 +371,14 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * The size of the chunks of a size class: {@link #MIN_CHUNK_SIZE}, or {@link #MIN_SEGMENTS_PER_CHUNK} segments
-     * when that is larger. Chunks are 128 KiB up to 4 KiB segments and hold exactly 32 segments above that.
+     * The size of the chunks of a size class: {@link #MIN_CHUNK_SIZE} up to 4 KiB segments,
+     * {@link #MIN_SEGMENTS_PER_CHUNK} segments up to 16.9 KiB, and that same chunk size for the rest of the family
+     * from {@link #MEDIUM_SEGMENT_SIZE} up, whose chunks hold 16, 8 and 4 segments.
      */
     static int chunkSizeOf(int segmentSize) {
+        while (segmentSize >= MEDIUM_SEGMENT_SIZE << 1) {
+            segmentSize >>= 1;
+        }
         return Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
     }
 
@@ -896,7 +909,7 @@ final class AdaptivePoolingAllocator {
      * of segments or is freed. The active chunk is the magazine's, not a retention candidate: no cache
      * decision touches it (the release paths and the drain act only on chunks filed on a queue,
      * and {@link #tickPurge} walks the lists only), and it is not counted against
-     * {@link #purgeRetentionFloor}.
+     * the retention floor ({@link #atOrBelowFloor}).
      *
      * <p><b>Why the reusable list is trustworthy.</b> A cached chunk other than the active one can
      * only <em>gain</em> capacity: segments are handed out only by {@code readInitInto} on the active
@@ -965,7 +978,6 @@ final class AdaptivePoolingAllocator {
 
         final SizeClassChunkRecycler chunkRecycler;
         final int sizeClassIndex;
-        final int purgeRetentionFloor;
         /**
          * The lock guarding this cache's lists, or {@code null} when there is nothing to guard.
          *
@@ -985,15 +997,16 @@ final class AdaptivePoolingAllocator {
             this.chunkRecycler = chunkRecycler;
             this.sizeClassIndex = sizeClassIndex;
             this.stripeLock = stripeLock;
-            purgeRetentionFloor = Math.max(1, THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize);
         }
 
         /**
-         * The chunks that count against {@link #purgeRetentionFloor}: every linked chunk. The active one is not
-         * linked: it is the magazine's to use and is not a retention candidate.
+         * {@code true} when the two queues hold at most one chunk between them. This is the retention floor:
+         * eviction must never take the last chunk of a size class besides the active one, which is what mimalloc's
+         * {@code pageRetire} does by refusing to free the only page left in a bin. Every other chunk that empties
+         * goes to the heap's {@link SizeClassChunkRecycler}, whose byte budget is what bounds idle memory.
          */
-        private int totalCount() {
-            return exhausted.size + reusable.size;
+        private boolean atOrBelowFloor() {
+            return exhausted.size + reusable.size <= 1;
         }
 
         // Signal A (see refile): exhausted → reusable
@@ -1005,7 +1018,7 @@ final class AdaptivePoolingAllocator {
         void evictIfAboveFloor(SizeClassedChunk chunk) {
             // Every caller filters on the reusable queue, which the active chunk is never on.
             assert chunk != active : "the active chunk must never be evicted";
-            if (chunk.hasFullCapacity() && totalCount() > purgeRetentionFloor) {
+            if (chunk.hasFullCapacity() && !atOrBelowFloor()) {
                 reusable.remove(chunk);
                 chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
             }
@@ -1196,14 +1209,12 @@ final class AdaptivePoolingAllocator {
             drainPending();
             // Exhausted→reusable is applied by the drain above. All that is left is evicting
             // fully-free reusable chunks above the retention floor.
-            int total = totalCount();
             SizeClassedChunk cur = (SizeClassedChunk) reusable.head;
-            while (cur != null && total > purgeRetentionFloor) {
+            while (cur != null && !atOrBelowFloor()) {
                 SizeClassedChunk next = (SizeClassedChunk) cur.nextInQueue;
                 if (cur.hasFullCapacity()) {
                     reusable.remove(cur);
                     cur.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
-                    total--;
                 }
                 cur = next;
             }
@@ -1553,12 +1564,16 @@ final class AdaptivePoolingAllocator {
          *
          * <p>Called on the allocation slow path only, right before {@link SizeClassedChunkCache#pollChunk},
          * which is once per chunk-worth of allocations.
+         *
+         * <p>This magazine's own cache is skipped: {@code pollChunk} drains it on the very next
+         * line, which is both the last moment before the poll and therefore the freshest - it also
+         * catches notes that landed while the other size classes were being drained.
          */
         private void drainHeapPending() {
             SizeClassMagazine[] mags = heapMagazines;
             for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
                 SizeClassMagazine mag = mags[i];
-                if (mag != null) {
+                if (mag != null && mag != this) {
                     mag.chunkCache.drainPending();
                 }
             }

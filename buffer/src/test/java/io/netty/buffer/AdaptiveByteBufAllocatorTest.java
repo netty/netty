@@ -685,7 +685,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             final SizeClassedChunkCache cache = chunkOf(held.get(0)).owningCache;
 
             // Fill the cache above its retention floor with chunks that have no free segment.
-            int floor = cache.purgeRetentionFloor;
+            int floor = 1; // the cache never gives up the last chunk of its size class
             for (int i = BURST_SEGMENTS_PER_CHUNK; i < (floor + 1) * BURST_SEGMENTS_PER_CHUNK; i++) {
                 held.add(allocator.heapBuffer(BURST_BUF_SIZE));
             }
@@ -850,7 +850,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             byte[] arrayB = held.get(BURST_SEGMENTS_PER_CHUNK).array();
             SizeClassedChunk chunkA = chunkOf(held.get(0));
             SizeClassedChunkCache cache = chunkA.owningCache;
-            assertTrue(cache.purgeRetentionFloor >= 1, "chunk A must be retained once fully free");
+            // Chunk A is the only queued chunk of its class, so it is retained once fully free.
 
             // Return A's segments from another thread while the stripe lock is held, so they land in A's MPSC
             // free list and leave a note; the drain then files A as reusable.
