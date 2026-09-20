@@ -240,7 +240,8 @@ public class ProtobufVarint32FrameDecoderTest {
 
     @Test
     public void testReadRawVarint32RejectsSixByteVarint() {
-        final ByteBuf buf = wrappedBuffer(new byte[] { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80 });
+        final ByteBuf buf = wrappedBuffer(
+            new byte[] { (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80 });
         assertThrows(CorruptedFrameException.class, new Executable() {
             @Override
             public void execute() {
