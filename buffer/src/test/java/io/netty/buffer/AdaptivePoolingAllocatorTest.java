@@ -187,6 +187,43 @@ class AdaptivePoolingAllocatorTest {
         }
     }
 
+    /**
+     * A buddy chunk that empties while its magazine holds many chunks still in use is kept and reused: only wholly
+     * free chunks count against {@link AdaptivePoolingAllocator#CHUNK_REUSE_QUEUE}. Allocating the emptied chunk's
+     * worth again needs no new chunk.
+     */
+    @Test
+    void emptiedBuddyChunkIsReusedWhileManyChunksAreInUse() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode has no buddy magazines");
+        CountingChunkAllocator counter = new CountingChunkAllocator();
+        AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(counter, true);
+        int size = 256 * 1024; // above the largest size class, so buddy chunks
+        List<ByteBuf> live = new ArrayList<ByteBuf>();
+        live.add(allocator.allocate(size, size));
+        // How many buffers a chunk holds comes from the allocator: one chunk was allocated for the first buffer.
+        assertEquals(1, counter.count);
+        int buffersPerChunk = (int) (allocator.usedMemory() / size);
+        assertTrue(buffersPerChunk >= 2, "buffers per chunk " + buffersPerChunk);
+        int chunks = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE + 4;
+        while (live.size() < chunks * buffersPerChunk) {
+            live.add(allocator.allocate(size, size));
+        }
+        long allocated = counter.count;
+        assertEquals(chunks, allocated, "one chunk per " + buffersPerChunk + " buffers");
+        // Empty the first chunk, which served the first buffers; every other chunk stays full.
+        for (int i = 0; i < buffersPerChunk; i++) {
+            live.remove(0).release();
+        }
+        // The next allocations take the slow path, which applies the releases and finds the emptied chunk.
+        for (int i = 0; i < buffersPerChunk; i++) {
+            live.add(allocator.allocate(size, size));
+        }
+        assertEquals(allocated, counter.count, "chunks allocated");
+        for (ByteBuf buf : live) {
+            buf.release();
+        }
+    }
+
     /** Release {@code buf} on {@code helper} and wait; with {@code locks}, while holding every one of them. */
     private static void releaseOn(ExecutorService helper, ByteBuf buf, List<StampedLock> locks) throws Exception {
         List<Long> stamps = new ArrayList<Long>();
