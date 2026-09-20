@@ -803,10 +803,10 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public DefaultStream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception {
-            if (parent == null) {
-                throw connectionError(PROTOCOL_ERROR, "Parent stream missing");
-            }
-            if (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen()) {
+            // A null parent is a stream we no longer track, which is assumed to have been open for push when the
+            // peer promised on it. Reserving anyway keeps our stream-id accounting in step with the peer's.
+            if (parent != null &&
+                    (isLocal() ? !parent.state().localSideOpen() : !parent.state().remoteSideOpen())) {
                 throw connectionError(PROTOCOL_ERROR, "Stream %d is not open for sending push promise", parent.id());
             }
             if (!opposite().allowPushTo()) {

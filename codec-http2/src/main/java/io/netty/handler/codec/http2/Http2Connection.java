@@ -165,7 +165,13 @@ public interface Http2Connection {
          * </ul>
          *
          * @param streamId the ID of the push stream
-         * @param parent the parent stream used to initiate the push stream.
+         * @param parent the parent stream used to initiate the push stream, or {@code null} if this connection no
+         *               longer tracks it. A {@code null} parent is assumed to have been in a state that allowed
+         *               the push, and skips the parent checks above. This keeps stream-ID accounting in step with
+         *               the opposite endpoint, which has already reserved the stream, for a push promised on a
+         *               stream we have since closed; see
+         *               <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-5.1">RFC 9113, Section 5.1</a>.
+         *               The caller then owns the reserved stream, as no parent remains to close it.
          */
         Http2Stream reservePushStream(int streamId, Http2Stream parent) throws Http2Exception;
 

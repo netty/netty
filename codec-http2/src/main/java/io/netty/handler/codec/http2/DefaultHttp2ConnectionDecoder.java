@@ -33,6 +33,7 @@ import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.REFUSED_STREAM;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
@@ -634,7 +635,21 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream parentStream = connection.stream(streamId);
 
+            if (parentStream == null) {
+                // The parent is already gone, so we cannot tell whether we reset it. Section 5.1 lets us apply the
+                // same minimal processing to every closed stream, which keeps the promised id consumed either way.
+                verifyStreamMayHaveExisted(streamId, false, "PUSH_PROMISE");
+                rejectDiscardedPushStream(ctx, promisedStreamId, null);
+                return;
+            }
+
             if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, false, "PUSH_PROMISE")) {
+                if (parentStream.isResetSent() && parentStream.state().remoteSideOpen()) {
+                    // Section 5.1 scopes this to a stream we reset while it was "open" or "half-closed (local)".
+                    // Anywhere else the peer was never allowed to promise (Section 6.6), so keep ignoring it
+                    // rather than escalate to the connection error reservePushStream() raises.
+                    rejectDiscardedPushStream(ctx, promisedStreamId, parentStream);
+                }
                 return;
             }
 
@@ -670,6 +685,23 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             connection.remote().reservePushStream(promisedStreamId, parentStream);
 
             listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+        }
+
+        /**
+         * Declines a PUSH_PROMISE that is discarded rather than surfaced to the listener.
+         *
+         * @param parentStream the stream the push was promised on, or {@code null} if it is no longer tracked.
+         */
+        private void rejectDiscardedPushStream(ChannelHandlerContext ctx, int promisedStreamId,
+                Http2Stream parentStream) throws Http2Exception {
+            // The peer promised before it saw our RST_STREAM, so it has already moved the promised stream to
+            // "reserved (remote)" (Section 5.1) and we consume the id to stay in step with it. Nothing above the
+            // decoder was told the stream exists though, so this is the only place that can release it, and
+            // Section 6.6 lets a recipient decline a promise by resetting the promised stream. REFUSED_STREAM
+            // rather than CANCEL because we never asked the application: the push was not processed, as opposed
+            // to not wanted, and the promise is safe and cacheable so the application can still request it.
+            Http2Stream promisedStream = connection.remote().reservePushStream(promisedStreamId, parentStream);
+            lifecycleManager.resetStream(ctx, promisedStream.id(), REFUSED_STREAM.code(), ctx.newPromise());
         }
 
         @Override
