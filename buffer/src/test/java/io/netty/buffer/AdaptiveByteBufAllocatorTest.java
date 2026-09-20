@@ -330,6 +330,35 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     }
 
     /**
+     * Idle memory above the size classes is bounded in bytes, whatever the size of the chunks, and the bound is
+     * applied by the releases: after a burst of large buffers is released, no more than the idle bound plus the
+     * chunk the magazine allocates from is held, without any further allocation.
+     */
+    @Test
+    void idleBuddyMemoryIsBoundedInBytes() {
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        int size = 1024 * 1024; // the largest pooled size: the largest chunks
+        ByteBuf first = allocator.heapBuffer(size, size);
+        long chunkSize = allocator.usedHeapMemory();
+        List<ByteBuf> bufs = new ArrayList<ByteBuf>();
+        bufs.add(first);
+        // Four times the idle bound, in whole chunks.
+        long burst = 4L * AdaptivePoolingAllocator.BUDDY_IDLE_BYTES;
+        while (allocator.usedHeapMemory() < burst) {
+            bufs.add(allocator.heapBuffer(size, size));
+        }
+        long peak = allocator.usedHeapMemory();
+        for (ByteBuf buf : bufs) {
+            buf.release();
+        }
+        // No allocation follows: a heap that goes quiet must not keep the burst. The releases themselves apply the
+        // bound (nothing else holds the stripe lock here, so every release acts in place).
+        long settled = allocator.usedHeapMemory();
+        assertTrue(settled <= AdaptivePoolingAllocator.BUDDY_IDLE_BYTES + chunkSize,
+                "peak " + peak + ", settled " + settled + ", bound " + AdaptivePoolingAllocator.BUDDY_IDLE_BYTES);
+    }
+
+    /**
      * Wholly free buddy chunks are not kept beyond the reuse limit: after a burst is released, the next allocations
      * leave at most {@link AdaptivePoolingAllocator#CHUNK_REUSE_QUEUE} idle chunks plus the ones in use.
      */
