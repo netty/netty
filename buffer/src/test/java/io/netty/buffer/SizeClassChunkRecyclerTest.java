@@ -131,6 +131,29 @@ public class SizeClassChunkRecyclerTest {
     }
 
     @Test
+    public void oneByteBudgetBoundsAllThePools() {
+        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        // Fill the budget with buffers of one chunk size.
+        int capacity = SizeClassChunkRecycler.poolCapacity(LARGE);
+        List<AbstractByteBuf> offered = new ArrayList<AbstractByteBuf>();
+        for (int i = 0; i < capacity; i++) {
+            AbstractByteBuf buf = buffer(LARGE);
+            offered.add(buf);
+            assertTrue(recycler.offer(buf, freeList(64), localFreeList(64), LARGE));
+        }
+        // The budget is per recycler, not per chunk size: a buffer of another chunk size is refused too.
+        AbstractByteBuf other = buffer(SMALL);
+        assertFalse(recycler.offer(other, freeList(64), localFreeList(64), SMALL));
+        // Taking one out makes room again.
+        assertTrue(recycler.poll(LARGE));
+        recycler.takeBuffer().release();
+        recycler.takeFreeList();
+        recycler.takeLocalFreeList();
+        assertTrue(recycler.offer(other, freeList(64), localFreeList(64), SMALL));
+        recycler.freeAll();
+    }
+
+    @Test
     public void freeAllReleasesPooledBuffersAndDropsLists() {
         SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
         AbstractByteBuf a = buffer(SMALL);
