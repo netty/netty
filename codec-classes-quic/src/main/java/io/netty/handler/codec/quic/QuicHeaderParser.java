@@ -126,12 +126,14 @@ public final class QuicHeaderParser implements AutoCloseable {
             offset += Integer.BYTES;
             type = typeOfLongHeader(first, version);
 
+            checkReadable(offset, readable, Byte.BYTES);
             int dcidLen = packet.getUnsignedByte(offset);
             checkCidLength(dcidLen);
             offset += Byte.BYTES;
             dcid = sliceCid(packet, offset, dcidLen);
             offset += dcidLen;
 
+            checkReadable(offset, readable, Byte.BYTES);
             int scidLen = packet.getUnsignedByte(offset);
             checkCidLength(scidLen);
             offset += Byte.BYTES;
