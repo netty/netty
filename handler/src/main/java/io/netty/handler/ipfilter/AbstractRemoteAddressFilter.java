@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.SocketAddress;
 
@@ -60,11 +61,22 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
             return false;
         }
 
-        // No need to keep this handler in the pipeline anymore because the decision is going to be made now.
+        // Evaluate the decision before removing this handler from the pipeline, so that if accept(...) throws,
+        // the channel is closed instead of silently continuing through the rest of the pipeline unfiltered.
+        boolean accepted;
+        try {
+            accepted = accept(ctx, remoteAddress);
+        } catch (Throwable cause) {
+            ctx.close();
+            PlatformDependent.throwException(cause);
+            return true;
+        }
+
+        // No need to keep this handler in the pipeline anymore because the decision has been made.
         // Also, this will prevent the subsequent events from being handled by this handler.
         ctx.pipeline().remove(this);
 
-        if (accept(ctx, remoteAddress)) {
+        if (accepted) {
             channelAccepted(ctx, remoteAddress);
         } else {
             Future<Void> rejectedFuture = channelRejected(ctx, remoteAddress);
