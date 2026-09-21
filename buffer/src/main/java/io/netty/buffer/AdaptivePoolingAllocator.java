@@ -207,9 +207,17 @@ final class AdaptivePoolingAllocator {
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
     private static final byte[] SIZE_INDEXES = new byte[SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32 + 1];
 
-    private static final byte[] SIZE_CLASS_TO_CHUNK_POOL; // sizeClassIndex -> poolIndex
-    private static final int CHUNK_POOL_COUNT;           // number of distinct pools
-    private static final int[] CHUNK_SIZES;              // chunkSize per pool index
+    /**
+     * The distinct chunk sizes of the size classes. A {@link SizeClassChunkRecycler} has one pool per entry, so a
+     * chunk buffer given up by a size class is reused by every other size class with the same chunk size.
+     */
+    private static final int[] CHUNK_SIZES = distinctChunkSizes(SIZE_CLASSES);
+    private static final int CHUNK_POOL_COUNT = CHUNK_SIZES.length;
+    /**
+     * Size class index to the index of its chunk size in {@link #CHUNK_SIZES}: precomputed, so that routing a chunk
+     * buffer to its pool is a table lookup.
+     */
+    private static final byte[] SIZE_CLASS_TO_CHUNK_POOL = chunkPools(SIZE_CLASSES, CHUNK_SIZES);
 
     static {
         if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
@@ -225,27 +233,6 @@ final class AdaptivePoolingAllocator {
             Arrays.fill(SIZE_INDEXES, lastIndex + 1, sizeIndex + 1, (byte) i);
             lastIndex = sizeIndex;
         }
-
-        // Precompute per-chunkSize pool mapping for O(1) recycled chunk routing.
-        // Each size class maps to chunkSizeOf(segmentSize), and all the size classes with the same chunk size share
-        // one pool, adjacent or not: the small ones (MIN_CHUNK_SIZE), and each family from MEDIUM_SEGMENT_SIZE up.
-        int[] chunkSizesTemp = new int[SIZE_CLASSES_COUNT];
-        byte[] mappingTemp = new byte[SIZE_CLASSES_COUNT];
-        int poolCount = 0;
-        for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
-            int chunkSize = chunkSizeOf(SIZE_CLASSES[i]);
-            int pool = 0;
-            while (pool < poolCount && chunkSizesTemp[pool] != chunkSize) {
-                pool++;
-            }
-            if (pool == poolCount) {
-                chunkSizesTemp[poolCount++] = chunkSize;
-            }
-            mappingTemp[i] = (byte) pool;
-        }
-        CHUNK_POOL_COUNT = poolCount;
-        CHUNK_SIZES = Arrays.copyOf(chunkSizesTemp, poolCount);
-        SIZE_CLASS_TO_CHUNK_POOL = mappingTemp;
     }
 
     /**
@@ -380,6 +367,52 @@ final class AdaptivePoolingAllocator {
             segmentSize >>= 1;
         }
         return Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+    }
+
+    /**
+     * The distinct chunk sizes of {@code sizeClasses}, in order of first appearance. Nothing is assumed about the
+     * order of the chunk sizes. Size classes with the same chunk size need not be adjacent.
+     */
+    // Visible for testing.
+    static int[] distinctChunkSizes(int[] sizeClasses) {
+        int[] distinct = new int[sizeClasses.length];
+        int count = 0;
+        for (int sizeClass : sizeClasses) {
+            int chunkSize = chunkSizeOf(sizeClass);
+            if (indexOf(distinct, count, chunkSize) == -1) {
+                distinct[count++] = chunkSize;
+            }
+        }
+        return Arrays.copyOf(distinct, count);
+    }
+
+    /**
+     * For each of {@code sizeClasses}, the index of its chunk size in {@code chunkSizes}.
+     */
+    // Visible for testing.
+    static byte[] chunkPools(int[] sizeClasses, int[] chunkSizes) {
+        assert chunkSizes.length <= Byte.MAX_VALUE;
+        byte[] pools = new byte[sizeClasses.length];
+        for (int i = 0; i < pools.length; i++) {
+            int pool = indexOf(chunkSizes, chunkSizes.length, chunkSizeOf(sizeClasses[i]));
+            assert pool >= 0;
+            pools[i] = (byte) pool;
+        }
+        return pools;
+    }
+
+    private static int indexOf(int[] values, int count, int value) {
+        for (int i = 0; i < count; i++) {
+            if (values[i] == value) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // Visible for testing.
+    static int chunkPoolOf(int sizeClassIndex) {
+        return SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex];
     }
 
     static int sizeClassIndexOf(int size) {

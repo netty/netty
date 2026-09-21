@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -169,6 +170,56 @@ public class SizeClassChunkRecyclerTest {
         assertEquals(0, recycler.size(LARGE));
         assertFalse(recycler.poll(SMALL));
         assertNull(recycler.takeBuffer());
+    }
+
+    /**
+     * Whatever the chunk sizes are, two size classes share a recycler pool exactly when their chunks have the same
+     * size, adjacent or not.
+     */
+    @Test
+    public void sizeClassesShareAPoolExactlyWhenTheirChunkSizesAreEqual() {
+        int[] sizeClasses = AdaptivePoolingAllocator.getSizeClasses();
+        for (int a = 0; a < sizeClasses.length; a++) {
+            for (int b = 0; b < sizeClasses.length; b++) {
+                boolean sameChunkSize = AdaptivePoolingAllocator.chunkSizeOf(sizeClasses[a])
+                        == AdaptivePoolingAllocator.chunkSizeOf(sizeClasses[b]);
+                boolean samePool = AdaptivePoolingAllocator.chunkPoolOf(a) == AdaptivePoolingAllocator.chunkPoolOf(b);
+                assertEquals(sameChunkSize, samePool, sizeClasses[a] + " and " + sizeClasses[b]);
+            }
+        }
+    }
+
+    /**
+     * The same property for size class tables other than today's: a changed table is how the pools of size classes
+     * that are not adjacent were once left unshared. The tables are random selections of the size classes in random
+     * order, so that equal chunk sizes are rarely adjacent.
+     */
+    @Test
+    public void anyTableOfSizeClassesSharesAPoolExactlyWhenChunkSizesAreEqual() {
+        int[] all = AdaptivePoolingAllocator.getSizeClasses();
+        Random random = new Random(42);
+        for (int round = 0; round < 1000; round++) {
+            int[] sizeClasses = new int[1 + random.nextInt(all.length)];
+            for (int i = 0; i < sizeClasses.length; i++) {
+                sizeClasses[i] = all[random.nextInt(all.length)];
+            }
+            int[] chunkSizes = AdaptivePoolingAllocator.distinctChunkSizes(sizeClasses);
+            byte[] pools = AdaptivePoolingAllocator.chunkPools(sizeClasses, chunkSizes);
+
+            Set<Integer> distinct = new HashSet<Integer>();
+            for (int chunkSize : chunkSizes) {
+                assertTrue(distinct.add(chunkSize), "chunk size listed twice: " + chunkSize);
+            }
+            assertEquals(sizeClasses.length, pools.length);
+            for (int a = 0; a < sizeClasses.length; a++) {
+                assertEquals(AdaptivePoolingAllocator.chunkSizeOf(sizeClasses[a]), chunkSizes[pools[a]]);
+                for (int b = 0; b < sizeClasses.length; b++) {
+                    boolean sameChunkSize = AdaptivePoolingAllocator.chunkSizeOf(sizeClasses[a])
+                            == AdaptivePoolingAllocator.chunkSizeOf(sizeClasses[b]);
+                    assertEquals(sameChunkSize, pools[a] == pools[b], sizeClasses[a] + " and " + sizeClasses[b]);
+                }
+            }
+        }
     }
 
     /**
