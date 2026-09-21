@@ -24,12 +24,15 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -456,5 +459,82 @@ public class SimpleChannelPoolTest {
         sc.close().sync();
         pool.close();
         group.shutdownGracefully();
+    }
+
+    @Test
+    public void testAcquireCancelledDuringHealthCheckOffersChannelBack() throws Exception {
+        EventLoopGroup group = new LocalEventLoopGroup(1);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
+        Bootstrap cb = new Bootstrap()
+                .group(group)
+                .channel(LocalChannel.class)
+                .remoteAddress(addr);
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+        Channel sc = sb.bind(addr).sync().channel();
+        CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
+
+        // Hand out health checks that we complete ourselves, so the acquire Promise can be cancelled while the
+        // health check of an already pooled Channel is still pending.
+        final BlockingQueue<Promise<Boolean>> healthChecks = new LinkedBlockingQueue<Promise<Boolean>>();
+        ChannelHealthChecker healthChecker = new ChannelHealthChecker() {
+            @Override
+            public Future<Boolean> isHealthy(Channel channel) {
+                Promise<Boolean> healthCheck = channel.eventLoop().newPromise();
+                healthChecks.add(healthCheck);
+                return healthCheck;
+            }
+        };
+        // Health checks on release are turned off, so releasing does not need a hand-completed health check as well.
+        SimpleChannelPool pool = new SimpleChannelPool(cb, handler, healthChecker, false);
+
+        Channel channel = null;
+        try {
+            // Nothing is pooled yet, so this connects a new Channel and does not run a health check at all.
+            channel = pool.acquire().sync().getNow();
+            pool.release(channel).sync();
+            assertTrue(healthChecks.isEmpty());
+            assertEquals(1, handler.acquiredCount());
+            assertEquals(1, handler.releasedCount());
+
+            // This acquire reuses the pooled Channel, so it has to pass the health check first.
+            Promise<Channel> acquirePromise = group.next().newPromise();
+            pool.acquire(acquirePromise);
+            Promise<Boolean> healthCheck = healthChecks.poll(5, TimeUnit.SECONDS);
+            assertNotNull(healthCheck);
+
+            assertTrue(acquirePromise.cancel(false));
+            healthCheck.setSuccess(Boolean.TRUE);
+
+            // Let the health check listener run on the EventLoop of the Channel.
+            channel.eventLoop().submit(() -> { }).sync();
+
+            assertTrue(acquirePromise.isCancelled());
+            assertEquals(2, handler.acquiredCount());
+            assertEquals(2, handler.releasedCount());
+            assertTrue(channel.isActive());
+
+            // The Channel went back into the pool, so the next acquire hands out the very same Channel.
+            Promise<Channel> secondAcquirePromise = group.next().newPromise();
+            pool.acquire(secondAcquirePromise);
+            Promise<Boolean> secondHealthCheck = healthChecks.poll(5, TimeUnit.SECONDS);
+            assertNotNull(secondHealthCheck);
+            secondHealthCheck.setSuccess(Boolean.TRUE);
+            assertSame(channel, secondAcquirePromise.sync().getNow());
+        } finally {
+            if (channel != null) {
+                channel.close().sync();
+            }
+            sc.close().sync();
+            pool.close();
+            group.shutdownGracefully();
+        }
     }
 }
