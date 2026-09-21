@@ -25,8 +25,9 @@ import java.util.List;
 
 /**
  * Configuration for TLS1.3 certificate compression extension.
- * When no configuration is specified, zlib compression is enabled in both directions. Use an empty configuration
- * to disable certificate compression. The {@code jdk.tls.client.disableExtensions} and
+ * When no configuration is specified, zlib compression is enabled in both directions on JDK 27 and later.
+ * On earlier JDKs, certificate compression is disabled by default. Use an empty configuration to disable it
+ * on any JDK version. The {@code jdk.tls.client.disableExtensions} and
  * {@code jdk.tls.server.disableExtensions} system properties can also disable it for the corresponding side.
  */
 public final class OpenSslCertificateCompressionConfig implements

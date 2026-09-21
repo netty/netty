@@ -35,6 +35,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -296,7 +297,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         if (isCertificateCompressionDisabled(mode)) {
             certCompressionConfig = null;
-        } else if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+        } else if (certCompressionConfig == null && PlatformDependent.javaVersion() >= 27 &&
+                (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
             certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
         }
 

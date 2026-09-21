@@ -63,8 +63,8 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * Set the {@link OpenSslCertificateCompressionConfig} to use. This allows for the configuration of certificate
      * compression algorithms which should be used, the priority of those algorithms and the directions in which
      * they should be used.
-     * If this option is not specified, zlib compression is enabled in both directions. An empty configuration
-     * disables certificate compression.
+     * If this option is not specified, zlib compression is enabled in both directions on JDK 27 and later.
+     * On earlier JDKs, certificate compression is disabled by default. An empty configuration disables it.
      * The {@code jdk.tls.client.disableExtensions} and {@code jdk.tls.server.disableExtensions} system properties
      * disable certificate compression for the corresponding side when they contain {@code compress_certificate},
      * even if this option is specified.
