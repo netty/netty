@@ -65,6 +65,9 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * they should be used.
      * If this option is not specified, zlib compression is enabled in both directions. An empty configuration
      * disables certificate compression.
+     * The {@code jdk.tls.client.disableExtensions} and {@code jdk.tls.server.disableExtensions} system properties
+     * disable certificate compression for the corresponding side when they contain {@code compress_certificate},
+     * even if this option is specified.
      *
      * This is currently only supported when {@code BoringSSL} or {@code AWS-LC} is used.
      */

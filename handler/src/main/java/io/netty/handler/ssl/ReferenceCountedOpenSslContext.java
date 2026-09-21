@@ -294,7 +294,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
         }
-        if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
+        if (isCertificateCompressionDisabled(mode)) {
+            certCompressionConfig = null;
+        } else if (certCompressionConfig == null && (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
             certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
         }
 
@@ -504,6 +506,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 release();
             }
         }
+    }
+
+    private static boolean isCertificateCompressionDisabled(int mode) {
+        String property = mode == SSL.SSL_MODE_CLIENT ?
+                "jdk.tls.client.disableExtensions" : "jdk.tls.server.disableExtensions";
+        String disabledExtensions = SystemPropertyUtil.get(property);
+        if (disabledExtensions != null) {
+            for (String extension : disabledExtensions.split(",")) {
+                if ("compress_certificate".equals(extension.trim())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {
