@@ -22,7 +22,6 @@ import io.netty.handler.codec.socks.SocksInitRequestDecoder.State;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,15 +45,15 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<State> {
                 checkpoint(State.READ_AUTH_SCHEMES);
             }
             case READ_AUTH_SCHEMES: {
-                final byte authSchemeNum = byteBuf.readByte();
-                final List<SocksAuthScheme> authSchemes;
-                if (authSchemeNum > 0) {
-                    authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
-                    for (int i = 0; i < authSchemeNum; i++) {
-                        authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
-                    }
-                } else {
-                    authSchemes = Collections.emptyList();
+                final int authSchemeNum = byteBuf.readUnsignedByte();
+                if (authSchemeNum == 0) {
+                    // RFC 1928 section 3 requires NMETHODS to be at least 1.
+                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
+                    break;
+                }
+                final List<SocksAuthScheme> authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
+                for (int i = 0; i < authSchemeNum; i++) {
+                    authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
                 }
                 out.add(new SocksInitRequest(authSchemes));
                 break;
