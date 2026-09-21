@@ -271,7 +271,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 // CANCEL_PUSH
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.3
                 if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
-                        HTTP3_CANCEL_PUSH_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
+                        HTTP3_CANCEL_PUSH_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR) ||
+                        !enforceNonZeroPayloadLength(ctx, type, payLoadLength)) {
                     return 0;
                 }
                 int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -301,7 +302,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                         // Let's use the maxHeaderListSize as a limit as this is this is the decompressed amounts of
                         // bytes which means the once we decompressed the headers we will be bigger then the actual
                         // payload size now.
-                        Math.max(maxHeaderListSize, maxHeaderListSize + 8), Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
+                        Math.max(maxHeaderListSize, maxHeaderListSize + 8), Http3ErrorCode.H3_EXCESSIVE_LOAD) ||
+                        !enforceNonZeroPayloadLength(ctx, type, payLoadLength)) {
                     return 0;
                 }
 
@@ -331,7 +333,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 // GO_AWAY
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.6
                 if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
-                        HTTP3_GO_AWAY_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
+                        HTTP3_GO_AWAY_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR) ||
+                        !enforceNonZeroPayloadLength(ctx, type, payLoadLength)) {
                     return 0;
                 }
                 int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -344,7 +347,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 // MAX_PUSH_ID
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.7
                 if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
-                        HTTP3_MAX_PUSH_ID_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR)) {
+                        HTTP3_MAX_PUSH_ID_FRAME_MAX_LEN, Http3ErrorCode.H3_FRAME_ERROR) ||
+                        !enforceNonZeroPayloadLength(ctx, type, payLoadLength)) {
                     return 0;
                 }
                 int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
@@ -395,6 +399,15 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         return true;
     }
 
+    private boolean enforceNonZeroPayloadLength(ChannelHandlerContext ctx, int type, int payLoadLength) {
+        if (payLoadLength == 0) {
+            connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.', true);
+            return false;
+        }
+        return true;
+    }
+
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(
@@ -415,6 +428,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 return null;
             }
             payLoadLength -= keyLen;
+            if (payLoadLength == 0) {
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                    "Received a settings key without a value.", true);
+                return null;
+            }
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             if (valueLen > payLoadLength) {
                 connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
