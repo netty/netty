@@ -137,7 +137,7 @@ public class TrafficShapingHandlerTest {
                             });
                         }
                     });
-            final LocalAddress svrAddr = new LocalAddress("foo");
+            final LocalAddress svrAddr = new LocalAddress(TrafficShapingHandlerTest.class);
             svrChannel = serverBootstrap.bind(svrAddr).sync().channel();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.channel(LocalChannel.class).group(GROUP).handler(new ChannelInitializer<Channel>() {

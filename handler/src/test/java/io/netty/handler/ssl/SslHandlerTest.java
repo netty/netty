@@ -654,7 +654,7 @@ public class SslHandlerTest {
                     }
                 });
 
-            serverChannel = sb.bind(new LocalAddress("SslHandlerTest")).sync().channel();
+            serverChannel = sb.bind(new LocalAddress(SslHandlerTest.class)).sync().channel();
             clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
             latch.await();
 

@@ -208,7 +208,7 @@ public class HttpProxyHandlerTest {
         Channel clientChannel = null;
         try {
             group = new DefaultEventLoopGroup(1);
-            final LocalAddress addr = new LocalAddress("a");
+            final LocalAddress addr = new LocalAddress(HttpProxyHandlerTest.class);
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
             ChannelFuture sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
