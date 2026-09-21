@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,19 +46,20 @@ public class SocksInitRequestDecoder extends ByteToMessageDecoder {
                 if (byteBuf.readableBytes() < 1) {
                     return;
                 }
-                final byte authSchemeNum = byteBuf.getByte(byteBuf.readerIndex());
+                final int authSchemeNum = byteBuf.getUnsignedByte(byteBuf.readerIndex());
+                if (authSchemeNum == 0) {
+                    // RFC 1928 section 3 requires NMETHODS to be at least 1.
+                    byteBuf.skipBytes(1);
+                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
+                    break;
+                }
                 if (byteBuf.readableBytes() < 1 + authSchemeNum) {
                     return;
                 }
                 byteBuf.skipBytes(1);
-                final List<SocksAuthScheme> authSchemes;
-                if (authSchemeNum > 0) {
-                    authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
-                    for (int i = 0; i < authSchemeNum; i++) {
-                        authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
-                    }
-                } else {
-                    authSchemes = Collections.emptyList();
+                final List<SocksAuthScheme> authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
+                for (int i = 0; i < authSchemeNum; i++) {
+                    authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
                 }
                 out.add(new SocksInitRequest(authSchemes));
                 break;
