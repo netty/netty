@@ -23,17 +23,23 @@ import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.InetSocketAddressResolver;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import org.apache.directory.server.dns.messages.QuestionRecord;
+import org.apache.directory.server.dns.messages.RecordType;
+import org.apache.directory.server.dns.messages.ResourceRecord;
+import org.apache.directory.server.dns.store.RecordStore;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.UnsupportedAddressTypeException;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import static io.netty.resolver.dns.TestDnsServer.newARecord;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,11 +77,24 @@ public class DnsAddressResolverGroupTest {
     }
 
     @Test
-    public void testSharedDNSCacheAcrossEventLoops() throws InterruptedException, ExecutionException {
+    public void testSharedDNSCacheAcrossEventLoops() throws Exception {
+        final String hostname = "netty.io";
+        final String expectedIp = "1.2.3.4";
+        TestDnsServer dnsServer = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getRecordType() == RecordType.A && question.getDomainName().equalsIgnoreCase(hostname)) {
+                    return Collections.singleton(newARecord(hostname, expectedIp));
+                }
+                return null;
+            }
+        });
+        dnsServer.start();
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         final EventLoop loop = group.next();
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
-                .eventLoop(loop).datagramChannelType(NioDatagramChannel.class);
+                .eventLoop(loop).datagramChannelType(NioDatagramChannel.class)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
         EventLoopGroup defaultEventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         EventLoop eventLoop1 = defaultEventLoopGroup.next();
@@ -84,16 +103,17 @@ public class DnsAddressResolverGroupTest {
             final Promise<InetSocketAddress> promise1 = loop.newPromise();
             InetSocketAddressResolver resolver1 = (InetSocketAddressResolver) resolverGroup.getResolver(eventLoop1);
             InetAddress address1 =
-                    resolve(resolver1, InetSocketAddress.createUnresolved("netty.io", 80), promise1);
+                    resolve(resolver1, InetSocketAddress.createUnresolved(hostname, 80), promise1);
             final Promise<InetSocketAddress> promise2 = loop.newPromise();
             InetSocketAddressResolver resolver2 = (InetSocketAddressResolver) resolverGroup.getResolver(eventLoop2);
             InetAddress address2 =
-                    resolve(resolver2, InetSocketAddress.createUnresolved("netty.io", 80), promise2);
+                    resolve(resolver2, InetSocketAddress.createUnresolved(hostname, 80), promise2);
             assertSame(address1, address2);
         } finally {
             resolverGroup.close();
             group.shutdownGracefully();
             defaultEventLoopGroup.shutdownGracefully();
+            dnsServer.stop();
         }
     }
 
