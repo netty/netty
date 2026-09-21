@@ -22,6 +22,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -32,12 +33,15 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.nio.channels.FileChannel;
+import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -780,12 +784,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         ByteBuf buf = allocator.heapBuffer(256);
         assertTrue(allocator.usedHeapMemory() > 0);
 
-        java.lang.reflect.Field f = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
-        f.setAccessible(true);
-        Object inner = f.get(allocator);
-        java.lang.reflect.Method free = inner.getClass().getDeclaredMethod("free");
-        free.setAccessible(true);
-        free.invoke(inner);
+        freeHeap(allocator);
 
         // last outstanding segment comes back from another thread
         Thread t = new Thread(buf::release);
@@ -1129,5 +1128,232 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             Array.set(array, i, Array.get(array, n));
             Array.set(array, n, value);
         }
+    }
+
+    /**
+     * What a chunk says about its free segments - whether it has one, whether it has all of them, and the bytes it
+     * last counted - through every way a segment comes back: never handed out, released under the lock, released
+     * by another thread that could not take the lock and not yet polled, and polled. Each segment that came back
+     * is then handed out again, once.
+     */
+    @Test
+    void capacityQueriesFollowEveryWayASegmentComesBack() throws Exception {
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        List<ByteBuf> held = new ArrayList<ByteBuf>();
+        // One buffer: chunk A is active and the other 31 segments were never handed out.
+        held.add(allocator.heapBuffer(BURST_BUF_SIZE));
+        SizeClassedChunk chunkA = chunkOf(held.get(0));
+        byte[] arrayA = held.get(0).array();
+        assertTrue(chunkA.hasRemainingCapacity());
+        assertFalse(chunkA.hasFullCapacity());
+
+        // Chunk A: every segment handed out. Chunk B: the active chunk, one segment handed out.
+        for (int i = 1; i <= BURST_SEGMENTS_PER_CHUNK; i++) {
+            held.add(allocator.heapBuffer(BURST_BUF_SIZE));
+        }
+        assertSame(arrayA, held.get(BURST_SEGMENTS_PER_CHUNK - 1).array());
+        assertNotSame(arrayA, held.get(BURST_SEGMENTS_PER_CHUNK).array());
+        assertFalse(chunkA.hasRemainingCapacity());
+        assertEquals(0, chunkA.remainingCapacity());
+
+        // Released by a thread that could take the stripe lock: straight into the chunk's local free list.
+        release(held.get(0), false);
+        assertTrue(chunkA.hasRemainingCapacity());
+        assertEquals(BURST_BUF_SIZE, chunkA.remainingCapacity());
+
+        // Released by a thread that cannot take the lock: counted as free before anyone takes them over. The last
+        // buffer of A stays in use, so that A is never given up and the same chunk serves what follows.
+        ByteBuf lastOfA = held.get(BURST_SEGMENTS_PER_CHUNK - 1);
+        List<StampedLock> locks = stripeLocks(allocator);
+        List<Long> stamps = new ArrayList<Long>();
+        for (StampedLock l : locks) {
+            stamps.add(l.writeLock());
+        }
+        try {
+            for (int i = 1; i < BURST_SEGMENTS_PER_CHUNK - 1; i++) {
+                release(held.get(i), true);
+            }
+            assertTrue(chunkA.hasRemainingCapacity());
+            assertFalse(chunkA.hasFullCapacity());
+            assertEquals((BURST_SEGMENTS_PER_CHUNK - 1) * BURST_BUF_SIZE, chunkA.remainingCapacity());
+        } finally {
+            for (int i = 0; i < locks.size(); i++) {
+                locks.get(i).unlockWrite(stamps.get(i));
+            }
+        }
+        ByteBuf firstOfB = held.get(BURST_SEGMENTS_PER_CHUNK);
+        held.clear();
+
+        // Run B out of segments; then A serves 31 allocations: the one released under the lock, then the 30 taken
+        // over from the other thread, each once and never the segment still in use.
+        List<ByteBuf> fromB = new ArrayList<ByteBuf>();
+        fromB.add(firstOfB);
+        for (int i = 1; i < BURST_SEGMENTS_PER_CHUNK; i++) {
+            fromB.add(allocator.heapBuffer(BURST_BUF_SIZE));
+            assertNotSame(arrayA, fromB.get(i).array());
+        }
+        Set<Integer> offsets = new HashSet<Integer>();
+        offsets.add(lastOfA.arrayOffset());
+        for (int i = 1; i < BURST_SEGMENTS_PER_CHUNK; i++) {
+            ByteBuf buf = allocator.heapBuffer(BURST_BUF_SIZE);
+            held.add(buf);
+            assertSame(arrayA, buf.array());
+            assertSame(chunkA, chunkOf(buf));
+            assertTrue(offsets.add(buf.arrayOffset()), "segment handed out twice");
+        }
+        assertFalse(chunkA.hasRemainingCapacity());
+        assertEquals(0, chunkA.remainingCapacity());
+
+        // Every segment of A back, from another thread that cannot take the lock: all of them free, none polled yet.
+        held.add(lastOfA);
+        for (StampedLock l : locks) {
+            stamps.set(locks.indexOf(l), l.writeLock());
+        }
+        try {
+            for (ByteBuf buf : held) {
+                release(buf, true);
+            }
+            assertTrue(chunkA.hasFullCapacity());
+            assertTrue(chunkA.hasRemainingCapacity());
+        } finally {
+            for (int i = 0; i < locks.size(); i++) {
+                locks.get(i).unlockWrite(stamps.get(i));
+            }
+        }
+        for (ByteBuf buf : fromB) {
+            buf.release();
+        }
+    }
+
+    /**
+     * The last segment of a chunk comes back after the allocator was freed, from a thread that cannot take the
+     * stripe lock: it goes on the external list, and that release must be the one that deallocates the chunk.
+     */
+    @Test
+    void segmentReturnedExternallyAfterFreeMustStillDeallocateChunk() throws Exception {
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        ByteBuf buf = allocator.heapBuffer(256);
+        List<StampedLock> locks = stripeLocks(allocator);
+        freeHeap(allocator);
+        assertTrue(allocator.usedHeapMemory() > 0);
+        List<Long> stamps = new ArrayList<Long>();
+        for (StampedLock l : locks) {
+            stamps.add(l.writeLock());
+        }
+        try {
+            release(buf, true);
+        } finally {
+            for (int i = 0; i < locks.size(); i++) {
+                locks.get(i).unlockWrite(stamps.get(i));
+            }
+        }
+        assertEquals(0, allocator.usedHeapMemory(), "chunk must deallocate once its last segment is returned");
+    }
+
+    /**
+     * A buffer that outgrows its segment moves to a larger one: its bytes move with it, and the segment it left is
+     * free again - the next buffer of that size gets it.
+     */
+    @Test
+    void aBufferThatOutgrowsItsSegmentGivesItBack() {
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        ByteBuf buf = allocator.heapBuffer(256, 8192);
+        byte[] firstArray = buf.array();
+        int firstOffset = buf.arrayOffset();
+        for (int i = 0; i < 256; i++) {
+            buf.writeByte(i);
+        }
+        buf.capacity(1024);
+        assertTrue(buf.array() != firstArray || buf.arrayOffset() != firstOffset, "the buffer did not move");
+        for (int i = 0; i < 256; i++) {
+            assertEquals((byte) i, buf.getByte(i));
+        }
+        ByteBuf next = allocator.heapBuffer(256, 256);
+        assertSame(firstArray, next.array());
+        assertEquals(firstOffset, next.arrayOffset());
+        next.writeLong(42);
+        for (int i = 0; i < 256; i++) {
+            assertEquals((byte) i, buf.getByte(i));
+        }
+        next.release();
+        buf.release();
+    }
+
+    /**
+     * The owner thread keeps allocating while other threads release what it allocated: their segments reach it
+     * through the chunk's external MPSC free list, which it polls one at a time while they offer. A segment must
+     * never be handed out while the buffer that holds it is still in use, whatever the interleaving.
+     */
+    @Test
+    @Timeout(value = 60, unit = TimeUnit.SECONDS)
+    void segmentsReleasedByOtherThreadsAreNeverHandedOutTwice() throws Exception {
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        final int releasers = 3;
+        final int allocations = 300000;
+        final BlockingQueue<ByteBuf> toRelease = new ArrayBlockingQueue<ByteBuf>(256);
+        final java.util.concurrent.ConcurrentHashMap<Long, Boolean> inUse =
+                new java.util.concurrent.ConcurrentHashMap<Long, Boolean>();
+        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        final ByteBuf poison = Unpooled.buffer(1);
+        Thread[] threads = new Thread[releasers];
+        for (int i = 0; i < releasers; i++) {
+            threads[i] = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (;;) {
+                            ByteBuf buf = toRelease.take();
+                            if (buf == poison) {
+                                return;
+                            }
+                            // Forget the segment before releasing it: it can only be handed out again afterwards.
+                            inUse.remove(buf.memoryAddress());
+                            buf.release();
+                        }
+                    } catch (Throwable t) {
+                        failure.compareAndSet(null, t);
+                    }
+                }
+            });
+            threads[i].start();
+        }
+        Thread owner = new FastThreadLocalThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    for (int i = 0; i < allocations && failure.get() == null; i++) {
+                        ByteBuf buf = allocator.directBuffer(64, 64);
+                        if (inUse.putIfAbsent(buf.memoryAddress(), Boolean.TRUE) != null) {
+                            throw new AssertionError("segment at " + buf.memoryAddress() + " handed out twice");
+                        }
+                        toRelease.put(buf);
+                    }
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                }
+            }
+        });
+        owner.start();
+        owner.join();
+        for (int i = 0; i < releasers; i++) {
+            toRelease.put(poison);
+        }
+        for (Thread thread : threads) {
+            thread.join();
+        }
+        poison.release();
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+        assertTrue(inUse.isEmpty());
+    }
+
+    private static void freeHeap(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field f = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        f.setAccessible(true);
+        Object inner = f.get(allocator);
+        Method free = inner.getClass().getDeclaredMethod("free");
+        free.setAccessible(true);
+        free.invoke(inner);
     }
 }
