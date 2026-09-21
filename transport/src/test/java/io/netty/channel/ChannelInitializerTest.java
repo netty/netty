@@ -267,7 +267,7 @@ public class ChannelInitializerTest {
         final AtomicInteger invokeCount = new AtomicInteger();
         final AtomicInteger completeCount = new AtomicInteger();
         final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
-        LocalAddress addr = new LocalAddress("test");
+        LocalAddress addr = new LocalAddress(ChannelInitializerTest.class);
 
         final EventExecutor executor = new DefaultEventLoop() {
             private final ScheduledExecutorService execService = Executors.newSingleThreadScheduledExecutor();
