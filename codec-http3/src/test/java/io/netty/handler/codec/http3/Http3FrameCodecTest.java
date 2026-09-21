@@ -999,7 +999,8 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
     @MethodSource("dataNoFragment")
-    public void testInvalidHttp3CancelPushFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+    public void testInvalidHttp3CancelPushFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams)
+            throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_CANCEL_PUSH_FRAME_TYPE, 0}),
@@ -1008,7 +1009,8 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
     @MethodSource("dataNoFragment")
-    public void testInvalidHttp3GoAwayFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+    public void testInvalidHttp3GoAwayFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams)
+            throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_GO_AWAY_FRAME_TYPE, 0}),
@@ -1017,7 +1019,8 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
     @MethodSource("dataNoFragment")
-    public void testInvalidHttp3MaxPushIdFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+    public void testInvalidHttp3MaxPushIdFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams)
+            throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_MAX_PUSH_ID_FRAME_TYPE, 0}),
@@ -1026,7 +1029,8 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
     @MethodSource("dataNoFragment")
-    public void testInvalidHttp3PushPromiseFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+    public void testInvalidHttp3PushPromiseFrameZeroLength(int maxBlockedStreams, boolean delayQpackStreams)
+            throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_PUSH_PROMISE_FRAME_TYPE, 0}),
@@ -1035,7 +1039,8 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: maxBlockedStreams = {0}, delayQpackStreams = {1}")
     @MethodSource("dataNoFragment")
-    public void testInvalidHttp3SettingsFrameKeyWithoutValue(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+    public void testInvalidHttp3SettingsFrameKeyWithoutValue(int maxBlockedStreams, boolean delayQpackStreams)
+            throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         testInvalidHttp3Frame0(delayQpackStreams,
             Unpooled.wrappedBuffer(new byte[] {(byte) HTTP3_SETTINGS_FRAME_TYPE, 1, 1}),
