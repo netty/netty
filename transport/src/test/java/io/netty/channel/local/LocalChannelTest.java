@@ -49,8 +49,12 @@ import org.junit.jupiter.api.function.Executable;
 import java.net.ConnectException;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1191,6 +1195,85 @@ public class LocalChannelTest {
 
             countDownLatch.await();
         } finally {
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testServerMaxMessagesPerReadRespectedWithQueuedConnections() throws Exception {
+        final int maxMessagesPerRead = 2;
+        final int connections = 5;
+        final CountDownLatch queuedConnections = new CountDownLatch(connections);
+        final BlockingQueue<Integer> messagesPerReadComplete = new LinkedBlockingQueue<Integer>();
+        final List<ChannelFuture> connectFutures = new ArrayList<ChannelFuture>();
+
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(sharedGroup)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        sb.group(sharedGroup)
+                .channelFactory(() -> new LocalServerChannel() {
+                    @Override
+                    protected LocalChannel newLocalChannel(LocalChannel peer) {
+                        LocalChannel child = super.newLocalChannel(peer);
+                        queuedConnections.countDown();
+                        return child;
+                    }
+                })
+                .option(ChannelOption.AUTO_READ, false)
+                .option(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
+                .handler(new ChannelInboundHandlerAdapter() {
+                    private int messagesRead;
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        messagesRead++;
+                        ctx.fireChannelRead(msg);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) {
+                        messagesPerReadComplete.add(messagesRead);
+                        messagesRead = 0;
+                        ctx.fireChannelReadComplete();
+                    }
+                })
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        Channel sc = null;
+        try {
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            for (int i = 0; i < connections; i++) {
+                connectFutures.add(cb.connect(TEST_ADDRESS));
+            }
+
+            assertTrue(queuedConnections.await(5, SECONDS));
+
+            sc.config().setAutoRead(true);
+            assertEquals(maxMessagesPerRead, messagesPerReadComplete.take());
+            assertEquals(maxMessagesPerRead, messagesPerReadComplete.take());
+            assertEquals(connections - 2 * maxMessagesPerRead, messagesPerReadComplete.take());
+            for (ChannelFuture connectFuture : connectFutures) {
+                connectFuture.sync();
+            }
+        } finally {
+            for (ChannelFuture connectFuture : connectFutures) {
+                closeChannel(connectFuture.channel());
+            }
             closeChannel(sc);
         }
     }

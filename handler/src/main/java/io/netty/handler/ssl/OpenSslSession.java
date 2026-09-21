@@ -34,6 +34,15 @@ public interface OpenSslSession extends SSLSession {
      */
     boolean hasPeerCertificates();
 
+    /**
+     * Returns the used named group or {@code null} if none was used or if it can't be determined.
+     *
+     * @return  the named group
+     */
+    default String getNamedGroup() {
+        return null;
+    }
+
     @Override
     OpenSslSessionContext getSessionContext();
 }

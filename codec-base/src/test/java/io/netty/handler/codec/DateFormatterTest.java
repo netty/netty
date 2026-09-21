@@ -38,6 +38,14 @@ public class DateFormatterTest {
     }
 
     @Test
+    public void testParseHttpDateSubstringDoesNotOverrunEnd() {
+        // Set-Cookie header format with the date anywhere but last (RFC 6265 tokens are unordered).
+        String dateText = "Sun 08:49:37 06 Nov 1994";
+        assertEquals(DATE, parseHttpDate(dateText));
+        assertEquals(DATE, parseHttpDate(dateText + "; Path=/", 0, dateText.length()));
+    }
+
+    @Test
     public void testParseWithDoubleDigitDay() {
         assertEquals(DATE, parseHttpDate("Sun, 06 Nov 1994 08:49:37 GMT"));
     }

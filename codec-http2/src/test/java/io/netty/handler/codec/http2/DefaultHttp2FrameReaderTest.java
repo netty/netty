@@ -341,6 +341,27 @@ public class DefaultHttp2FrameReaderTest {
     }
 
     @Test
+    public void failedWhenPushPromiseFrameNotAssociateWithStream() throws Http2Exception {
+        final ByteBuf input = Unpooled.buffer();
+        try {
+            writeFrameHeader(input, INT_FIELD_LENGTH, PUSH_PROMISE, new Http2Flags().endOfHeaders(true), 0);
+            input.writeInt(2);
+            Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
+            assertFalse(ex instanceof Http2Exception.StreamException);
+            assertEquals(Http2Error.PROTOCOL_ERROR, ex.error());
+            verify(listener, never()).onPushPromiseRead(any(ChannelHandlerContext.class), anyInt(), anyInt(),
+                    any(Http2Headers.class), anyInt());
+        } finally {
+            input.release();
+        }
+    }
+
+    @Test
     public void readPriorityFrame() throws Http2Exception {
         ByteBuf input = Unpooled.buffer();
         try {

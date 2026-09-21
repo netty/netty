@@ -51,6 +51,7 @@ import static io.netty.handler.codec.http3.Http3CodecUtils.readVariableLengthInt
 import static io.netty.handler.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Decodes / encodes {@link Http3Frame}s.
@@ -58,6 +59,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutboundHandler {
     private final Http3FrameTypeValidator validator;
     private final long maxHeaderListSize;
+    private final int maxUnknownFramePayloadLength;
     private final QpackDecoder qpackDecoder;
     private final QpackEncoder qpackEncoder;
     private final Http3RequestStreamCodecState encodeState;
@@ -72,23 +74,29 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private WriteResumptionListener writeResumptionListener;
 
     static Http3FrameCodecFactory newFactory(QpackDecoder qpackDecoder,
-                                             long maxHeaderListSize, QpackEncoder qpackEncoder) {
+                                             long maxHeaderListSize, int maxUnknownFramePayloadLength,
+                                             QpackEncoder qpackEncoder) {
         checkNotNull(qpackEncoder, "qpackEncoder");
         checkNotNull(qpackDecoder, "qpackDecoder");
+        checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        checkPositive(maxUnknownFramePayloadLength, "maxUnknownFramePayloadLength");
 
         // QPACK decoder and encoder are shared between streams in a connection.
         return (validator, encodeState, decodeState,
                 nonStandardSettingsValidator) -> new Http3FrameCodec(validator, qpackDecoder,
-                maxHeaderListSize, qpackEncoder, encodeState, decodeState, nonStandardSettingsValidator);
+                maxHeaderListSize, maxUnknownFramePayloadLength, qpackEncoder,
+                encodeState, decodeState, nonStandardSettingsValidator);
     }
 
     Http3FrameCodec(Http3FrameTypeValidator validator, QpackDecoder qpackDecoder,
-                    long maxHeaderListSize, QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
+                    long maxHeaderListSize, int maxUnknownFramePayloadLength,
+                    QpackEncoder qpackEncoder, Http3RequestStreamCodecState encodeState,
                     Http3RequestStreamCodecState decodeState,
                     Http3Settings.NonStandardHttp3SettingsValidator nonStandardSettingsValidator) {
         this.validator = checkNotNull(validator, "validator");
         this.qpackDecoder = checkNotNull(qpackDecoder, "qpackDecoder");
         this.maxHeaderListSize = checkPositive(maxHeaderListSize, "maxHeaderListSize");
+        this.maxUnknownFramePayloadLength = checkPositive(maxUnknownFramePayloadLength, "maxUnknownFramePayloadLength");
         this.qpackEncoder = checkNotNull(qpackEncoder, "qpackEncoder");
         this.encodeState = checkNotNull(encodeState, "encodeState");
         this.decodeState = checkNotNull(decodeState, "decodeState");
@@ -213,8 +221,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     private static int skipBytes(ByteBuf in, int payLoadLength) {
-        in.skipBytes(payLoadLength);
-        return payLoadLength;
+        int length = Math.min(in.readableBytes(), payLoadLength);
+        in.skipBytes(length);
+        return length;
     }
 
     private int decodeFrame(ChannelHandlerContext ctx, long longType, int payLoadLength, ByteBuf in, List<Object> out) {
@@ -265,6 +274,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, pushIdLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
                 return payLoadLength;
             case HTTP3_SETTINGS_FRAME_TYPE:
@@ -300,6 +312,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 }
                 int readerIdx = in.readerIndex();
                 int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (pushPromiseIdLen > payLoadLength) {
+                    connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                            "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.',
+                            true);
+                    return 0;
+                }
                 Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                         readVariableLengthInteger(in, pushPromiseIdLen));
                 if (decodeHeaders(ctx, pushPromiseFrame.headers(), in, payLoadLength - pushPromiseIdLen, false)) {
@@ -316,6 +334,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, idLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
                 return payLoadLength;
             case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
@@ -326,6 +347,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, pidLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                 return payLoadLength;
             default:
@@ -334,7 +358,8 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 }
                 // Handling reserved frame types
                 // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.8
-                if (in.readableBytes() < payLoadLength) {
+                if (!enforceMaxPayloadLength(ctx, in, type, payLoadLength,
+                        maxUnknownFramePayloadLength, Http3ErrorCode.H3_EXCESSIVE_LOAD)) {
                     return 0;
                 }
                 out.add(new DefaultHttp3UnknownFrame(longType, in.readRetainedSlice(payLoadLength)));
@@ -353,12 +378,33 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         return in.readableBytes() >= payLoadLength;
     }
 
+    /**
+     * Frames whose payload consists of exactly one variable-length integer identifier (CANCEL_PUSH, GO_AWAY,
+     * MAX_PUSH_ID) must declare a frame length that matches the actual encoded length of that integer. The
+     * length of the integer is derived from its own first byte and is independent of {@code payLoadLength}, so
+     * without this check a peer could declare a short frame length whose single byte nevertheless encodes an
+     * integer requiring more bytes than either the declared length or the buffer actually has available.
+     */
+    private boolean enforceExactIdLength(ChannelHandlerContext ctx, int type, int payLoadLength, int idLen) {
+        if (idLen != payLoadLength) {
+            connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                    "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.', true);
+            return false;
+        }
+        return true;
+    }
+
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(
                 new Http3Settings(nonStandardSettingsValidator));
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            if (keyLen > payLoadLength) {
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                        "Received an invalid settings frame length.", true);
+                return null;
+            }
             long key = readVariableLengthInteger(in, keyLen);
             if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                 // This must be treated as a connection error
@@ -369,6 +415,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             }
             payLoadLength -= keyLen;
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            if (valueLen > payLoadLength) {
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                        "Received an invalid settings frame length.", true);
+                return null;
+            }
             long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
 
@@ -696,7 +747,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         @Override
         public void operationComplete(Future<? super QuicStreamChannel> future) {
             if (future.isSuccess()) {
-                resume();
+                run();
             } else {
                 ctx.fireExceptionCaught(future.cause());
             }
@@ -704,7 +755,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         @Override
         public void run() {
-            resume();
+            // If we are not on the handler's event executor loop, schedule resume to execute there.
+            if (ctx.executor().inEventLoop()) {
+                resume();
+            } else {
+                ctx.executor().execute(this);
+            }
         }
 
         private void resume() {
@@ -752,7 +808,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         @Override
         public void operationComplete(Future<? super QuicStreamChannel> future) {
-            drain();
+            // If we are not on the handler's event executor loop, schedule drain to execute there.
+            if (ctx.executor().inEventLoop()) {
+                drain();
+            } else {
+                ctx.executor().execute(this::drain);
+            }
         }
 
         void enqueue(Object msg, ChannelPromise promise) {

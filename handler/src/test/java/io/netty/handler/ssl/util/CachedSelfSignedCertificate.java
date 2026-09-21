@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl.util;
 
+import io.netty.util.LeakPresenceDetector;
+
 import java.security.cert.CertificateException;
 
 public final class CachedSelfSignedCertificate {
@@ -39,11 +41,13 @@ public final class CachedSelfSignedCertificate {
         public static final Object INSTANCE = createInstance();
 
         private static Object createInstance() {
-            try {
-                return new SelfSignedCertificate();
-            } catch (CertificateException e) {
-                return e;
-            }
+            return LeakPresenceDetector.staticInitializer(() -> {
+                try {
+                    return new SelfSignedCertificate();
+                } catch (CertificateException e) {
+                    return e;
+                }
+            });
         }
     }
 }

@@ -80,6 +80,22 @@ public final class BrotliDecoder extends ByteToMessageDecoder {
         this.outputBufferSize = ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize");
     }
 
+    /**
+     * Creates a new {@link BrotliDecoder} that use the {@code maxAllocation}
+     * semantics: the supplied value bounds the size of the emitted decompressed chunks.
+     * The input buffer size stays at the decoder's default.
+     *
+     * @param maxAllocation maximum size, in bytes, of each decompressed output
+     *                      buffer forwarded downstream; if {@code 0}, the
+     *                      decoder's default output cap is used.
+     */
+    public static BrotliDecoder newDecoderWithMaxAllocation(int maxAllocation) {
+        ObjectUtil.checkPositiveOrZero(maxAllocation, "maxAllocation");
+        return maxAllocation > 0 ?
+                new BrotliDecoder(DEFAULT_INPUT_BUFFER_SIZE, maxAllocation) :
+                new BrotliDecoder();
+    }
+
     private void forwardOutput(ChannelHandlerContext ctx) {
         ByteBuffer nativeBuffer = decoder.pull(outputBufferSize);
         // nativeBuffer actually wraps brotli's internal buffer so we need to copy its content

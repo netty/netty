@@ -98,7 +98,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     }
 
     static OpenSslServerSessionContext newSessionContext(ReferenceCountedOpenSslContext thiz, long ctx,
-                                                         Map<Long, ReferenceCountedOpenSslEngine>  engines,
+                                                         OpenSslEngineMap engines,
                                                          X509Certificate[] trustCertCollection,
                                                          TrustManagerFactory trustManagerFactory,
                                                          X509Certificate[] keyCertChain, PrivateKey key,
@@ -217,7 +217,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     }
 
     private static void setVerifyCallback(long ctx,
-                                          Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                          OpenSslEngineMap engines,
                                           X509TrustManager manager) {
         // Use this to prevent an error when running on java < 7
         if (useExtendedTrustManager(manager)) {
@@ -229,10 +229,10 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     }
 
     private static final class OpenSslServerCertificateCallback implements CertificateCallback {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
         private final OpenSslKeyMaterialManager keyManagerHolder;
 
-        OpenSslServerCertificateCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        OpenSslServerCertificateCallback(OpenSslEngineMap engines,
                                          OpenSslKeyMaterialManager keyManagerHolder) {
             this.engines = engines;
             this.keyManagerHolder = keyManagerHolder;
@@ -263,7 +263,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509TrustManager manager;
 
-        TrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        TrustManagerVerifyCallback(OpenSslEngineMap engines,
                                    X509TrustManager manager) {
             super(engines);
             this.manager = manager;
@@ -279,7 +279,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509ExtendedTrustManager manager;
 
-        ExtendedTrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+        ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engines,
                                            X509ExtendedTrustManager manager) {
             super(engines);
             this.manager = manager;
@@ -293,9 +293,9 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     }
 
     private static final class OpenSslSniHostnameMatcher implements SniHostNameMatcher {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
+        private final OpenSslEngineMap engines;
 
-        OpenSslSniHostnameMatcher(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+        OpenSslSniHostnameMatcher(OpenSslEngineMap engines) {
             this.engines = engines;
         }
 

@@ -51,7 +51,7 @@ final class Native {
             // Just ignore
         }
 
-        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possibility of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
@@ -253,6 +253,7 @@ final class Native {
     static final int IORING_FEAT_NODROP = 1 << 1;
     static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
+    static final int IORING_FEAT_NO_IOWAIT = 1 << 17;
 
     static final int IORING_SQ_NEED_WAKEUP = 1 << 0;
     static final int IORING_SQ_CQ_OVERFLOW = 1 << 1;
@@ -316,8 +317,10 @@ final class Native {
 
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
     static final int IORING_ENTER_REGISTERED_RING = 1 << 4;
+    static final int IORING_ENTER_NO_IOWAIT = 1 << 7;
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
+    static final int IOSQE_HARDLINK = NativeStaticallyReferencedJniMethods.iosqeHardlink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
     static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
     static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
@@ -601,6 +604,7 @@ final class Native {
     }
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);
+    static native boolean isUnixDomainSocketInqSupported();
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {

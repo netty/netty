@@ -15,8 +15,12 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.handler.codec.http.HttpConstants;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MemoryFileUploadTest {
@@ -26,5 +30,26 @@ public class MemoryFileUploadTest {
         MemoryFileUpload f1 =
                 new MemoryFileUpload("m1", "m1", "application/json", null, null, 100);
         assertEquals(f1, f1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {
+            0x00,
+            HttpConstants.CR,
+            HttpConstants.LF,
+            0x19,
+            HttpConstants.DEL,
+            HttpConstants.DOUBLE_QUOTE,
+            HttpConstants.BACKSLASH})
+    void filenameCannotContainIllegalCharacters(byte illegal) {
+        assertIllegalFilename(((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal) + "f");
+        assertIllegalFilename("f" + ((char) illegal));
+    }
+
+    private static void assertIllegalFilename(String filename) {
+        assertThatThrownBy(() -> new MemoryFileUpload("f", filename, "plain/text", null, null, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Illegal filename character");
     }
 }

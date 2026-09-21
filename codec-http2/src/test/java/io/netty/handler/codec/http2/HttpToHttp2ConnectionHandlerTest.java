@@ -264,12 +264,35 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testAuthorityFormRequestTargetHandled() throws Exception {
         bootstrapEnv(2, 1, 0);
-        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, CONNECT, "http://www.example.com:80");
+        // https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.3 : the request-target for CONNECT is
+        // authority-form, i.e. host:port, not an absolute-form URI with a scheme.
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, CONNECT, "www.example.com:80");
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "www.example.com:80");
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.5 : HTTP/2 CONNECT requests must omit
+        // :scheme and :path, and carry the tunnel target in :authority.
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("CONNECT")).path(new AsciiString("/"))
-                .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
+                new DefaultHttp2Headers().method(new AsciiString("CONNECT"))
+                .authority(new AsciiString("www.example.com:80"));
+
+        ChannelPromise writePromise = newPromise();
+        verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
+    }
+
+    @Test
+    public void testAuthorityFormRequestTargetIgnoresConflictingHostHeader() throws Exception {
+        bootstrapEnv(2, 1, 0);
+        // A conflicting Host header must not override the CONNECT authority-form request-target when
+        // converting to HTTP/2, otherwise the HTTP/2 :authority (tunnel target) could disagree with the
+        // request-target a proxy/gateway validated against policy.
+        final FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, CONNECT, "trusted.example:443");
+        final HttpHeaders httpHeaders = request.headers();
+        httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
+        httpHeaders.set(HttpHeaderNames.HOST, "attacker.example:443");
+        final Http2Headers http2Headers =
+                new DefaultHttp2Headers().method(new AsciiString("CONNECT"))
+                .authority(new AsciiString("trusted.example:443"));
 
         ChannelPromise writePromise = newPromise();
         verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
@@ -405,7 +428,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         httpHeaders.add(of("foo2"), of("goo2"));
         final Http2Headers http2Headers =
                 new DefaultHttp2Headers().method(new AsciiString("POST")).path(new AsciiString("/example"))
-                .authority(new AsciiString("www.example-origin.org:5555")).scheme(new AsciiString("http"))
+                .authority(new AsciiString("www.example.org:5555")).scheme(new AsciiString("http"))
                 .add(new AsciiString("foo"), new AsciiString("goo"))
                 .add(new AsciiString("foo"), new AsciiString("goo2"))
                 .add(new AsciiString("foo2"), new AsciiString("goo2"));

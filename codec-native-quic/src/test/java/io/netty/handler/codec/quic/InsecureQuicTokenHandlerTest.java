@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
 
@@ -44,6 +45,21 @@ public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
     @Test
     public void testTokenProcessingIpv6() throws UnknownHostException {
         testTokenProcessing(false);
+    }
+
+    @Test
+    public void testTokenValidationResultCanUseDestinationConnectionIdAsOdcid() {
+        ByteBuf token = Unpooled.buffer().writeInt(1);
+        ByteBuf dcid = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
+        try {
+            QuicTokenHandler.TokenValidationResult result =
+                    QuicTokenHandler.TokenValidationResult.odcidFromDestinationConnectionId();
+            assertThat(result.isValid()).isTrue();
+            assertEquals(dcid, result.originalDestinationConnectionId(token, dcid));
+        } finally {
+            token.release();
+            dcid.release();
+        }
     }
 
     private static void testTokenProcessing(boolean ipv4) throws UnknownHostException {
@@ -69,9 +85,15 @@ public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
             InsecureQuicTokenHandler.INSTANCE.writeToken(out, dcid, validAddress);
             assertThat(out.readableBytes()).isLessThanOrEqualTo(InsecureQuicTokenHandler.INSTANCE.maxTokenLength());
             assertNotEquals(-1, InsecureQuicTokenHandler.INSTANCE.validateToken(out, validAddress));
+            QuicTokenHandler.TokenValidationResult result =
+                    InsecureQuicTokenHandler.INSTANCE.validateToken(out, validAddress, dcid);
+            assertThat(result.isValid()).isTrue();
+            assertEquals(dcid, result.originalDestinationConnectionId(out, dcid));
 
             // Use another address and check that the validate fails.
             assertEquals(-1, InsecureQuicTokenHandler.INSTANCE.validateToken(out, invalidAddress));
+            assertSame(QuicTokenHandler.TokenValidationResult.invalidToken(),
+                    InsecureQuicTokenHandler.INSTANCE.validateToken(out, invalidAddress, dcid));
         } finally {
             dcid.release();
             out.release();

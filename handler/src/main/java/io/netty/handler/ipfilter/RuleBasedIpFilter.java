@@ -53,7 +53,9 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
      * <p> {@code acceptIfNotFound} is set to {@code true}. </p>
      *
      * @param rules An array of {@link IpFilterRule} containing all rules.
+     * @deprecated Use {@link RuleBasedIpFilter#RuleBasedIpFilter(boolean, IpFilterRule...)}
      */
+    @Deprecated
     public RuleBasedIpFilter(IpFilterRule... rules) {
         this(true, rules);
     }

@@ -51,6 +51,20 @@ class PerFrameDeflateEncoder extends DeflateEncoder {
         super(compressionLevel, windowSize, noContext, extensionEncoderFilter);
     }
 
+    /**
+     * Constructor
+     *
+     * @param compressionLevel compression level of the compressor.
+     * @param windowSize       maximum size of the window compressor buffer.
+     * @param memLevel         internal compression state memory level (1..9).
+     * @param noContext        true to disable context takeover.
+     * @param extensionEncoderFilter extension encoder filter for per frame deflate encoder.
+     */
+    PerFrameDeflateEncoder(int compressionLevel, int windowSize, int memLevel, boolean noContext,
+                           WebSocketExtensionFilter extensionEncoderFilter) {
+        super(compressionLevel, windowSize, memLevel, noContext, extensionEncoderFilter);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         if (!super.acceptOutboundMessage(msg)) {

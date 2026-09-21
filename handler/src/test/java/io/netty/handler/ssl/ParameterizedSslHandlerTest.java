@@ -62,6 +62,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.KeyStore;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -440,6 +441,8 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                             ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new SilenceExceptionHandler()
+                                    .rootCauseInstanceOf(SignatureException.class));
                         }
                     }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 

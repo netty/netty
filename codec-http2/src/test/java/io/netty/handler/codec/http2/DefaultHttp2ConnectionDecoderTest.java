@@ -44,6 +44,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
@@ -601,6 +602,141 @@ public class DefaultHttp2ConnectionDecoderTest {
         assertThat(ex.getMessage()).contains(pseudoHeader);
     }
 
+    // Builds a decoder with validateRequiredPseudoHeaders enabled, primed past the preface.
+    private Http2FrameListener strictDecode() throws Exception {
+        DefaultHttp2ConnectionDecoder strict = new DefaultHttp2ConnectionDecoder(
+                connection, encoder, reader, ALWAYS_VERIFY, true, true, true, true);
+        strict.lifecycleManager(lifecycleManager);
+        strict.frameListener(listener);
+        decode(strict).onSettingsRead(ctx, new Http2Settings());
+        return decode(strict);
+    }
+
+    private static Http2Headers request() {
+        return new DefaultHttp2Headers().method("GET").scheme("https").authority("example.org").path("/");
+    }
+
+    private Http2Exception assertHeadersRejected(final Http2FrameListener dec, final Http2Headers headers,
+            final boolean endOfStream) throws Http2Exception {
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onHeadersRead(ctx, STREAM_ID, headers, 0, endOfStream);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        verify(listener, never()).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(endOfStream));
+        return ex;
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {":method", ":scheme", ":path"})
+    public void requestMissingMandatoryPseudoHeaderRejectedWhenEnabled(String missing) throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = request();
+        headers.remove(missing);
+        assertThat(assertHeadersRejected(strictDecode(), headers, true).getMessage()).contains(missing);
+    }
+
+    @Test
+    public void requestEmptyPathRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        // Disable header-level validation so the empty :path reaches the decoder's own check.
+        Http2Headers headers = new DefaultHttp2Headers(false)
+                .method("GET").scheme("https").authority("example.org").path("");
+        assertThat(assertHeadersRejected(strictDecode(), headers, true).getMessage()).contains(":path");
+    }
+
+    @Test
+    public void emptyRequestRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        assertHeadersRejected(strictDecode(), EmptyHttp2Headers.INSTANCE, true);
+    }
+
+    @Test
+    public void validRequestAcceptedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = request();
+        strictDecode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
+    @Test
+    public void connectRequestWithoutSchemeAndPathAcceptedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        // A CONNECT request (RFC 9113, 8.5) omits :scheme and :path and only carries :authority.
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT").authority("example.org:443");
+        strictDecode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+    }
+
+    @Test
+    public void connectRequestMissingAuthorityRejectedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT");
+        assertThat(assertHeadersRejected(strictDecode(), headers, false).getMessage()).contains(":authority");
+    }
+
+    @Test
+    public void extendedConnectRequiresSchemeAndPathWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        // Extended CONNECT (RFC 8441) is identified by :protocol and must include :scheme and :path.
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT").authority("example.org");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        assertThat(assertHeadersRejected(strictDecode(), headers, false).getMessage()).contains(":scheme");
+    }
+
+    @Test
+    public void extendedConnectAcceptedWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2Headers headers = new DefaultHttp2Headers().method("CONNECT").scheme("https")
+                .authority("example.org").path("/chat");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        strictDecode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+    }
+
+    @Test
+    public void responseMissingStatusRejectedWhenEnabled() throws Exception {
+        // isServer() defaults to false, so inbound HEADERS are treated as a response.
+        assertThat(assertHeadersRejected(strictDecode(), EmptyHttp2Headers.INSTANCE, true).getMessage())
+                .contains(":status");
+    }
+
+    @Test
+    public void validResponseAcceptedWhenEnabled() throws Exception {
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+        strictDecode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(headers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
+    @Test
+    public void trailersNotRequiredToCarryPseudoHeadersWhenEnabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        Http2FrameListener dec = strictDecode();
+        // Valid initial request headers.
+        dec.onHeadersRead(ctx, STREAM_ID, request(), 0, false);
+        // Trailers carry no pseudo-headers and must still be accepted (check applies to initial HEADERS only).
+        Http2Headers trailers = new DefaultHttp2Headers().add("x-trailer", "value");
+        dec.onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(trailers), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
+    @Test
+    public void defaultDecoderDoesNotValidateMandatoryPseudoHeaders() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        // The default decoder has validateRequiredPseudoHeaders disabled, so an empty request is accepted.
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+        verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true));
+    }
+
     @Test
     public void tooManyHeadersEOSThrows() throws Exception {
         tooManyHeaderThrows(true);
@@ -721,6 +857,64 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
         verify(listener).onPushPromiseRead(eq(ctx), eq(STREAM_ID), eq(PUSH_STREAM_ID),
                 eq(EmptyHttp2Headers.INSTANCE), eq(0));
+    }
+
+    // The promised stream must still be reserved (i.e. its existence tracked by the connection) even when the
+    // Http2PromisedRequestVerifier subsequently rejects the promised request, so that the stream ID cannot be
+    // silently reused or its book keeping lost. A follow-up frame for that stream must then be rejected with a
+    // stream error rather than a connection error, since the connection is now aware of the stream.
+    @Test
+    public void pushPromiseReadRejectedByVerifierShouldStillReserveStream() throws Exception {
+        Http2PromisedRequestVerifier verifier = new Http2PromisedRequestVerifier() {
+            @Override
+            public boolean isAuthoritative(ChannelHandlerContext ctx, Http2Headers headers) {
+                return false;
+            }
+
+            @Override
+            public boolean isCacheable(Http2Headers headers) {
+                return true;
+            }
+
+            @Override
+            public boolean isSafe(Http2Headers headers) {
+                return true;
+            }
+        };
+        DefaultHttp2ConnectionDecoder rejecting =
+                new DefaultHttp2ConnectionDecoder(connection, encoder, reader, verifier);
+        rejecting.lifecycleManager(lifecycleManager);
+        rejecting.frameListener(listener);
+        // Prime the decoder past the connection preface so PUSH_PROMISE is not treated as an unexpected
+        // first frame.
+        decode(rejecting).onSettingsRead(ctx, new Http2Settings());
+        final Http2FrameListener dec = decode(rejecting);
+
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(ex));
+
+        verify(remote).reservePushStream(eq(PUSH_STREAM_ID), eq(stream));
+        verify(listener, never()).onPushPromiseRead(eq(ctx), anyInt(), anyInt(), any(Http2Headers.class), anyInt());
+
+        // Because the promised stream was reserved despite the rejection, the connection now knows about its
+        // existence. A follow-up HEADERS frame for that stream (e.g. once it has been reset and closed) must
+        // therefore be rejected with a stream error scoped to that stream, rather than a connection error.
+        when(connection.stream(PUSH_STREAM_ID)).thenReturn(pushStream);
+        when(pushStream.state()).thenReturn(Http2Stream.State.CLOSED);
+        Http2Exception followUpEx = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onHeadersRead(ctx, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true);
+            }
+        });
+        assertEquals(STREAM_CLOSED, followUpEx.error());
+        assertEquals(PUSH_STREAM_ID, Http2Exception.streamId(followUpEx));
     }
 
     @Test

@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -39,6 +40,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
@@ -193,7 +195,42 @@ public class SocketConnectTest extends AbstractSocketTest {
         });
     }
 
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectDirectBufferReaderIndex(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> directBufferWithReaderIndex(
+                                channel, "BAD-PREFIX-", "[fastopen-reader-index]"),
+                        "[fastopen-reader-index]"));
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectCompositeBuffer(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> compositeBuffer(channel, "[fastopen-", "composite-", "data]"),
+                        "[fastopen-composite-data]"));
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testWriteWithFastOpenBeforeConnectCompositeBufferReaderIndex(TestInfo testInfo) throws Throwable {
+        run(testInfo, (serverBootstrap, bootstrap) ->
+                testWriteWithFastOpenBeforeConnect(serverBootstrap, bootstrap,
+                        channel -> compositeBufferWithReaderIndex(
+                                channel, "BAD-PREFIX-", "[fastopen-", "composite-reader-", "index]"),
+                        "[fastopen-composite-reader-index]"));
+    }
+
     public void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        testWriteWithFastOpenBeforeConnect(sb, cb, channel -> writeAscii(DEFAULT, "[fastopen]"), "[fastopen]");
+    }
+
+    protected void testWriteWithFastOpenBeforeConnect(ServerBootstrap sb, Bootstrap cb,
+                                                      Function<Channel, ByteBuf> initialDataFactory,
+                                                      String expectedInitialData) throws Throwable {
         enableTcpFastOpen(sb, cb);
         sb.childOption(ChannelOption.AUTO_READ, true);
         cb.option(ChannelOption.AUTO_READ, true);
@@ -206,26 +243,59 @@ public class SocketConnectTest extends AbstractSocketTest {
         });
 
         Channel sc = sb.bind().sync().channel();
-        connectAndVerifyDataTransfer(cb, sc);
-        connectAndVerifyDataTransfer(cb, sc);
+        connectAndVerifyDataTransfer(cb, sc, initialDataFactory, expectedInitialData);
+        connectAndVerifyDataTransfer(cb, sc, initialDataFactory, expectedInitialData);
     }
 
-    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc)
+    private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc,
+                                                     Function<Channel, ByteBuf> initialDataFactory,
+                                                     String expectedInitialData)
             throws InterruptedException {
         BufferingClientHandler handler = new BufferingClientHandler();
         cb.handler(handler);
         ChannelFuture register = cb.register();
         Channel channel = register.sync().channel();
-        ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        ChannelFuture write = channel.write(initialDataFactory.apply(channel));
         SocketAddress remoteAddress = sc.localAddress();
         ChannelFuture connectFuture = channel.connect(remoteAddress);
         Channel cc = connectFuture.sync().channel();
         cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
         write.sync();
-        String expectedString = "[fastopen][normal data]";
+        String expectedString = expectedInitialData + "[normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
         cc.disconnect().sync();
         assertEquals(expectedString, result);
+    }
+
+    private static ByteBuf directBufferWithReaderIndex(Channel channel, String prefix, String data) {
+        ByteBuf buffer = directBuffer(channel, prefix + data);
+        buffer.readerIndex(prefix.getBytes(US_ASCII).length);
+        return buffer;
+    }
+
+    private static ByteBuf compositeBufferWithReaderIndex(Channel channel, String prefix, String... parts) {
+        CompositeByteBuf buffer = channel.alloc().compositeDirectBuffer(parts.length + 1);
+        buffer.addComponent(true, directBuffer(channel, prefix));
+        for (String part : parts) {
+            buffer.addComponent(true, directBuffer(channel, part));
+        }
+        buffer.readerIndex(prefix.getBytes(US_ASCII).length);
+        return buffer;
+    }
+
+    private static ByteBuf compositeBuffer(Channel channel, String... parts) {
+        CompositeByteBuf buffer = channel.alloc().compositeDirectBuffer(parts.length);
+        for (String part : parts) {
+            buffer.addComponent(true, directBuffer(channel, part));
+        }
+        return buffer;
+    }
+
+    private static ByteBuf directBuffer(Channel channel, String data) {
+        byte[] bytes = data.getBytes(US_ASCII);
+        ByteBuf buffer = channel.alloc().directBuffer(bytes.length);
+        buffer.writeBytes(bytes);
+        return buffer;
     }
 
     protected void enableTcpFastOpen(ServerBootstrap sb, Bootstrap cb) {

@@ -32,7 +32,7 @@ public class QpackStreamHandlerTest {
 
         EmbeddedQuicStreamChannel channel =
                 (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                        new QpackDecoderHandler(new QpackEncoder())).get();
+                        new QpackDecoderHandler(new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE))).get();
         assertFalse(channel.finish());
         verifyClose(1, Http3ErrorCode.H3_CLOSED_CRITICAL_STREAM, parent);
     }
@@ -44,7 +44,7 @@ public class QpackStreamHandlerTest {
 
         EmbeddedQuicStreamChannel channel =
                 (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                        new QpackDecoderHandler(new QpackEncoder())).get();
+                        new QpackDecoderHandler(new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE))).get();
         assertFalse(channel.finish());
     }
 
@@ -55,7 +55,7 @@ public class QpackStreamHandlerTest {
 
         EmbeddedQuicStreamChannel channel =
                 (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                        new QpackDecoderHandler(new QpackEncoder())).get();
+                        new QpackDecoderHandler(new QpackEncoder(QpackSensitivityDetector.NEVER_SENSITIVE))).get();
         ByteBuf buffer = Unpooled.buffer();
         assertFalse(channel.writeInbound(buffer));
         assertEquals(0, buffer.refCnt());

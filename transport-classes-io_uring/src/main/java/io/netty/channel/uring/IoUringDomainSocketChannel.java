@@ -102,6 +102,23 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         return false;
     }
 
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        return IoUring.isUnixDomainSocketInqSupported() && super.socketIsEmpty(flags);
+    }
+
+    @Override
+    protected boolean shouldCompleteReadLoop(int flags, boolean multishot) {
+        if (IoUring.isUnixDomainSocketInqSupported()) {
+            return socketIsEmpty(flags);
+        }
+        // Older kernels cannot report IORING_CQE_F_SOCK_NONEMPTY for UDS, so the read-loop boundary cannot be
+        // determined reliably.
+        // Multishot recv does not produce an EAGAIN completion while it remains armed, so
+        // complete the read loop for each multishot completion. A one-shot recv can continue until EAGAIN.
+        return multishot;
+    }
+
     private final class IoUringDomainSocketUnsafe extends IoUringStreamUnsafe {
 
         private MsgHdrMemory writeMsgHdrMemory;
@@ -131,7 +148,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
@@ -141,8 +158,11 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
+                        // The completion may arrive after close() or shutdownOutput() dropped the buffer.
                         ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-                        channelOutboundBuffer.remove();
+                        if (channelOutboundBuffer != null) {
+                            channelOutboundBuffer.remove();
+                        }
                     }
                 } catch (Throwable throwable) {
                    handleWriteError(throwable);

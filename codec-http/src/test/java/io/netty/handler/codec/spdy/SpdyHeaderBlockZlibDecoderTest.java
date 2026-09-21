@@ -23,6 +23,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.io.ByteArrayOutputStream;
+import java.util.zip.Deflater;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,6 +38,9 @@ public class SpdyHeaderBlockZlibDecoderTest {
     private static final byte[] zlibSyncFlush = {0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff};
 
     private static final int maxHeaderSize = 8192;
+
+    private static final long MAX_DECOMPRESSED_SIZE =
+            SpdyHeaderBlockZlibDecoder.calculateMaxDecompressedSizePerBlock(maxHeaderSize);
 
     private static final String name = "name";
     private static final String value = "value";
@@ -241,5 +247,69 @@ public class SpdyHeaderBlockZlibDecoderTest {
         });
 
         headerBlock.release();
+    }
+
+    @Test
+    public void testHeaderBlockAtDecompressionCapIsAccepted() throws Exception {
+        long valueLength = MAX_DECOMPRESSED_SIZE - headerBlockOverhead();
+        ByteBuf headerBlock = Unpooled.wrappedBuffer(deflate(buildHeaderBlock((int) valueLength)));
+
+        decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+        decoder.endHeaderBlock(frame);
+
+        assertFalse(frame.isInvalid());
+        assertTrue(frame.isTruncated());
+
+        headerBlock.release();
+    }
+
+    @Test
+    public void testHeaderBlockExceedingDecompressionCapThrows() throws Exception {
+        long valueLength = MAX_DECOMPRESSED_SIZE - headerBlockOverhead() + 1;
+        final ByteBuf headerBlock = Unpooled.wrappedBuffer(deflate(buildHeaderBlock((int) valueLength)));
+
+        assertThrows(SpdyProtocolException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
+            }
+        });
+
+        headerBlock.release();
+    }
+
+    // 4 bytes for the header count, 4 bytes for the name length, the 1-byte name itself,
+    // and 4 bytes for the value length: everything but the value payload.
+    private static long headerBlockOverhead() {
+        return 4 + 4 + 1 + 4;
+    }
+
+    private static byte[] buildHeaderBlock(int valueLength) {
+        ByteBuf buf = Unpooled.buffer((int) headerBlockOverhead() + valueLength);
+        buf.writeInt(1); // number of Name/Value pairs
+        buf.writeInt(1); // length of name
+        buf.writeByte('n');
+        buf.writeInt(valueLength);
+        buf.writeZero(valueLength);
+
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        buf.release();
+        return bytes;
+    }
+
+    private static byte[] deflate(byte[] input) {
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        deflater.setInput(input);
+        deflater.finish();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        while (!deflater.finished()) {
+            int n = deflater.deflate(chunk);
+            out.write(chunk, 0, n);
+        }
+        deflater.end();
+        return out.toByteArray();
     }
 }

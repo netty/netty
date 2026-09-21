@@ -153,7 +153,12 @@ final class DnsCodecUtil {
     static ByteBuf decompressDomainName(ByteBuf compression) {
         String domainName = decodeDomainName(compression);
         ByteBuf result = compression.alloc().buffer(domainName.length() << 1);
-        encodeDomainName(domainName, result);
+        try {
+            encodeDomainName(domainName, result);
+        } catch (Throwable cause) {
+            result.release();
+            throw cause;
+        }
         return result;
     }
 }

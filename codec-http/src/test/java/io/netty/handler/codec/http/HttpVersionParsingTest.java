@@ -109,6 +109,51 @@ public class HttpVersionParsingTest {
         );
     }
 
+    @Test
+    void testLeadingNulInStrictValueOfIsRejected() {
+        String text = (char) 0x00 + "HTTP/1.1";
+        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
+                "leading NUL must be rejected");
+    }
+
+    @Test
+    void testTrailingNulInStrictValueOfIsRejected() {
+        String text = "HTTP/1.1" + (char) 0x00;
+        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
+                "trailing NUL must be rejected");
+    }
+
+    @Test
+    void testLeadingControlCharInStrictValueOfIsRejected() {
+        // CR, LF, VT and FF must all be rejected in the version token.
+        for (int control : new int[] {0x0D, 0x0A, 0x0B, 0x0C}) {
+            String text = (char) control + "HTTP/1.1";
+            assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text, true),
+                    "control char 0x" + Integer.toHexString(control) + " must be rejected");
+        }
+    }
+
+    @Test
+    void testLeadingSpaceInStrictValueOfIsRejected() {
+        // A leading space in the version token must be rejected.
+        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(" HTTP/1.1", true),
+                "leading space must be rejected");
+    }
+
+    @Test
+    void testLeadingNulInNonStrictValueOfIsRejected() {
+        String text = (char) 0x00 + "HTTP/1.1";
+        assertThrows(IllegalArgumentException.class, () -> HttpVersion.valueOf(text),
+                "leading NUL must be rejected in non-strict mode too");
+    }
+
+    @Test
+    void testValidVersionsResolveCorrectly() {
+        assertSame(HttpVersion.HTTP_1_1, HttpVersion.valueOf("HTTP/1.1", true));
+        assertSame(HttpVersion.HTTP_1_0, HttpVersion.valueOf("HTTP/1.0"));
+        assertEquals("ICAP", HttpVersion.valueOf("icap/1.0").protocolName());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "HTTP ",

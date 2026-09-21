@@ -37,6 +37,7 @@ import static io.netty.handler.codec.http.HttpMethod.PATCH;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpMethod.PUT;
 import static io.netty.handler.codec.http.HttpMethod.TRACE;
+import static io.netty.handler.codec.http.HttpMethod.QUERY;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 
 @State(Scope.Benchmark)
@@ -61,6 +62,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
                 "POST",
                 "PUT",
                 "PATCH",
+                "QUERY",
                 "DELETE",
                 "TRACE",
                 "CONNECT"
@@ -98,6 +100,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
         OLD_MAP.put(DELETE.toString(), DELETE);
         OLD_MAP.put(TRACE.toString(), TRACE);
         OLD_MAP.put(CONNECT.toString(), CONNECT);
+        OLD_MAP.put(QUERY.toString(), QUERY);
 
         NEW_MAP = new SimpleStringMap<HttpMethod>(
                 new SimpleStringMap.Node<HttpMethod>(OPTIONS.toString(), OPTIONS),
@@ -106,6 +109,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
                 new SimpleStringMap.Node<HttpMethod>(POST.toString(), POST),
                 new SimpleStringMap.Node<HttpMethod>(PUT.toString(), PUT),
                 new SimpleStringMap.Node<HttpMethod>(PATCH.toString(), PATCH),
+                new SimpleStringMap.Node<HttpMethod>(QUERY.toString(), QUERY),
                 new SimpleStringMap.Node<HttpMethod>(DELETE.toString(), DELETE),
                 new SimpleStringMap.Node<HttpMethod>(TRACE.toString(), TRACE),
                 new SimpleStringMap.Node<HttpMethod>(CONNECT.toString(), CONNECT));

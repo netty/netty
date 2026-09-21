@@ -50,6 +50,7 @@ public class HttpHeaderValidationUtilTest {
         list.add(header(false, HttpHeaderNames.ACCEPT_LANGUAGE));
         list.add(header(false, HttpHeaderNames.ACCEPT_RANGES));
         list.add(header(false, HttpHeaderNames.ACCEPT_PATCH));
+        list.add(header(false, HttpHeaderNames.ACCEPT_QUERY));
         list.add(header(false, HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS));
         list.add(header(false, HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS));
         list.add(header(false, HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS));

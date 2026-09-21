@@ -55,7 +55,7 @@ final class MsgHdr {
         }
     }
 
-    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, ByteBuffer iovMemory, int iovLength,
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, long iovMemory, int iovLength,
                     ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
         int memoryPosition = memory.position();
         memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
@@ -74,19 +74,25 @@ final class MsgHdr {
         long sockAddr = sockAddrMemory == null ? 0 : Buffer.memoryAddress(sockAddrMemory);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, (int) sockAddr);
-            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) Buffer.memoryAddress(iovMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) iovMemory);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, sockAddr);
-            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, iovMemory);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         }
         // No flags (we assume the memory was memset before)
+    }
+
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, ByteBuffer iovMemory, int iovLength,
+                    ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
+        set(memory, sockAddrMemory, addressSize, Buffer.memoryAddress(iovMemory), iovLength,
+                msgControl, cmsgHdrDataOffset, segmentSize);
     }
 
     static void prepSendFd(ByteBuffer memory, int fd, ByteBuffer msgControl,

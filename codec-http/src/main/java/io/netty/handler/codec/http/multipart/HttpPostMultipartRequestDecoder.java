@@ -1283,10 +1283,15 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 sb.append(HttpConstants.SP_CHAR);
                 break;
             case HttpConstants.DOUBLE_QUOTE:
-                // nothing added, just removes it
+            case HttpConstants.BACKSLASH:
+                // nothing added, just removes double quote and backslash
                 break;
             default:
-                sb.append(nextChar);
+                if (nextChar < HttpConstants.SP || nextChar == HttpConstants.DEL) {
+                    sb.append(HttpConstants.SP_CHAR);
+                } else {
+                    sb.append(nextChar);
+                }
                 break;
             }
         }

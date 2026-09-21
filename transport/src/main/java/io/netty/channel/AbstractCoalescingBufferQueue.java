@@ -126,6 +126,7 @@ public abstract class AbstractCoalescingBufferQueue {
             aggregatePromise.addListener((ChannelFutureListener) entry);
             bufAndListenerPairs.poll();
         }
+        reconcileReadableBytes();
         return result;
     }
 
@@ -146,7 +147,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {
-            assert readableBytes == 0;
+            reconcileReadableBytes();
             return removeEmptyValue();
         }
         bytes = Math.min(bytes, readableBytes);
@@ -215,6 +216,7 @@ public abstract class AbstractCoalescingBufferQueue {
             throwException(cause);
         }
         decrementReadableBytes(originalBytes - bytes);
+        reconcileReadableBytes();
         return toReturn;
     }
 
@@ -289,6 +291,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
             }
         }
+        reconcileReadableBytes();
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
@@ -402,6 +405,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
             }
         }
+        reconcileReadableBytes();
         if (pending != null) {
             throw new IllegalStateException(pending);
         }
@@ -423,6 +427,22 @@ public abstract class AbstractCoalescingBufferQueue {
         assert readableBytes >= 0;
         if (tracker != null) {
             tracker.decrementPendingOutboundBytes(decrement);
+        }
+    }
+
+    /**
+     * Resets readableBytes to 0 when the queue is empty. They can only diverge if a queued buffer was released
+     * or consumed while still referenced by the queue (similar to a reference-counting bug) after it was added,
+     * which would otherwise make remove(...) return empty buffers forever. Logged at error level because it
+     * always indicates a bug that needs to be found.
+     * See https://github.com/netty/netty/issues/16946
+     */
+    private void reconcileReadableBytes() {
+        if (readableBytes != 0 && bufAndListenerPairs.isEmpty()) {
+            logger.error("readableBytes is {} but the queue is empty: a queued buffer was released or consumed " +
+                    "while still referenced by the queue. This indicates a bug in the code that produced the " +
+                    "buffer. Resetting readableBytes to 0.", readableBytes);
+            decrementReadableBytes(readableBytes);
         }
     }
 

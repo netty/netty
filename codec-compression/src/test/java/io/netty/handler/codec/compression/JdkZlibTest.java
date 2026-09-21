@@ -25,7 +25,10 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,8 +37,12 @@ import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -137,6 +144,210 @@ public class JdkZlibTest extends ZlibTest {
         } finally {
             assertFalse(chDecoderGZip.finish());
             chDecoderGZip.close();
+        }
+    }
+
+    @Test
+    public void testGZIPDecodeWithExtraField() throws Exception {
+        byte[] data = "Hello, gzip FEXTRA world!".getBytes(CharsetUtil.UTF_8);
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 }; // 6 arbitrary bytes
+        byte[] gzipWithExtra = gzipWithExtraField(data, extra);
+
+        // Sanity-check the crafted stream is a valid gzip by decoding it with the JDK itself.
+        assertArrayEquals(data, jdkGunzip(gzipWithExtra));
+
+        // netty must decode it identically; before the FEXTRA fix the extra bytes were never
+        // skipped, corrupting the deflate stream and throwing DecompressionException.
+        EmbeddedChannel ch = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(gzipWithExtra)));
+            ByteBuf out = ch.readInbound();
+            assertEquals(new String(data, CharsetUtil.UTF_8), out.toString(CharsetUtil.UTF_8));
+            out.release();
+        } finally {
+            assertFalse(ch.finish());
+            ch.close();
+        }
+    }
+
+    @Test
+    public void testConcatenatedGzipFirstStreamHasExtraField() throws Exception {
+        // Regression guard: with concatenated streams, an FEXTRA field on the first stream must not
+        // leak its XLEN into the second stream's header parsing. The xlen state has to be reset
+        // between streams; otherwise the second stream (which has no extra field) would skip
+        // xlen bytes that are actually deflate data and fail to decode.
+        String firstText = "first stream";
+        String secondText = "second stream";
+        byte[] first = firstText.getBytes(CharsetUtil.UTF_8);
+        byte[] second = secondText.getBytes(CharsetUtil.UTF_8);
+        byte[] extra = { 0x42, 0x43, 0x02, 0x00, (byte) 0x99, 0x00 };
+
+        byte[] firstGz = gzipWithExtraField(first, extra); // first stream HAS an extra field
+        byte[] secondGz = gzip(second);                    // second stream has none
+        byte[] both = new byte[firstGz.length + secondGz.length];
+        System.arraycopy(firstGz, 0, both, 0, firstGz.length);
+        System.arraycopy(secondGz, 0, both, firstGz.length, secondGz.length);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
+        try {
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(both)));
+            ByteArrayOutputStream decoded = new ByteArrayOutputStream();
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                msg.readBytes(decoded, msg.readableBytes());
+                msg.release();
+            }
+            assertArrayEquals((firstText + secondText).getBytes(CharsetUtil.UTF_8),
+                    decoded.toByteArray());
+            decoded.close();
+        } finally {
+            assertFalse(ch.finish());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("highlyCompressibleStreams")
+    public void testHighlyCompressibleStreamIsFullyDecoded(ZlibWrapper wrapper, int size, int chunkSize)
+            throws Exception {
+        // Every output buffer is sized from the number of remaining input bytes. That is generous at
+        // ordinary compression ratios, but at a high ratio the inflater can pull the last input byte into
+        // its internal state while it still holds decoded data, and then the proposed size is zero and
+        // inflate(...) cannot make progress. The tail stayed inside the inflater and was dropped together
+        // with the input, without any exception, so a peer simply saw a short body.
+        assertFullyDecoded(wrapper, size, chunkSize);
+    }
+
+    private static Object[][] highlyCompressibleStreams() {
+        // The two payload shapes reach the two places a buffer is taken. 65537 bytes written in one go
+        // crosses the threshold at which the decoder forwards the buffer downstream and then allocates a
+        // fresh one; 33333 bytes arriving in 7-byte reads stays under that threshold but starts every
+        // decode(...) call with a fresh buffer. Only ZlibWrapper.NONE actually lost bytes before the fix,
+        // because the ZLIB and GZIP trailers keep bytes in the input buffer while output is still pending.
+        return new Object[][] {
+                { ZlibWrapper.NONE, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.NONE, 33333, 7 },
+                { ZlibWrapper.ZLIB, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.ZLIB, 33333, 7 },
+                { ZlibWrapper.GZIP, 65537, Integer.MAX_VALUE },
+                { ZlibWrapper.GZIP, 33333, 7 },
+        };
+    }
+
+    private void assertFullyDecoded(ZlibWrapper wrapper, int size, int chunkSize) throws Exception {
+        byte[] data = new byte[size];
+        Arrays.fill(data, (byte) 'a');
+        byte[] compressed = compress(wrapper, data);
+
+        // Cross-check the fixture with the JDK itself, so a failure below cannot be blamed on it.
+        assertArrayEquals(data, jdkInflate(wrapper, compressed));
+
+        EmbeddedChannel ch = new EmbeddedChannel(createDecoder(wrapper));
+        ByteArrayOutputStream decoded = new ByteArrayOutputStream();
+        try {
+            ByteBuf in = Unpooled.wrappedBuffer(compressed);
+            try {
+                while (in.isReadable()) {
+                    ch.writeInbound(in.readRetainedSlice(Math.min(chunkSize, in.readableBytes())));
+                }
+            } finally {
+                in.release();
+            }
+            ch.finish();
+
+            ByteBuf msg;
+            while ((msg = ch.readInbound()) != null) {
+                msg.readBytes(decoded, msg.readableBytes());
+                msg.release();
+            }
+            assertArrayEquals(data, decoded.toByteArray());
+        } finally {
+            decoded.close();
+            ch.close();
+        }
+    }
+
+    private static byte[] compress(ZlibWrapper wrapper, byte[] data) throws IOException {
+        if (wrapper == ZlibWrapper.GZIP) {
+            return gzip(data);
+        }
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        DeflaterOutputStream deflaterOut = new DeflaterOutputStream(bytesOut,
+                new Deflater(Deflater.BEST_COMPRESSION, wrapper == ZlibWrapper.NONE));
+        deflaterOut.write(data);
+        deflaterOut.close();
+        return bytesOut.toByteArray();
+    }
+
+    private static byte[] jdkInflate(ZlibWrapper wrapper, byte[] compressed) throws IOException {
+        if (wrapper == ZlibWrapper.GZIP) {
+            return jdkGunzip(compressed);
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            InflaterInputStream in = new InflaterInputStream(new ByteArrayInputStream(compressed),
+                    new Inflater(wrapper == ZlibWrapper.NONE));
+            try {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            } finally {
+                in.close();
+            }
+            return out.toByteArray();
+        } finally {
+            out.close();
+        }
+    }
+
+    private static byte[] gzip(byte[] data) throws IOException {
+        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(bytesOut);
+        gzipOut.write(data);
+        gzipOut.close();
+        return bytesOut.toByteArray();
+    }
+
+    private static byte[] gzipWithExtraField(byte[] data, byte[] extra) throws IOException {
+        // GZIPOutputStream never emits an FEXTRA field, so build a standard gzip stream first ...
+        byte[] standard = gzip(data);
+
+        // ... then splice in an FEXTRA field by hand: set the FEXTRA flag in FLG and insert
+        // XLEN (2 bytes, little-endian per RFC 1952) followed by the extra subfield, right after
+        // the fixed 10-byte gzip header.
+        ByteArrayOutputStream withExtra = new ByteArrayOutputStream();
+        try {
+            byte[] header = Arrays.copyOfRange(standard, 0, 10);
+            header[3] |= 0x04; // FLG.FEXTRA
+            withExtra.write(header);
+            withExtra.write(extra.length & 0xff);          // XLEN low byte (little-endian)
+            withExtra.write((extra.length >>> 8) & 0xff);  // XLEN high byte
+            withExtra.write(extra);
+            withExtra.write(standard, 10, standard.length - 10);
+            return withExtra.toByteArray();
+        } finally {
+            withExtra.close();
+        }
+    }
+
+    private static byte[] jdkGunzip(byte[] gz) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            java.util.zip.GZIPInputStream in =
+                    new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(gz));
+            try {
+                byte[] buf = new byte[256];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+            } finally {
+                in.close();
+            }
+            return out.toByteArray();
+        } finally {
+            out.close();
         }
     }
 

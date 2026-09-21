@@ -55,6 +55,10 @@ final class BsdSocket extends Socket {
         super(fd);
     }
 
+    SocketProtocolFamily family() {
+        return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+    }
+
     void setAcceptFilter(AcceptFilter acceptFilter) throws IOException {
         setAcceptFilter(intValue(), acceptFilter.filterName(), acceptFilter.filterArgs());
     }
@@ -236,7 +240,7 @@ final class BsdSocket extends Socket {
                                         long offset, long length) throws IOException;
 
     /**
-     * @return If successful, zero or positive number of bytes transfered, otherwise negative errno.
+     * @return If successful, zero or positive number of bytes transferred, otherwise negative errno.
      */
     private static native int connectx(
             int socketFd,

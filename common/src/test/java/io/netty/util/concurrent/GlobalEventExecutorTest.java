@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -154,6 +155,26 @@ public class GlobalEventExecutorTest {
         f.sync();
 
         assertTrue(t.ran.get());
+    }
+
+    @Test
+    public void testTerminationFutureFailureDoesNotFillInStackTrace() {
+        // The GlobalEventExecutor.INSTANCE is a singleton that lives for the lifetime of the Classloader that
+        // loaded it. It holds on to the failure of its terminationFuture forever, so that failure must not
+        // populate a (native) backtrace: doing so would pin the Classloader of whatever thread happened to
+        // trigger the lazy initialization of INSTANCE (see https://github.com/netty/netty/issues/17128).
+        Throwable cause = e.terminationFuture().cause();
+        assertNotNull(cause);
+        assertTrue(cause instanceof UnsupportedOperationException);
+
+        StackTraceElement[] before = cause.getStackTrace();
+        assertEquals(1, before.length);
+        assertEquals(GlobalEventExecutor.class.getName(), before[0].getClassName());
+        assertEquals("terminationFuture", before[0].getMethodName());
+
+        // fillInStackTrace() must be a no-op; otherwise it would repopulate the backtrace with native frames.
+        cause.fillInStackTrace();
+        assertArrayEquals(before, cause.getStackTrace());
     }
 
     private static final class TestRunnable implements Runnable {

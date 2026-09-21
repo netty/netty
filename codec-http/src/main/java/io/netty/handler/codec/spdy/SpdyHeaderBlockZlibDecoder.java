@@ -29,12 +29,27 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
     private static final SpdyProtocolException INVALID_HEADER_BLOCK =
             new SpdyProtocolException("Invalid Header Block");
 
+    // Legitimate header blocks are bounded by maxHeaderSize, but framing overhead (the header
+    // count and the per-header name/value length prefixes) means the decompressed size of a
+    // wire-legitimate header block can exceed maxHeaderSize itself. A generous multiplier is used
+    // instead of an equal cap so this never rejects well-formed header blocks, while still
+    // preventing a maliciously compressible header block from forcing an effectively unbounded
+    // number of Inflater#inflate() calls on the calling (event-loop) thread.
+    private static final int MAX_DECOMPRESSED_SIZE_MULTIPLIER = 16;
+
     private final Inflater decompressor = new Inflater();
+    private final long maxDecompressedSize;
 
     private ByteBuf decompressed;
+    private long totalInflated;
 
     SpdyHeaderBlockZlibDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
         super(spdyVersion, maxHeaderSize);
+        maxDecompressedSize = calculateMaxDecompressedSizePerBlock(maxHeaderSize);
+    }
+
+    static long calculateMaxDecompressedSizePerBlock(int maxHeaderSize) {
+        return (long) maxHeaderSize * MAX_DECOMPRESSED_SIZE_MULTIPLIER;
     }
 
     @Override
@@ -44,6 +59,11 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
         int numBytes;
         do {
             numBytes = decompress(alloc, frame);
+            totalInflated += numBytes;
+            if (totalInflated > maxDecompressedSize) {
+                throw new SpdyProtocolException(
+                        "Decompressed header block exceeds " + maxDecompressedSize + " bytes");
+            }
         } while (numBytes > 0);
 
         // z_stream has an internal 64-bit hold buffer
@@ -107,6 +127,7 @@ final class SpdyHeaderBlockZlibDecoder extends SpdyHeaderBlockRawDecoder {
     void endHeaderBlock(SpdyHeadersFrame frame) throws Exception {
         super.endHeaderBlock(frame);
         releaseBuffer();
+        totalInflated = 0;
     }
 
     @Override

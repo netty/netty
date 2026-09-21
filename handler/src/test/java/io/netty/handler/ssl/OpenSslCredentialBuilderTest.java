@@ -17,9 +17,11 @@ package io.netty.handler.ssl;
 
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import io.netty.util.test.LeakPresenceExtension;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * Unit tests for {@link OpenSslCredentialBuilder}.
  */
+@ExtendWith(LeakPresenceExtension.class)
 public class OpenSslCredentialBuilderTest {
 
     private static X509Bundle cert;

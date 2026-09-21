@@ -128,4 +128,19 @@ public class WebSocketServerHandshaker00Test extends WebSocketServerHandshakerTe
         content.release();
         req.release();
     }
+
+    @Override
+    public void testHandshakeExceptionWhenConnectionHeaderIsAbsent() {
+        // ignore
+    }
+
+    @Override
+    public void testHandshakeExceptionWhenInvalidConnectionHeader() {
+        // ignore
+    }
+
+    @Override
+    public void testHandshakeExceptionWhenInvalidUpgradeHeader() {
+        // ignore
+    }
 }

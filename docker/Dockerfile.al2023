@@ -13,6 +13,7 @@ RUN dnf install -yq \
  autoconf \
  automake \
  bzip2 \
+ clang \
  cmake \
  gcc \
  gcc-c++ \
@@ -27,6 +28,7 @@ RUN dnf install -yq \
  make \
  ninja-build \
  patch \
+ patchelf \
  perl \
  perl-parent \
  perl-devel \
@@ -37,7 +39,7 @@ RUN dnf install -yq \
  zip
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io" | bash
+RUN curl -s "https://beta.sdkman.io?ci=true" | bash
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \

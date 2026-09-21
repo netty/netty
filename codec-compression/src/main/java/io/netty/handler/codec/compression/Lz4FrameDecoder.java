@@ -21,8 +21,9 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
+import net.jpountz.lz4.LZ4SafeDecompressor;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.zip.Checksum;
 
@@ -67,7 +68,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     /**
      * Underlying decompressor in use.
      */
-    private LZ4FastDecompressor decompressor;
+    private LZ4SafeDecompressor decompressor;
 
     /**
      * Underlying checksum calculator in use.
@@ -174,7 +175,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  maximum length of the decompressed block. If {@code 0} is given it uses {@code 32MB} by default.
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum, int maxDecompressedLength) {
-        decompressor = ObjectUtil.checkNotNull(factory, "factory").fastDecompressor();
+        decompressor = ObjectUtil.checkNotNull(factory, "factory").safeDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
         this.maxDecompressedLength = maxDecompressedLength == 0 ? MAX_BLOCK_SIZE :
                 ObjectUtil.checkInRange(maxDecompressedLength, 0, MAX_BLOCK_SIZE, "maxDecompressedLength");
@@ -266,8 +267,19 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                         case BLOCK_TYPE_COMPRESSED:
                             uncompressed = ctx.alloc().buffer(decompressedLength, decompressedLength);
 
-                            decompressor.decompress(CompressionUtil.safeReadableNioBuffer(in),
-                                    uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength));
+                            ByteBuffer source = CompressionUtil.safeNioBuffer(
+                                    in, in.readerIndex(), compressedLength);
+                            ByteBuffer destination = uncompressed.internalNioBuffer(
+                                    uncompressed.writerIndex(), decompressedLength);
+                            int actualDecompressedLength = decompressor.decompress(
+                                    source, source.position(), compressedLength,
+                                    destination, destination.position(), decompressedLength);
+                            if (actualDecompressedLength != decompressedLength) {
+                                throw new DecompressionException(String.format(
+                                        "stream corrupted: decompressedLength(%d) and " +
+                                                "actualDecompressedLength(%d) mismatch",
+                                        decompressedLength, actualDecompressedLength));
+                            }
                             // Update the writerIndex now to reflect what we decompressed.
                             uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);
                             break;

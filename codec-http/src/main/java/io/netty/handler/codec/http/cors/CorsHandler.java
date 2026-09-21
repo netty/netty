@@ -155,7 +155,7 @@ public class CorsHandler extends ChannelDuplexHandler {
             if (corsConfig.origins().contains(requestOrigin)) {
                 return corsConfig;
             }
-            if (corsConfig.isNullOriginAllowed() || NULL_ORIGIN.equals(requestOrigin)) {
+            if (corsConfig.isNullOriginAllowed() && NULL_ORIGIN.equals(requestOrigin)) {
                 return corsConfig;
             }
         }
@@ -193,7 +193,9 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void setVaryHeader(final HttpResponse response) {
-        response.headers().set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
+        if (!response.headers().containsValue(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN, true)) {
+            response.headers().add(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
+        }
     }
 
     private static void setAnyOrigin(final HttpResponse response) {

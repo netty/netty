@@ -1,0 +1,37 @@
+# Fork of https://github.com/AgentWorkforce/relay/blob/v12.2.2/.github/workflows/cancel-on-merge.yml
+name: Cancel PR Jobs on Merge
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cancel:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel running workflows for this PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const headSha = context.payload.pull_request.head.sha;
+
+            // Get all running workflow runs for this commit
+            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              status: 'in_progress',
+              head_sha: headSha,
+            });
+
+            // Cancel each running workflow
+            for (const run of runs.data.workflow_runs) {
+              console.log(`Cancelling workflow run ${run.id} (${run.name})`);
+              await github.rest.actions.cancelWorkflowRun({
+                owner,
+                repo,
+                run_id: run.id,
+              });
+            }
+
+            console.log(`Cancelled ${runs.data.workflow_runs.length} workflow runs`);

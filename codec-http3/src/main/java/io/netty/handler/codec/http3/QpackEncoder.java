@@ -20,7 +20,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.internal.ObjectUtil;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map;
@@ -39,26 +41,45 @@ final class QpackEncoder {
                     "QPACK - section acknowledgment received for unknown stream.");
     private static final int DYNAMIC_TABLE_ENCODE_NOT_DONE = -1;
     private static final int DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE = -2;
+    /**
+     * Maximum number of field sections for which we will track dynamic-table references while waiting for the
+     * peer's Section Acknowledgment or Stream Cancellation instruction. Both instructions are optional per
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2">RFC 9204, section 2.2.2.2</a>, so a
+     * remote peer that never sends them (while still acknowledging dynamic-table insertions) must not be able to
+     * grow this per-connection state without bound. Once the limit is reached we stop referencing the dynamic
+     * table for new field sections (falling back to literal encoding, which is always legal, see
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.4">section 4.5.4</a>) until enough
+     * outstanding sections are acknowledged or cancelled to free up tracking capacity again.
+     */
+    // Visible for tests
+    static final int MAX_OUTSTANDING_SECTIONS = 10_000;
 
     private final QpackHuffmanEncoder huffmanEncoder;
     private final QpackEncoderDynamicTable dynamicTable;
+    private final QpackSensitivityDetector sensitivityDetector;
     private int maxBlockedStreams;
     private int blockedStreams;
     private LongObjectHashMap<Queue<Indices>> streamSectionTrackers;
+    private int outstandingSections;
 
-    QpackEncoder() {
-        this(new QpackEncoderDynamicTable());
+    QpackEncoder(@Nullable QpackSensitivityDetector sensitivityDetector) {
+        this(new QpackEncoderDynamicTable(), sensitivityDetector);
     }
 
-    QpackEncoder(QpackEncoderDynamicTable dynamicTable) {
+    QpackEncoder(QpackEncoderDynamicTable dynamicTable, @Nullable QpackSensitivityDetector sensitivityDetector) {
         huffmanEncoder = new QpackHuffmanEncoder();
-        this.dynamicTable = dynamicTable;
+        this.dynamicTable = ObjectUtil.checkNotNull(dynamicTable, "dynamicTable");
+        this.sensitivityDetector = sensitivityDetector == null ?
+                QpackSensitivityDetector.NEVER_SENSITIVE : sensitivityDetector;
     }
 
     /**
      * Encode the header field into the header block.
      *
-     * TODO: do we need to support sensitivity detector?
+     * <p>Fields for which {@link QpackSensitivityDetector#isSensitive(CharSequence, CharSequence)}
+     * returns {@code true} are encoded as literals with the
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.4">"Never Indexed"</a>
+     * ({@code N=1}) flag set, and are never inserted into the dynamic table.</p>
      */
     void encodeHeaders(QpackAttributes qpackAttributes, ByteBuf out, ByteBufAllocator allocator, long streamId,
                        Http3Headers headers) {
@@ -73,7 +94,13 @@ final class QpackEncoder {
             for (Map.Entry<CharSequence, CharSequence> header : headers) {
                 CharSequence name = header.getKey();
                 CharSequence value = header.getValue();
-                int dynamicTblIdx = encodeHeader(qpackAttributes, tmp, base, name, value);
+                int dynamicTblIdx;
+                if (sensitivityDetector.isSensitive(name, value)) {
+                    encodeSensitiveHeader(tmp, name, value);
+                    dynamicTblIdx = DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
+                } else {
+                    dynamicTblIdx = encodeHeader(qpackAttributes, tmp, base, name, value);
+                }
                 if (dynamicTblIdx >= 0) {
                     int req = dynamicTable.addReferenceToEntry(name, value, dynamicTblIdx);
                     if (dynamicTblIdx > maxDynamicTblIdx) {
@@ -92,6 +119,7 @@ final class QpackEncoder {
                 assert streamSectionTrackers != null;
                 streamSectionTrackers.computeIfAbsent(streamId, __ -> new ArrayDeque<>())
                         .add(dynamicTableIndices);
+                outstandingSections++;
             }
 
             // https://www.rfc-editor.org/rfc/rfc9204.html#name-encoded-field-section-prefi
@@ -140,7 +168,13 @@ final class QpackEncoder {
      * @param streamId For which the header fields section is acknowledged.
      */
     void sectionAcknowledgment(long streamId) throws QpackException {
-        assert streamSectionTrackers != null;
+        // If a configureDynamicTable(...) was called with a maxTableCapacity of 0 we will have not instanced
+        // streamSectionTrackers. The remote peer might still (incorrectly) send a section acknowledgment for a
+        // stream, so this must be treated as a protocol error instead of throwing an NPE.
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1
+        if (streamSectionTrackers == null) {
+            throw INVALID_SECTION_ACKNOWLEDGMENT;
+        }
         final Queue<Indices> tracker = streamSectionTrackers.get(streamId);
         if (tracker == null) {
             throw INVALID_SECTION_ACKNOWLEDGMENT;
@@ -155,6 +189,7 @@ final class QpackEncoder {
         if (dynamicTableIndices == null) {
             throw INVALID_SECTION_ACKNOWLEDGMENT;
         }
+        outstandingSections--;
 
         dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnAck);
     }
@@ -179,6 +214,7 @@ final class QpackEncoder {
                 if (dynamicTableIndices == null) {
                     break;
                 }
+                outstandingSections--;
                 dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnCancellation);
             }
         }
@@ -195,6 +231,31 @@ final class QpackEncoder {
     }
 
     /**
+     * Encode a header field that the {@link QpackSensitivityDetector} flagged as sensitive.
+     *
+     * <p>Sensitive fields are never inserted into the dynamic table and are encoded
+     * with the {@code "Never Indexed"} flag ({@code N=1}) so that intermediaries
+     * also avoid indexing them — see
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-7.1">RFC 9204 7.1</a>.
+     * </p>
+     */
+    private void encodeSensitiveHeader(ByteBuf out, CharSequence name, CharSequence value) {
+        final int index = QpackStaticTable.findFieldIndex(name, value);
+        if (index == QpackStaticTable.NOT_FOUND) {
+            encodeLiteral(out, name, value, true);
+        } else if ((index & QpackStaticTable.MASK_NAME_REF) == QpackStaticTable.MASK_NAME_REF) {
+            // Name-only match, reuse the cached lookup instead of calling getIndex(name) again.
+            encodeLiteralWithNameRefStaticTable(out, index ^ QpackStaticTable.MASK_NAME_REF, value, true);
+        } else {
+            // Exact (name, value) match in the static table, an indexed static reference
+            // does not leak more information than what is already public, and the
+            // intermediary cannot gain any compression benefit by inserting a copy into
+            // its own dynamic table (the entry is already there as part of the static table).
+            encodeIndexedStaticTable(out, index);
+        }
+    }
+
+    /**
      * Encode the header field into the header block.
      * @param qpackAttributes {@link QpackAttributes} for the channel.
      * @param out {@link ByteBuf} to which encoded header field is to be written.
@@ -208,8 +269,8 @@ final class QpackEncoder {
                              CharSequence value) {
         int index = QpackStaticTable.findFieldIndex(name, value);
         if (index == QpackStaticTable.NOT_FOUND) {
-            if (qpackAttributes.dynamicTableDisabled()) {
-                encodeLiteral(out, name, value);
+            if (isDynamicTableUnavailable(qpackAttributes)) {
+                encodeLiteral(out, name, value, false);
                 return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
             }
             return encodeWithDynamicTable(qpackAttributes, out, base, name, value);
@@ -228,11 +289,11 @@ final class QpackEncoder {
                 }
                 return dynamicTblIdx;
             }
-            encodeLiteralWithNameRefStaticTable(out, nameIdx, value);
+            encodeLiteralWithNameRefStaticTable(out, nameIdx, value, false);
         } else {
             encodeIndexedStaticTable(out, index);
         }
-        return qpackAttributes.dynamicTableDisabled() ? DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE :
+        return isDynamicTableUnavailable(qpackAttributes) ? DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE :
                 DYNAMIC_TABLE_ENCODE_NOT_DONE;
     }
 
@@ -265,7 +326,7 @@ final class QpackEncoder {
                 return idx;
             }
         }
-        encodeLiteral(out, name, value);
+        encodeLiteral(out, name, value, false);
         return idx;
     }
 
@@ -283,7 +344,7 @@ final class QpackEncoder {
      */
     private int tryEncodeWithDynamicTable(QpackAttributes qpackAttributes, ByteBuf out, int base, CharSequence name,
                                           CharSequence value) {
-        if (qpackAttributes.dynamicTableDisabled()) {
+        if (isDynamicTableUnavailable(qpackAttributes)) {
             return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
         }
         assert qpackAttributes.encoderStreamAvailable();
@@ -347,7 +408,7 @@ final class QpackEncoder {
      */
     private int tryAddToDynamicTable(QpackAttributes qpackAttributes, boolean staticTableNameRef, int nameIdx,
                                      CharSequence name, CharSequence value) {
-        if (qpackAttributes.dynamicTableDisabled()) {
+        if (isDynamicTableUnavailable(qpackAttributes)) {
             return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
         }
         assert qpackAttributes.encoderStreamAvailable();
@@ -376,7 +437,11 @@ final class QpackEncoder {
                     //   +---+---+---+-------------------+
                     //   |  Name String (Length bytes)   |
                     //   +---+---------------------------+
-                    // TODO: Force H = 1 till we support sensitivity detector
+                    // Names are always Huffman-encoded (H = 1). RFC 9204 makes
+                    // Huffman a pure size/CPU tradeoff and does not tie it to the
+                    // sensitivity of the field; whether intermediaries may index
+                    // the field is controlled separately by the N bit on the
+                    // matching literal field line.
                     encodeLengthPrefixedHuffmanEncodedLiteral(insert, (byte) 0b0110_0000, 5, name);
                 }
                 //    0   1   2   3   4   5   6   7
@@ -427,7 +492,8 @@ final class QpackEncoder {
         encodePrefixedInteger(out, (byte) 0b0001_0000, 4, index - base);
     }
 
-    private void encodeLiteralWithNameRefStaticTable(ByteBuf out, int nameIndex, CharSequence value) {
+    private void encodeLiteralWithNameRefStaticTable(ByteBuf out, int nameIndex, CharSequence value,
+                                                     boolean neverIndex) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-nam
         //     0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
@@ -437,8 +503,10 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, nameIndex);
+        //
+        // T = 1 (static table). N is driven by the sensitivity detector.
+        final byte prefix = (byte) (0b0101_0000 | (neverIndex ? 0b0010_0000 : 0));
+        encodePrefixedInteger(out, prefix, 4, nameIndex);
         encodeStringLiteral(out, value);
     }
 
@@ -452,8 +520,11 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, base - nameIndex - 1);
+        //
+        // T = 0 (dynamic table). Sensitive headers are routed through
+        // encodeSensitiveHeader() which bypasses the dynamic table entirely, so
+        // anything reaching this method is non-sensitive and N is always 0.
+        encodePrefixedInteger(out, (byte) 0b0100_0000, 4, base - nameIndex - 1);
         encodeStringLiteral(out, value);
     }
 
@@ -467,12 +538,15 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0000_0000, 4, nameIndex - base);
+        //
+        // Same as above post-base references only exist for entries in the
+        // encoder's dynamic table, so sensitive headers never reach here and
+        // N is always 0.
+        encodePrefixedInteger(out, (byte) 0, 3, nameIndex - base);
         encodeStringLiteral(out, value);
     }
 
-    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value) {
+    private void encodeLiteral(ByteBuf out, CharSequence name, CharSequence value, boolean neverIndex) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-literal-field-line-with-lit
         //   0   1   2   3   4   5   6   7
         //   +---+---+---+---+---+---+---+---+
@@ -484,8 +558,10 @@ final class QpackEncoder {
         //   +---+---------------------------+
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
-        // TODO: Force N = 0 & H = 1 till we support sensitivity detector
-        encodeLengthPrefixedHuffmanEncodedLiteral(out, (byte) 0b0010_1000, 3, name);
+        //
+        // H = 1 (Huffman) is always set for the name length prefix.
+        final byte prefix = (byte) (0b0010_1000 | (neverIndex ? 0b0001_0000 : 0));
+        encodeLengthPrefixedHuffmanEncodedLiteral(out, prefix, 3, name);
         encodeStringLiteral(out, value);
     }
 
@@ -500,7 +576,9 @@ final class QpackEncoder {
         // +---+---------------------------+
         // |  String Data (Length octets)  |
         // +-------------------------------+
-        // TODO: Force H = 1 till we support sensitivity detector
+        // String values are always Huffman-encoded (H = 1). RFC 9204 treats the
+        // H bit as a pure size/CPU choice; whether intermediaries may index the
+        // field is controlled separately by the N bit on the literal field line.
         encodeLengthPrefixedHuffmanEncodedLiteral(out, (byte) 0b1000_0000, 7, value);
     }
 
@@ -515,6 +593,23 @@ final class QpackEncoder {
 
     private boolean mayNotBlockStream() {
         return blockedStreams >= maxBlockedStreams - 1;
+    }
+
+    /**
+     * Whether the dynamic table must not be used to encode the next header field: either because it was disabled
+     * for this connection, or because we are already tracking {@link #MAX_OUTSTANDING_SECTIONS} field sections
+     * that are awaiting a Section Acknowledgment or Stream Cancellation instruction from the peer.
+     *
+     * @param qpackAttributes  the attributes used.
+     * @return {@code true} if the dynamic table can't be used, {@code false} otherwise.
+     */
+    private boolean isDynamicTableUnavailable(QpackAttributes qpackAttributes) {
+        return qpackAttributes.dynamicTableDisabled() || outstandingSections >= MAX_OUTSTANDING_SECTIONS;
+    }
+
+    // Visible for tests
+    int outstandingSectionCount() {
+        return outstandingSections;
     }
 
     private static final class Indices {

@@ -702,14 +702,88 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0(requestStr);
     }
 
-    @Test
-    public void testChunkedNotLastInTransferEncoding() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Transfer-Encoding: chunked, identity\r\nContent-Length: 1\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: gzip\r\n",
+            "Transfer-Encoding: chunked, gzip,\r\n",
+            "Transfer-Encoding: chunked, xchunked\r\n",
+            "Transfer-Encoding: gzip\r\n",
+            "Transfer-Encoding: chunked gzip\r\nContent-Length: 1\r\n",
+            "Transfer-Encoding: chunked, chunked\r\n",
+            "Transfer-Encoding: chunked, gzip, chunked\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\n",
+            "Transfer-Encoding: Chunked, , CHUNKED,\r\n",
+            "Transfer-Encoding: chunked;foo=bar\r\n"
+    })
+    public void testInvalidTransferEncodingFraming(String headers) {
+        testInvalidHeaders0("GET /some/path HTTP/1.1\r\n" + headers + "Host: netty.io\r\n\r\n");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Transfer-Encoding: gzip\r\nTransfer-Encoding: chunked\r\n",
+            "Transfer-Encoding: gzip\r\nTransfer-Encoding: chunked,\r\n",
+            "Transfer-Encoding: chunked\r\nTransfer-Encoding: , \t,\r\n"
+    })
+    public void testChunkedLastInMultiLineTransferEncoding(String transferEncodingHeaders) {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                transferEncodingHeaders +
+                "Host: netty.io\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertEquals(2, request.headers().getAll(HttpHeaderNames.TRANSFER_ENCODING).size());
+        LastHttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isSuccess());
+        content.release();
+        assertFalse(channel.finish());
+    }
+
+    // Regression: the chunked-must-be-last check was nested inside a protocolVersion() ==
+    // HTTP_1_1 condition, so it was silently skipped for HTTP/1.0 when
+    // useRfc9112TransferEncoding is disabled. See HttpObjectDecoder#readHeaders.
+    @Test
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112Disabled() {
+        String requestStr = "GET /some/path HTTP/1.0\r\n" +
                 "Transfer-Encoding: chunked, identity\r\n" +
                 "Content-Length: 1\r\n" +
                 "Host: netty.io\r\n\r\n" +
                 "a";
-        testInvalidHeaders0(requestStr);
+        HttpDecoderConfig config = new HttpDecoderConfig().setUseRfc9112TransferEncoding(false);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
+        assertTrue(channel.writeInbound(
+                Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertTrue(request.decoderResult().isFailure(),
+                "expected 'chunked must be last' to be enforced regardless of HTTP version "
+                        + "when Transfer-Encoding is legitimately present (useRfc9112TransferEncoding=false)");
+        channel.finishAndReleaseAll();
+    }
+
+    // Companion to the test above: confirms the fix isn't tied to identity being a no-op
+    // by using a real trailing encoding (gzip) instead.
+    @Test
+    public void testChunkedNotLastInTransferEncodingHttp10WithRfc9112DisabledNonNoOpEncoding() {
+        String requestStr = "GET /some/path HTTP/1.0\r\n" +
+                "Transfer-Encoding: chunked, gzip\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        HttpDecoderConfig config = new HttpDecoderConfig().setUseRfc9112TransferEncoding(false);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
+        assertTrue(channel.writeInbound(
+                Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertTrue(request.decoderResult().isFailure(),
+                "expected 'chunked must be last' to be enforced regardless of the specific "
+                        + "trailing encoding value, matching the identity-trailing case above");
+        channel.finishAndReleaseAll();
     }
 
     @Test
@@ -1086,6 +1160,50 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @ParameterizedTest(name = "[{index}] '{arguments}'")
+    @ValueSource(strings = {
+        "",
+        "5 ",
+        " 5",
+        "5 c",
+        "5 x",
+        "5 c;foo=bar",
+        "  5 c",
+        "  5 x",
+        "  5 c;foo=bar",
+    })
+    public void mustRejectChunkSizeWithIllegalWhitespaceOrExtraTokens(String chunkSizeLine) {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+            "Host: example\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "\r\n" +
+            chunkSizeLine + "\r\n" +
+            "GPOST\r\n" +
+            "0\r\n" +
+            "\r\n" +
+            "GET /smuggled HTTP/1.1\r\n" +
+            "Host: example\r\n" +
+            "\r\n";
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+
+        // The request headers parse fine.
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertThat(request.protocolVersion()).isEqualTo(HttpVersion.HTTP_1_1);
+        assertThat(request.method()).isEqualTo(HttpMethod.POST);
+
+        // But the malformed chunk-size line must be rejected, not truncated at the whitespace.
+        HttpContent content = channel.readInbound();
+        assertTrue(content.decoderResult().isFailure());
+        assertThat(content.decoderResult().cause()).hasMessageContaining("chunk size");
+        content.release();
+
+        // Nothing after the failed chunk may be surfaced as a second, smuggled request.
+        assertFalse(channel.finish());
+    }
+
     @Test
     public void testOrderOfHeadersWithContentLength() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
@@ -1263,6 +1381,33 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
         assertTrue(request.decoderResult().isFailure());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testNulInVersionTokenIsRejected() {
+        // A NUL right before the version token must be rejected.
+        testInvalidHeaders0("GET / " + (char) 0 + "HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNulInMethodTokenIsRejected() {
+        // Control case: a NUL inside the method token is also rejected.
+        testInvalidHeaders0("GET" + (char) 0 + " / HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    public void testNormalRequestStillDecodes() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertNotNull(req);
+        assertTrue(req.decoderResult().isSuccess());
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        LastHttpContent last = channel.readInbound();
+        assertNotNull(last);
+        last.release();
         assertFalse(channel.finish());
     }
 }

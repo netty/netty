@@ -115,6 +115,19 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     }
 
     /**
+     * Returns the value associated with the specified setting identifier,
+     * or {@code defaultValue} if no value is present for the given key.
+     *
+     * @param key the numeric setting identifier
+     * @param defaultValue the value to return if the setting is not present
+     * @return the configured value for the specified key, or {@code defaultValue},
+     * if the key is not found
+     */
+    public long getOrDefault(long key, long defaultValue) {
+        return settings.getOrDefault(key, defaultValue);
+    }
+
+    /**
      * Returns the {@code QPACK_MAX_TABLE_CAPACITY} value.
      *
      * @return the current QPACK maximum table capacity, or {@code null} if not set

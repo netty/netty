@@ -331,7 +331,7 @@ public class PerMessageDeflateDecoderTest {
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
-                                                                           EMPTY_DEFLATE_BLOCK);
+                                                                           EMPTY_DEFLATE_BLOCK.duplicate());
 
         assertTrue(decoderChannel.writeInbound(emptyDeflateBlockFrame));
         TextWebSocketFrame emptyBufferFrame = decoderChannel.readInbound();

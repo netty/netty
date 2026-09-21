@@ -32,6 +32,11 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public Http2ConnectionHandlerBuilder validateRequiredPseudoHeaders(boolean validateRequiredPseudoHeaders) {
+        return super.validateRequiredPseudoHeaders(validateRequiredPseudoHeaders);
+    }
+
+    @Override
     public Http2ConnectionHandlerBuilder initialSettings(Http2Settings settings) {
         return super.initialSettings(settings);
     }

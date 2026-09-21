@@ -21,7 +21,6 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.Locale;
 
-import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -66,8 +65,6 @@ public class HttpVersion implements Comparable<HttpVersion> {
         if (text == HTTP_1_0_STRING) {
             return HTTP_1_0;
         }
-
-        text = text.trim();
 
         if (text.isEmpty()) {
             throw new IllegalArgumentException("text is empty (possibly HTTP/0.9)");
@@ -124,7 +121,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
         // toUpperCase() without an explicit Locale uses the JVM default. In Turkish locale
         // (tr_TR) 'i' uppercases to 'İ' (U+0130), which would corrupt protocol strings such
         // as "icap/1.0" or any custom HTTP-derived scheme that contains a lowercase 'i'.
-        text = checkNonEmptyAfterTrim(text, "text").toUpperCase(Locale.US);
+        // Control characters or whitespace at the token boundary must fail the checks below.
+        ObjectUtil.checkNotNull(text, "text");
+        if (text.isEmpty()) {
+            throw new IllegalArgumentException("text must not be empty");
+        }
+        text = text.toUpperCase(Locale.US);
 
         if (strict) {
             // Only single digit major / minor version is allowed.
@@ -142,7 +144,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
             int dotIndex = text.indexOf('.', slashIndex + 1);
 
             if (slashIndex <= 0 || dotIndex <= slashIndex + 1
-                    || dotIndex >= text.length() - 1 || hasWhitespace(text, slashIndex)) {
+                    || dotIndex >= text.length() - 1 || hasControlOrWhitespace(text, slashIndex)) {
                 throw new IllegalArgumentException("invalid version format: " + text);
             }
 
@@ -156,9 +158,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
         bytes = null;
     }
 
-    private static boolean hasWhitespace(String s, int end) {
+    private static boolean hasControlOrWhitespace(String s, int end) {
         for (int i = 0; i < end; i++) {
-            if (Character.isWhitespace(s.charAt(i))) {
+            char c = s.charAt(i);
+            if (Character.isISOControl(c) || Character.isWhitespace(c)) {
                 return true;
             }
         }
@@ -204,13 +207,14 @@ public class HttpVersion implements Comparable<HttpVersion> {
             boolean keepAliveDefault, boolean bytes) {
         // See the comment in the (text, strict, keepAliveDefault) constructor for why this needs
         // an explicit Locale.US: avoids the Turkish-locale 'i' -> 'İ' corruption.
-        protocolName = checkNonEmptyAfterTrim(protocolName, "protocolName").toUpperCase(Locale.US);
+        ObjectUtil.checkNotNull(protocolName, "protocolName");
+        if (protocolName.isEmpty()) {
+            throw new IllegalArgumentException("protocolName must not be empty");
+        }
+        protocolName = protocolName.toUpperCase(Locale.US);
 
-        for (int i = 0; i < protocolName.length(); i ++) {
-            if (Character.isISOControl(protocolName.charAt(i)) ||
-                    Character.isWhitespace(protocolName.charAt(i))) {
-                throw new IllegalArgumentException("invalid character in protocolName");
-            }
+        if (hasControlOrWhitespace(protocolName, protocolName.length())) {
+            throw new IllegalArgumentException("invalid character in protocolName");
         }
 
         checkPositiveOrZero(majorVersion, "majorVersion");

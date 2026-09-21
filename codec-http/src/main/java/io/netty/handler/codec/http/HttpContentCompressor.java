@@ -185,6 +185,26 @@ public class HttpContentCompressor extends HttpContentEncoder {
      *        if the default should be used.
      */
     public HttpContentCompressor(int contentSizeThreshold, CompressionOptions... compressionOptions) {
+        this(contentSizeThreshold, DEFAULT_MAX_PIPELINE_DEPTH, compressionOptions);
+    }
+
+    /**
+     * Create a new {@link HttpContentCompressor} instance with specified
+     * {@link CompressionOptions}s
+     *
+     * @param contentSizeThreshold
+     *        The response body is compressed when the size of the response
+     *        body exceeds the threshold. The value should be a non negative
+     *        number. {@code 0} will enable compression for all responses.
+     * @param maxPipelineDepth
+     *        The maximum allowed depth of the encoding pipeline queue, the default
+     *        value is set to {@link DEFAULT_MAX_PIPELINE_DEPTH}
+     * @param compressionOptions {@link CompressionOptions} or {@code null}
+     *        if the default should be used.
+     */
+    public HttpContentCompressor(int contentSizeThreshold, int maxPipelineDepth,
+            CompressionOptions... compressionOptions) {
+        super(maxPipelineDepth);
         this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
         BrotliOptions brotliOptions = null;
         GzipOptions gzipOptions = null;

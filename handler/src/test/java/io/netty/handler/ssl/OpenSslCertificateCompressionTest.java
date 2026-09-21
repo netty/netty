@@ -409,6 +409,9 @@ public class OpenSslCertificateCompressionTest {
                     ctx.fireUserEventTriggered(evt);
                 }
             });
+            pipeline.addLast(new SilenceExceptionHandler()
+                    .messageContains("CERT_DECOMPRESSION_FAILED")
+                    .messageContains("TLSV1_ALERT_DECODE_ERROR"));
         }
     }
 
