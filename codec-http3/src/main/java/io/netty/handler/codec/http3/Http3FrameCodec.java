@@ -275,6 +275,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int pushIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, pushIdLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3CancelPushFrame(readVariableLengthInteger(in, pushIdLen)));
                 return payLoadLength;
             case HTTP3_SETTINGS_FRAME_TYPE:
@@ -310,6 +313,12 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                 }
                 int readerIdx = in.readerIndex();
                 int pushPromiseIdLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (pushPromiseIdLen > payLoadLength) {
+                    connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                            "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.',
+                            true);
+                    return 0;
+                }
                 Http3PushPromiseFrame pushPromiseFrame = new DefaultHttp3PushPromiseFrame(
                         readVariableLengthInteger(in, pushPromiseIdLen));
                 if (decodeHeaders(ctx, pushPromiseFrame.headers(), in, payLoadLength - pushPromiseIdLen, false)) {
@@ -326,6 +335,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int idLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, idLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3GoAwayFrame(readVariableLengthInteger(in, idLen)));
                 return payLoadLength;
             case HTTP3_MAX_PUSH_ID_FRAME_TYPE:
@@ -336,6 +348,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     return 0;
                 }
                 int pidLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+                if (!enforceExactIdLength(ctx, type, payLoadLength, pidLen)) {
+                    return 0;
+                }
                 out.add(new DefaultHttp3MaxPushIdFrame(readVariableLengthInteger(in, pidLen)));
                 return payLoadLength;
             default:
@@ -364,12 +379,33 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         return in.readableBytes() >= payLoadLength;
     }
 
+    /**
+     * Frames whose payload consists of exactly one variable-length integer identifier (CANCEL_PUSH, GO_AWAY,
+     * MAX_PUSH_ID) must declare a frame length that matches the actual encoded length of that integer. The
+     * length of the integer is derived from its own first byte and is independent of {@code payLoadLength}, so
+     * without this check a peer could declare a short frame length whose single byte nevertheless encodes an
+     * integer requiring more bytes than either the declared length or the buffer actually has available.
+     */
+    private boolean enforceExactIdLength(ChannelHandlerContext ctx, int type, int payLoadLength, int idLen) {
+        if (idLen != payLoadLength) {
+            connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                    "Received an invalid frame len " + payLoadLength + " for frame of type " + type + '.', true);
+            return false;
+        }
+        return true;
+    }
+
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(
                 new Http3Settings(nonStandardSettingsValidator));
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            if (keyLen > payLoadLength) {
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                        "Received an invalid settings frame length.", true);
+                return null;
+            }
             long key = readVariableLengthInteger(in, keyLen);
             if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                 // This must be treated as a connection error
@@ -380,6 +416,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             }
             payLoadLength -= keyLen;
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
+            if (valueLen > payLoadLength) {
+                connectionError(ctx, Http3ErrorCode.H3_FRAME_ERROR,
+                        "Received an invalid settings frame length.", true);
+                return null;
+            }
             long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
 
