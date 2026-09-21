@@ -797,6 +797,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     processPacket(pipeline(), allocHandle, datagramSize, packet);
                     return true;
                 }
+                // A UDP_GRO batch is split up by the loop below, which creates the packet again, so release this one.
+                packet.release();
             }
             // Its important that we process all received data out of the NativeDatagramPacketArray
             // before we call fireChannelRead(...). This is because the user may call flush()

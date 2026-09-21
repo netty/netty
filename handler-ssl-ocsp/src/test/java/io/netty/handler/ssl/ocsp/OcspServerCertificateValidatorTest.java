@@ -110,12 +110,12 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
     void connectUsingHttpAndValidateCertificateUsingOcspTest() throws Exception {
         final AtomicBoolean ocspStatus = new AtomicBoolean();
         EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        final SslContext sslContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
 
         try {
             final CountDownLatch latch = new CountDownLatch(1);
-            final SslContext sslContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .build();
 
             Bootstrap bootstrap = new Bootstrap()
                     .group(eventLoopGroup)
@@ -158,6 +158,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
             channelFuture.channel().closeFuture().sync();
         } finally {
             eventLoopGroup.shutdownGracefully();
+            ReferenceCountUtil.release(sslContext);
         }
     }
 
@@ -271,6 +272,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
         Channel ocspResponder = null;
         Channel tlsServer = null;
         Channel client = null;
+        final AtomicReference<Channel> acceptedServerChannel = new AtomicReference<Channel>();
         try {
             final AtomicReference<byte[]> ocspResponseBytes = new AtomicReference<byte[]>();
             final AtomicInteger ocspRequests = new AtomicInteger();
@@ -330,6 +332,7 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
+                            acceptedServerChannel.set(ch);
                             ch.pipeline().addLast(serverSslCtx.newHandler(ch.alloc()));
                         }
                     })
@@ -393,6 +396,14 @@ class OcspServerCertificateValidatorTest extends AbstractOcspTest {
         } finally {
             if (client != null) {
                 client.close().syncUninterruptibly();
+            }
+            // The server-side child channel accepted for the TLS connection is independent of the listening
+            // socket, so closing 'tlsServer' below does not close it. It must be closed explicitly here so that
+            // its SSLEngine (and the key material cached by 'serverSslContext') is released deterministically,
+            // instead of racing the tight timeout on the 'group' shutdown further down.
+            Channel acceptedChannel = acceptedServerChannel.get();
+            if (acceptedChannel != null) {
+                acceptedChannel.close().syncUninterruptibly();
             }
             if (tlsServer != null) {
                 tlsServer.close().syncUninterruptibly();

@@ -292,6 +292,20 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testGetMimeTypeWithWhitespaceBeforeParameter() {
+        // RFC 9110 8.3.1: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the first parameter
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html\t; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html \t ;charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ;"));
+
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json ; charset=UTF-8");
+        assertEquals("application/json", HttpUtil.getMimeType(message));
+    }
+
+    @Test
     public void testGetContentLengthThrowsNumberFormatException() {
         final HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         message.headers().set(HttpHeaderNames.CONTENT_LENGTH, "bar");

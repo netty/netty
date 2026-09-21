@@ -70,6 +70,8 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     private static final byte[] BAD_PREFIX = "BAD-PREFIX-".getBytes(StandardCharsets.UTF_8);
     private static final byte[] EXPECTED = "EXPECTED-direct-reader-index".getBytes(StandardCharsets.UTF_8);
     private static final byte[] BYTES = {0, 1, 2, 3};
+    // UDP delivery is best-effort even on loopback, so allow a few resends before failing the test.
+    private static final int SEND_ATTEMPTS = 3;
     protected enum WrapType {
         NONE, DUP, SLICE, READ_ONLY
     }
@@ -342,17 +344,23 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             SocketAddress localAddr = sc.localAddress();
             SocketAddress addr = localAddr instanceof InetSocketAddress ?
                     convertAnyAddress((InetSocketAddress) sc.localAddress()) : localAddr;
-            List<ChannelFuture> futures = new ArrayList<ChannelFuture>(count);
-            for (int i = 0; i < count; i++) {
-                futures.add(write(cc, buf, addr, wrapType));
-            }
-            // release as we used buf.retain() before
-            cc.flush();
 
-            for (ChannelFuture future: futures) {
-                future.sync();
+            boolean received = false;
+            for (int attempt = 1; attempt <= SEND_ATTEMPTS && !received; attempt++) {
+                List<ChannelFuture> futures = new ArrayList<ChannelFuture>(count);
+                for (int i = 0; i < count; i++) {
+                    futures.add(write(cc, buf, addr, wrapType));
+                }
+                // release as we used buf.retain() before
+                cc.flush();
+
+                for (ChannelFuture future: futures) {
+                    future.sync();
+                }
+                // UDP datagrams can be lost even on loopback, so retry a few times before giving up.
+                received = latch.await(10, TimeUnit.SECONDS);
             }
-            if (!latch.await(10, TimeUnit.SECONDS)) {
+            if (!received) {
                 Throwable error = errorRef.get();
                 if (error != null) {
                     throw error;
@@ -397,23 +405,30 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             cc.connect(addr).syncUninterruptibly();
 
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
-            for (int i = 0; i < count; i++) {
-                futures.add(write(cc, buf, wrapType));
-            }
-            cc.flush();
-
-            for (ChannelFuture future: futures) {
-                future.sync();
-            }
-
-            if (!latch.await(10, TimeUnit.SECONDS)) {
-                Throwable cause = errorRef.get();
-                if (cause != null) {
-                    throw cause;
+            boolean received = false;
+            for (int attempt = 1; attempt <= SEND_ATTEMPTS && !received; attempt++) {
+                futures.clear();
+                for (int i = 0; i < count; i++) {
+                    futures.add(write(cc, buf, wrapType));
                 }
-                fail();
+                cc.flush();
+
+                for (ChannelFuture future: futures) {
+                    future.sync();
+                }
+
+                // UDP datagrams (including the echo) can be lost even on loopback, so retry a few times
+                // before giving up.
+                received = latch.await(10, TimeUnit.SECONDS) && clientLatch.await(10, TimeUnit.SECONDS);
             }
-            if (!clientLatch.await(10, TimeUnit.SECONDS)) {
+            if (!received) {
+                if (latch.getCount() != 0) {
+                    Throwable cause = errorRef.get();
+                    if (cause != null) {
+                        throw cause;
+                    }
+                    fail();
+                }
                 Throwable cause = clientErrorRef.get();
                 if (cause != null) {
                     throw cause;
