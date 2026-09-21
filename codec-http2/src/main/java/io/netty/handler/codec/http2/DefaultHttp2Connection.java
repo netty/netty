@@ -378,13 +378,15 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Simple stream implementation. Streams can be compared to each other by priority.
      */
-    private class DefaultStream implements Http2Stream {
+    class DefaultStream implements Http2Stream {
         private static final byte META_STATE_SENT_RST = 1;
         private static final byte META_STATE_SENT_HEADERS = 1 << 1;
         private static final byte META_STATE_SENT_TRAILERS = 1 << 2;
         private static final byte META_STATE_SENT_PUSHPROMISE = 1 << 3;
         private static final byte META_STATE_RECV_HEADERS = 1 << 4;
         private static final byte META_STATE_RECV_TRAILERS = 1 << 5;
+        private static final byte META_STATE_CONNECT_STREAM = 1 << 6;
+        private static final byte META_STATE_SUCCESSFUL_RESPONSE = (byte) (1 << 7);
         private final int id;
         private final long identity;
         private final PropertyMap properties = new PropertyMap();
@@ -463,6 +465,40 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public boolean isPushPromiseSent() {
             return (metaState & META_STATE_SENT_PUSHPROMISE) != 0;
+        }
+
+        /**
+         * Marks this stream's request as an ordinary CONNECT request (RFC 9113, 8.5), i.e. a CONNECT request whose
+         * headers do not carry a {@code :protocol} pseudo-header field (which would instead identify it as an
+         * extended CONNECT request per RFC 8441). Not part of the {@link Http2Stream} contract; callers must
+         * {@code instanceof}-check for {@link DefaultStream} before using this.
+         */
+        void connectStream() {
+            metaState |= META_STATE_CONNECT_STREAM;
+        }
+
+        /**
+         * Indicates whether or not {@link #connectStream()} was called for this stream.
+         */
+        boolean isConnectStream() {
+            return (metaState & META_STATE_CONNECT_STREAM) != 0;
+        }
+
+        /**
+         * Marks this stream's (final, non-informational) response as having used a successful (2xx) status code.
+         * Combined with {@link #isConnectStream()}, this indicates that the CONNECT tunnel described in
+         * <a href="https://www.rfc-editor.org/rfc/rfc9113.html#section-8.5">RFC 9113, 8.5</a> has been established,
+         * after which no further HEADERS frame is permitted on the stream.
+         */
+        void successfulResponse() {
+            metaState |= META_STATE_SUCCESSFUL_RESPONSE;
+        }
+
+        /**
+         * Indicates whether or not {@link #successfulResponse()} was called for this stream.
+         */
+        boolean isSuccessfulResponse() {
+            return (metaState & META_STATE_SUCCESSFUL_RESPONSE) != 0;
         }
 
         @Override
@@ -684,6 +720,26 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public boolean isPushPromiseSent() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        void connectStream() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        boolean isConnectStream() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        void successfulResponse() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        boolean isSuccessfulResponse() {
             throw new UnsupportedOperationException();
         }
     }
