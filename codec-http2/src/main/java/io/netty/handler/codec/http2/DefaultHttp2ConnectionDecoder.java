@@ -657,6 +657,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                       parentStream.id(), parentStream.state());
             }
 
+            // Reserve the push stream, with a priority based on the current stream's priority, before running
+            // the request verifier below. This ensures the promised stream's existence is tracked even if the
+            // request is subsequently rejected, so the stream ID cannot be silently reused or forgotten.
+            connection.remote().reservePushStream(promisedStreamId, parentStream);
+
             if (!requestVerifier.isAuthoritative(ctx, headers)) {
                 throw streamError(promisedStreamId, PROTOCOL_ERROR,
                         "Promised request on stream %d for promised stream %d is not authoritative",
@@ -672,9 +677,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                         "Promised request on stream %d for promised stream %d is not known to be safe",
                         streamId, promisedStreamId);
             }
-
-            // Reserve the push stream based with a priority based on the current stream's priority.
-            connection.remote().reservePushStream(promisedStreamId, parentStream);
 
             listener.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
         }
