@@ -28,6 +28,13 @@ public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter
         this.delegate = checkNotNull(delegate, "delegate");
     }
 
+    /**
+     * Returns the {@link Http2ConnectionEncoder} wrapped by this decorator.
+     */
+    final Http2ConnectionEncoder delegate() {
+        return delegate;
+    }
+
     @Override
     public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
         delegate.lifecycleManager(lifecycleManager);
