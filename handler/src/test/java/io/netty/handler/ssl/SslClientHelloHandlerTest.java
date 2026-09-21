@@ -24,6 +24,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -108,11 +109,11 @@ public class SslClientHelloHandlerTest {
                 "160301" + String.format("%04x", secondFragment.length() / 2) + secondFragment);
     }
 
-    private static void assertZeroLengthHandshakeRecordFailsClosed(String... chunks) {
+    private static void assertZeroLengthHandshakeRecordFailsClosed(final String... chunks) {
         final AtomicBoolean lookupCalled = new AtomicBoolean();
         final AtomicReference<SniCompletionEvent> eventRef = new AtomicReference<SniCompletionEvent>();
 
-        EmbeddedChannel ch = new EmbeddedChannel(new AbstractSniHandler<Object>() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new AbstractSniHandler<Object>() {
             @Override
             protected Future<Object> lookup(ChannelHandlerContext ctx, String hostname) {
                 lookupCalled.set(true);
@@ -134,9 +135,12 @@ public class SslClientHelloHandlerTest {
         });
 
         try {
-            DecoderException e = assertThrows(DecoderException.class, () -> {
-                for (String chunk : chunks) {
-                    ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(chunk)));
+            DecoderException e = assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    for (String chunk : chunks) {
+                        ch.writeInbound(Unpooled.wrappedBuffer(StringUtil.decodeHexDump(chunk)));
+                    }
                 }
             });
             assertInstanceOf(NotSslRecordException.class, e.getCause());
@@ -166,16 +170,21 @@ public class SslClientHelloHandlerTest {
                 // no-op
             }
         };
-        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        final EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-        byte[] records = new byte[5 * 200_000];
+        final byte[] records = new byte[5 * 200000];
         for (int i = 0; i < records.length; i += 5) {
             records[i] = SslUtils.SSL_CONTENT_TYPE_HANDSHAKE;
             records[i + 1] = 3;
             records[i + 2] = 3;
         }
         try {
-            assertThrows(DecoderException.class, () -> ch.writeInbound(Unpooled.wrappedBuffer(records)));
+            assertThrows(DecoderException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    ch.writeInbound(Unpooled.wrappedBuffer(records));
+                }
+            });
             assertFalse(ch.isActive());
             assertFalse(lookupCalled.get());
         } finally {

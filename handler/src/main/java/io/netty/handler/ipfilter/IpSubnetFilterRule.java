@@ -154,10 +154,33 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     }
 
     /**
-     * Equivalent to {@link Integer#compare(int, int)}
+     * {@code true} if every address matched by {@code other} is also matched by this rule.
+     */
+    boolean contains(IpSubnetFilterRule other) {
+        if (filterRule instanceof Ip4SubnetFilterRule) {
+            Ip4SubnetFilterRule parent = (Ip4SubnetFilterRule) filterRule;
+            Ip4SubnetFilterRule child = (Ip4SubnetFilterRule) other.filterRule;
+            return (parent.subnetMask & child.subnetMask) == parent.subnetMask &&
+                    (child.networkAddress & parent.subnetMask) == parent.networkAddress;
+        }
+        Ip6SubnetFilterRule parent = (Ip6SubnetFilterRule) filterRule;
+        Ip6SubnetFilterRule child = (Ip6SubnetFilterRule) other.filterRule;
+        return parent.subnetMask.and(child.subnetMask).equals(parent.subnetMask) &&
+                child.networkAddress.and(parent.subnetMask).equals(parent.networkAddress);
+    }
+
+    /**
+     * IPv4 addresses are compared as unsigned values, so 128.0.0.0 and above sort after 127.255.255.255.
      */
     private static int compareInt(int x, int y) {
-        return (x < y) ? -1 : ((x == y) ? 0 : 1);
+        int x1 = x ^ Integer.MIN_VALUE;
+        int y1 = y ^ Integer.MIN_VALUE;
+        return (x1 < y1) ? -1 : ((x1 == y1) ? 0 : 1);
+    }
+
+    @Override
+    public String toString() {
+        return "IpSubnetFilterRule(" + ipAddress + ", " + ruleType() + ')';
     }
 
     static final class Ip4SubnetFilterRule implements IpFilterRule {
