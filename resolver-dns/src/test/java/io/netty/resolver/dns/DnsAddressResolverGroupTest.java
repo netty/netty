@@ -94,6 +94,7 @@ public class DnsAddressResolverGroupTest {
         final EventLoop loop = group.next();
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
                 .eventLoop(loop).datagramChannelType(NioDatagramChannel.class)
+                .optResourceEnabled(false)
                 .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
         EventLoopGroup defaultEventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
