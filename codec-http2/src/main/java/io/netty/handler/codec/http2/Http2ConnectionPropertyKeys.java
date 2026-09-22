@@ -69,5 +69,19 @@ final class Http2ConnectionPropertyKeys {
         private GlobalPropertyKey(int index) {
             this.index = index;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof GlobalPropertyKey)) {
+                return false;
+            }
+            GlobalPropertyKey that = (GlobalPropertyKey) o;
+            return index == that.index;
+        }
+
+        @Override
+        public int hashCode() {
+            return index;
+        }
     }
 }
