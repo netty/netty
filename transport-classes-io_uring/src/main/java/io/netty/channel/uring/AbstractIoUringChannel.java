@@ -472,8 +472,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private boolean closed;
         private boolean socketIsEmpty;
         private ChannelPromise deregisterPromise;
+        private final WriteOpsSnapshot writeSnapshot = new WriteOpsSnapshot();
         // Only one primary write batch is submitted at a time. Notifications belong to older zero-copy writes.
-        IoUringIoOps currentWrite;
+        WriteOpsSnapshot currentWrite;
         // References retained before outbound messages are released. Non-null until the batch completes,
         // even when empty, so subsequent completions no longer consume the outbound queue.
         List<ReferenceCounted> retainedWriteBuffers;
@@ -485,7 +486,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         final long submitWrite(IoUringIoOps ops) {
             long id = registration().submit(ops);
             if (id != 0) {
-                currentWrite = ops;
+                writeSnapshot.copyFrom(ops);
+                currentWrite = writeSnapshot;
             }
             return id;
         }
