@@ -241,9 +241,23 @@ public interface Http2Connection {
     }
 
     /**
-     * A key to be used for associating application-defined properties with streams within this connection.
+     * A key to be used for associating application-defined properties with streams within a connection.
      */
     interface PropertyKey {
+        /**
+         * Creates a new key that, unlike one returned by {@link Http2Connection#newKey()}, is not tied to a
+         * specific {@link Http2Connection} instance. The returned key can be used with the streams of any
+         * {@link Http2Connection}, which makes it suitable for cases where a key needs to be shared, e.g. stored in
+         * a {@code static} field, across multiple connections, or created before a {@link Http2Connection}
+         * instance is even available.
+         * <p>
+         * Accessing a property that is associated with a key returned by this method is slower than accessing one
+         * associated with a key returned by {@link Http2Connection#newKey()}. Prefer the latter whenever a specific
+         * {@link Http2Connection} instance is available up-front.
+         */
+        static PropertyKey newKey() {
+            return new PropertyKey() { };
+        }
     }
 
     /**
@@ -257,7 +271,10 @@ public interface Http2Connection {
     Future<Void> close(Promise<Void> promise);
 
     /**
-     * Creates a new key that is unique within this {@link Http2Connection}.
+     * Creates a new key that is unique within this {@link Http2Connection}. Accessing a property associated with
+     * the returned key is faster than accessing one associated with a key returned by
+     * {@link PropertyKey#newKey()}, so this method should be preferred whenever a specific
+     * {@link Http2Connection} instance is available up-front.
      */
     PropertyKey newKey();
 

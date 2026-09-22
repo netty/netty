@@ -32,9 +32,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
@@ -365,10 +367,10 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Verifies that the key is valid and returns it as the internal {@link DefaultPropertyKey} type.
+     * Verifies that the key was created by this connection and returns it as the internal
+     * {@link DefaultPropertyKey} type.
      *
      * @throws NullPointerException if the key is {@code null}.
-     * @throws ClassCastException if the key is not of type {@link DefaultPropertyKey}.
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
     final DefaultPropertyKey verifyKey(PropertyKey key) {
@@ -467,17 +469,23 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public final <V> V setProperty(PropertyKey key, V value) {
-            return properties.add(verifyKey(key), value);
+            return key instanceof DefaultPropertyKey
+                    ? properties.add(verifyKey(key), value)
+                    : properties.addGeneric(checkNotNull(key, "key"), value);
         }
 
         @Override
         public final <V> V getProperty(PropertyKey key) {
-            return properties.get(verifyKey(key));
+            return key instanceof DefaultPropertyKey
+                    ? properties.get(verifyKey(key))
+                    : properties.getGeneric(checkNotNull(key, "key"));
         }
 
         @Override
         public final <V> V removeProperty(PropertyKey key) {
-            return properties.remove(verifyKey(key));
+            return key instanceof DefaultPropertyKey
+                    ? properties.remove(verifyKey(key))
+                    : properties.removeGeneric(checkNotNull(key, "key"));
         }
 
         @Override
@@ -567,6 +575,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         private class PropertyMap {
             Object[] values = EmptyArrays.EMPTY_OBJECTS;
 
+            /**
+             * Storage for keys that are not tied to this connection (see {@link PropertyKey#newKey()}). Allocated
+             * lazily as such keys are expected to be used rarely, if ever, compared to keys created via
+             * {@link Http2Connection#newKey()}.
+             */
+            Map<PropertyKey, Object> genericValues;
+
             <V> V add(DefaultPropertyKey key, V value) {
                 resizeIfNecessary(key.index);
                 @SuppressWarnings("unchecked")
@@ -597,6 +612,24 @@ public class DefaultHttp2Connection implements Http2Connection {
                 if (index >= values.length) {
                     values = Arrays.copyOf(values, propertyKeyRegistry.size());
                 }
+            }
+
+            @SuppressWarnings("unchecked")
+            <V> V addGeneric(PropertyKey key, V value) {
+                if (genericValues == null) {
+                    genericValues = new IdentityHashMap<PropertyKey, Object>(4);
+                }
+                return (V) genericValues.put(key, value);
+            }
+
+            @SuppressWarnings("unchecked")
+            <V> V getGeneric(PropertyKey key) {
+                return genericValues == null ? null : (V) genericValues.get(key);
+            }
+
+            @SuppressWarnings("unchecked")
+            <V> V removeGeneric(PropertyKey key) {
+                return genericValues == null ? null : (V) genericValues.remove(key);
             }
         }
 

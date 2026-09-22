@@ -888,6 +888,63 @@ public class DefaultHttp2ConnectionTest {
         endpoint.createStream(streamC.id() + 2, true);
     }
 
+    @Test
+    public void connectionKeyShouldRejectUseWithOtherConnection() throws Http2Exception {
+        Http2Connection.PropertyKey key = client.newKey();
+        Http2Stream stream = server.local().createStream(2, false);
+        assertThrows(IllegalArgumentException.class, () -> stream.setProperty(key, "foo"));
+    }
+
+    @Test
+    public void connectionKeyShouldWorkAcrossStreamsOfSameConnection() throws Http2Exception {
+        Http2Connection.PropertyKey key = client.newKey();
+        Http2Stream streamA = client.local().createStream(3, false);
+        Http2Stream streamB = client.local().createStream(5, false);
+        assertNull(streamA.setProperty(key, "a"));
+        assertNull(streamB.setProperty(key, "b"));
+        assertEquals("a", streamA.getProperty(key));
+        assertEquals("b", streamB.getProperty(key));
+        assertEquals("a", streamA.removeProperty(key));
+        assertNull(streamA.getProperty(key));
+        assertEquals("b", streamB.getProperty(key));
+    }
+
+    @Test
+    public void staticKeyShouldWorkWithAnyConnection() throws Http2Exception {
+        Http2Connection.PropertyKey key = Http2Connection.PropertyKey.newKey();
+        Http2Stream clientStream = client.local().createStream(3, false);
+        Http2Stream serverStream = server.local().createStream(2, false);
+        assertNull(clientStream.setProperty(key, "client"));
+        assertNull(serverStream.setProperty(key, "server"));
+        assertEquals("client", clientStream.getProperty(key));
+        assertEquals("server", serverStream.getProperty(key));
+        assertEquals("client", clientStream.removeProperty(key));
+        assertNull(clientStream.getProperty(key));
+        assertEquals("server", serverStream.getProperty(key));
+    }
+
+    @Test
+    public void staticKeysShouldBeIndependent() throws Http2Exception {
+        Http2Connection.PropertyKey keyA = Http2Connection.PropertyKey.newKey();
+        Http2Connection.PropertyKey keyB = Http2Connection.PropertyKey.newKey();
+        Http2Stream stream = client.local().createStream(3, false);
+        stream.setProperty(keyA, "a");
+        stream.setProperty(keyB, "b");
+        assertEquals("a", stream.getProperty(keyA));
+        assertEquals("b", stream.getProperty(keyB));
+    }
+
+    @Test
+    public void unsetPropertyShouldReturnNullForBothKeyKinds() throws Http2Exception {
+        Http2Connection.PropertyKey connectionKey = client.newKey();
+        Http2Connection.PropertyKey staticKey = Http2Connection.PropertyKey.newKey();
+        Http2Stream stream = client.local().createStream(3, false);
+        assertNull(stream.getProperty(connectionKey));
+        assertNull(stream.getProperty(staticKey));
+        assertNull(stream.removeProperty(connectionKey));
+        assertNull(stream.removeProperty(staticKey));
+    }
+
     private static final class ListenerExceptionThrower implements Answer<Void> {
         private final boolean[] array;
         private final int index;
