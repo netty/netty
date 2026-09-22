@@ -243,9 +243,6 @@ public interface Http2Connection {
     /**
      * A key to be used for associating application-defined properties with streams within a connection.
      * <p>
-     * Keys are compared by strict reference (identity) equality, not by {@link Object#equals(Object)}, so each key
-     * instance is distinct even if two instances would otherwise be considered "equal".
-     * <p>
      * A key can either be created via {@link #newKey()}, which is fast but ties the key to this specific
      * {@link Http2Connection} instance, or via {@link Http2ConnectionPropertyKeys#newGlobalKey()}, which is slower
      * to access but is not tied to any particular {@link Http2Connection} instance.
