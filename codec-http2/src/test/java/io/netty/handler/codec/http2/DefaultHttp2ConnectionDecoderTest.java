@@ -947,10 +947,14 @@ public class DefaultHttp2ConnectionDecoderTest {
     // Promised requests cannot include any content or a trailer section.
     @Test
     public void testPromiseWithContentLength() throws Exception {
-        Http2FrameListener dec = strictDecode();
-        Http2Headers headers = request().setInt(HttpHeaderNames.CONTENT_LENGTH, 10);
-        assertThrows(Http2Exception.class, () ->
-            dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0));
+       final Http2FrameListener dec = strictDecode();
+        final Http2Headers headers = request().setInt(HttpHeaderNames.CONTENT_LENGTH, 10);
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                dec.onPushPromiseRead(ctx, STREAM_ID, PUSH_STREAM_ID, headers, 0);
+            }
+        });
     }
 
     // https://www.rfc-editor.org/rfc/rfc9113.html#name-server-push
