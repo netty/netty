@@ -539,6 +539,9 @@ public abstract class Recycler<T> {
 
         @SuppressWarnings("unchecked")
         LocalPool(int maxCapacity, boolean exclusiveGet) {
+            // if there's no capacity, we need to never allocate pooled objects.
+            // if there's capacity, because there is a shared pool, we always pool them, since we cannot trust the
+            // thread unsafe ratio counter.
             this.ratioInterval = maxCapacity == 0? -1 : 0;
             this.owner = null;
             batch = null;
