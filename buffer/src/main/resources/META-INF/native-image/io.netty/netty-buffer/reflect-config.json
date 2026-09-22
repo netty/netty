@@ -52,6 +52,38 @@
     ]
   },
   {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator",
+    "fields": [
+      {
+        "name": "stripeScanLength"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
+    "fields": [
+      {
+        "name": "pendingNext"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$PendingChunks",
+    "fields": [
+      {
+        "name": "head"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$SizeClassedChunk",
+    "fields": [
+      {
+        "name": "state"
+      }
+    ]
+  },
+  {
     "name":"io.netty.util.ReferenceCountUtil",
     "queryAllDeclaredMethods":true
   }
