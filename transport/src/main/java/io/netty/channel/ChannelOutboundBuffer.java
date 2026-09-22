@@ -73,7 +73,7 @@ public final class ChannelOutboundBuffer {
         }
     };
 
-    private final Channel channel;
+    private final AbstractChannel channel;
 
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
     //
@@ -704,6 +704,7 @@ public final class ChannelOutboundBuffer {
 
         try {
             inFail = true;
+            channel.prepareToReleaseOutboundMessages(this);
             for (;;) {
                 if (!remove0(cause, notify)) {
                     break;
