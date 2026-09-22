@@ -517,6 +517,56 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void compositeStreamExceptionReportsEachAffectedStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "stream 1 error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR, "stream 2 error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // Each StreamException in the composite represents an independent error for a distinct stream
+        // (e.g. one per active stream whose flow-control window overflowed when the initial window size
+        // setting changed). Every affected stream must be reset individually, otherwise it would be left
+        // open with a corrupted flow-control window.
+        verify(encoder, times(2))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+        verify(encoder)
+            .writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+    }
+
+    @Test
+    public void compositeStreamExceptionOnlyReportsFirstErrorForSameStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "first error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(STREAM_ID, CANCEL, "second error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error per stream. Only the
+        // first StreamException seen for a given stream id should result in a RST_STREAM.
+        verify(encoder, times(1))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+    }
+
+    @Test
     public void serverShouldSend431OnHeaderSizeErrorWhenDecodingInitialHeaders() throws Exception {
         int padding = 0;
         handler = newHandler();
