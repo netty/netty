@@ -146,6 +146,10 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             public void run() {
                 if (!closeSent.isDone()) {
                     closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
+                    // Do not rely on some other listener eventually closing the channel once closeSent
+                    // completes (e.g. write(CloseWebSocketFrame) without a subsequent close() call attaches
+                    // none): close it here so the deadline is enforced unconditionally.
+                    ctx.close();
                 }
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
