@@ -15,10 +15,14 @@
 
 package io.netty.handler.codec.http2;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Utility methods for creating {@link Http2Connection.PropertyKey}s.
  */
 final class Http2ConnectionPropertyKeys {
+
+    private static final AtomicInteger nextIndex = new AtomicInteger();
 
     private Http2ConnectionPropertyKeys() { }
 
@@ -33,6 +37,26 @@ final class Http2ConnectionPropertyKeys {
      * {@link Http2Connection} instance is available up-front.
      */
     static Http2Connection.PropertyKey newGlobalKey() {
-        return new Http2Connection.PropertyKey() { };
+        return new GlobalPropertyKey(nextIndex.getAndIncrement());
+    }
+
+    /**
+     * The number of keys created via {@link #newGlobalKey()} so far, which also doubles as the exclusive upper
+     * bound for {@link GlobalPropertyKey#index}.
+     */
+    static int keyCount() {
+        return nextIndex.get();
+    }
+
+    /**
+     * Implementation of {@link Http2Connection.PropertyKey} that specifies the index position of the property and,
+     * unlike {@link DefaultHttp2Connection.DefaultPropertyKey}, is not tied to a specific {@link Http2Connection}.
+     */
+    static final class GlobalPropertyKey implements Http2Connection.PropertyKey {
+        final int index;
+
+        private GlobalPropertyKey(int index) {
+            this.index = index;
+        }
     }
 }
