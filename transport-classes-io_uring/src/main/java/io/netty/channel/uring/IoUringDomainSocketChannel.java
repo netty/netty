@@ -29,9 +29,15 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.PeerCredentials;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * {@link DomainSocketChannel} implementation that uses linux io_uring
@@ -85,7 +91,8 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof FileDescriptor) {
-            return msg;
+            // Duplicate the fd because a failed write listener may close the original before SENDMSG completes.
+            return new DuplicatedFileDescriptor((FileDescriptor) msg);
         }
         return super.filterOutboundMessage(msg);
     }
@@ -126,15 +133,14 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
-            if (msg instanceof FileDescriptor) {
+            if (msg instanceof DuplicatedFileDescriptor) {
                 // we can reuse the same memory for any fd
                 // because we never have more than a single outstanding write.
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
-                IoRegistration registration = registration();
-                IoUringIoOps ioUringIoOps = prepSendFdIoOps((FileDescriptor) msg, writeMsgHdrMemory);
-                writeId = registration.submit(ioUringIoOps);
+                IoUringIoOps ioUringIoOps = prepSendFdIoOps(((DuplicatedFileDescriptor) msg).fd, writeMsgHdrMemory);
+                writeId = submitWrite(ioUringIoOps);
                 writeOpCode = Native.IORING_OP_SENDMSG;
                 if (writeId == 0) {
                     MsgHdrMemory memory = writeMsgHdrMemory;
@@ -148,21 +154,28 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
+        List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
+            Object msg = buffer.current();
+            if (msg instanceof DuplicatedFileDescriptor) {
+                return Collections.singletonList(((DuplicatedFileDescriptor) msg).retain());
+            }
+            return super.retainWriteBuffers(buffer);
+        }
+
+        @Override
         boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+                // A failed batch may still return an error after shutdownOutput(). It must not close the input.
+                if (channelOutboundBuffer == null || res == Native.ERRNO_ECANCELED_NEGATIVE) {
                     return true;
                 }
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
-                        // The completion may arrive after close() or shutdownOutput() dropped the buffer.
-                        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-                        if (channelOutboundBuffer != null) {
-                            channelOutboundBuffer.remove();
-                        }
+                        channelOutboundBuffer.remove();
                     }
                 } catch (Throwable throwable) {
                    handleWriteError(throwable);
@@ -282,6 +295,30 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 return false;
             default:
                 throw new Error("Unexpected read mode: " + readMode);
+        }
+    }
+
+    private static final class DuplicatedFileDescriptor extends AbstractReferenceCounted {
+        private static final InternalLogger logger = InternalLoggerFactory.getInstance(DuplicatedFileDescriptor.class);
+
+        private final FileDescriptor fd;
+
+        DuplicatedFileDescriptor(FileDescriptor descriptor) {
+            fd = new FileDescriptor(Native.duplicateFd(descriptor.intValue()));
+        }
+
+        @Override
+        public ReferenceCounted touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        protected void deallocate() {
+            try {
+                fd.close();
+            } catch (IOException e) {
+                logger.debug("Error while closing a duplicated file descriptor", e);
+            }
         }
     }
 }

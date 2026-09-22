@@ -633,6 +633,8 @@ final class Native {
 
     private static native int getFd0(Object fileChannel);
 
+    static native int duplicateFd(int fd);
+
     static FileDescriptor newBlockingEventFd() {
         return new FileDescriptor(blockingEventFd());
     }

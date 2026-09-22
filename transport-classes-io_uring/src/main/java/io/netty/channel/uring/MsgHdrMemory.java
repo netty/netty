@@ -109,6 +109,10 @@ final class MsgHdrMemory {
                 cmsgDataOffset, segmentSize);
     }
 
+    int iovLength() {
+        return MsgHdr.iovLength(msgHdrMemory);
+    }
+
     void set(long iovArray, int length) {
         MsgHdr.set(msgHdrMemory, iovArray, length);
     }

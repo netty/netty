@@ -36,6 +36,11 @@ final class MsgHdr {
 
     private MsgHdr() { }
 
+    static int iovLength(ByteBuffer memory) {
+        int offset = memory.position() + Native.MSGHDR_OFFSETOF_MSG_IOVLEN;
+        return Native.SIZEOF_SIZE_T == 4 ? memory.getInt(offset) : (int) memory.getLong(offset);
+    }
+
     static void set(ByteBuffer memory, long iovMemory, int iovLength) {
         int memoryPosition = memory.position();
         memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, 0);
