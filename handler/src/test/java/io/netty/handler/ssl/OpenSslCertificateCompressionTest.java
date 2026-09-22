@@ -194,7 +194,7 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String property = "jdk.tls.client.disableExtensions";
         String previous = System.getProperty(property);
-        System.setProperty(property, "server_name, compress_certificate");
+        System.setProperty(property, "compress_certificate_extra, compress_certificate");
         try {
             TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
             SslContext clientSslContext = buildClientContext(
@@ -220,7 +220,7 @@ public class OpenSslCertificateCompressionTest {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String property = "jdk.tls.server.disableExtensions";
         String previous = System.getProperty(property);
-        System.setProperty(property, "compress_certificate, server_name");
+        System.setProperty(property, "compress_certificate, compress_certificate_extra");
         try {
             TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
             SslContext clientSslContext = buildClientContext(
@@ -248,8 +248,8 @@ public class OpenSslCertificateCompressionTest {
         String serverProperty = "jdk.tls.server.disableExtensions";
         String previousClient = System.getProperty(clientProperty);
         String previousServer = System.getProperty(serverProperty);
-        System.setProperty(clientProperty, "server_name, compress_certificate_extra");
-        System.setProperty(serverProperty, "server_name");
+        System.setProperty(clientProperty, "compress_certificate_extra");
+        System.setProperty(serverProperty, "compress_certificate_extra");
         try {
             TrackingZlibAlgorithm clientAlgorithm = new TrackingZlibAlgorithm();
             SslContext clientSslContext = buildClientContext(
