@@ -258,8 +258,12 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                 }
             }
         }
+        // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+        System.err.println("NETTY-DIAG bind fd=" + fd().intValue() + " family=" + socket.family()
+                + " requested=" + localAddress);
         super.doBind(localAddress);
         active = true;
+        System.err.println("NETTY-DIAG bind fd=" + fd().intValue() + " done, localAddress=" + localAddress());
     }
 
     @Override
@@ -316,6 +320,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         }
+
+        // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+        System.err.println("NETTY-DIAG send fd=" + fd().intValue() + " local=" + localAddress()
+                + " dest=" + remoteAddress + " dataLen=" + dataLen + " writtenBytes=" + writtenBytes);
 
         return writtenBytes > 0;
     }
@@ -403,8 +411,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         @Override
         void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
             assert eventLoop().inEventLoop();
+            // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+            System.err.println("NETTY-DIAG readReady fd=" + fd().intValue() + " local=" + localAddress());
             final DatagramChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
+                System.err.println("NETTY-DIAG readReady fd=" + fd().intValue() + " shouldBreakReadReady=true");
                 clearReadFilter0();
                 return;
             }
@@ -455,11 +466,20 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
                             }
 
                             if (remoteAddress == null) {
+                                // NETTY-DIAG: temporary logging to root-cause
+                                // KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+                                System.err.println("NETTY-DIAG readReady fd=" + fd().intValue()
+                                        + " recvFrom returned null (EAGAIN/nothing to read)");
                                 allocHandle.lastBytesRead(-1);
                                 byteBuf.release();
                                 byteBuf = null;
                                 break;
                             }
+                            // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest
+                            // CI flakiness.
+                            System.err.println("NETTY-DIAG readReady fd=" + fd().intValue()
+                                    + " received " + remoteAddress.receivedAmount() + " bytes from "
+                                    + remoteAddress + " (local=" + remoteAddress.localAddress() + ")");
                             InetSocketAddress localAddress = remoteAddress.localAddress();
                             if (localAddress == null) {
                                 localAddress = (InetSocketAddress) localAddress();
