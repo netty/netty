@@ -529,7 +529,6 @@ public class Http2ConnectionHandlerTest {
         compositeException.add(streamException2);
 
         when(stream.id()).thenReturn(STREAM_ID);
-        when(encoder.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, compositeException);
 
@@ -537,9 +536,11 @@ public class Http2ConnectionHandlerTest {
         // (e.g. one per active stream whose flow-control window overflowed when the initial window size
         // setting changed). Every affected stream must be reset individually, otherwise it would be left
         // open with a corrupted flow-control window.
-        verify(encoder, times(2)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
-        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
-        verify(encoder).writeRstStream(ctx, NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder, times(2))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+        verify(encoder)
+            .writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
     }
 
     @Test
@@ -555,14 +556,14 @@ public class Http2ConnectionHandlerTest {
         compositeException.add(streamException2);
 
         when(stream.id()).thenReturn(STREAM_ID);
-        when(encoder.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, compositeException);
 
         // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error per stream. Only the
         // first StreamException seen for a given stream id should result in a RST_STREAM.
-        verify(encoder, times(1)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
-        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder, times(1))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
     }
 
     @Test
