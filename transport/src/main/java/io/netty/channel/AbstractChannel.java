@@ -976,6 +976,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doClose() throws Exception;
 
     /**
+     * Called before flushed outbound messages are failed and released. Asynchronous transports may retain
+     * messages that are still used by pending I/O. This method must not remove messages or notify promises.
+     * The default implementation does nothing.
+     */
+    protected void prepareToReleaseOutboundMessages(ChannelOutboundBuffer buffer) {
+        // Noop by default.
+    }
+
+    /**
      * Called when conditions justify shutting down the output portion of the channel. This may happen if a write
      * operation throws an exception.
      */
