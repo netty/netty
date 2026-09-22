@@ -577,8 +577,8 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             /**
              * Storage for keys that are not tied to this connection (see
-             * {@link Http2ConnectionPropertyKeys#newKey()}). Allocated lazily as such keys are expected to be used
-             * rarely, if ever, compared to keys created via {@link Http2Connection#newKey()}.
+             * {@link Http2ConnectionPropertyKeys#newGlobalKey()}). Allocated lazily as such keys are expected to be
+             * used rarely, if ever, compared to keys created via {@link Http2Connection#newKey()}.
              */
             Map<PropertyKey, Object> genericValues;
 
