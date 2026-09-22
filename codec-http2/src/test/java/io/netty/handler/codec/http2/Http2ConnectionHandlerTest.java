@@ -515,7 +515,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void compositeStreamExceptionOnlyReportsOneStreamError() throws Exception {
+    public void compositeStreamExceptionReportsEachAffectedStream() throws Exception {
         handler = newHandler();
         Http2Exception.StreamException streamException1 =
                 new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "stream 1 error");
@@ -531,11 +531,13 @@ public class Http2ConnectionHandlerTest {
 
         handler.exceptionCaught(ctx, compositeException);
 
-        // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error as a result of
-        // processing a single frame/condition, even if multiple streams were affected.
-        verify(encoder, times(1)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
+        // Each StreamException in the composite represents an independent error for a distinct stream
+        // (e.g. one per active stream whose flow-control window overflowed when the initial window size
+        // setting changed). Every affected stream must be reset individually, otherwise it would be left
+        // open with a corrupted flow-control window.
+        verify(encoder, times(2)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
         verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
-        verify(encoder, never()).writeRstStream(ctx, NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test

@@ -32,7 +32,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -695,13 +694,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             onStreamError(ctx, outbound, cause, (StreamException) embedded);
         } else if (embedded instanceof CompositeStreamException) {
             CompositeStreamException compositException = (CompositeStreamException) embedded;
-            // RFC 9113, Section 5.4: "An endpoint that notices multiple errors can only report one to its peer"
-            // and "implementations SHOULD report at most one stream and one connection error as a result".
-            // Only report the first stream error out of the composite instead of one RST_STREAM per contained
-            // error, even though multiple streams may be affected by the condition that produced the composite.
-            Iterator<StreamException> iterator = compositException.iterator();
-            if (iterator.hasNext()) {
-                onStreamError(ctx, outbound, cause, iterator.next());
+            // Each contained StreamException is an independent error for a distinct stream (e.g. one stream
+            // per active stream that overflowed its flow-control window when SETTINGS_INITIAL_WINDOW_SIZE
+            // changed). Every affected stream must still be reset individually; otherwise it would be left
+            // open with a corrupted flow-control window. RFC 9113, Section 5.4's guidance to report at most
+            // one stream error applies per-stream, and is already satisfied since each stream contributes at
+            // most one exception to the composite.
+            for (StreamException streamException : compositException) {
+                onStreamError(ctx, outbound, cause, streamException);
             }
         } else {
             onConnectionError(ctx, outbound, cause, embedded);
