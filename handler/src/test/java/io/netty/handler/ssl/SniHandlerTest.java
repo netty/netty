@@ -582,7 +582,7 @@ public class SniHandlerTest {
             case OPENSSL:
             case OPENSSL_REFCNT:
                 final String sniHost = "sni.netty.io";
-                LocalAddress address = new LocalAddress("testReplaceHandler-" + Math.random());
+                LocalAddress address = new LocalAddress(SniHandlerTest.class);
                 EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
                 Channel sc = null;
                 Channel cc = null;
