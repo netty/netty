@@ -514,7 +514,12 @@ public class SimpleChannelPoolTest {
             healthCheck.setSuccess(Boolean.TRUE);
 
             // Let the health check listener run on the EventLoop of the Channel.
-            channel.eventLoop().submit(() -> { }).sync();
+            channel.eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP.
+                }
+            }).sync();
 
             assertTrue(acquirePromise.isCancelled());
             assertEquals(2, handler.acquiredCount());
