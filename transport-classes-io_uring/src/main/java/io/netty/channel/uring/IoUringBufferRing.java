@@ -222,9 +222,13 @@ final class IoUringBufferRing {
         ByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.writableBytes(), read);
+        // The kernel might report a bundle total (RECVSEND_BUNDLE) that spans more than this single ring
+        // entry can hold. Clamp to what this entry can actually provide; the caller loops over the
+        // remainder using the next bid (see nextBid(short)).
+        int len = Math.min(read, byteBuf.writableBytes());
         // We always slice so the user will not mess up things later.
-        ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), read);
-        byteBuf.writerIndex(byteBuf.writerIndex() + read);
+        ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), len);
+        byteBuf.writerIndex(byteBuf.writerIndex() + len);
 
         if (incremental && more && byteBuf.isWritable()) {
             // The buffer will be used later again, just slice out what we did read so far.
