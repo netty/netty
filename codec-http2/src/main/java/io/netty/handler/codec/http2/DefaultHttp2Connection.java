@@ -367,14 +367,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Verifies that the key was created by this connection and returns it as the internal
-     * {@link DefaultPropertyKey} type.
+     * Verifies that the key was created by this connection.
      *
-     * @throws NullPointerException if the key is {@code null}.
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
-    final DefaultPropertyKey verifyKey(PropertyKey key) {
-        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+    final DefaultPropertyKey verifyKey(DefaultPropertyKey key) {
+        return key.verifyConnection(this);
     }
 
     /**
@@ -470,21 +468,21 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public final <V> V setProperty(PropertyKey key, V value) {
             return key instanceof DefaultPropertyKey
-                    ? properties.add(verifyKey(key), value)
+                    ? properties.add(verifyKey((DefaultPropertyKey) key), value)
                     : properties.addGeneric(checkNotNull(key, "key"), value);
         }
 
         @Override
         public final <V> V getProperty(PropertyKey key) {
             return key instanceof DefaultPropertyKey
-                    ? properties.get(verifyKey(key))
+                    ? properties.get(verifyKey((DefaultPropertyKey) key))
                     : properties.getGeneric(checkNotNull(key, "key"));
         }
 
         @Override
         public final <V> V removeProperty(PropertyKey key) {
             return key instanceof DefaultPropertyKey
-                    ? properties.remove(verifyKey(key))
+                    ? properties.remove(verifyKey((DefaultPropertyKey) key))
                     : properties.removeGeneric(checkNotNull(key, "key"));
         }
 
