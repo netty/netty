@@ -574,9 +574,8 @@ public class DefaultHttp2Connection implements Http2Connection {
             Object[] values = EmptyArrays.EMPTY_OBJECTS;
 
             /**
-             * Storage for keys that are not tied to this connection (see
-             * {@link Http2ConnectionPropertyKeys#newGlobalKey()}). Allocated lazily as such keys are expected to be
-             * used rarely, if ever, compared to keys created via {@link Http2Connection#newKey()}.
+             * Storage for keys that are not tied to this connection. Allocated lazily as such keys are expected to
+             * be used rarely, if ever, compared to keys created via {@link Http2Connection#newKey()}.
              */
             Map<PropertyKey, Object> genericValues;
 

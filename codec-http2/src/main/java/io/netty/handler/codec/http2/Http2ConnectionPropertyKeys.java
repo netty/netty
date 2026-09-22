@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 /**
  * Utility methods for creating {@link Http2Connection.PropertyKey}s.
  */
-public final class Http2ConnectionPropertyKeys {
+final class Http2ConnectionPropertyKeys {
 
     private Http2ConnectionPropertyKeys() { }
 
@@ -32,7 +32,7 @@ public final class Http2ConnectionPropertyKeys {
      * associated with a key returned by {@link Http2Connection#newKey()}. Prefer the latter whenever a specific
      * {@link Http2Connection} instance is available up-front.
      */
-    public static Http2Connection.PropertyKey newGlobalKey() {
+    static Http2Connection.PropertyKey newGlobalKey() {
         return new Http2Connection.PropertyKey() { };
     }
 }
