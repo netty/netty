@@ -911,7 +911,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void staticKeyShouldWorkWithAnyConnection() throws Http2Exception {
-        Http2Connection.PropertyKey key = Http2Connection.PropertyKey.newKey();
+        Http2Connection.PropertyKey key = Http2ConnectionPropertyKeys.newKey();
         Http2Stream clientStream = client.local().createStream(3, false);
         Http2Stream serverStream = server.local().createStream(2, false);
         assertNull(clientStream.setProperty(key, "client"));
@@ -925,8 +925,8 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void staticKeysShouldBeIndependent() throws Http2Exception {
-        Http2Connection.PropertyKey keyA = Http2Connection.PropertyKey.newKey();
-        Http2Connection.PropertyKey keyB = Http2Connection.PropertyKey.newKey();
+        Http2Connection.PropertyKey keyA = Http2ConnectionPropertyKeys.newKey();
+        Http2Connection.PropertyKey keyB = Http2ConnectionPropertyKeys.newKey();
         Http2Stream stream = client.local().createStream(3, false);
         stream.setProperty(keyA, "a");
         stream.setProperty(keyB, "b");
@@ -937,7 +937,7 @@ public class DefaultHttp2ConnectionTest {
     @Test
     public void unsetPropertyShouldReturnNullForBothKeyKinds() throws Http2Exception {
         Http2Connection.PropertyKey connectionKey = client.newKey();
-        Http2Connection.PropertyKey staticKey = Http2Connection.PropertyKey.newKey();
+        Http2Connection.PropertyKey staticKey = Http2ConnectionPropertyKeys.newKey();
         Http2Stream stream = client.local().createStream(3, false);
         assertNull(stream.getProperty(connectionKey));
         assertNull(stream.getProperty(staticKey));
