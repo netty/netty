@@ -506,8 +506,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                 "Multiple content-length headers received");
                     }
                 }
-                // Use size() instead of isEmpty() for backward compatibility with grpc-java prior to 1.59.1,
-                // see https://github.com/grpc/grpc-java/issues/10665
             } else {
                 // Once a CONNECT tunnel is established (RFC 9113, 8.5) -- an ordinary CONNECT request answered
                 // with a successful response -- no further HEADERS frame is permitted on the stream.
@@ -516,7 +514,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                             "Received HEADERS frame on stream %d after the CONNECT tunnel was established; only " +
                             "DATA and stream management frames are permitted (RFC 9113, 8.5)", stream.id());
                 }
-                if (validateHeaders && !headers.isEmpty()) {
+                // Use size() instead of isEmpty() for backward compatibility with grpc-java prior to 1.59.1,
+                // see https://github.com/grpc/grpc-java/issues/10665
+                if (validateHeaders && headers.size() > 0) {
                     // Need to check trailers don't contain pseudo headers. According to RFC 9113
                     // Trailers MUST NOT include pseudo-header fields (Section 8.3).
                     for (Iterator<Entry<CharSequence, CharSequence>> iterator =
