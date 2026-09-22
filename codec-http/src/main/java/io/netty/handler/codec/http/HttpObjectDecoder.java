@@ -822,7 +822,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (contentLength != -1) {
                 String lengthValue = contentLengthFields.get(0).trim();
                 if (contentLengthFields.size() > 1 || // don't unnecessarily re-order headers
-                        !lengthValue.equals(Long.toString(contentLength))) {
+                        !isLengthEqual(lengthValue, contentLength)) {
                     headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
                 }
             }
