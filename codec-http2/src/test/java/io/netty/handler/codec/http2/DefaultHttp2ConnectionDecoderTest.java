@@ -155,14 +155,7 @@ public class DefaultHttp2ConnectionDecoderTest {
                 return properties.put(invocationOnMock.getArgument(0), invocationOnMock.getArgument(1));
             }
         });
-        // Each call must return a distinct key so that properties stored under different keys (e.g. content-length
-        // vs. CONNECT-tunnel tracking) don't collide in the IdentityHashMap above.
-        when(connection.newKey()).thenAnswer(new Answer<Http2Connection.PropertyKey>() {
-            @Override
-            public Http2Connection.PropertyKey answer(InvocationOnMock invocationOnMock) {
-                return mock(Http2Connection.PropertyKey.class);
-            }
-        });
+        when(connection.newKey()).thenReturn(mock(Http2Connection.PropertyKey.class));
 
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         doAnswer(new Answer<Boolean>() {

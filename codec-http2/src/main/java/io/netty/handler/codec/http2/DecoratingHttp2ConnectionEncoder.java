@@ -21,7 +21,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter implements Http2ConnectionEncoder,
         Http2SettingsReceivedConsumer {
-    final Http2ConnectionEncoder delegate;
+    private final Http2ConnectionEncoder delegate;
 
     public DecoratingHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         super(delegate);
