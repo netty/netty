@@ -541,6 +541,29 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void compositeStreamExceptionOnlyReportsFirstErrorForSameStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "first error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(STREAM_ID, CANCEL, "second error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+        when(encoder.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenReturn(future);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error per stream. Only the
+        // first StreamException seen for a given stream id should result in a RST_STREAM.
+        verify(encoder, times(1)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+    }
+
+    @Test
     public void serverShouldSend431OnHeaderSizeErrorWhenDecodingInitialHeaders() throws Exception {
         int padding = 0;
         handler = newHandler();
