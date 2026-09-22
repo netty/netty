@@ -22,6 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class Http2ConnectionPropertyKeys {
 
+    /**
+     * Safe-guard against misuse: global keys are expected to be created rarely, typically once per use-case and
+     * stored in a {@code static} field, so there should never be a legitimate need for more than this many.
+     */
+    private static final int MAX_GLOBAL_KEYS = 8;
+
     private static final AtomicInteger nextIndex = new AtomicInteger();
 
     private Http2ConnectionPropertyKeys() { }
@@ -37,7 +43,12 @@ final class Http2ConnectionPropertyKeys {
      * {@link Http2Connection} instance is available up-front.
      */
     static Http2Connection.PropertyKey newGlobalKey() {
-        return new GlobalPropertyKey(nextIndex.getAndIncrement());
+        int index = nextIndex.getAndIncrement();
+        if (index >= MAX_GLOBAL_KEYS) {
+            nextIndex.decrementAndGet();
+            throw new IllegalStateException("Only " + MAX_GLOBAL_KEYS + " global keys can be created");
+        }
+        return new GlobalPropertyKey(index);
     }
 
     /**
