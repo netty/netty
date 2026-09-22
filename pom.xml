@@ -1314,6 +1314,36 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.uring.AbstractIoUringChannel::doShutdownOutput0() throws java.lang.Exception @ io.netty.channel.uring.IoUringDatagramChannel</old>
+                  <justification>Removed an internal protected shutdown hook. The declaring superclass is package-private and the public channel is final.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.uring.AbstractIoUringStreamChannel::doShutdownOutput0() throws java.lang.Exception @ io.netty.channel.uring.IoUringDomainSocketChannel</old>
+                  <justification>Removed an internal protected shutdown hook. The declaring superclass is package-private and the public channel is final.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.uring.AbstractIoUringChannel::doShutdownOutput0() throws java.lang.Exception @ io.netty.channel.uring.IoUringServerDomainSocketChannel</old>
+                  <justification>Removed an internal protected shutdown hook. The declaring superclass is package-private and the public channel is final.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.uring.AbstractIoUringChannel::doShutdownOutput0() throws java.lang.Exception @ io.netty.channel.uring.IoUringServerSocketChannel</old>
+                  <justification>Removed an internal protected shutdown hook. The declaring superclass is package-private and the public channel is final.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.uring.AbstractIoUringStreamChannel::doShutdownOutput0() throws java.lang.Exception @ io.netty.channel.uring.IoUringSocketChannel</old>
+                  <justification>Removed an internal protected shutdown hook. The declaring superclass is package-private and the public channel is final.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>
                   <new>method void io.netty.handler.codec.http3.Http3ClientConnectionHandler::initBidirectionalStream(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.quic.QuicStreamChannel)</new>
                   <justification>Allow applications to customize initialization of bidirectional streams by subclassing.</justification>
