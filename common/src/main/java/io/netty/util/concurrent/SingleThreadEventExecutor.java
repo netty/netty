@@ -1174,6 +1174,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
+                        } else if (currentState == ST_SUSPENDING || currentState == ST_SUSPENDED) {
+                            // We were trying to suspend (or just did) but something raced in - e.g. a scheduled
+                            // task being cancelled and re-submitted itself for removal via scheduleRemoveScheduled()
+                            // - so we can no longer suspend right now. No shutdown was requested, so this must not
+                            // be treated as if run() returned without confirming shutdown; just go around the loop
+                            // again so run() can pick up whatever raced in.
+                            continue;
                         }
                         break;
                     }
