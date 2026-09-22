@@ -26,6 +26,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +41,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -58,9 +61,9 @@ public class IoUringBufferRingTest {
         try {
             int ringFd = ringBuffer.fd();
             long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, 4, (short) 1, 0);
-            assumeTrue(
-                    ioUringBufRingAddr > 0,
-                    "ioUringSetupBufRing result must great than 0, but now result is " + ioUringBufRingAddr);
+            assertThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must great than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
             int freeRes = Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, (short) 1);
             assertEquals(
                     0,
@@ -144,7 +147,7 @@ public class IoUringBufferRingTest {
                 .channel(IoUringSocketChannel.class)
                 .handler(new ChannelInboundHandler() { });
         Future<Channel> channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
-        assumeTrue(channelFuture.isSuccess());
+        assertTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.getNow();
 
         //is provider buffer read?
@@ -182,8 +185,8 @@ public class IoUringBufferRingTest {
     @EnabledIf("recvsendBundleEnabled")
     public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws Exception {
         // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
-        assumeTrue(IoUring.isRecvMultishotEnabled(),
-                "Only yields expected test results when using multishot atm");
+        assumeTrue(IoUring.isRecvMultishotEnabled());
+
         if (incremental) {
             assumeTrue(IoUring.isRegisterBufferRingIncSupported());
         }
@@ -219,7 +222,7 @@ public class IoUringBufferRingTest {
                 .channel(IoUringSocketChannel.class)
                 .handler(new ChannelInboundHandler() { });
         Future<Channel> channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
-        assumeTrue(channelFuture.isSuccess());
+        assertTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.getNow();
 
         // Create a buffer that will span multiple buffers that are used out of the buffer ring.
@@ -246,6 +249,42 @@ public class IoUringBufferRingTest {
         } finally {
             writeBuffer.release();
             received.release();
+        }
+    }
+
+    @Test
+    public void testUseBufferClampsReadLargerThanEntryCapacity() throws Exception {
+        // Regression test for a bundle completion (IORING_RECVSEND_BUNDLE) reporting a total byte count
+        // that spans more than a single ring entry can hold: useBuffer(...) must clamp instead of throwing
+        // an IndexOutOfBoundsException, leaving the remainder for the caller to fetch from the next bid.
+        int entrySize = 8;
+        short entries = 4;
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        try {
+            int ringFd = ringBuffer.fd();
+            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, entries, (short) 1, 0);
+            assumeThat(ioUringBufRingAddr)
+                    .as("ioUringSetupBufRing result must be greater than 0, but now result is %d", ioUringBufRingAddr)
+                    .isGreaterThan(0);
+            try {
+                IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
+                        Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
+                        entries, 2, (short) 1, false,
+                        new IoUringFixedBufferRingAllocator(entrySize), false);
+                bufferRing.initialize();
+
+                int bundleTotal = entrySize * 2 + 1;
+                ByteBuf buffer = bufferRing.useBuffer((short) 0, bundleTotal, true);
+                try {
+                    assertEquals(entrySize, buffer.readableBytes());
+                } finally {
+                    buffer.release();
+                }
+            } finally {
+                Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, (short) 1);
+            }
+        } finally {
+            ringBuffer.close();
         }
     }
 
