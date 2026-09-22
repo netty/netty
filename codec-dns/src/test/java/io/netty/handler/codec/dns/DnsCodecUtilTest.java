@@ -17,13 +17,33 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DnsCodecUtilTest {
+
+    @Test
+    void calculateMaxNameLengthIsBoundedRegardlessOfRemainingBytes() {
+        // A decoded name can never exceed MAX_DOMAIN_NAME_LENGTH characters, so the working buffer must stay
+        // bounded even when the message has a huge number of bytes still readable after the name (e.g. many
+        // more records in a large DNS message). Without this bound, a single message could force an oversized
+        // allocation for every name decoded from it.
+        assertEquals(DnsCodecUtil.MAX_DOMAIN_NAME_LENGTH,
+                DnsCodecUtil.calculateMaxNameLength(Integer.MAX_VALUE));
+        assertEquals(DnsCodecUtil.MAX_DOMAIN_NAME_LENGTH,
+                DnsCodecUtil.calculateMaxNameLength(8 * 1024 * 1024));
+        assertEquals(DnsCodecUtil.MAX_DOMAIN_NAME_LENGTH,
+                DnsCodecUtil.calculateMaxNameLength(DnsCodecUtil.MAX_DOMAIN_NAME_LENGTH + 1));
+
+        // For buffers that cannot possibly contain more than a valid name, behavior is unchanged.
+        assertEquals(5, DnsCodecUtil.calculateMaxNameLength(5));
+        assertEquals(0, DnsCodecUtil.calculateMaxNameLength(0));
+    }
 
     @Test
     void rejectTooLongLabelWhileDecoding() {
@@ -60,6 +80,67 @@ public class DnsCodecUtilTest {
             }
         });
         buf.release();
+    }
+
+    @Test
+    void acceptMaxCompressionPointers() {
+        ByteBuf buf = newPointerChain(DnsCodecUtil.MAX_COMPRESSION_POINTERS);
+        try {
+            assertEquals("abc.", DnsCodecUtil.decodeDomainName(buf));
+            // The reader index must be just after the first pointer.
+            assertEquals(buf.writerIndex(), buf.readerIndex());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    void rejectTooManyCompressionPointers() {
+        final ByteBuf buf = newPointerChain(DnsCodecUtil.MAX_COMPRESSION_POINTERS + 1);
+        try {
+            assertThrows(CorruptedFrameException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    DnsCodecUtil.decodeDomainName(buf);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    void rejectCompressionPointerLoop() {
+        final ByteBuf buf = Unpooled.buffer();
+        // A pointer to itself.
+        buf.writeShort(0xc000);
+        try {
+            assertThrows(CorruptedFrameException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    DnsCodecUtil.decodeDomainName(buf);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    /**
+     * Writes the name {@code abc.} followed by a chain of {@code pointers} compression pointers, each pointing to the
+     * previous one, and positions the reader index at the last pointer so that decoding it follows all of them.
+     */
+    private static ByteBuf newPointerChain(int pointers) {
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeByte(3).writeBytes(new byte[] { 'a', 'b', 'c' }).writeByte(0);
+        int previous = 0;
+        for (int i = 0; i < pointers; i++) {
+            int current = buf.writerIndex();
+            buf.writeShort(0xc000 | previous);
+            previous = current;
+        }
+        buf.readerIndex(previous);
+        return buf;
     }
 
     @Test
