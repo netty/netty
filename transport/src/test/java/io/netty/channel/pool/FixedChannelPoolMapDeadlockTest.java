@@ -45,16 +45,20 @@ public class FixedChannelPoolMapDeadlockTest {
 
         final EventLoopGroup threadA1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapA1 = new Bootstrap()
-                .channel(LocalChannel.class).group(threadA1).localAddress(new LocalAddress("A1"));
+                .channel(LocalChannel.class).group(threadA1).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
         final EventLoopGroup threadA2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapA2 = new Bootstrap()
-                .channel(LocalChannel.class).group(threadA2).localAddress(new LocalAddress("A2"));
+                .channel(LocalChannel.class).group(threadA2).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
         final EventLoopGroup threadB1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapB1 = new Bootstrap()
-                .channel(LocalChannel.class).group(threadB1).localAddress(new LocalAddress("B1"));
+                .channel(LocalChannel.class).group(threadB1).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
         final EventLoopGroup threadB2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapB2 = new Bootstrap()
-                .channel(LocalChannel.class).group(threadB2).localAddress(new LocalAddress("B2"));
+                .channel(LocalChannel.class).group(threadB2).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
 
         final FixedChannelPool poolA1 = new FixedChannelPool(bootstrapA1, NOOP_HANDLER, 1);
         final FixedChannelPool poolA2 = new FixedChannelPool(bootstrapB2, NOOP_HANDLER, 1);
@@ -179,10 +183,12 @@ public class FixedChannelPoolMapDeadlockTest {
 
         final EventLoopGroup thread1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrap1 = new Bootstrap()
-                .channel(LocalChannel.class).group(thread1).localAddress(new LocalAddress("#1"));
+                .channel(LocalChannel.class).group(thread1).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
         final EventLoopGroup thread2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrap2 = new Bootstrap()
-                .channel(LocalChannel.class).group(thread2).localAddress(new LocalAddress("#2"));
+                .channel(LocalChannel.class).group(thread2).localAddress(
+                    new LocalAddress(FixedChannelPoolMapDeadlockTest.class));
 
         // pool1 runs on thread2, pool2 runs on thread1
         final FixedChannelPool pool1 = new FixedChannelPool(bootstrap2, NOOP_HANDLER, 1);
