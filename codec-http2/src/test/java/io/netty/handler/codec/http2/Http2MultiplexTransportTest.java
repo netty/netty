@@ -382,9 +382,11 @@ public class Http2MultiplexTransportTest {
         }
         final String protocol = tlsv13 ? "TLSv1.3" : "TLSv1.2";
         SelfSignedCertificate ssc = null;
+        SslContext sslCtx = null;
+        SslContext clientCtx = null;
         try {
             ssc = new SelfSignedCertificate();
-            final SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                     .trustManager(new X509TrustManager() {
                         @Override
                         public void checkClientTrusted(X509Certificate[] chain, String authType)
@@ -415,6 +417,7 @@ public class Http2MultiplexTransportTest {
                             ApplicationProtocolNames.HTTP_1_1)).clientAuth(ClientAuth.REQUIRE)
                     .build();
 
+            final SslContext sslCtx0 = sslCtx;
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(eventLoopGroup);
             sb.channel(NioServerSocketChannel.class);
@@ -422,14 +425,14 @@ public class Http2MultiplexTransportTest {
 
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(sslCtx0.newHandler(ch.alloc()));
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
             serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
 
-            final SslContext clientCtx = SslContextBuilder.forClient()
+            clientCtx = SslContextBuilder.forClient()
                     .keyManager(ssc.key(), ssc.cert())
                     .sslProvider(provider)
                     /* NOTE: the cipher filter may not include all ciphers required by the HTTP/2 specification.
@@ -449,13 +452,14 @@ public class Http2MultiplexTransportTest {
 
             final CountDownLatch latch = new CountDownLatch(2);
             final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
+            final SslContext clientCtx0 = clientCtx;
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup);
             bs.channel(NioSocketChannel.class);
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(clientCtx0.newHandler(ch.alloc()));
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
@@ -517,6 +521,8 @@ public class Http2MultiplexTransportTest {
                 throw error;
             }
         } finally {
+            ReferenceCountUtil.release(clientCtx);
+            ReferenceCountUtil.release(sslCtx);
             if (ssc != null) {
                 ssc.delete();
             }
@@ -542,9 +548,11 @@ public class Http2MultiplexTransportTest {
 
     private void testFireChannelReadAfterHandshakeSuccess(SslProvider provider) throws Exception {
         SelfSignedCertificate ssc = null;
+        SslContext serverCtx = null;
+        SslContext clientCtx = null;
         try {
             ssc = new SelfSignedCertificate();
-            final SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                     .sslProvider(provider)
                     .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                     .applicationProtocolConfig(new ApplicationProtocolConfig(
@@ -555,13 +563,14 @@ public class Http2MultiplexTransportTest {
                             ApplicationProtocolNames.HTTP_1_1))
                     .build();
 
+            final SslContext serverCtx0 = serverCtx;
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(eventLoopGroup);
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(serverCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(serverCtx0.newHandler(ch.alloc()));
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
@@ -590,7 +599,7 @@ public class Http2MultiplexTransportTest {
             });
             serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
 
-            final SslContext clientCtx = SslContextBuilder.forClient()
+            clientCtx = SslContextBuilder.forClient()
                     .sslProvider(provider)
                     .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -603,13 +612,14 @@ public class Http2MultiplexTransportTest {
                     .build();
 
             final CountDownLatch latch = new CountDownLatch(1);
+            final SslContext clientCtx0 = clientCtx;
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup);
             bs.channel(NioSocketChannel.class);
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
+                    ch.pipeline().addLast(clientCtx0.newHandler(ch.alloc()));
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
@@ -649,6 +659,8 @@ public class Http2MultiplexTransportTest {
 
             latch.await();
         } finally {
+            ReferenceCountUtil.release(clientCtx);
+            ReferenceCountUtil.release(serverCtx);
             if (ssc != null) {
                 ssc.delete();
             }
