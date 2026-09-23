@@ -21,6 +21,7 @@ import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.parallel.Isolated;
 
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(10)
 @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
+@EnabledIf("io.netty.util.internal.PlatformDependent#isJfrEnabled")
 @Isolated
 public class JfrEventsTest {
     PooledByteBufAllocator newPooledAllocator(boolean preferDirect) {
