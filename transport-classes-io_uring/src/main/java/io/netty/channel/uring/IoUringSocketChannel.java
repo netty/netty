@@ -118,6 +118,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     writeId = submitWrite(ops);
                     writeOpCode = opCode;
                     if (writeId == 0) {
+                        pendingZeroCopyWrites.recycle(opsId);
                         return 0;
                     }
                     return 1;
@@ -172,6 +173,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 writeId = submitWrite(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
+                    pendingZeroCopyWrites.recycle(opsId);
                     return 0;
                 }
                 return 1;
@@ -202,9 +204,12 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         }
 
         private long nextZeroCopyUserData() {
-            short candidate = nextOpsId();
             PendingZeroCopyWrites pendingWrites = pendingZeroCopyWrites;
-            return pendingWrites == null ? candidate : pendingWrites.nextUserData(candidate);
+            if (pendingWrites == null) {
+                pendingWrites = new PendingZeroCopyWrites();
+                pendingZeroCopyWrites = pendingWrites;
+            }
+            return pendingWrites.nextUserData();
         }
 
         @Override
@@ -223,14 +228,21 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             return super.writeComplete0(op, res, flags, data, outstanding);
         }
 
-        private List<ReferenceCounted> takeWriteBuffers() {
+        private void takeWriteBuffers(long data) {
+            PendingZeroCopyWrites.PendingWrite write = pendingZeroCopyWrites.register(data);
             if (retainedWriteBuffers == null) {
-                return retainWriteBuffers(outboundBuffer());
+                if (currentWrite.opcode() == Native.IORING_OP_SENDMSG_ZC) {
+                    write.retain(outboundBuffer(), writeMsgHdr().iovLength());
+                } else {
+                    write.add(((ByteBuf) outboundBuffer().current()).retain());
+                }
+            } else {
+                // Shutdown may have cleared the outbound buffer before the primary CQE; use the retained buffers.
+                for (int i = 0; i < retainedWriteBuffers.size(); i++) {
+                    write.add(retainedWriteBuffers.get(i));
+                }
+                retainedWriteBuffers = Collections.emptyList();
             }
-            // Shutdown may have cleared the outbound buffer before the primary CQE; use the retained buffers.
-            List<ReferenceCounted> buffers = retainedWriteBuffers;
-            retainedWriteBuffers = Collections.emptyList();
-            return buffers;
         }
 
         private boolean handleWriteCompleteZeroCopy(byte op, int res, int flags, long data) {
@@ -242,12 +254,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             writeOpCode = 0;
             if ((flags & Native.IORING_CQE_F_MORE) != 0) {
                 // Establish notification ownership before removeBytes() can notify a write listener.
-                PendingZeroCopyWrites pendingWrites = pendingZeroCopyWrites;
-                if (pendingWrites == null) {
-                    pendingWrites = new PendingZeroCopyWrites();
-                    pendingZeroCopyWrites = pendingWrites;
-                }
-                pendingWrites.register(data, takeWriteBuffers());
+                takeWriteBuffers(data);
+            } else {
+                pendingZeroCopyWrites.recycle(data);
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (channelOutboundBuffer == null) {
