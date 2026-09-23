@@ -290,17 +290,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             ByteBuf buf = (ByteBuf) msg;
             if (buf.isReadable()) {
                 buffers.add(buf.retain());
-                if (buf.nioBufferCount() == 1) {
-                    --remaining;
-                } else {
-                    for (ByteBuffer nioBuffer : buf.nioBuffers(buf.readerIndex(), buf.readableBytes())) {
-                        if (nioBuffer.remaining() != 0 && --remaining == 0) {
-                            break;
-                        }
-                    }
-                }
+                remaining = remainingIovs(buf, remaining);
             }
             return remaining != 0;
+        }
+
+        static int remainingIovs(ByteBuf buf, int remaining) {
+            if (buf.nioBufferCount() == 1) {
+                return remaining - 1;
+            }
+            for (ByteBuffer nioBuffer : buf.nioBuffers(buf.readerIndex(), buf.readableBytes())) {
+                if (nioBuffer.remaining() != 0 && --remaining == 0) {
+                    break;
+                }
+            }
+            return remaining;
         }
     }
 
