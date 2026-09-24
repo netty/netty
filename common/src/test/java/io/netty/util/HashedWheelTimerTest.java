@@ -16,9 +16,11 @@
 package io.netty.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -26,9 +28,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -98,7 +102,7 @@ public class HashedWheelTimerTest {
     @org.junit.jupiter.api.Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testTimerShouldThrowExceptionAfterShutdownForNewTimeouts() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(3);
-        final Timer timer = new HashedWheelTimer();
+        final HashedWheelTimer timer = new HashedWheelTimer();
         for (int i = 0; i < 3; i ++) {
             timer.newTimeout(new TimerTask() {
                 @Override
@@ -117,6 +121,34 @@ public class HashedWheelTimerTest {
         } catch (IllegalStateException ignored) {
             // expected
         }
+        // All three timeouts expired and the rejected one must not be counted either.
+        assertEquals(0, timer.pendingTimeouts());
+    }
+
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testNewTimeoutRacingWithStop() {
+        final AtomicReference<Set<Timeout>> unprocessed = new AtomicReference<Set<Timeout>>();
+        final HashedWheelTimer timer = new HashedWheelTimer() {
+            @Override
+            public void start() {
+                super.start();
+                // Stop the timer after newTimeout() started it but before it added the timeout to the queue. This
+                // lets the worker terminate before the timeout is added.
+                if (unprocessed.get() == null) {
+                    unprocessed.set(stop());
+                }
+            }
+        };
+
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() {
+                timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
+            }
+        });
+        assertTrue(unprocessed.get().isEmpty());
+        assertEquals(0, timer.pendingTimeouts());
     }
 
     @Test
