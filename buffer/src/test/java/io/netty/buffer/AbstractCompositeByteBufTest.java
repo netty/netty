@@ -1673,6 +1673,38 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testOverflowWhileAddingFlattenedComponents() {
+        int capacity = 1024 * 1024; // 1MB
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        final CompositeByteBuf toAdd = compositeBuffer(Integer.MAX_VALUE);
+        try {
+            // fill up to less than 2 x 1MB below Integer.MAX_VALUE
+            for (int i = 0; i < Integer.MAX_VALUE / capacity - 1; i++) {
+                compositeByteBuf.addComponent(true, buffer.retainedDuplicate());
+            }
+            int numComponents = compositeByteBuf.numComponents();
+            int compositeCapacity = compositeByteBuf.capacity();
+
+            toAdd.addComponent(true, buffer.retainedDuplicate());
+            toAdd.addComponent(true, buffer.retainedDuplicate());
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    compositeByteBuf.addFlattenedComponents(true, toAdd);
+                }
+            });
+            // nothing was added, and the buffer was released as its ownership was transferred
+            assertEquals(numComponents, compositeByteBuf.numComponents());
+            assertEquals(compositeCapacity, compositeByteBuf.capacity());
+            assertEquals(0, toAdd.refCnt());
+        } finally {
+            compositeByteBuf.release();
+            buffer.release();
+        }
+    }
+
+    @Test
     public void testOverflowWhileAddingComponentsViaVarargs() {
         int capacity = 1024 * 1024; // 1MB
         final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);

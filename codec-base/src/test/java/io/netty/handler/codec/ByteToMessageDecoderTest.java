@@ -419,10 +419,14 @@ public class ByteToMessageDecoderTest {
         ByteBuf cumulation = new CompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, false, 64) {
             @Override
             public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
+                // the ownership of buffer is transferred, so it must be released if it can't be added
+                buffer.release();
                 throw error;
             }
             @Override
             public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+                // the ownership of buffer is transferred, so it must be released if it can't be added
+                buffer.release();
                 throw error;
             }
         }.writeZero(1);
@@ -434,6 +438,63 @@ public class ByteToMessageDecoderTest {
             assertSame(error, expected);
             assertEquals(0, in.refCnt());
             cumulation.release();
+        }
+    }
+
+    @Test
+    public void compositeCumulatorReleasesCompositeInOnceWhenCapacityWouldOverflow() {
+        testCompositeCumulatorReleasesInOnceWhenCapacityWouldOverflow(true, false);
+    }
+
+    @Test
+    public void compositeCumulatorReleasesInOnceWhenCapacityWouldOverflow() {
+        testCompositeCumulatorReleasesInOnceWhenCapacityWouldOverflow(false, false);
+    }
+
+    @Test
+    public void compositeCumulatorKeepsSharedCumulationWhenCapacityWouldOverflow() {
+        // a shared cumulation is copied into a new CompositeByteBuf, which is released on failure
+        testCompositeCumulatorReleasesInOnceWhenCapacityWouldOverflow(true, true);
+    }
+
+    private static void testCompositeCumulatorReleasesInOnceWhenCapacityWouldOverflow(
+            boolean compositeIn, boolean sharedCumulation) {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf cumulation = Unpooled.compositeBuffer(Integer.MAX_VALUE);
+        try {
+            // fill up to less than 2 x 1MB below Integer.MAX_VALUE
+            for (int i = 0; i < Integer.MAX_VALUE / capacity - 1; i++) {
+                cumulation.addComponent(true, buffer.retainedDuplicate());
+            }
+            int cumulationCapacity = cumulation.capacity();
+            if (sharedCumulation) {
+                cumulation.retain();
+            }
+            int cumulationRefCnt = cumulation.refCnt();
+            ByteBuf in;
+            if (compositeIn) {
+                in = Unpooled.compositeBuffer().addComponent(true, buffer.retainedDuplicate())
+                        .addComponent(true, buffer.retainedDuplicate());
+            } else {
+                in = Unpooled.buffer(2 * capacity).writeZero(2 * capacity);
+            }
+            try {
+                ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
+                fail();
+            } catch (IllegalArgumentException expected) {
+                // the capacity would overflow
+            }
+            // in was released exactly once, and the cumulation is unchanged and still owned by the caller
+            assertEquals(0, in.refCnt());
+            assertEquals(cumulationRefCnt, cumulation.refCnt());
+            assertEquals(cumulationCapacity, cumulation.capacity());
+            if (sharedCumulation) {
+                cumulation.release();
+            }
+        } finally {
+            cumulation.release();
+            buffer.release();
         }
     }
 
