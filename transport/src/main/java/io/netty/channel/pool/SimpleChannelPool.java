@@ -294,8 +294,7 @@ public class SimpleChannelPool implements ChannelPool {
             if (channel.attr(POOL_KEY).getAndSet(null) != this) {
                 closeAndFail(channel,
                              // Better include a stacktrace here as this is an user error.
-                             new IllegalArgumentException(
-                                     "Channel " + channel + " was not acquired from this ChannelPool"),
+                             new ChannelNotAcquiredFromPoolException(channel),
                              promise);
             } else {
                 if (releaseHealthCheck) {
@@ -412,6 +411,20 @@ public class SimpleChannelPool implements ChannelPool {
                 return null;
             }
         });
+    }
+
+    /**
+     * Fails the release of a {@link Channel} that was not acquired from this pool. This lets {@link FixedChannelPool}
+     * tell it apart from other release failures, which may also be {@link IllegalArgumentException}s thrown by user
+     * code.
+     */
+    static final class ChannelNotAcquiredFromPoolException extends IllegalArgumentException {
+
+        private static final long serialVersionUID = -7390314262213853178L;
+
+        ChannelNotAcquiredFromPoolException(Channel channel) {
+            super("Channel " + channel + " was not acquired from this ChannelPool");
+        }
     }
 
     private static final class ChannelPoolFullException extends IllegalStateException {
