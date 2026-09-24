@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
@@ -92,8 +93,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             @Override
             public void onStreamActive(Http2Stream stream) {
                 // If the object was previously created, but later activated then we have to ensure the proper
-                // initialWindowSize is used.
-                monitor.windowSize(state(stream), initialWindowSize);
+                // initialWindowSize is used. The peer might also have already granted credit for a reserved stream
+                // via WINDOW_UPDATE (RFC 9113, section 5.1), so add the initialWindowSize to it instead of replacing
+                // it. The window of a stream that was not reserved before is always 0 here.
+                FlowState state = state(stream);
+                monitor.windowSize(state,
+                        (int) min((long) initialWindowSize + state.windowSize(), MAX_INITIAL_WINDOW_SIZE));
             }
 
             @Override
