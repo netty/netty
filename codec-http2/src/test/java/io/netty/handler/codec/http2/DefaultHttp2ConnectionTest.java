@@ -899,9 +899,14 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void connectionKeyShouldRejectUseWithOtherConnection() throws Http2Exception {
-        Http2Connection.PropertyKey key = client.newKey();
-        Http2Stream stream = server.local().createStream(2, false);
-        assertThrows(IllegalArgumentException.class, () -> stream.setProperty(key, "foo"));
+        final Http2Connection.PropertyKey key = client.newKey();
+        final Http2Stream stream = server.local().createStream(2, false);
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute(){
+                stream.setProperty(key, "foo");
+            }
+        });
     }
 
     @Test
