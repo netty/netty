@@ -903,7 +903,7 @@ public class DefaultHttp2ConnectionTest {
         final Http2Stream stream = server.local().createStream(2, false);
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
-            public void execute(){
+            public void execute() {
                 stream.setProperty(key, "foo");
             }
         });
