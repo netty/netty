@@ -78,6 +78,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -90,6 +91,7 @@ import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forClient;
 import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forServer;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -757,6 +759,153 @@ public class Http2MultiplexTransportTest {
             }
             if (clientEventLoopGroup != null) {
                 clientEventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+        }
+    }
+
+    /**
+     * Covers the scenario from https://github.com/netty/netty/issues/17600: a stream is stalled because
+     * auto-read was disabled while data was buffered, and auto-read is re-enabled from an EventLoop other than
+     * the one the stream channel is registered to (e.g. code mirroring the writability of one stream onto the
+     * auto-read state of a stream that belongs to a different Http2 connection/EventLoop). Guards against a
+     * regression in this exact usage pattern: the stream must resume and deliver the complete response.
+     */
+    @Test
+    @Timeout(value = 30000L, unit = MILLISECONDS)
+    public void crossThreadSetAutoReadResumesStalledStream() throws Exception {
+        // Bigger than the default 64KiB (65535 byte) HTTP/2 stream flow-control window, so the server will stall
+        // part-way through unless the client sends a WINDOW_UPDATE, which only happens once auto-read is enabled.
+        final int payloadLength = 200 * 1024;
+        final byte[] payloadBytes = new byte[payloadLength];
+        Arrays.fill(payloadBytes, (byte) 'X');
+
+        EventLoopGroup serverGroup = null;
+        EventLoopGroup clientGroup = null;
+        // A totally independent EventLoop, standing in for e.g. a peer stream that lives on a different Http2
+        // connection (and hence a different EventLoop), which is what triggers the cross-thread call below.
+        EventLoopGroup foreignGroup = null;
+        Channel server = null;
+        Channel client = null;
+        Http2StreamChannel clientStream = null;
+        try {
+            serverGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+            clientGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+            foreignGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(serverGroup);
+            sb.channel(NioServerSocketChannel.class);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+                                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false));
+                                ctx.writeAndFlush(new DefaultHttp2DataFrame(
+                                        Unpooled.wrappedBuffer(payloadBytes), true));
+                            }
+                            ReferenceCountUtil.release(msg);
+                        }
+                    }));
+                }
+            });
+            server = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+
+            Bootstrap bs = new Bootstrap();
+            bs.group(clientGroup);
+            bs.channel(NioSocketChannel.class);
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                }
+            });
+            client = bs.connect(server.localAddress()).syncUninterruptibly().channel();
+
+            final CountDownLatch headersReceived = new CountDownLatch(1);
+            final CountDownLatch dataComplete = new CountDownLatch(1);
+            final ByteBuf received = Unpooled.buffer(payloadLength);
+            final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+
+            Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(client);
+            h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    try {
+                        if (msg instanceof Http2HeadersFrame) {
+                            headersReceived.countDown();
+                        } else if (msg instanceof Http2DataFrame) {
+                            Http2DataFrame data = (Http2DataFrame) msg;
+                            received.writeBytes(data.content());
+                            if (data.isEndStream()) {
+                                dataComplete.countDown();
+                            }
+                        }
+                    } catch (Throwable cause) {
+                        failure.compareAndSet(null, cause);
+                    } finally {
+                        ReferenceCountUtil.release(msg);
+                    }
+                }
+            });
+            clientStream = h2Bootstrap.open().syncUninterruptibly().getNow();
+
+            // Disable auto-read *before* any data arrives so the stream stalls once the server exhausts the
+            // default 64KiB stream flow-control window (no WINDOW_UPDATE is sent back while auto-read is off).
+            clientStream.config().setAutoRead(false);
+            clientStream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).sync();
+
+            assertTrue(headersReceived.await(10, SECONDS), "did not receive response headers");
+
+            // Re-enable auto-read from a *different* EventLoop than the one the client stream channel is
+            // registered to. Without EventLoop-confinement in Http2StreamChannelConfig#setAutoRead(), toggling
+            // auto-read like this could race with (or be reordered against) the read-processing that happens on
+            // the stream channel's own EventLoop, and leave the stream stalled forever.
+            final Http2StreamChannel finalClientStream = clientStream;
+            foreignGroup.next().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        assertFalse(finalClientStream.eventLoop().inEventLoop());
+                    } catch (Throwable cause) {
+                        failure.compareAndSet(null, cause);
+                    }
+                    finalClientStream.config().setAutoRead(true);
+                }
+            });
+
+            assertTrue(dataComplete.await(20, SECONDS), "stream stalled: never received the full response body");
+            Throwable cause = failure.get();
+            if (cause != null) {
+                throw new AssertionError(cause);
+            }
+            assertEquals(payloadLength, received.readableBytes());
+            byte[] actual = new byte[payloadLength];
+            received.readBytes(actual);
+            assertArrayEquals(payloadBytes, actual);
+            received.release();
+        } finally {
+            if (clientStream != null) {
+                clientStream.close().syncUninterruptibly();
+            }
+            if (client != null) {
+                client.close().syncUninterruptibly();
+            }
+            if (server != null) {
+                server.close().syncUninterruptibly();
+            }
+            if (serverGroup != null) {
+                serverGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+            if (clientGroup != null) {
+                clientGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+            if (foreignGroup != null) {
+                foreignGroup.shutdownGracefully(0, 0, MILLISECONDS);
             }
         }
     }

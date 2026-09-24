@@ -1231,6 +1231,28 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
+        public ChannelConfig setAutoRead(boolean autoRead) {
+            // Like AUTO_STREAM_FLOW_CONTROL below, always apply the change on the channel's EventLoop so that it is
+            // safe to call from any thread, e.g. a proxy mirroring the writability of one stream onto the
+            // auto-read state of another stream that belongs to a different connection (and EventLoop).
+            if (!channel.isRegistered() || channel.eventLoop().inEventLoop()) {
+                setAutoRead0(autoRead);
+            } else {
+                channel.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        setAutoRead0(autoRead);
+                    }
+                });
+            }
+            return this;
+        }
+
+        private void setAutoRead0(boolean autoRead) {
+            super.setAutoRead(autoRead);
+        }
+
+        @Override
         public Map<ChannelOption<?>, Object> getOptions() {
             return getOptions(
                     super.getOptions(),
