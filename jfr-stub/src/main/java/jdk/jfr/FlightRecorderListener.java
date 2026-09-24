@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 The Netty Project
+ * Copyright 2026 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,16 +15,7 @@
  */
 package jdk.jfr;
 
-public final class FlightRecorder {
-    private FlightRecorder() {
-        throw new UnsupportedOperationException("Stub should only be used at compile time");
-    }
-
-    public static boolean isAvailable() {
-        throw new UnsupportedOperationException("Stub should only be used at compile time");
-    }
-
-    public static void addListener(FlightRecorderListener changeListener) {
-        throw new UnsupportedOperationException("Stub should only be used at compile time");
+public interface FlightRecorderListener {
+    default void recorderInitialized(FlightRecorder recorder) {
     }
 }

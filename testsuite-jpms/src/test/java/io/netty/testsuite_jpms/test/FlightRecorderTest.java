@@ -17,6 +17,7 @@ package io.netty.testsuite_jpms.test;
 
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
+import jdk.jfr.FlightRecorder;
 import jdk.jfr.consumer.RecordedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -37,6 +38,8 @@ public class FlightRecorderTest {
 
     @Test
     public void testJfrEnabled() {
+        // Netty emits events once a Flight Recorder exists.
+        FlightRecorder.getFlightRecorder();
         assertTrue(PlatformDependent.isJfrEnabled());
     }
 
