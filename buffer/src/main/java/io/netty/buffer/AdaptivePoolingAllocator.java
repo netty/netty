@@ -57,7 +57,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 
 /**
@@ -2478,8 +2477,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
-            checkIndex(index, src.remaining());
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            int length = src.remaining();
+            checkIndex(index, length);
+            if (src == tmpNioBuf) {
+                src = src.duplicate();
+            }
+            ByteBuffer tmp = internalNioBuffer();
+            tmp.position(index);
             tmp.put(src);
             return this;
         }
