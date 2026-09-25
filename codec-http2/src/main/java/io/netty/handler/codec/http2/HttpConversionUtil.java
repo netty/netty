@@ -90,6 +90,15 @@ public final class HttpConversionUtil {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.PROTOCOL.text(), EMPTY_STRING);
+    }
+
+    private static final CharSequenceMap<AsciiString> HTTP2_TO_HTTP_HEADER_BLACKLIST =
+            new CharSequenceMap<>(false);
+    static {
+        for (ExtensionHeaderNames name : ExtensionHeaderNames.values()) {
+            HTTP2_TO_HTTP_HEADER_BLACKLIST.add(name.text(), EMPTY_STRING);
+        }
     }
 
     /**
@@ -164,7 +173,15 @@ public final class HttpConversionUtil {
          * <p>
          * {@code "x-http2-stream-weight"}
          */
-        STREAM_WEIGHT("x-http2-stream-weight");
+        STREAM_WEIGHT("x-http2-stream-weight"),
+        /**
+         * HTTP extension header which will identify the protocol pseudo header from an Extended CONNECT
+         * (<a href="https://tools.ietf.org/html/rfc8441">RFC 8441</a>) HTTP/2 event responsible for generating an
+         * {@code HttpObject}
+         * <p>
+         * {@code "x-http2-protocol"}
+         */
+        PROTOCOL("x-http2-protocol");
 
         private final AsciiString text;
 
@@ -405,7 +422,13 @@ public final class HttpConversionUtil {
      */
     public static void addHttp2ToHttpHeaders(int streamId, Http2Headers inputHeaders, HttpHeaders outputHeaders,
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
-        Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
+        // Extended CONNECT (RFC 8441) changes the semantics of a CONNECT request: the server must not treat
+        // ':authority' as an ordinary tunnel target the way it would for a regular CONNECT request. Preserve the
+        // ':protocol' and ':path' pseudo-headers as extension headers so that code operating on the converted
+        // HTTP/1.x object can still distinguish an Extended CONNECT request from a regular CONNECT request.
+        boolean isConnect = isRequest && HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(inputHeaders.method());
+        Http2ToHttpHeaderTranslator translator =
+                new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest, isConnect);
         try {
             translator.translateHeaders(inputHeaders);
         } catch (Http2Exception ex) {
@@ -436,28 +459,48 @@ public final class HttpConversionUtil {
         final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
-                out.path(new AsciiString(request.uri()));
-                setHttp2Scheme(inHeaders, out);
+            if (request.method().equals(HttpMethod.CONNECT)) {
+                // https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.3 defines the HTTP/1 CONNECT
+                // request-target as authority-form (host:port), which is the only valid request-target for
+                // CONNECT. Use it directly for :authority, ignoring any (potentially conflicting) Host header,
+                // and per https://datatracker.ietf.org/doc/html/rfc9113#section-8.5 omit :scheme and :path.
+
+                String authorityForm = request.uri();
+                if (authorityForm != null) {
+                    // CONNECT uses a special form of request target, unique to this method, consisting of only the
+                    // host and port number of the tunnel destination, separated by a colon per
+                    // https://www.rfc-editor.org/info/rfc9110/#name-connect
+                    if (authorityForm.isEmpty() || authorityForm.indexOf('@') >= 0 || authorityForm.indexOf('/') >= 0) {
+                        throw new IllegalArgumentException("Invalid CONNECT request target: " + authorityForm);
+                    }
+                    out.authority(new AsciiString(authorityForm));
+                }
             } else {
-                String requestTarget = request.uri();
-                out.path(toHttp2Path(requestTarget));
-                if (hasSchemeAndAuthority(requestTarget)) {
-                    URI requestTargetUri = URI.create(http2PathlessRequestTarget(requestTarget));
-                    // Take from the request-line if HOST header was empty
-                    host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
-                    setHttp2Scheme(inHeaders, requestTargetUri, out);
+                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+                if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
+                    out.path(new AsciiString(request.uri()));
+                    setHttp2Scheme(inHeaders, out);
                 } else {
-                    int schemeEnd = schemeEnd(requestTarget);
-                    if (schemeEnd != -1) {
-                        setHttp2Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                    String requestTarget = request.uri();
+                    out.path(toHttp2Path(requestTarget));
+                    if (hasSchemeAndAuthority(requestTarget)) {
+                        URI requestTargetUri = URI.create(http2PathlessRequestTarget(requestTarget));
+                        // The absolute-form request-target authority is authoritative and takes precedence over
+                        // a (potentially conflicting) HOST header, per RFC 9112 section 3.2 and RFC 9113 section 8.3.1.
+                        String requestTargetAuthority = requestTargetUri.getAuthority();
+                        host = isNullOrEmpty(requestTargetAuthority) ? host : requestTargetAuthority;
+                        setHttp2Scheme(inHeaders, requestTargetUri, out);
                     } else {
-                        setHttp2Scheme(inHeaders, out);
+                        int schemeEnd = schemeEnd(requestTarget);
+                        if (schemeEnd != -1) {
+                            setHttp2Scheme(inHeaders, requestTarget.substring(0, schemeEnd), -1, out);
+                        } else {
+                            setHttp2Scheme(inHeaders, out);
+                        }
                     }
                 }
+                setHttp2Authority(host, out);
             }
-            setHttp2Authority(host, out);
             out.method(request.method().asciiName());
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
@@ -803,6 +846,14 @@ public final class HttpConversionUtil {
             REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
         private static final CharSequenceMap<AsciiString>
             RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
+        /**
+         * Translations used for Extended CONNECT (RFC 8441) requests. In addition to the regular request
+         * translations, the ':path' and ':protocol' pseudo-headers are preserved as extension headers so that
+         * an Extended CONNECT request cannot be mistaken for a regular CONNECT request once converted to an
+         * HTTP/1.x object.
+         */
+        private static final CharSequenceMap<AsciiString>
+            CONNECT_REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                             HttpHeaderNames.HOST);
@@ -811,6 +862,11 @@ public final class HttpConversionUtil {
             REQUEST_HEADER_TRANSLATIONS.add(RESPONSE_HEADER_TRANSLATIONS);
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.PATH.value(),
                             ExtensionHeaderNames.PATH.text());
+            CONNECT_REQUEST_HEADER_TRANSLATIONS.add(REQUEST_HEADER_TRANSLATIONS);
+            CONNECT_REQUEST_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.PATH.value(),
+                            ExtensionHeaderNames.PATH.text());
+            CONNECT_REQUEST_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(),
+                            ExtensionHeaderNames.PROTOCOL.text());
         }
 
         private final int streamId;
@@ -823,11 +879,18 @@ public final class HttpConversionUtil {
          * @param output The HTTP/1.x headers object to store the results of the translation
          * @param request if {@code true}, translates headers using the request translation map. Otherwise uses the
          *        response translation map.
+         * @param connect if {@code true}, translates headers using the CONNECT request translation map, which
+         *        additionally preserves the ':path' and ':protocol' pseudo-headers of an Extended CONNECT
+         *        (RFC 8441) request as extension headers. Ignored unless {@code request} is {@code true}.
          */
-        Http2ToHttpHeaderTranslator(int streamId, HttpHeaders output, boolean request) {
+        Http2ToHttpHeaderTranslator(int streamId, HttpHeaders output, boolean request, boolean connect) {
             this.streamId = streamId;
             this.output = output;
-            translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
+            if (request) {
+                translations = connect ? CONNECT_REQUEST_HEADER_TRANSLATIONS : REQUEST_HEADER_TRANSLATIONS;
+            } else {
+                translations = RESPONSE_HEADER_TRANSLATIONS;
+            }
         }
 
         void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http2Exception {
@@ -850,6 +913,9 @@ public final class HttpConversionUtil {
                     if (name.length() == 0 || name.charAt(0) == ':') {
                         throw streamError(streamId, PROTOCOL_ERROR,
                                 "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
+                    }
+                    if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                        continue;
                     }
                     if (COOKIE.equals(name)) {
                         // combine the cookie values into 1 header entry.

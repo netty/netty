@@ -27,7 +27,9 @@ final class QpackUtil {
     private static final QpackException PREFIXED_INTEGER_TOO_LONG =
             QpackException.newStatic(QpackDecoder.class, "toIntOrThrow(...)",
                     "QPACK - invalid prefixed integer");
-
+    private static final QpackException PREFIXED_INTEGER_ENCODING_TOO_LONG =
+        QpackException.newStatic(QpackUtil.class, "decodePrefixedInteger(...)",
+            "QPACK - prefixed integer encoding too long");
     /**
      * Encode integer according to
      * <a href="https://tools.ietf.org/html/rfc7541#section-5.1">Section 5.1</a>.
@@ -85,7 +87,7 @@ final class QpackUtil {
      * @param prefixLength the prefix length
      * @return the integer or {@code -1} if not enough readable bytes are in the {@link ByteBuf).
      */
-    static long decodePrefixedInteger(ByteBuf in, int prefixLength) {
+    static long decodePrefixedInteger(ByteBuf in, int prefixLength) throws QpackException {
         int readerIndex = in.readerIndex();
         int writerIndex = in.writerIndex();
         if (readerIndex == writerIndex) {
@@ -103,6 +105,12 @@ final class QpackUtil {
         int factor = 0;
         byte next;
         do {
+            if (factor == 56) {
+                // Same overflow guard as HpackDecoder.decodeULE128(...): shifting a further 7-bit group in
+                // would overflow the long accumulator. Treat this as an invalid, over-long encoding rather
+                // than continuing to scan an unbounded run of continuation bytes.
+                throw PREFIXED_INTEGER_ENCODING_TOO_LONG;
+            }
             if (idx == writerIndex) {
                 in.readerIndex(readerIndex);
                 return -1;

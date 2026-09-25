@@ -18,6 +18,7 @@ package io.netty.handler.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -824,6 +825,180 @@ public class ChunkedWriteHandlerTest {
 
         boolean isClosed() {
             return closed;
+        }
+    }
+
+    @Test
+    public void testResumeTransferReenteredFromReadChunkMustNotBeLostWhenSuspending() {
+        final ChunkedWriteHandler streamer = new ChunkedWriteHandler();
+        final EmbeddedChannel ch = new EmbeddedChannel(streamer);
+        SuspendResumeChunkedInput input = new SuspendResumeChunkedInput(streamer);
+        ChannelFuture future = ch.write(input);
+        ch.flush();
+
+        // The input suspends (first readChunk(...) returns null) after its implementation has
+        // already produced data and synchronously called resumeTransfer() from within
+        // readChunk(...). A plain re-entrancy guard would drop that nested call and leave the
+        // transfer suspended forever; the guard must re-run the drain loop instead.
+        ByteBuf chunk = ch.readOutbound();
+        assertNull(ch.readOutbound());
+        assertFalse(ch.finishAndReleaseAll());
+
+        assertEquals(42, chunk.readInt());
+        chunk.release();
+        assertEquals(2, input.readChunkCalls());
+        assertTrue(input.isClosed());
+        assertTrue(future.isSuccess());
+    }
+
+    private static final class SuspendResumeChunkedInput implements ChunkedInput<ByteBuf> {
+        private final ChunkedWriteHandler streamer;
+        private final AtomicInteger readChunkCalls = new AtomicInteger();
+        private final AtomicBoolean closed = new AtomicBoolean();
+
+        SuspendResumeChunkedInput(ChunkedWriteHandler streamer) {
+            this.streamer = streamer;
+        }
+
+        int readChunkCalls() {
+            return readChunkCalls.get();
+        }
+
+        boolean isClosed() {
+            return closed.get();
+        }
+
+        @Override
+        public boolean isEndOfInput() {
+            return readChunkCalls.get() >= 2;
+        }
+
+        @Override
+        public void close() {
+            closed.set(true);
+        }
+
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+            return readChunk(ctx.alloc());
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            if (readChunkCalls.incrementAndGet() == 1) {
+                // Data becomes available "now", so the producer resumes synchronously, but this
+                // call still reports "no chunk yet": doFlush(...) is about to suspend when the
+                // nested resumeTransfer() arrives, and that call must not be dropped.
+                streamer.resumeTransfer();
+                return null;
+            }
+            ByteBuf buffer = allocator.buffer(4);
+            buffer.writeInt(42);
+            return buffer;
+        }
+
+        @Override
+        public long length() {
+            return -1;
+        }
+
+        @Override
+        public long progress() {
+            return 0;
+        }
+    }
+
+    @Test
+    public void testFlushReenteredFromReadChunkMustNotConsumeQueueEntryTwice() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+        ReentrantFlushChunkedInput input = new ReentrantFlushChunkedInput(ch);
+        ChannelFuture future = ch.write(input);
+        ch.flush();
+
+        ByteBuf first = ch.readOutbound();
+        ByteBuf second = ch.readOutbound();
+        assertNull(ch.readOutbound());
+        // Before the re-entrancy guard, the nested flush() consumed the queue entry and both
+        // invocations read from the same input; the outer doFlush(...) then failed with
+        // NoSuchElementException from ArrayDeque.remove() on the already-empty queue.
+        // Both chunks were read above, so no message must be left in the buffers.
+        assertFalse(ch.finishAndReleaseAll());
+
+        assertEquals(1, first.readInt());
+        first.release();
+        assertEquals(2, second.readInt());
+        second.release();
+        // The input must have been read exactly twice, and closed exactly once, after the last
+        // read: before the guard, close() happened from the nested invocation while the outer
+        // readChunk(...) call had not even returned yet.
+        assertEquals(2, input.readChunkCalls());
+        assertTrue(input.isClosed());
+        assertEquals(2, input.readChunkCallsAtClose());
+        assertTrue(future.isSuccess());
+    }
+
+    private static final class ReentrantFlushChunkedInput implements ChunkedInput<ByteBuf> {
+        private final Channel channel;
+        private final AtomicInteger readChunkCalls = new AtomicInteger();
+        private final AtomicInteger readChunkCallsAtClose = new AtomicInteger(-1);
+        private final AtomicBoolean closed = new AtomicBoolean();
+        private int chunkNo;
+
+        ReentrantFlushChunkedInput(Channel channel) {
+            this.channel = channel;
+        }
+
+        int readChunkCalls() {
+            return readChunkCalls.get();
+        }
+
+        int readChunkCallsAtClose() {
+            return readChunkCallsAtClose.get();
+        }
+
+        boolean isClosed() {
+            return closed.get();
+        }
+
+        @Override
+        public boolean isEndOfInput() {
+            return chunkNo >= 2;
+        }
+
+        @Override
+        public void close() {
+            closed.set(true);
+            readChunkCallsAtClose.set(readChunkCalls.get());
+        }
+
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+            return readChunk(ctx.alloc());
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            int call = readChunkCalls.incrementAndGet();
+            if (call == 1) {
+                // Runs between queue.peek() and queue.remove() in doFlush(...). Re-enter the
+                // handler synchronously, like incidental pipeline activity triggered from user
+                // code (a flush, a writability change, a close notification) would.
+                channel.flush();
+            }
+            chunkNo++;
+            ByteBuf buffer = allocator.buffer(4);
+            buffer.writeInt(chunkNo);
+            return buffer;
+        }
+
+        @Override
+        public long length() {
+            return -1;
+        }
+
+        @Override
+        public long progress() {
+            return 0;
         }
     }
 }

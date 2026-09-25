@@ -36,9 +36,21 @@ import java.util.List;
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
 
     private static final int DEFAULT_MAX_ARRAY_LENGTH = RedisConstants.REDIS_MAX_ARRAY_LENGTH;
+
+    // Bound the eagerly reserved backing capacity of an aggregate's child list, regardless of the
+    // length declared in the array header. The list can still grow to the declared length as
+    // elements actually arrive.
+    private static final int INITIAL_CHILDREN_CAPACITY = 32;
+
     private final int maxNestedArrayDepth;
     private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);
     private final int maxElements;
+
+    // Sum of the declared lengths of all currently active (nested) aggregate states. Bounding this
+    // total, rather than each header individually, prevents an attacker from multiplying the
+    // per-header element cap by the nesting depth cap to reserve far more backing capacity than
+    // maxElements alone would suggest.
+    private long pendingElements;
 
     /**
      * Create a new instance that will aggregate an {@link ArrayHeaderRedisMessage}
@@ -61,7 +73,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
      * <p>
      * A {@link CodecException} will be thrown if the array header specify a length greater than
      * the given number of max elements.
-     * @param maxElements The maximum number of elements to aggregate in a single message.
+     * @param maxElements The maximum number of elements to aggregate in a single message. This applies cumulatively.
      * @param maxNestedArrayDepth   the maximum depth of the nested array before an exception will be thrown
      */
     public RedisArrayAggregator(int maxElements, int maxNestedArrayDepth) {
@@ -89,6 +101,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             if (current.children.size() == current.length) {
                 msg = new ArrayRedisMessage(current.children);
                 depths.pop();
+                pendingElements -= current.length;
             } else {
                 // not aggregated yet. try next time.
                 return;
@@ -117,6 +130,19 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             if (depths.size() >= maxNestedArrayDepth) {
                 throw clearAndCreateException("max nested array depth exceeded: "  + maxNestedArrayDepth);
             }
+
+            // Bound the total number of elements declared across all currently active (nested)
+            // aggregate states, not just the length of this one header. Without this, a header's
+            // declared length could be repeated at every nesting level, letting maxElements and
+            // maxNestedArrayDepth multiply into a far larger reserved capacity than either limit
+            // implies on its own.
+            long newPendingElements = pendingElements + header.length();
+            if (newPendingElements > maxElements) {
+                throw clearAndCreateException(
+                        "total outstanding array elements exceeds " + maxElements);
+            }
+            pendingElements = newPendingElements;
+
             // start aggregating array
             depths.push(new AggregateState((int) header.length()));
             return null;
@@ -130,7 +156,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         private final List<RedisMessage> children;
         AggregateState(int length) {
             this.length = length;
-            this.children = new ArrayList<RedisMessage>(length);
+            this.children = new ArrayList<RedisMessage>(Math.min(length, INITIAL_CHILDREN_CAPACITY));
         }
     }
 
@@ -147,6 +173,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             }
         }
         depths.clear();
+        pendingElements = 0;
     }
 
     @Override

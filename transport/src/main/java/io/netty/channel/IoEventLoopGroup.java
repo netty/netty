@@ -15,7 +15,10 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+
+import java.util.Iterator;
 
 /**
  * {@link EventLoopGroup} for {@link IoEventLoop}s.
@@ -61,7 +64,8 @@ public interface IoEventLoopGroup extends EventLoopGroup {
      * @return              if compatible of not.
      */
     default boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return next().isCompatible(handleType);
+        Iterator<EventExecutor> executors = iterator();
+        return executors.hasNext() && ((IoEventLoop) executors.next()).isCompatible(handleType);
     }
 
     /**
@@ -72,6 +76,7 @@ public interface IoEventLoopGroup extends EventLoopGroup {
      * @return            if used or not.
      */
     default boolean isIoType(Class<? extends IoHandler> handlerType) {
-        return next().isIoType(handlerType);
+        Iterator<EventExecutor> executors = iterator();
+        return executors.hasNext() && ((IoEventLoop) executors.next()).isIoType(handlerType);
     }
 }

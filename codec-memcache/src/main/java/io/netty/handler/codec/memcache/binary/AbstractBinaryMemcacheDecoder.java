@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.memcache.AbstractMemcacheObjectDecoder;
 import io.netty.handler.codec.memcache.DefaultLastMemcacheContent;
@@ -76,6 +77,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 resetDecoder();
 
                 currentMessage = decodeHeader(in);
+                validateHeader(currentMessage);
                 state = State.READ_EXTRAS;
             } catch (Exception e) {
                 resetDecoder();
@@ -83,7 +85,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             }
             case READ_EXTRAS: try {
-                byte extrasLength = currentMessage.extrasLength();
+                int extrasLength = currentMessage.extrasLength() & 0xFF;
                 if (extrasLength > 0) {
                     if (in.readableBytes() < extrasLength) {
                         return;
@@ -99,7 +101,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             }
             case READ_KEY: try {
-                short keyLength = currentMessage.keyLength();
+                int keyLength = currentMessage.keyLength() & 0xFFFF;
                 if (keyLength > 0) {
                     if (in.readableBytes() < keyLength) {
                         return;
@@ -116,8 +118,8 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
             }
             case READ_CONTENT: try {
                 int valueLength = currentMessage.totalBodyLength()
-                    - currentMessage.keyLength()
-                    - currentMessage.extrasLength();
+                    - (currentMessage.keyLength() & 0xFFFF)
+                    - (currentMessage.extrasLength() & 0xFF);
                 int toRead = in.readableBytes();
                 if (valueLength > 0) {
                     if (toRead == 0) {
@@ -163,6 +165,37 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
                 return;
             default:
                 throw new Error("Unexpected state reached: " + state);
+        }
+    }
+
+    /**
+     * Validates the length fields of a decoded header against each other.
+     * <p/>
+     * A header that fails this check can not be framed, so decoding stops permanently rather than attempting to
+     * resynchronize, see the class documentation.
+     * <p/>
+     * Note that {@code keyLength} and {@code extrasLength} are unsigned in the protocol and are interpreted as such
+     * here, see {@link BinaryMemcacheMessage#keyLength()} and {@link BinaryMemcacheMessage#extrasLength()}.
+     *
+     * @param header the decoded header to validate.
+     * @throws CorruptedFrameException if the lengths in the header are inconsistent.
+     */
+    private static void validateHeader(final BinaryMemcacheMessage header) {
+        final int totalBodyLength = header.totalBodyLength();
+        // The protocol defines totalBodyLength as an unsigned 32 bit value. A body that does not fit into a
+        // positive int can not be represented, and is never legitimate.
+        if (totalBodyLength < 0) {
+            throw new CorruptedFrameException(
+                "totalBodyLength must neither be negative nor be larger than " + Integer.MAX_VALUE + ", but was: "
+                    + (totalBodyLength & 0xFFFFFFFFL));
+        }
+        // The protocol defines totalBodyLength as the "Length in bytes of extra + key + value", so the extras and
+        // the key on their own can never be longer than the total body.
+        final int extrasAndKeyLength = (header.extrasLength() & 0xFF) + (header.keyLength() & 0xFFFF);
+        if (extrasAndKeyLength > totalBodyLength) {
+            throw new CorruptedFrameException(
+                "extrasLength + keyLength must not be larger than totalBodyLength, but was: "
+                    + extrasAndKeyLength + " > " + totalBodyLength);
         }
     }
 
