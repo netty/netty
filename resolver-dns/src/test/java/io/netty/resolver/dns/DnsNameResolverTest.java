@@ -2900,6 +2900,96 @@ public class DnsNameResolverTest {
         }
     }
 
+    /**
+     * A {@link DnsCache} that serves pre-seeded entries, so cache lookup semantics can be exercised without
+     * an {@link io.netty.channel.EventLoop} or a DNS server.
+     */
+    private static final class FixedDnsCache implements DnsCache {
+        private final Map<String, List<DnsCacheEntry>> entries = new HashMap<String, List<DnsCacheEntry>>();
+
+        void put(String hostname, final InetAddress address, final Throwable cause) {
+            entries.put(hostname, Collections.<DnsCacheEntry>singletonList(new DnsCacheEntry() {
+                @Override
+                public InetAddress address() {
+                    return address;
+                }
+
+                @Override
+                public Throwable cause() {
+                    return cause;
+                }
+            }));
+        }
+
+        @Override
+        public void clear() {
+            entries.clear();
+        }
+
+        @Override
+        public boolean clear(String hostname) {
+            return entries.remove(hostname) != null;
+        }
+
+        @Override
+        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            return entries.get(hostname);
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl,
+                                   EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowPositiveOne() throws Exception {
+        // Mirrors a Kubernetes resolv.conf: the pod's own namespace is the first search domain, so a service in
+        // another namespace always yields NXDOMAIN for the first permutation and resolves via the second.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+        InetAddress expected = InetAddress.getByAddress(
+                hostname + '.' + searchDomains[1], new byte[] { 10, 96, 0, 42 });
+        cache.put(hostname + '.' + searchDomains[1], expected, null);
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertTrue(promise.isSuccess(), "a negatively cached '" + hostname + '.' + searchDomains[0] +
+                "' must not shadow the positively cached '" + hostname + '.' + searchDomains[1] + '\'');
+        assertEquals(Collections.singletonList(expected), promise.getNow());
+    }
+
+    @Test
+    public void testNegativelyCachedBareHostnameStillShortCircuits() throws Exception {
+        // A negative entry for the hostname that is actually being resolved must keep failing fast.
+        String[] searchDomains = { "ns1.svc.cluster.local" };
+        String hostname = "missing-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname, null, new UnknownHostException("failed to resolve " + hostname));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause()).isInstanceOf(UnknownHostException.class);
+    }
+
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testCNameCached(DnsNameResolverChannelStrategy strategy) throws Exception {
