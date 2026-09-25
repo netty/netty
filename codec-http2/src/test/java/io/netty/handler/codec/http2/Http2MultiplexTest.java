@@ -1680,6 +1680,40 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(flushSniffer.checkFlush());
     }
 
+    @Test
+    public void windowUpdateFlushedWhenReadRequestedWhileReadInProgress() {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        FlushSniffer flushSniffer = new FlushSniffer();
+        parentChannel.pipeline().addFirst(flushSniffer);
+
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        // Each round: a read() is requested while the child is waiting for data (the same thing a
+        // setAutoRead(false) -> setAutoRead(true) flip does), auto-read is disabled again, and then a DATA frame
+        // arrives. The frame is still delivered because a read was pending, but its bytes are not returned yet.
+        for (int i = 0; i < 2; i++) {
+            childChannel.config().setAutoRead(false);
+            childChannel.config().setAutoRead(true);
+            childChannel.config().setAutoRead(false);
+            frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(16 * 1024), 0, false);
+            verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        }
+        verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
+        flushSniffer.checkFlush();
+
+        // Re-enabling auto-read triggers a read() which returns the consumed bytes to the flow controller. That
+        // results in a wire-level WINDOW_UPDATE which must be flushed, otherwise the remote peer may stall forever
+        // once its send window is exhausted.
+        childChannel.config().setAutoRead(true);
+        verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
+        verify(frameWriter).writeWindowUpdate(
+                eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
+        assertTrue(flushSniffer.checkFlush(), "WINDOW_UPDATE was written but never flushed");
+    }
+
     @ParameterizedTest(name = "{displayName} [{index}] value={0}")
     @MethodSource("userEvents")
     public void userEventsThatPropagatedToChildChannels(Object userEvent) {

@@ -850,18 +850,24 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (!isActive()) {
                 return;
             }
-            updateLocalWindowIfNeeded();
+            final boolean windowUpdated = updateLocalWindowIfNeeded();
 
             switch (readStatus) {
                 case IDLE:
                     readStatus = ReadStatus.IN_PROGRESS;
+                    // doBeginRead() always flushes (or defers to the parent's read-complete flush).
                     doBeginRead();
-                    break;
+                    return;
                 case IN_PROGRESS:
                     readStatus = ReadStatus.REQUESTED;
                     break;
                 default:
                     break;
+            }
+            if (windowUpdated) {
+                // No read loop runs here, so nothing else is guaranteed to flush the WINDOW_UPDATE. Without this the
+                // remote peer can stall forever once its flow-control window is exhausted.
+                flush();
             }
         }
 
@@ -1228,28 +1234,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
             super.setRecvByteBufAllocator(allocator);
             return this;
-        }
-
-        @Override
-        public ChannelConfig setAutoRead(boolean autoRead) {
-            // Like AUTO_STREAM_FLOW_CONTROL below, always apply the change on the channel's EventLoop so that it is
-            // safe to call from any thread, e.g. a proxy mirroring the writability of one stream onto the
-            // auto-read state of another stream that belongs to a different connection (and EventLoop).
-            if (!channel.isRegistered() || channel.eventLoop().inEventLoop()) {
-                setAutoRead0(autoRead);
-            } else {
-                channel.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        setAutoRead0(autoRead);
-                    }
-                });
-            }
-            return this;
-        }
-
-        private void setAutoRead0(boolean autoRead) {
-            super.setAutoRead(autoRead);
         }
 
         @Override
