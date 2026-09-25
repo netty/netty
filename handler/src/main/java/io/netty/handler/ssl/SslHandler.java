@@ -195,17 +195,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     private static final int STATE_WRAP_RESUME_SCHEDULED = 1 << 10;
     /**
-     * Set for the duration of a wrap()+forceFlush() cycle driven from either {@link #wrapAndFlush} or
-     * {@link WrapResumeListener}. forceFlush(ctx) - or even the ctx.write(...) inside
-     * suspendWrapUntilTransportDrains(...) - can synchronously complete a resume marker's promise and invoke
-     * {@link WrapResumeListener} while a cycle is still active further down the stack; rather than recursing,
-     * such re-entrant attempts set {@link #STATE_WRAP_RETRY_PENDING} and return, and the active cycle loops
-     * again by itself once its current pass finishes. This turns what would otherwise be unbounded recursion
-     * (if the transport keeps freeing up just enough room for one more chunk at a time) into safe iteration.
+     * Set for the duration of a {@code wrap(ctx, ...)} call made through {@link #wrapGuarded}. See
+     * {@link #wrapGuarded} for why every caller of {@code wrap(ctx, ...)} must go through it instead of calling
+     * {@code wrap(ctx, ...)} directly.
      */
     private static final int STATE_WRAP_ACTIVE = 1 << 11;
     /**
-     * Set by a re-entrant wrap()+forceFlush() attempt that deferred to the active cycle instead of recursing.
+     * Set by a re-entrant call to {@link #wrapGuarded} that deferred to the active call instead of recursing.
      * See {@link #STATE_WRAP_ACTIVE}.
      */
     private static final int STATE_WRAP_RETRY_PENDING = 1 << 12;
@@ -866,33 +862,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
         // Everything currently sitting in the queue - including any backlog left over from a previous flush()
         // that got backpressured, plus anything written since then - has now crossed a flush boundary and becomes
-        // eligible for wrapping. Bytes written *after* this point are excluded until the next flush() call.
+        // eligible for wrapping. Bytes written *after* this point are excluded until the next flush() call. This
+        // still applies even if wrapGuarded(...) below finds a cycle already active and defers: the active cycle
+        // reads flushedPlaintextBytes fresh on every pass, so it will pick up this update itself.
         flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
         if (!handshakePromise.isDone()) {
             setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
         }
-        if (isStateSet(STATE_WRAP_ACTIVE)) {
-            // A wrap()+forceFlush() cycle is already active further down the stack (this flush() call arrived
-            // synchronously from within its own forceFlush(), e.g. because a resume marker's promise completed
-            // inline). The flush-boundary update above still applies; let the active cycle pick up the newly
-            // flushed data itself instead of recursing here. See STATE_WRAP_ACTIVE.
-            setState(STATE_WRAP_RETRY_PENDING);
-            return;
-        }
-        setState(STATE_WRAP_ACTIVE);
         try {
-            do {
-                clearState(STATE_WRAP_RETRY_PENDING);
-                try {
-                    wrap(ctx, false);
-                } finally {
-                    // We may have written some parts of data before an exception was thrown so ensure we always
-                    // flush. See https://github.com/netty/netty/issues/3900#issuecomment-172481830
-                    forceFlush(ctx);
-                }
-            } while (isStateSet(STATE_WRAP_RETRY_PENDING));
+            wrapGuarded(ctx, false);
         } finally {
-            clearState(STATE_WRAP_ACTIVE);
+            // We may have written some parts of data before an exception was thrown so ensure we always flush.
+            // See https://github.com/netty/netty/issues/3900#issuecomment-172481830
+            forceFlush(ctx);
         }
     }
 
@@ -956,6 +938,35 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         resumeSignal.addListener(wrapResumeListener);
     }
 
+    /**
+     * Calls {@code wrap(ctx, inUnwrap)}, guarding against the reentrancy hazard described on
+     * {@link #STATE_WRAP_ACTIVE}: {@code wrap(ctx, ...)} can call {@link #suspendWrapUntilTransportDrains} which,
+     * via a downstream write completing synchronously (always true for {@code EmbeddedChannel}, and also possible
+     * for a real socket write that fits straight into the OS send buffer), can invoke {@link WrapResumeListener}
+     * before {@code wrap(ctx, ...)} even returns. Every caller of {@code wrap(ctx, ...)} that could be on the stack
+     * when that happens - {@link #wrapAndFlush}, {@link WrapResumeListener}, the post-handshake continuations in
+     * {@link #wrapNonAppData}, {@link #resumeOnEventExecutor}, and {@link #unwrap} - must go through here instead
+     * of calling {@code wrap(ctx, ...)} directly, or a nested attempt could reenter {@code wrap(ctx, ...)} while
+     * it is already active. If the transport keeps freeing up just enough room for one more chunk at a time, that
+     * would recurse without bound instead of iterating; deferring to the active call instead - it checks
+     * {@link #STATE_WRAP_RETRY_PENDING} itself after every pass - turns that recursion into safe iteration.
+     */
+    private void wrapGuarded(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
+        if (isStateSet(STATE_WRAP_ACTIVE)) {
+            setState(STATE_WRAP_RETRY_PENDING);
+            return;
+        }
+        setState(STATE_WRAP_ACTIVE);
+        try {
+            do {
+                clearState(STATE_WRAP_RETRY_PENDING);
+                wrap(ctx, inUnwrap);
+            } while (isStateSet(STATE_WRAP_RETRY_PENDING));
+        } finally {
+            clearState(STATE_WRAP_ACTIVE);
+        }
+    }
+
     private final class WrapResumeListener implements ChannelFutureListener, Runnable {
         private ChannelFuture future;
 
@@ -984,34 +995,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // completion path will resume wrapping once it finishes.
                 return;
             }
-            if (isStateSet(STATE_WRAP_ACTIVE)) {
-                // A wrap()+forceFlush() cycle is already active further down the stack: this promise completed
-                // synchronously as part of that cycle's own forceFlush(ctx) (always true for EmbeddedChannel, and
-                // also possible for a real socket write that fits straight into the OS send buffer), invoking this
-                // listener while that cycle is still unwinding. Calling wrap() again from here would reenter it
-                // while already active, and if the transport keeps freeing up just enough room for one more chunk
-                // at a time, each resume would synchronously trigger the next one, recursing without bound instead
-                // of iterating. Deferring to the active cycle instead - it checks this flag itself after every
-                // pass - turns that recursion into safe iteration. See STATE_WRAP_ACTIVE.
-                setState(STATE_WRAP_RETRY_PENDING);
-                return;
-            }
-            setState(STATE_WRAP_ACTIVE);
             try {
-                do {
-                    clearState(STATE_WRAP_RETRY_PENDING);
-                    try {
-                        wrap(ctx, false);
-                    } catch (Throwable cause) {
-                        setHandshakeFailure(ctx, cause);
-                        ctx.fireExceptionCaught(cause);
-                        return;
-                    } finally {
-                        forceFlush(ctx);
-                    }
-                } while (isStateSet(STATE_WRAP_RETRY_PENDING));
+                wrapGuarded(ctx, false);
+            } catch (Throwable cause) {
+                setHandshakeFailure(ctx, cause);
+                ctx.fireExceptionCaught(cause);
+                return;
             } finally {
-                clearState(STATE_WRAP_ACTIVE);
+                forceFlush(ctx);
             }
         }
     }
@@ -1231,7 +1222,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
                         // attempt to wrap application data here if any is pending.
                         if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
-                            wrap(ctx, true);
+                            wrapGuarded(ctx, true);
                         }
                         return false;
                     case NEED_TASK:
@@ -1253,7 +1244,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         break;
                     case NOT_HANDSHAKING:
                         if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
-                            wrap(ctx, true);
+                            wrapGuarded(ctx, true);
                         }
                         // Workaround for TLS False Start problem reported at:
                         // https://github.com/netty/netty/issues/1108#issuecomment-14266970
@@ -1799,7 +1790,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (wrapLater) {
-                wrap(ctx, true);
+                wrapGuarded(ctx, true);
             }
         } finally {
             if (decodeOut != null) {
@@ -2041,7 +2032,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         try {
                             // Lets call wrap to ensure we produce the alert if there is any pending and also to
                             // ensure we flush any queued data..
-                            wrap(ctx, inUnwrap);
+                            wrapGuarded(ctx, inUnwrap);
                         } catch (Throwable e) {
                             taskError(e);
                             return;
