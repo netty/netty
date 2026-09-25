@@ -959,11 +959,53 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     }
 
     @Test
-    public void windowOfReservedStreamShouldNotOverflowWhenActivated() throws Http2Exception {
-        Http2Stream pushStream = reservePushStreamOnServer();
-        controller.incrementWindowSize(pushStream, MAX_INITIAL_WINDOW_SIZE);
+    public void windowUpdateThatOverflowsReservedStreamWhenActivatedShouldFail() throws Http2Exception {
+        final Http2Stream pushStream = reservePushStreamOnServer();
+        // The initialWindowSize is added when the stream becomes active, so this is the most credit it can take.
+        controller.incrementWindowSize(pushStream, MAX_INITIAL_WINDOW_SIZE - DEFAULT_WINDOW_SIZE);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.incrementWindowSize(pushStream, 1);
+            }
+        });
+        assertTrue(e instanceof Http2Exception.StreamException);
+        assertEquals(Http2Error.FLOW_CONTROL_ERROR, e.error());
+        assertEquals(MAX_INITIAL_WINDOW_SIZE - DEFAULT_WINDOW_SIZE, controller.windowSize(pushStream));
+
         pushStream.open(false);
         assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void initialWindowSizeChangeThatOverflowsReservedStreamWhenActivatedShouldFail() throws Http2Exception {
+        final Http2Stream pushStream = reservePushStreamOnServer();
+        controller.incrementWindowSize(pushStream, 1000);
+        controller.initialWindowSize(MAX_INITIAL_WINDOW_SIZE - 1000);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                controller.initialWindowSize(MAX_INITIAL_WINDOW_SIZE - 999);
+            }
+        });
+        assertFalse(e instanceof Http2Exception.StreamException);
+        assertEquals(Http2Error.FLOW_CONTROL_ERROR, e.error());
+        assertEquals(MAX_INITIAL_WINDOW_SIZE - 1000, controller.initialWindowSize());
+
+        pushStream.open(false);
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.windowSize(pushStream));
+    }
+
+    @Test
+    public void initialWindowSizeChangeShouldIgnoreCreditOfClosedReservedStream() throws Http2Exception {
+        Http2Stream pushStream = reservePushStreamOnServer();
+        controller.incrementWindowSize(pushStream, 1000);
+        pushStream.close();
+
+        controller.initialWindowSize(MAX_INITIAL_WINDOW_SIZE);
+        assertEquals(MAX_INITIAL_WINDOW_SIZE, controller.initialWindowSize());
     }
 
     private Http2Stream reservePushStreamOnServer() throws Http2Exception {

@@ -20,6 +20,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
@@ -28,8 +30,11 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
@@ -50,6 +55,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     private final StreamByteDistributor streamByteDistributor;
     private final FlowState connectionState;
     private int initialWindowSize = DEFAULT_WINDOW_SIZE;
+    // Reserved streams that the peer has already granted credit to via WINDOW_UPDATE (RFC 9113, section 5.1).
+    private final Set<FlowState> reservedStreamsWithCredit = new HashSet<FlowState>();
     private WritabilityMonitor monitor;
     private ChannelHandlerContext ctx;
 
@@ -95,17 +102,27 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 // If the object was previously created, but later activated then we have to ensure the proper
                 // initialWindowSize is used. The peer might also have already granted credit for a reserved stream
                 // via WINDOW_UPDATE (RFC 9113, section 5.1), so add the initialWindowSize to it instead of replacing
-                // it. The window of a stream that was not reserved before is always 0 here.
+                // it. The window of a stream that was not reserved before is always 0 here. The sum does not exceed
+                // MAX_INITIAL_WINDOW_SIZE, as a WINDOW_UPDATE or SETTINGS frame that would make it exceed it is
+                // rejected (see FlowState.incrementStreamWindow and WritabilityMonitor.initialWindowSize).
                 FlowState state = state(stream);
-                monitor.windowSize(state,
-                        (int) min((long) initialWindowSize + state.windowSize(), MAX_INITIAL_WINDOW_SIZE));
+                reservedStreamsWithCredit.remove(state);
+                monitor.windowSize(state, initialWindowSize + state.windowSize());
             }
 
             @Override
             public void onStreamClosed(Http2Stream stream) {
                 // Any pending frames can never be written, cancel and
                 // write errors for any pending frames.
-                state(stream).cancel(STREAM_CLOSED, null);
+                FlowState state = state(stream);
+                reservedStreamsWithCredit.remove(state);
+                state.cancel(STREAM_CLOSED, null);
+            }
+
+            @Override
+            public void onStreamRemoved(Http2Stream stream) {
+                // A reserved stream that is closed before it became active is only removed, not closed.
+                reservedStreamsWithCredit.remove(state(stream));
             }
 
             @Override
@@ -295,6 +312,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
+         * Determine if the stream associated with this object is reserved, so it is not active yet.
+         */
+        boolean isReserved() {
+            Http2Stream.State state = stream.state();
+            return state == RESERVED_LOCAL || state == RESERVED_REMOTE;
+        }
+
+        /**
          * Determine if the stream associated with this object is writable.
          * @return {@code true} if the stream associated with this object is writable.
          */
@@ -411,7 +436,17 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Window size overflow for stream: %d", stream.id());
             }
+            boolean reserved = isReserved();
+            if (reserved && delta > 0 && (long) window + delta + initialWindowSize > MAX_INITIAL_WINDOW_SIZE) {
+                // The initialWindowSize is added to the window of a reserved stream when it becomes active, and the
+                // window must not exceed 2^31-1 then either (RFC 9113, section 6.9.1).
+                throw streamError(stream.id(), FLOW_CONTROL_ERROR,
+                        "Window size overflow for reserved stream: %d", stream.id());
+            }
             window += delta;
+            if (reserved && window > 0) {
+                reservedStreamsWithCredit.add(this);
+            }
 
             streamByteDistributor.updateStreamableBytes(this);
             return window;
@@ -640,6 +675,15 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         void initialWindowSize(int newWindowSize) throws Http2Exception {
             checkPositiveOrZero(newWindowSize, "newWindowSize");
+
+            // The new initialWindowSize is added to the window of a reserved stream when it becomes active, and a
+            // change that makes any window exceed 2^31-1 is a connection error (RFC 9113, section 6.9.2).
+            for (FlowState state : reservedStreamsWithCredit) {
+                if ((long) state.windowSize() + newWindowSize > MAX_INITIAL_WINDOW_SIZE) {
+                    throw connectionError(FLOW_CONTROL_ERROR,
+                            "Window size overflow for reserved stream: %d", state.stream.id());
+                }
+            }
 
             final int delta = newWindowSize - initialWindowSize;
             initialWindowSize = newWindowSize;
