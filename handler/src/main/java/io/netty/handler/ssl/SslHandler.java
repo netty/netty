@@ -65,6 +65,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
 import java.security.cert.CertificateException;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -418,6 +419,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
 
     private SslHandlerCoalescingBufferQueue pendingUnencryptedWrites;
+    private ArrayDeque<SslHandlerCoalescingBufferQueue> flushedUnencryptedWrites;
+    private SslHandlerCoalescingBufferQueue recycledUnencryptedWrites;
+    private long pendingUnencryptedBytes;
+    private boolean wrapResumeScheduled;
     private Promise<Channel> handshakePromise = new LazyChannelPromise();
     private final LazyChannelPromise sslClosePromise = new LazyChannelPromise();
 
@@ -702,12 +707,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     @Override
     public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
-            if (pendingUnencryptedWrites != null && !pendingUnencryptedWrites.isEmpty()) {
-                // Check if queue is not empty first because create a new ChannelException is expensive
-                pendingUnencryptedWrites.releaseAndFailAll(ctx,
-                  new ChannelException("Pending write on removal of SslHandler"));
+            if (hasPendingUnencryptedWrites()) {
+                releaseAndFailAllPendingWrites(ctx,
+                        new ChannelException("Pending write on removal of SslHandler"));
             }
             pendingUnencryptedWrites = null;
+            flushedUnencryptedWrites = null;
+            recycledUnencryptedWrites = null;
+            pendingUnencryptedBytes = 0;
+            wrapResumeScheduled = false;
 
             SSLException cause = null;
 
@@ -772,6 +780,159 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return new IllegalStateException("pendingUnencryptedWrites is null, handlerRemoved0 called?");
     }
 
+    private SslHandlerCoalescingBufferQueue newPendingUnencryptedWritesQueue(Channel channel) {
+        return new SslHandlerCoalescingBufferQueue(channel, 16, engineType.wantsDirectBuffer) {
+            @Override
+            protected int wrapDataSize() {
+                return SslHandler.this.wrapDataSize;
+            }
+        };
+    }
+
+    private SslHandlerCoalescingBufferQueue acquirePendingUnencryptedWritesQueue(Channel channel) {
+        SslHandlerCoalescingBufferQueue queue = recycledUnencryptedWrites;
+        if (queue != null) {
+            recycledUnencryptedWrites = null;
+            return queue;
+        }
+        return newPendingUnencryptedWritesQueue(channel);
+    }
+
+    private void recyclePendingUnencryptedWritesQueue(SslHandlerCoalescingBufferQueue queue) {
+        if (recycledUnencryptedWrites == null) {
+            recycledUnencryptedWrites = queue;
+        }
+    }
+
+    private SslHandlerCoalescingBufferQueue currentFlushedUnencryptedWrites() {
+        if (flushedUnencryptedWrites == null) {
+            return null;
+        }
+        for (;;) {
+            SslHandlerCoalescingBufferQueue queue = flushedUnencryptedWrites.peekFirst();
+            if (queue == null) {
+                return null;
+            }
+            if (!queue.isEmpty()) {
+                return queue;
+            }
+            flushedUnencryptedWrites.removeFirst();
+            recyclePendingUnencryptedWritesQueue(queue);
+        }
+    }
+
+    private boolean hasFlushedUnencryptedWrites() {
+        return currentFlushedUnencryptedWrites() != null;
+    }
+
+    private boolean hasPendingUnencryptedWrites() {
+        return pendingUnencryptedWrites != null &&
+                (!pendingUnencryptedWrites.isEmpty() || hasFlushedUnencryptedWrites());
+    }
+
+    private void markPendingUnencryptedWritesFlushed(ChannelHandlerContext ctx) {
+        if (pendingUnencryptedWrites.isEmpty()) {
+            return;
+        }
+        if (flushedUnencryptedWrites == null) {
+            flushedUnencryptedWrites = new ArrayDeque<SslHandlerCoalescingBufferQueue>(2);
+        }
+        flushedUnencryptedWrites.addLast(pendingUnencryptedWrites);
+        pendingUnencryptedWrites = acquirePendingUnencryptedWritesQueue(ctx.channel());
+    }
+
+    private void writeAndRemoveAllFlushed(ChannelHandlerContext ctx) {
+        for (;;) {
+            SslHandlerCoalescingBufferQueue queue = currentFlushedUnencryptedWrites();
+            if (queue == null) {
+                return;
+            }
+            int before = queue.readableBytes();
+            try {
+                queue.writeAndRemoveAll(ctx);
+            } finally {
+                pendingUnencryptedBytes -= before - queue.readableBytes();
+            }
+        }
+    }
+
+    private long downstreamPendingBytes(ChannelHandlerContext ctx) {
+        ChannelOutboundBuffer outboundBuffer = ctx.channel().unsafe().outboundBuffer();
+        if (outboundBuffer == null) {
+            return 0;
+        }
+        long downstream = outboundBuffer.totalPendingWriteBytes() - pendingUnencryptedBytes;
+        return Math.max(0, downstream);
+    }
+
+    private int maxPlaintextBytesForWrap(ChannelHandlerContext ctx, SslHandlerCoalescingBufferQueue queue) {
+        int readableBytes = queue.readableBytes();
+        if (readableBytes == 0) {
+            // Empty writes are used to preserve promise / control-frame semantics and must be processable
+            // even when application-data wrapping is backpressured.
+            return 0;
+        }
+
+        long available = (long) ctx.channel().config().getWriteBufferHighWaterMark() - downstreamPendingBytes(ctx);
+        if (available <= 0) {
+            return -1;
+        }
+
+        long desired = wrapDataSize > 0 ? Math.min((long) wrapDataSize, readableBytes) : readableBytes;
+        return (int) Math.max(1, Math.min(Math.min(desired, available), Integer.MAX_VALUE));
+    }
+
+    private void suspendWrapUntilTransportDrains(final ChannelHandlerContext ctx) {
+        if (wrapResumeScheduled || !hasFlushedUnencryptedWrites()) {
+            return;
+        }
+        wrapResumeScheduled = true;
+
+        // This marker is written below SslHandler. Its promise cannot complete until all TLS output already
+        // queued ahead of it has drained from the transport. It therefore provides a transport-only resume signal
+        // which is independent of Channel.isWritable(), whose value also includes queued plaintext.
+        ChannelPromise markerPromise = ctx.newPromise();
+        ctx.write(Unpooled.EMPTY_BUFFER, markerPromise);
+        markerPromise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(final ChannelFuture future) {
+                EventExecutor executor = ctx.executor();
+                try {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            wrapResumeScheduled = false;
+                            if (!future.isSuccess()) {
+                                Throwable cause = future.cause();
+                                releaseAndFailAll(ctx, cause);
+                                ctx.fireExceptionCaught(cause);
+                                return;
+                            }
+                            if (ctx.isRemoved() || !hasFlushedUnencryptedWrites()) {
+                                return;
+                            }
+                            if (isStateSet(STATE_PROCESS_TASK)) {
+                                // The delegated-task completion path will resume wrapping.
+                                return;
+                            }
+                            try {
+                                wrap(ctx, false);
+                            } catch (Throwable cause) {
+                                setHandshakeFailure(ctx, cause);
+                                ctx.fireExceptionCaught(cause);
+                            } finally {
+                                forceFlush(ctx);
+                            }
+                        }
+                    });
+                } catch (RejectedExecutionException cause) {
+                    wrapResumeScheduled = false;
+                    releaseAndFailAll(ctx, cause);
+                }
+            }
+        });
+    }
+
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (!(msg instanceof ByteBuf)) {
@@ -782,20 +943,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             ReferenceCountUtil.safeRelease(msg);
             promise.setFailure(newPendingWritesNullException());
         } else {
-            pendingUnencryptedWrites.add((ByteBuf) msg, promise);
+            ByteBuf buffer = (ByteBuf) msg;
+            pendingUnencryptedBytes += buffer.readableBytes();
+            pendingUnencryptedWrites.add(buffer, promise);
         }
     }
 
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
-        // Do not encrypt the first write request if this handler is
-        // created with startTLS flag turned on.
+        if (pendingUnencryptedWrites.isEmpty() && !hasFlushedUnencryptedWrites()) {
+            // It's important to NOT use a voidPromise here as the user may want to add a
+            // ChannelFutureListener to the ChannelPromise later. See #3364.
+            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
+        }
+        markPendingUnencryptedWritesFlushed(ctx);
+
+        // Do not encrypt the first write request if this handler is created with startTLS enabled.
         if (startTls && !isStateSet(STATE_SENT_FIRST_MESSAGE)) {
             setState(STATE_SENT_FIRST_MESSAGE);
-            pendingUnencryptedWrites.writeAndRemoveAll(ctx);
+            writeAndRemoveAllFlushed(ctx);
             forceFlush(ctx);
-            // Explicit start handshake processing once we send the first message. This will also ensure
-            // we will schedule the timeout if needed.
             startHandshakeProcessing(true);
             return;
         }
@@ -812,13 +979,24 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
+    private void addFlushedControlWrite(ChannelHandlerContext ctx) {
+        // wrapAndFlush() is also used internally after an unwrap failure to give SSLEngine a chance to
+        // generate a TLS alert. That control wrap must not consume application writes which have not crossed
+        // an explicit flush boundary, so give it an isolated, already-flushed empty segment.
+        SslHandlerCoalescingBufferQueue queue = acquirePendingUnencryptedWritesQueue(ctx.channel());
+        queue.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
+        if (flushedUnencryptedWrites == null) {
+            flushedUnencryptedWrites = new ArrayDeque<SslHandlerCoalescingBufferQueue>(2);
+        }
+        flushedUnencryptedWrites.addLast(queue);
+    }
+
     private void wrapAndFlush(ChannelHandlerContext ctx) throws SSLException {
-        if (pendingUnencryptedWrites.isEmpty()) {
-            // It's important to NOT use a voidPromise here as the user
-            // may want to add a ChannelFutureListener to the ChannelPromise later.
-            //
-            // See https://github.com/netty/netty/issues/3364
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
+        if (!hasFlushedUnencryptedWrites()) {
+            // Preserve the historical SslHandler behavior of performing an empty wrap when there is no
+            // application data. This is required for TLS alerts / handshake control frames. Keep the empty
+            // wrap in its own flushed segment so unflushed application data cannot cross a flush boundary.
+            addFlushedControlWrite(ctx);
         }
         if (!handshakePromise.isDone()) {
             setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
@@ -837,27 +1015,32 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         ByteBuf out = null;
         ByteBufAllocator alloc = ctx.alloc();
         try {
-            final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
             outer: while (!ctx.isRemoved()) {
-                ChannelPromise promise = ctx.newPromise();
-                ByteBuf buf = wrapDataSize > 0 ?
-                        pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
-                        pendingUnencryptedWrites.removeFirst(promise);
-                if (buf == null) {
+                SslHandlerCoalescingBufferQueue queue = currentFlushedUnencryptedWrites();
+                if (queue == null) {
                     break;
                 }
+
+                int maxPlaintextBytes = maxPlaintextBytesForWrap(ctx, queue);
+                if (maxPlaintextBytes < 0) {
+                    suspendWrapUntilTransportDrains(ctx);
+                    break;
+                }
+
+                ChannelPromise promise = ctx.newPromise();
+                ByteBuf buf = queue.remove(alloc, maxPlaintextBytes, promise);
+                if (buf == null) {
+                    continue;
+                }
+                int removedBytes = buf.readableBytes();
+                pendingUnencryptedBytes -= removedBytes;
 
                 SSLEngineResult result = null;
 
                 try {
                     if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
-                        // If we pulled a buffer larger than the supported packet size, we can slice it up and
-                        // iteratively, encrypting multiple packets into a single larger buffer. This substantially
-                        // saves on allocations for large responses. Here we estimate how large of a buffer we need.
-                        // If we overestimate a bit, that's fine. If we underestimate, we'll simply re-enqueue the
-                        // remaining buffer and get it on the next outer loop.
                         int readableBytes = buf.readableBytes();
                         int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
                         if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
@@ -875,19 +1058,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         result = wrap(alloc, engine, buf, out);
                     }
                 } catch (Throwable e) {
-                    // Either wrapMultiple(...), wrap(...) or allocateOutNetBuf(...) did throw.
-                    // In this case we need to release the buffer that we removed from pendingUnencryptedWrites
-                    // before failing the promise and rethrowing it. Failing to do so would result in a buffer leak.
-                    // See https://github.com/netty/netty/issues/14644
-                    //
-                    // We don't need to release out here as this is done in a finally block already.
                     buf.release();
                     promise.setFailure(e);
                     PlatformDependent.throwException(e);
                 }
 
                 if (buf.isReadable()) {
-                    pendingUnencryptedWrites.addFirst(buf, promise);
+                    pendingUnencryptedBytes += buf.readableBytes();
+                    queue.addFirst(buf, promise);
                     // When we add the buffer/promise pair back we need to be sure we don't complete the promise
                     // later. We only complete the promise if the buffer is completely consumed.
                     promise = null;
@@ -911,11 +1089,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // else out is not readable we can re-use it and so save an extra allocation
 
                 if (result.getStatus() == Status.CLOSED) {
-                    // First check if there is any write left that needs to be failed, if there is none we don't need
-                    // to create a new exception or obtain an existing one.
-                    if (!pendingUnencryptedWrites.isEmpty()) {
-                        // Make a best effort to preserve any exception that way previously encountered from the
-                        // handshake or the transport, else fallback to a general error.
+                    if (hasPendingUnencryptedWrites()) {
                         Throwable exception = handshakePromise.cause();
                         if (exception == null) {
                             exception = sslClosePromise.cause();
@@ -923,35 +1097,28 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                 exception = new SslClosedEngineException("SSLEngine closed already");
                             }
                         }
-                        pendingUnencryptedWrites.releaseAndFailAll(ctx, exception);
+                        releaseAndFailAllPendingWrites(ctx, exception);
                     }
-
                     return;
                 } else {
                     switch (result.getHandshakeStatus()) {
                         case NEED_TASK:
                             if (!runDelegatedTasks(inUnwrap)) {
-                                // We scheduled a task on the delegatingTaskExecutor, so stop processing as we will
-                                // resume once the task completes.
                                 break outer;
                             }
                             break;
                         case FINISHED:
-                        case NOT_HANDSHAKING: // work around for android bug that skips the FINISHED state.
+                        case NOT_HANDSHAKING:
                             setHandshakeSuccess();
                             break;
                         case NEED_WRAP:
-                            // If we are expected to wrap again and we produced some data we need to ensure there
-                            // is something in the queue to process as otherwise we will not try again before there
-                            // was more added. Failing to do so may fail to produce an alert that can be
-                            // consumed by the remote peer.
-                            if (result.bytesProduced() > 0 && pendingUnencryptedWrites.isEmpty()) {
-                                pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER);
+                            // Keep the control-frame continuation in the already-flushed segment so later
+                            // application writes cannot cross this flush boundary.
+                            if (result.bytesProduced() > 0 && queue.isEmpty()) {
+                                queue.add(Unpooled.EMPTY_BUFFER);
                             }
                             break;
                         case NEED_UNWRAP:
-                            // The underlying engine is starving so we need to feed it with more data.
-                            // See https://github.com/netty/netty/pull/5039
                             readIfNeeded(ctx);
                             return;
                         default:
@@ -1013,7 +1180,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // and this write is to complete the new handshake. The user may have previously done a
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
                         // attempt to wrap application data here if any is pending.
-                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                        if (setHandshakeSuccess() && inUnwrap && hasFlushedUnencryptedWrites()) {
                             wrap(ctx, true);
                         }
                         return false;
@@ -1035,7 +1202,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     case NEED_WRAP:
                         break;
                     case NOT_HANDSHAKING:
-                        if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                        if (setHandshakeSuccess() && inUnwrap && hasFlushedUnencryptedWrites()) {
                             wrap(ctx, true);
                         }
                         // Workaround for TLS False Start problem reported at:
@@ -1504,7 +1671,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             handshakeStatus == HandshakeStatus.FINISHED ||
                             // We need to check if pendingUnecryptedWrites is null as the SslHandler
                             // might have been removed in the meantime.
-                            (pendingUnencryptedWrites != null  && !pendingUnencryptedWrites.isEmpty());
+                            (pendingUnencryptedWrites != null && hasFlushedUnencryptedWrites());
                 }
 
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
@@ -2065,14 +2232,28 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
     }
 
+    private void releaseAndFailAllPendingWrites(ChannelHandlerContext ctx, Throwable cause) {
+        if (flushedUnencryptedWrites != null) {
+            SslHandlerCoalescingBufferQueue queue;
+            while ((queue = flushedUnencryptedWrites.pollFirst()) != null) {
+                if (!queue.isEmpty()) {
+                    queue.releaseAndFailAll(ctx, cause);
+                }
+            }
+        }
+        if (pendingUnencryptedWrites != null && !pendingUnencryptedWrites.isEmpty()) {
+            pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
+        }
+        pendingUnencryptedBytes = 0;
+        wrapResumeScheduled = false;
+    }
+
     private void releaseAndFailAll(ChannelHandlerContext ctx, Throwable cause) {
         if (resumptionController != null &&
                 (!engine.getSession().isValid() || cause instanceof SSLHandshakeException)) {
             resumptionController.remove(engine());
         }
-        if (pendingUnencryptedWrites != null) {
-            pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
-        }
+        releaseAndFailAllPendingWrites(ctx, cause);
     }
 
     private void notifyClosePromise(Throwable cause) {
@@ -2141,12 +2322,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         Channel channel = ctx.channel();
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16, engineType.wantsDirectBuffer) {
-            @Override
-            protected int wrapDataSize() {
-                return SslHandler.this.wrapDataSize;
-            }
-        };
+        pendingUnencryptedWrites = newPendingUnencryptedWritesQueue(channel);
 
         setOpensslEngineSocketFd(channel);
         boolean fastOpen = Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
