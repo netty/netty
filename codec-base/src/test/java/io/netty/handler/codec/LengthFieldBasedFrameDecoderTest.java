@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -80,7 +81,7 @@ public class LengthFieldBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeNextFrameAfterFrameLengthLessThanInitialBytesToStrip() {
+    public void testDecodeNextFrameAfterFrameLengthLessThanInitialBytesToStrip() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4, 0, 6));
 
         // The adjusted frame length (4) is less than initialBytesToStrip (6).
@@ -104,7 +105,7 @@ public class LengthFieldBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeNextFrameAfterFrameLengthLessThanInitialBytesToStripInSeparateReads() {
+    public void testDecodeNextFrameAfterFrameLengthLessThanInitialBytesToStripInSeparateReads() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4, 0, 10));
 
         // The length field arrives first, and the rest of the malformed frame (adjusted length 8 is less than
