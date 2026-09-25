@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import jdk.jfr.FlightRecorder;
 import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
@@ -265,16 +264,19 @@ public final class PlatformDependent {
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
 
-        boolean jfrAvailable;
+        // Read the property first, so that disabling JFR support keeps Netty away from jdk.jfr entirely.
+        boolean jfr = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", true);
         Throwable jfrFailure = null;
-        try {
-            //noinspection Since15
-            jfrAvailable = FlightRecorder.isAvailable();
-        } catch (Throwable t) {
-            jfrFailure = t;
-            jfrAvailable = false;
+        if (jfr) {
+            try {
+                JfrRecorderListener.register();
+            } catch (Throwable t) {
+                // jdk.jfr is not available.
+                jfrFailure = t;
+                jfr = false;
+            }
         }
-        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
+        JFR = jfr;
         if (logger.isTraceEnabled() && jfrFailure != null) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
         } else if (logger.isDebugEnabled()) {
@@ -1911,10 +1913,14 @@ public final class PlatformDependent {
     }
 
     /**
-     * Check if JFR events are supported on this platform.
+     * Check if JFR events should be emitted: JFR support is enabled ({@code io.netty.jfr.enabled}) and available on
+     * this platform, and a Flight Recorder has been initialized, for example because a recording was started.
+     * <p>
+     * Until a recorder exists this returns {@code false}, so that processes that never record do not pay for
+     * registering event classes with JFR.
      */
     public static boolean isJfrEnabled() {
-        return JFR;
+        return JFR && JfrRecorderListener.recorderInitialized;
     }
 
     private PlatformDependent() {
