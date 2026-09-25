@@ -133,6 +133,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -678,7 +679,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(serverException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, serverException);
     }
 
     @MethodSource("newTestParams")
@@ -694,7 +695,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(param, clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           clientCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
-        assertTrue(clientException instanceof SSLHandshakeException);
+        assertInstanceOf(SSLHandshakeException.class, clientException);
     }
 
     @MethodSource("newTestParams")
@@ -3857,12 +3858,7 @@ public abstract class SSLEngineTest {
                 assertNull(clientSession.getLocalCertificates());
                 assertNull(clientSession.getLocalPrincipal());
 
-                try {
-                    serverSession.getPeerCertificates();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, () -> serverSession.getPeerCertificates());
 
                 additionalPeerAssertions(serverSession, mutualAuth);
 
@@ -3876,12 +3872,7 @@ public abstract class SSLEngineTest {
                     assertTrue(PlatformDependent.javaVersion() >= 15);
                 }
 
-                try {
-                    serverSession.getPeerPrincipal();
-                    fail();
-                } catch (SSLPeerUnverifiedException expected) {
-                    // As we did not use mutual auth this is expected
-                }
+                assertThrows(SSLPeerUnverifiedException.class, () -> serverSession.getPeerPrincipal());
             }
 
             Certificate[] clientPeerCertificates = clientSession.getPeerCertificates();
@@ -4811,19 +4802,18 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .clientAuth(ClientAuth.REQUIRE)
                 .build());
-        SSLEngine clientEngine = null;
-        SSLEngine serverEngine = null;
+        final SSLEngine[] clientEngine = new SSLEngine[1];
+        final SSLEngine[] serverEngine = new SSLEngine[1];
         try {
-            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            assertThrows(SSLException.class, () -> {
+                clientEngine[0] = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+                serverEngine[0] = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
-            handshake(param.type(), param.delegate(), clientEngine, serverEngine);
-            fail();
-        } catch (SSLException expected) {
-            // Expected
+                handshake(param.type(), param.delegate(), clientEngine[0], serverEngine[0]);
+            });
         } finally {
-            cleanupClientSslEngine(clientEngine);
-            cleanupServerSslEngine(serverEngine);
+            cleanupClientSslEngine(clientEngine[0]);
+            cleanupServerSslEngine(serverEngine[0]);
         }
     }
 

@@ -50,7 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * An abstract test class for composite channel buffers
@@ -1232,12 +1231,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertSame(EMPTY_BUFFER, it.next());
         assertFalse(it.hasNext());
 
-        try {
-            it.next();
-            fail();
-        } catch (NoSuchElementException e) {
-            //Expected
-        }
+        assertThrows(NoSuchElementException.class, () -> it.next());
         cbuf.release();
     }
 
@@ -1248,12 +1242,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         Iterator<ByteBuf> it = cbuf.iterator();
         assertFalse(it.hasNext());
 
-        try {
-            it.next();
-            fail();
-        } catch (NoSuchElementException e) {
-            //Expected
-        }
+        assertThrows(NoSuchElementException.class, () -> it.next());
         cbuf.release();
     }
 
@@ -1540,12 +1529,9 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testComponentsLessThanLowerBound() {
-        try {
-            new CompositeByteBuf(ALLOC, true, 0);
-            fail();
-        } catch (IllegalArgumentException e) {
-            assertEquals("maxNumComponents: 0 (expected: >= 1)", e.getMessage());
-        }
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+                new CompositeByteBuf(ALLOC, true, 0));
+        assertEquals("maxNumComponents: 0 (expected: >= 1)", e.getMessage());
     }
 
     @Test
@@ -1767,10 +1753,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         composite.discardSomeReadBytes();
 
         try {
-            slice.readByte();
-            fail("Expected readByte of discarded slice to throw.");
-        } catch (IllegalStateException ignore) {
-            // Good.
+            assertThrows(IllegalStateException.class, () -> slice.readByte());
         } finally {
             slice.release();
             composite.release();

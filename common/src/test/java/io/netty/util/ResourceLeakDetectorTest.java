@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ResourceLeakDetectorTest {
     @SuppressWarnings("unused")
@@ -139,12 +140,8 @@ public class ResourceLeakDetectorTest {
                 throw new RuntimeException("expected failure");
             }
         };
-        try {
-            leakResource();
-            fail("expected failure");
-        } catch (RuntimeException e) {
-            assertThat(e.getMessage()).isEqualTo("expected failure");
-        }
+        RuntimeException e = assertThrows(RuntimeException.class, () -> leakResource());
+        assertThat(e.getMessage()).isEqualTo("expected failure");
         DefaultResource.detectorWithSetupHint.initialHint = DefaultResource.detectorWithSetupHint.canaryString;
 
         do {

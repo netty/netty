@@ -38,6 +38,7 @@ import java.nio.channels.Channels;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -193,7 +194,7 @@ public class HttpChunkedInputTest {
                 break;
             }
             if (lastHttpContent != null) {
-                assertTrue(lastHttpContent instanceof DefaultHttpContent, "Chunk must be DefaultHttpContent");
+                assertInstanceOf(DefaultHttpContent.class, lastHttpContent, "Chunk must be DefaultHttpContent");
             }
 
             ByteBuf buffer = httpContent.content();

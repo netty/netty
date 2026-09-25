@@ -33,6 +33,7 @@ import java.net.SocketAddress;
 import static io.netty.util.NetUtil.LOCALHOST;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,7 +89,7 @@ public class EpollDatagramChannelTest {
 
             SocketAddress localAddressAfterBind = future.channel().localAddress();
             assertNotNull(localAddressAfterBind);
-            assertTrue(localAddressAfterBind instanceof InetSocketAddress);
+            assertInstanceOf(InetSocketAddress.class, localAddressAfterBind);
             assertTrue(((InetSocketAddress) localAddressAfterBind).getPort() != 0);
 
             future.channel().close().syncUninterruptibly();

@@ -45,8 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpContentDecoderTest {
     private static final String HELLO_WORLD = "hello, world";
@@ -739,12 +739,7 @@ public class HttpContentDecoderTest {
         HttpContent content = new DefaultHttpContent(Unpooled.buffer().writeZero(10));
         assertTrue(channel.writeInbound(content));
         assertEquals(1, content.refCnt());
-        try {
-            channel.finishAndReleaseAll();
-            fail();
-        } catch (CodecException expected) {
-            // expected
-        }
+        assertThrows(CodecException.class, () -> channel.finishAndReleaseAll());
         assertTrue(channelInactiveCalled.get());
         assertEquals(0, content.refCnt());
     }

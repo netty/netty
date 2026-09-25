@@ -38,6 +38,7 @@ import static java.util.function.UnaryOperator.identity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -125,7 +126,7 @@ public class Http3ServerPushStreamManagerTest {
         final PushStreamListener pushStreamHandler = new PushStreamListener();
         pushStreamCreateAndClose(pushId -> newPushStream(pushStreamHandler, pushId));
         assertEquals(1, pushStreamHandler.framesWritten.size());
-        assertTrue(pushStreamHandler.framesWritten.get(0) instanceof Http3HeadersFrame);
+        assertInstanceOf(Http3HeadersFrame.class, pushStreamHandler.framesWritten.get(0));
     }
 
     @Test
@@ -138,7 +139,7 @@ public class Http3ServerPushStreamManagerTest {
         final PushStreamListener pushStreamHandler = new PushStreamListener();
         pushStreamWithBootstrapCreateAndClose(pushStreamHandler);
         assertEquals(1, pushStreamHandler.framesWritten.size());
-        assertTrue(pushStreamHandler.framesWritten.get(0) instanceof Http3HeadersFrame);
+        assertInstanceOf(Http3HeadersFrame.class, pushStreamHandler.framesWritten.get(0));
     }
 
     private void pushStreamWithBootstrapCreateAndClose(@Nullable ChannelHandler pushStreamHandler) throws Exception {
