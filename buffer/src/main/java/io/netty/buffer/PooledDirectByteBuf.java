@@ -260,10 +260,10 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public ByteBuf setBytes(int index, ByteBuffer src) {
         int length = src.remaining();
         checkIndex(index, length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        if (src == tmpBuf) {
+        if (src == tmpNioBuf) {
             src = src.duplicate();
         }
+        ByteBuffer tmpBuf = internalNioBuffer();
 
         index = idx(index);
         tmpBuf.limit(index + length).position(index);
