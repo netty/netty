@@ -1281,4 +1281,82 @@ public class HttpPostRequestDecoderTest {
 
         assertEquals(0, partial.refCnt());
     }
+
+    /**
+     * A decoder using a factory that tracks the data, with a field that is still being decoded.
+     */
+    private static HttpPostRequestDecoder decoderWithPartialData(HttpDataFactory factory, boolean multipart) {
+        String boundary = "be38b42a9ad2713f";
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        String body;
+        if (multipart) {
+            req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+            body = "--" + boundary + "\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+                    "Content-Type: text/plain\r\n" +
+                    "\r\n" +
+                    "some partial content";
+        } else {
+            req.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/x-www-form-urlencoded");
+            body = "field=partialvalue";
+        }
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(factory, req);
+        decoder.offer(new DefaultHttpContent(Unpooled.copiedBuffer(body, CharsetUtil.UTF_8)));
+        assertNotNull(decoder.currentPartialHttpData());
+        return decoder;
+    }
+
+    private static void testDestroyAfterCleanFiles(boolean multipart) {
+        HttpPostRequestDecoder decoder = decoderWithPartialData(new DefaultHttpDataFactory(), multipart);
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        decoder.cleanFiles();
+        assertEquals(0, partial.refCnt());
+        decoder.destroy();
+    }
+
+    @Test
+    public void testDestroyAfterCleanFilesStandardDecoder() {
+        testDestroyAfterCleanFiles(false);
+    }
+
+    @Test
+    public void testDestroyAfterCleanFilesMultipartDecoder() {
+        testDestroyAfterCleanFiles(true);
+    }
+
+    private static void testDestroyAfterFactoryCleaned(boolean multipart) {
+        DefaultHttpDataFactory factory = new DefaultHttpDataFactory();
+        HttpPostRequestDecoder decoder = decoderWithPartialData(factory, multipart);
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        factory.cleanAllHttpData();
+        assertEquals(0, partial.refCnt());
+        decoder.destroy();
+    }
+
+    @Test
+    public void testDestroyAfterFactoryCleanedStandardDecoder() {
+        testDestroyAfterFactoryCleaned(false);
+    }
+
+    @Test
+    public void testDestroyAfterFactoryCleanedMultipartDecoder() {
+        testDestroyAfterFactoryCleaned(true);
+    }
+
+    private static void testDestroyAfterPartialReleased(boolean multipart) {
+        HttpPostRequestDecoder decoder = decoderWithPartialData(new DefaultHttpDataFactory(false), multipart);
+        InterfaceHttpData partial = decoder.currentPartialHttpData();
+        assertTrue(partial.release());
+        decoder.destroy();
+    }
+
+    @Test
+    public void testDestroyAfterPartialReleasedStandardDecoder() {
+        testDestroyAfterPartialReleased(false);
+    }
+
+    @Test
+    public void testDestroyAfterPartialReleasedMultipartDecoder() {
+        testDestroyAfterPartialReleased(true);
+    }
 }
