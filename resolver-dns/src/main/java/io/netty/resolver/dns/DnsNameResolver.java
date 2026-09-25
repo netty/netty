@@ -1251,13 +1251,20 @@ public class DnsNameResolver extends InetNameResolver {
                                       int ndots,
                                       SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
         List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
-                && !StringUtil.endsWith(hostname, '.')) {
+        boolean resolvedWithSearchDomains = searchDomains != null && ndots > 0 && !StringUtil.endsWith(hostname, '.');
+        if (!hasEntries(cachedEntries) && resolvedWithSearchDomains) {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
-                cachedEntries = resolveCache.get(initialHostname, additionals);
-                if (hasEntries(cachedEntries)) {
-                    break;
+                final List<? extends DnsCacheEntry> entries = resolveCache.get(initialHostname, additionals);
+                // Only a positive cache entry lets us draw a conclusion about the bare hostname. A negative entry
+                // just means that this specific search domain permutation does not exist, which must neither
+                // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
+                if (hasEntries(entries)) {
+                    cachedEntries = entries; // Returns the last cached entry if none of the resolution was successful
+                    boolean successfulResolution = entries.get(0).cause() == null;
+                    if (successfulResolution) {
+                        break;
+                    }
                 }
             }
         }
