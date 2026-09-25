@@ -2459,7 +2459,7 @@ final class AdaptivePoolingAllocator {
                 ByteBuffer dstBuffer = rootParent()._internalNioBuffer();
                 PlatformDependent.absolutePut(dstBuffer, idx(index), src, srcIndex, length);
             } else {
-                ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+                ByteBuffer tmp = (ByteBuffer) internalNioBuffer().position(index);
                 tmp.put(src, srcIndex, length);
             }
             return this;
@@ -2513,7 +2513,7 @@ final class AdaptivePoolingAllocator {
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf);
         }
 
@@ -2521,7 +2521,7 @@ final class AdaptivePoolingAllocator {
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf, position);
         }
 
