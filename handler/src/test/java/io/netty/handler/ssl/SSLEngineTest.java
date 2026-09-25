@@ -4802,18 +4802,19 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .clientAuth(ClientAuth.REQUIRE)
                 .build());
-        final SSLEngine[] clientEngine = new SSLEngine[1];
-        final SSLEngine[] serverEngine = new SSLEngine[1];
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
         try {
-            assertThrows(SSLException.class, () -> {
-                clientEngine[0] = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
-                serverEngine[0] = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
-                handshake(param.type(), param.delegate(), clientEngine[0], serverEngine[0]);
-            });
+            handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+            fail();
+        } catch (SSLException expected) {
+            // expected
         } finally {
-            cleanupClientSslEngine(clientEngine[0]);
-            cleanupServerSslEngine(serverEngine[0]);
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 
