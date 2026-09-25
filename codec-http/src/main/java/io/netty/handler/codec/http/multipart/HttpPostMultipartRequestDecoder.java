@@ -986,6 +986,19 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      */
     @Override
     public void destroy() {
+        // The HttpData that is still being decoded was never added to bodyListHttpData, and a memory based
+        // one is not tracked by the factory either. Remove it from the factory so that cleanFiles() below
+        // does not release it too, then release it exactly once.
+        if (currentFileUpload != null) {
+            factory.removeHttpDataFromClean(request, currentFileUpload);
+            currentFileUpload.release();
+            currentFileUpload = null;
+        }
+        if (currentAttribute != null) {
+            factory.removeHttpDataFromClean(request, currentAttribute);
+            currentAttribute.release();
+            currentAttribute = null;
+        }
         // Release all data items, including those not yet pulled, only file based items
         cleanFiles();
         // Clean Memory based data
@@ -994,20 +1007,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             if (httpData.refCnt() > 0) {
                 httpData.release();
             }
-        }
-        // A HttpData that is still being decoded was never added to bodyListHttpData, and a memory based
-        // one is not tracked by the factory either, so cleanFiles() above does not cover it.
-        if (currentFileUpload != null) {
-            if (currentFileUpload.refCnt() > 0) {
-                currentFileUpload.release();
-            }
-            currentFileUpload = null;
-        }
-        if (currentAttribute != null) {
-            if (currentAttribute.refCnt() > 0) {
-                currentAttribute.release();
-            }
-            currentAttribute = null;
         }
 
         destroyed = true;
