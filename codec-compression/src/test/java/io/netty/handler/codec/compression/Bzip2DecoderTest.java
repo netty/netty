@@ -142,6 +142,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect huffman groups number");
+        try {
+            // Leftover cumulation bytes get reprocessed from stale decoder state when the
+            // channel is torn down, which can legitimately raise a second, unrelated exception.
+            destroyChannel();
+        } catch (DecompressionException ignored) {
+            // expected
+        }
     }
 
     @Test
@@ -156,6 +163,13 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect selectors number");
+        try {
+            // Leftover cumulation bytes get reprocessed from stale decoder state when the
+            // channel is torn down, which can legitimately raise a second, unrelated exception.
+            destroyChannel();
+        } catch (DecompressionException ignored) {
+            // expected
+        }
     }
 
     @Test
@@ -266,6 +280,31 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
             assertArrayEquals(new byte[]{'A', 'A', 'A', 'A'}, result);
         } finally {
             decoded.release();
+        }
+    }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() {
+        final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange());
+        assertThrows(DecompressionException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(in);
+            }
+        }, "incorrect selector index");
+        try {
+            // Leftover cumulation bytes get reprocessed from stale decoder state when the
+            // channel is torn down, which can legitimately raise a second, unrelated exception.
+            destroyChannel();
+        } catch (DecompressionException ignored) {
+            // expected
         }
     }
 
