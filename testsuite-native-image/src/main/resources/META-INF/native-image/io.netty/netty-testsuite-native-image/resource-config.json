@@ -1,0 +1,12 @@
+{
+  "resources":{
+    "includes":[
+      {
+        "pattern":"io/netty/testsuite/svm/openssl-test-cert\\.pem"
+      },
+      {
+        "pattern":"io/netty/testsuite/svm/openssl-test-key\\.pem"
+      }
+    ]},
+  "bundles":[]
+}
