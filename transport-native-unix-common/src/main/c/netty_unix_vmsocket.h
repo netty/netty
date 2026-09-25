@@ -35,4 +35,4 @@ struct sockaddr_vm {
                            sizeof(unsigned int)];
 };
 
-#endif /* NETTY_EPOLL_VMSOCKET_H_ */
+#endif /* NETTY_UNIX_VMSOCKET_H_ */
