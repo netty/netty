@@ -25,6 +25,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.SplittableRandom;
 import java.util.concurrent.CountDownLatch;
@@ -61,7 +62,7 @@ public class RecyclerTest {
         }
 
         public boolean isPooling() {
-            return this != FAST_THREAD_LOCAL || FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals();
+            return this != FAST_THREAD_LOCAL || Recycler.currentThreadCanPool();
         }
     }
 
@@ -621,6 +622,105 @@ public class RecyclerTest {
                 "The instances count (" +  instancesCount.get() + ") must be <= array.length (" + array.length
                 + ") - maxCapacity (" + maxCapacity + ") / 2 as we not pool all new handles" +
                 " internally");
+    }
+
+    // --- Pooling on threads that are not FastThreadLocalThreads (see #16315) ---------------------------------
+
+    private static void assertPoolsAndRecycles(Recycler<HandledObject> recycler) {
+        HandledObject a = recycler.get();
+        a.recycle();
+        HandledObject b = recycler.get();
+        assertSame(a, b, "object was not pooled on " + Thread.currentThread());
+        b.recycle();
+        assertEquals(1, recycler.threadLocalSize());
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testPoolsOnPlainThread() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(OwnerType.FAST_THREAD_LOCAL, false, 256, 0, 16);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        Thread t = new Thread(() -> {
+            try {
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertPoolsAndRecycles(recycler);
+            } catch (Throwable e) {
+                error.set(e);
+            }
+        });
+        t.start();
+        t.join();
+        if (error.get() != null) {
+            throw new AssertionError(error.get());
+        }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testPoolsOnExecutorThread() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(OwnerType.FAST_THREAD_LOCAL, false, 256, 0, 16);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            executor.submit(() -> {
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertPoolsAndRecycles(recycler);
+                return null;
+            }).get(10, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testPoolsOnFastThreadLocalThread() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(OwnerType.FAST_THREAD_LOCAL, false, 256, 0, 16);
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        Thread t = new FastThreadLocalThread(() -> {
+            try {
+                assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertPoolsAndRecycles(recycler);
+            } catch (Throwable e) {
+                error.set(e);
+            }
+        });
+        t.start();
+        t.join();
+        if (error.get() != null) {
+            throw new AssertionError(error.get());
+        }
+    }
+
+    /**
+     * A plain thread stores its pool in the {@link ThreadLocal} fallback of {@code InternalThreadLocalMap}, which is
+     * not cleaned by {@code FastThreadLocal.removeAll()}. This asserts the pool, and everything in it, still becomes
+     * unreachable once the thread terminates, while the {@link Recycler} itself stays alive.
+     */
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testPlainThreadPoolIsReclaimedWhenThreadDies() throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(OwnerType.FAST_THREAD_LOCAL, false, 256, 0, 16);
+        final AtomicReference<WeakReference<Object>> pooled = new AtomicReference<WeakReference<Object>>();
+        Thread t = new Thread(() -> {
+            HandledObject o = recycler.get();
+            pooled.set(new WeakReference<Object>(o));
+            o.recycle();
+            // The object is now owned by this thread's pool only.
+            assertEquals(1, recycler.threadLocalSize());
+        });
+        t.start();
+        t.join();
+        t = null;
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+        while (pooled.get().get() != null && System.nanoTime() < deadline) {
+            System.gc();
+            Thread.sleep(50);
+        }
+        assertNull(pooled.get().get(), "pooled object was not reclaimed after the owning thread died");
+        // The Recycler is still usable afterwards.
+        assertNotNull(recycler);
+        recycler.get().recycle();
     }
 
     static final class HandledObject {
