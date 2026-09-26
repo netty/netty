@@ -27,6 +27,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
+import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -641,7 +642,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             connection.forEachActiveStream(new Http2StreamVisitor() {
                 @Override
                 public boolean visit(Http2Stream stream) throws Http2Exception {
-                    state(stream).incrementStreamWindow(delta);
+                    try {
+                        state(stream).incrementStreamWindow(delta);
+                    } catch (Http2Exception e) {
+                        // RFC 9113 Section 6.9.2 requires a connection error if a SETTINGS change causes overflow.
+                        throw connectionError(FLOW_CONTROL_ERROR, e,
+                                "Window size overflow for stream: %d after SETTINGS_INITIAL_WINDOW_SIZE change",
+                                stream.id());
+                    }
                     return true;
                 }
             });
