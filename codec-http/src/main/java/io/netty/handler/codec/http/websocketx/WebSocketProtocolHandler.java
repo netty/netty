@@ -133,6 +133,13 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
      * never completes (e.g. the peer stops reading and the socket send buffer fills up).
      */
     void closeSent(ChannelPromise promise) {
+        if (closeSent != null) {
+            // Already sending (or already sent) a close frame, e.g. a peer that sends more than one CLOSE
+            // frame. Keep the original promise (and the deadline already armed for it) authoritative, and
+            // just cascade its outcome onto the new one instead of losing track of the original.
+            closeSent.addListener(new PromiseNotifier<Void, ChannelFuture>(false, promise));
+            return;
+        }
         closeSent = promise;
     }
 
