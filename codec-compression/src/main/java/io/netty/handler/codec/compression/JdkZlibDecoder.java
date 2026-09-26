@@ -28,7 +28,10 @@ import java.util.zip.Inflater;
 
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
+ *
+ * @deprecated Superseded by {@link JdkZlibDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class JdkZlibDecoder extends ZlibDecoder {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;

@@ -33,7 +33,10 @@ import static io.netty.handler.codec.compression.Snappy.validateChecksum;
  * or if you would prefer the safety that checksum validation brings, please
  * use the {@link #SnappyFrameDecoder(boolean)} constructor with the argument
  * set to {@code true}.
+ *
+ * @deprecated Superseded by {@link SnappyFrameDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class SnappyFrameDecoder extends ByteToMessageDecoder {
 
     private enum ChunkType {

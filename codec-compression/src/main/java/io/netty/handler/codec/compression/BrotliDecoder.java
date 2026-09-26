@@ -29,7 +29,10 @@ import java.util.List;
  * Decompresses a {@link ByteBuf} encoded with the brotli format.
  * <p>
  * See <a href="https://github.com/google/brotli">brotli</a>.
+ *
+ * @deprecated Superseded by {@link BrotliDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public final class BrotliDecoder extends ByteToMessageDecoder {
 
     private static final int DEFAULT_MAX_FORWARD_BYTES = CompressionUtil.DEFAULT_MAX_FORWARD_BYTES;
