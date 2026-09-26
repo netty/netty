@@ -865,9 +865,23 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     break;
             }
             if (windowUpdated) {
-                // No read loop runs here, so nothing else is guaranteed to flush the WINDOW_UPDATE. Without this the
-                // remote peer can stall forever once its flow-control window is exhausted.
-                flush();
+                // A WINDOW_UPDATE was just written above, but no read loop runs in this branch to flush it, so an
+                // unflushed frame here can stall the remote peer forever (netty/netty#17600).
+                //
+                // flush() alone is not enough: it no-ops while isParentReadInProgress(), since
+                // Http2MultiplexHandler batches all children's flushes into one ctx.flush() at the end of its read
+                // loop (processPendingReadCompleteQueue()) -- but that batched flush only runs if some channel
+                // registered via maybeAddChannelToReadCompletePendingQueue(), which doBeginRead()/fireChildRead()
+                // do but this branch doesn't. If a cross-thread setAutoRead(true) lands here as the only activity
+                // in the parent's read loop, the queue stays empty, the end-of-loop flush is skipped, and this
+                // WINDOW_UPDATE (flowControlledBytes already zeroed) is never retried -- permanent stall.
+                //
+                // So register into that queue while the parent is reading; otherwise flush immediately.
+                if (isParentReadInProgress()) {
+                    maybeAddChannelToReadCompletePendingQueue();
+                } else {
+                    flush();
+                }
             }
         }
 
