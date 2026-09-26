@@ -308,7 +308,9 @@ public class FixedChannelPool extends SimpleChannelPool {
                 } else {
                     Throwable cause = future.cause();
                     // Check if the exception was not because of we passed the Channel to the wrong pool.
-                    if (!(cause instanceof IllegalArgumentException)) {
+                    // Other failures (for example an IllegalArgumentException thrown by the ChannelPoolHandler)
+                    // must still give back the slot.
+                    if (!(cause instanceof ChannelNotAcquiredFromPoolException)) {
                         decrementAndRunTaskQueue();
                     }
                     promise.setFailure(future.cause());
