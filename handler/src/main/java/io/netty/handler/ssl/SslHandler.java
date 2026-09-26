@@ -1220,8 +1220,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // We may be here because we read data and discovered the remote peer initiated a renegotiation
                         // and this write is to complete the new handshake. The user may have previously done a
                         // writeAndFlush which wasn't able to wrap data due to needing the pending handshake, so we
-                        // attempt to wrap application data here if any is pending.
+                        // attempt to wrap application data here if any is pending. That earlier flush() may never
+                        // have reached wrapAndFlush() at all (e.g. it arrived while a delegated task was in flight
+                        // and was dropped by the STATE_PROCESS_TASK check there), so flushedPlaintextBytes might
+                        // still be stale; treat everything currently queued as flushed, same as wrapAndFlush() does.
                         if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                            flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
                             wrapGuarded(ctx, true);
                         }
                         return false;
@@ -1244,6 +1248,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         break;
                     case NOT_HANDSHAKING:
                         if (setHandshakeSuccess() && inUnwrap && !pendingUnencryptedWrites.isEmpty()) {
+                            // See the same comment on the FINISHED case above: flushedPlaintextBytes may be stale.
+                            flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
                             wrapGuarded(ctx, true);
                         }
                         // Workaround for TLS False Start problem reported at:
@@ -1790,6 +1796,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             if (wrapLater) {
+                // wrapLater can become true either from the STATE_FLUSHED_BEFORE_HANDSHAKE check above (which only
+                // ever fires after a successful wrapAndFlush(), so flushedPlaintextBytes is already current) or
+                // from the handshake-just-finished check earlier in this method, which does not touch
+                // flushedPlaintextBytes at all. In the latter case any write made while this handshake step was
+                // offloaded as a delegated task - and so had its flush() dropped by the STATE_PROCESS_TASK check
+                // in flush() - would otherwise never be picked up: re-affirm the boundary here too.
+                if (pendingUnencryptedWrites != null) {
+                    flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
+                }
                 wrapGuarded(ctx, true);
             }
         } finally {
@@ -2031,7 +2046,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         setHandshakeSuccess(); // NOT_HANDSHAKING -> workaround for android skipping FINISHED state.
                         try {
                             // Lets call wrap to ensure we produce the alert if there is any pending and also to
-                            // ensure we flush any queued data..
+                            // ensure we flush any queued data. Any flush() that arrived while this task was in
+                            // flight was silently dropped by the STATE_PROCESS_TASK check in flush(), so
+                            // flushedPlaintextBytes may not yet cover everything sitting in pendingUnencryptedWrites;
+                            // treat it all as flushed now, same as wrapAndFlush() does for an ordinary flush().
+                            flushedPlaintextBytes = pendingUnencryptedWrites.readableBytes();
                             wrapGuarded(ctx, inUnwrap);
                         } catch (Throwable e) {
                             taskError(e);
