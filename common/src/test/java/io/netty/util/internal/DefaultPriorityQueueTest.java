@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultPriorityQueueTest {
     @Test
@@ -127,12 +127,7 @@ public class DefaultPriorityQueueTest {
         assertEmptyQueue(queue);
 
         // Elements cannot be re-inserted but new ones can.
-        try {
-            queue.offer(a);
-            fail();
-        } catch (IllegalArgumentException t) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, () -> queue.offer(a));
 
         assertOffer(queue, e);
         assertSame(e, queue.peek());
@@ -292,12 +287,8 @@ public class DefaultPriorityQueueTest {
         assertTrue(queue.offer(a));
         assertTrue(queue.contains(a));
         assertTrue(queue.containsTyped(a));
-        try { // An element can not be inserted more than 1 time.
-            queue.offer(a);
-            fail();
-        } catch (IllegalArgumentException ignored) {
-            // ignored
-        }
+        assertThrows(IllegalArgumentException.class, () -> // An element can not be inserted more than 1 time.
+            queue.offer(a));
     }
 
     private static void assertEmptyQueue(PriorityQueue<TestElement> queue) {

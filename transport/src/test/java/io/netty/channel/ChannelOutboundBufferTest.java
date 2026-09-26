@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import static io.netty.buffer.Unpooled.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -502,7 +503,7 @@ public class ChannelOutboundBufferTest {
         ChannelFuture future = ch.write(buffer);
         ch.runPendingTasks();
 
-        assertTrue(future.cause() instanceof RejectedExecutionException);
+        assertInstanceOf(RejectedExecutionException.class, future.cause());
         assertEquals(0, buffer.refCnt());
 
         // In case of rejected task we should not have anything pending.

@@ -40,7 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
@@ -772,10 +771,8 @@ public class ByteBufUtilTest {
         for (int [] range : INVALID_RANGES) {
             ByteBuf buf = buffer(bufferType, 16);
             try {
-                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
-                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
-            } catch (IndexOutOfBoundsException iiobe) {
-                // expected
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]));
             } finally {
                 assertFalse(buf.isReadable());
                 buf.release();
@@ -927,12 +924,8 @@ public class ByteBufUtilTest {
                     {1, 5},
             };
             for (int[] pair : invalidIndexLengthPairs) {
-                try {
-                    ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII);
-                    fail("Expected IndexOutOfBoundsException");
-                } catch (IndexOutOfBoundsException e) {
-                    // expected
-                }
+                assertThrows(IndexOutOfBoundsException.class, () ->
+                        ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII));
             }
         } finally {
             buffer.release();

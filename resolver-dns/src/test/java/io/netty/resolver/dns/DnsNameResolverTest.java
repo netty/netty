@@ -781,30 +781,25 @@ public class DnsNameResolverTest {
     }
 
     private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
-        try {
-            resolver.resolve("non-existent.netty.io").sync();
-            fail();
-            return null;
-        } catch (Exception e) {
-            assertInstanceOf(UnknownHostException.class, e);
+        Exception e = assertThrows(Exception.class, () -> resolver.resolve("non-existent.netty.io").sync());
+        assertInstanceOf(UnknownHostException.class, e);
 
-            TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
-                    (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
-            TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
-            if (observer != null) {
-                Object o = observer.events.poll();
-                if (o instanceof QueryCancelledEvent) {
-                    assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
-                        "unexpected type: " + observer.question);
-                } else if (o instanceof QueryWrittenEvent) {
-                    QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
-                } else if (!(o instanceof QueryFailedEvent)) {
-                    fail("unexpected event type: " + o);
-                }
-                assertTrue(observer.events.isEmpty());
+        TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
+                (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
+        TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
+        if (observer != null) {
+            Object o = observer.events.poll();
+            if (o instanceof QueryCancelledEvent) {
+                assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
+                    "unexpected type: " + observer.question);
+            } else if (o instanceof QueryWrittenEvent) {
+                QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
+            } else if (!(o instanceof QueryFailedEvent)) {
+                fail("unexpected event type: " + o);
             }
-            return (UnknownHostException) e;
+            assertTrue(observer.events.isEmpty());
         }
+        return (UnknownHostException) e;
     }
 
     @ParameterizedTest
@@ -1864,7 +1859,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
@@ -1997,7 +1992,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
@@ -3724,12 +3719,8 @@ public class DnsNameResolverTest {
                 .datagramChannelStrategy(strategy)
                 .build();
 
-        try {
-            resolver.resolve("non-existent.netty.io", promise).sync();
-            fail();
-        } catch (Exception e) {
-            assertInstanceOf(CancellationException.class, e);
-        }
+        Exception e = assertThrows(Exception.class, () -> resolver.resolve("non-existent.netty.io", promise).sync());
+        assertInstanceOf(CancellationException.class, e);
         assertFalse(isQuerySentToSecondServer.get());
     }
 
@@ -4403,9 +4394,8 @@ public class DnsNameResolverTest {
             // setup call to fail and verify
             returnSuccess.set(false);
             try {
-                resolver.resolve("yahoo.com").syncUninterruptibly().getNow();
-                fail();
-            } catch (Exception e) {
+                Exception e = assertThrows(Exception.class, () ->
+                        resolver.resolve("yahoo.com").syncUninterruptibly().getNow());
                 // expected
                 assertInstanceOf(UnknownHostException.class, e);
             } finally {

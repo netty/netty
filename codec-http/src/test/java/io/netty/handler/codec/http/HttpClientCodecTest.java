@@ -49,8 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpClientCodecTest {
 
@@ -91,12 +91,8 @@ public class HttpClientCodecTest {
         ByteBuf buffer = ch.readOutbound();
         assertNotNull(buffer);
         buffer.release();
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        CodecException e = assertThrows(CodecException.class, () -> ch.finish());
+        assertInstanceOf(PrematureChannelClosureException.class, e);
     }
 
     @Test
@@ -115,12 +111,8 @@ public class HttpClientCodecTest {
         ((HttpContent) ch.readInbound()).release(); // Chunk 'second'
         assertNull(ch.readInbound());
 
-        try {
-            ch.finish();
-            fail();
-        } catch (CodecException e) {
-            assertTrue(e instanceof PrematureChannelClosureException);
-        }
+        CodecException e = assertThrows(CodecException.class, () -> ch.finish());
+        assertInstanceOf(PrematureChannelClosureException.class, e);
     }
 
     @Test
@@ -142,7 +134,7 @@ public class HttpClientCodecTest {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
                             // This is just a simple demo...don't block in IO
-                            assertTrue(ctx.channel() instanceof SocketChannel);
+                            assertInstanceOf(SocketChannel.class, ctx.channel());
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
                             /**
                              * The point of this test is to not add any content-length or content-encoding headers

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -294,7 +295,7 @@ public class WebSocketHandshakeHandOverTest {
             Object srcData = srcChannel.readOutbound();
 
             if (srcData != null) {
-                assertTrue(srcData instanceof ByteBuf);
+                assertInstanceOf(ByteBuf.class, srcData);
                 ByteBuf srcBuf = (ByteBuf) srcData;
                 try {
                     if (mergedBuffer == null) {

@@ -46,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReadOnlyDirectByteBufferBufTest {
 
@@ -428,12 +427,7 @@ public class ReadOnlyDirectByteBufferBufTest {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
         try {
             assertFalse(buf.hasMemoryAddress());
-            try {
-                buf.memoryAddress();
-                fail();
-            } catch (UnsupportedOperationException expected) {
-                // expected
-            }
+            assertThrows(UnsupportedOperationException.class, () -> buf.memoryAddress());
         } finally {
             buf.release();
         }

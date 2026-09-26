@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class DiskFileUploadTest {
     @Test
@@ -279,14 +279,10 @@ public class DiskFileUploadTest {
             } finally {
                 fos.close();
             }
-            try {
-                f1.setContent(tmpFile);
-                fail("should not reach here!");
-            } catch (IOException e) {
-                assertNotNull(f1.getFile());
-                assertEquals(originalFile, f1.getFile());
-                assertEquals(maxSize, f1.length());
-            }
+            IOException e = assertThrows(IOException.class, () -> f1.setContent(tmpFile));
+            assertNotNull(f1.getFile());
+            assertEquals(originalFile, f1.getFile());
+            assertEquals(maxSize, f1.length());
         } finally {
             f1.delete();
         }

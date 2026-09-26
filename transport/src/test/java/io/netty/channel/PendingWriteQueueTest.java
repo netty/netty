@@ -30,11 +30,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class PendingWriteQueueTest {
 
@@ -181,12 +182,8 @@ public class PendingWriteQueueTest {
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = buffer.retainedDuplicate();
         }
-        try {
-            assertFalse(channel.writeOutbound(buffers));
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof TestException);
-        }
+        Exception e = assertThrows(Exception.class, () -> assertFalse(channel.writeOutbound(buffers)));
+        assertInstanceOf(TestException.class, e);
         assertFalse(channel.finish());
         channel.closeFuture().syncUninterruptibly();
 
