@@ -163,8 +163,8 @@ public class WebSocketProtocolHandlerTest {
             }
         }, handler);
 
-        ChannelFuture future = channel.writeAndFlush(new CloseWebSocketFrame());
         ChannelHandlerContext ctx = channel.pipeline().context(WebSocketProtocolHandler.class);
+        ChannelFuture future = channel.writeAndFlush(new CloseWebSocketFrame());
         handler.close(ctx, ctx.newPromise());
 
         do {
@@ -174,6 +174,31 @@ public class WebSocketProtocolHandlerTest {
 
         assertInstanceOf(WebSocketHandshakeException.class, future.cause());
         assertFalse(ref.get().isDone());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testTimeoutWithoutExplicitClose() throws Exception {
+        // A bare write(CloseWebSocketFrame) is not followed by any close() call: the force-close
+        // timeout itself must be the thing that closes the channel once it fires.
+        WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
+                false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                // Simulate a stalled write: never complete the promise.
+                ReferenceCountUtil.release(msg);
+            }
+        }, handler);
+
+        channel.writeAndFlush(new CloseWebSocketFrame());
+
+        while (channel.isOpen()) {
+            Thread.sleep(10);
+            channel.runPendingTasks();
+        }
+
+        assertFalse(channel.isOpen());
         assertFalse(channel.finish());
     }
 
