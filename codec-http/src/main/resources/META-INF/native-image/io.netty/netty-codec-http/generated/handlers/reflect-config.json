@@ -474,5 +474,12 @@
       "typeReachable": "io.netty.handler.codec.spdy.SpdySessionHandler"
     },
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpDecompressionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpDecompressionHandler"
+    },
+    "queryAllPublicMethods": true
   }
 ]

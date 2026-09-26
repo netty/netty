@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -45,6 +46,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpContentDecompressorTest {
+    protected ChannelHandler createDecompressor() {
+        return new HttpContentDecompressor(0);
+    }
 
     // See https://github.com/netty/netty/issues/8915.
     @Test
@@ -56,11 +60,22 @@ public class HttpContentDecompressorTest {
                 readCalled.incrementAndGet();
                 ctx.read();
             }
-        }, new HttpContentDecompressor(0), new ChannelInboundHandlerAdapter() {
+        }, createDecompressor(), new ChannelInboundHandlerAdapter() {
+            boolean hasChannelRead;
+
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 ctx.fireChannelRead(msg);
-                ctx.read();
+                hasChannelRead = true;
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                ctx.fireChannelReadComplete();
+                if (hasChannelRead) {
+                    hasChannelRead = false;
+                    ctx.read();
+                }
             }
         });
 
@@ -195,7 +210,7 @@ public class HttpContentDecompressorTest {
         PooledByteBufAllocator allocator = new PooledByteBufAllocator(false);
 
         ZipBombIncomingHandler incomingHandler = new ZipBombIncomingHandler(memoryLimit);
-        EmbeddedChannel decompressChannel = new EmbeddedChannel(new HttpContentDecompressor(0), incomingHandler);
+        EmbeddedChannel decompressChannel = new EmbeddedChannel(createDecompressor(), incomingHandler);
         decompressChannel.config().setAllocator(allocator);
         decompressChannel.writeInbound(message);
         decompressChannel.writeInbound(new DefaultLastHttpContent(compressed));
