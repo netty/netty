@@ -35,6 +35,7 @@
     <!-- This only be set when run on linux as on other platforms we just want to include the jar without native
          code -->
     <epoll.classifier />
+    <iouring.classifier />
     <!-- This only be set when run on mac as on other platforms we just want to include the jar without native
          code -->
     <kqueue.classifier />
@@ -50,6 +51,7 @@
       </activation>
       <properties>
         <epoll.classifier>${jni.classifier}</epoll.classifier>
+        <iouring.classifier>${jni.classifier}</iouring.classifier>
       </properties>
       <build>
         <plugins>
@@ -188,6 +190,12 @@
       <artifactId>netty-transport-native-kqueue</artifactId>
       <version>${project.version}</version>
       <classifier>${kqueue.classifier}</classifier>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-native-io_uring</artifactId>
+      <version>${project.version}</version>
+      <classifier>${iouring.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
