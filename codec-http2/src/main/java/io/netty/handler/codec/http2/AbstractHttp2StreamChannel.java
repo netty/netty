@@ -600,10 +600,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         assert eventLoop().inEventLoop();
         if (!isActive()) {
             ReferenceCountUtil.release(frame);
-        } else if (readStatus != ReadStatus.IDLE) {
-            // If a read is in progress or has been requested, there cannot be anything in the queue,
-            // otherwise we would have drained it from the queue and processed it during the read cycle.
-            assert inboundBuffer == null || inboundBuffer.isEmpty();
+        } else if (readStatus != ReadStatus.IDLE && isInboundBufferEmpty()) {
+            // A read is in progress or has been requested and nothing is queued, so dispatch directly. If frames are
+            // still queued (e.g. this frame was delivered re-entrantly while doBeginRead() is running pipeline
+            // callbacks after it stopped early) we must queue behind them below to preserve ordering; the read loop
+            // that is still on the stack will drain them.
             final RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
 
             unsafe.doRead0(frame, allocHandle);
@@ -622,6 +623,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
             inboundBuffer.add(frame);
         }
+    }
+
+    private boolean isInboundBufferEmpty() {
+        return inboundBuffer == null || inboundBuffer.isEmpty();
     }
 
     void fireChildReadComplete() {
@@ -892,10 +897,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         void doBeginRead() {
             if (readStatus == ReadStatus.IDLE) {
                 // Don't wait for the user to request a read to notify of channel closure.
-                if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
+                if (readEOS && isInboundBufferEmpty()) {
                     // Double check there is nothing left to flush such as a window update frame.
                     flush();
-                    unsafe.closeForcibly();
+                    closeIfReadEOSAndDrained();
                 }
             } else {
                 do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
@@ -903,9 +908,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     if (message == null) {
                         // Double check there is nothing left to flush such as a window update frame.
                         flush();
-                        if (readEOS) {
-                            unsafe.closeForcibly();
+                        if (!isInboundBufferEmpty()) {
+                            // The flush re-entrantly delivered more frames which got queued; keep reading if we
+                            // still should.
+                            continue;
                         }
+                        closeIfReadEOSAndDrained();
                         break;
                     }
                     final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
@@ -977,8 +985,15 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // channel is not currently reading we need to force a flush at the child channel, because we cannot
             // rely upon flush occurring in channelReadComplete on the parent channel.
             flush();
-            if (readEOS) {
-                unsafe.closeForcibly();
+            closeIfReadEOSAndDrained();
+        }
+
+        private void closeIfReadEOSAndDrained() {
+            // Pipeline callbacks and flush() can re-entrantly deliver more frames, including the one that ends the
+            // stream, and queue them if the user stopped reading. Only close once all of them have been read,
+            // otherwise the queued frames would be released and the stream silently truncated.
+            if (readEOS && isInboundBufferEmpty()) {
+                closeForcibly();
             }
         }
 
