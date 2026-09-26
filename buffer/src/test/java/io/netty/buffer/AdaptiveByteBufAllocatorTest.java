@@ -171,7 +171,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     public void testGetBytesBoundaryCheckWithGatheringByteChannel() throws Exception {
         AdaptiveByteBufAllocator allocator = newAllocator(false);
-        TestGatheringByteChannel channel = new TestGatheringByteChannel();
+        final TestGatheringByteChannel channel = new TestGatheringByteChannel();
         final ByteBuf buf = allocator.directBuffer(7);
         try {
             assertThrows(IndexOutOfBoundsException.class, new Executable() {
