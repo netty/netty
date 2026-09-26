@@ -211,7 +211,7 @@ final class HttpPostBodyUtil {
      * @param index the index to start from in the buffer
      * @param delimiter the delimiter as byte array
      * @param precededByLineBreak true if it must be preceded by LF or CRLF, else false
-     * @return a relative position from index > 0 if delimiter found designing the start of it
+     * @return a position relative to the buffer's reader index if delimiter found designing the start of it
      *         (including LF or CRLF is asked)
      *         or a number < 0 if delimiter is not found
      * @throws IndexOutOfBoundsException

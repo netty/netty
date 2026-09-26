@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -31,7 +32,9 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -554,4 +557,83 @@ public class HttpPostMultiPartRequestDecoderTest {
         commonTestFileDelimiterLFLastChunk(factory, false);
     }
 
+    @Test
+    public void testDelimiterLikeContentAtChunkStartMemoryFactory() throws IOException {
+        commonTestDelimiterLikeContentAtChunkStart(new DefaultHttpDataFactory(false), true);
+    }
+
+    @Test
+    public void testDelimiterLikeContentAtChunkStartMixedFactory() throws IOException {
+        // Only the interesting split points, since every part goes to disk here.
+        commonTestDelimiterLikeContentAtChunkStart(new DefaultHttpDataFactory(4), false);
+    }
+
+    private static void commonTestDelimiterLikeContentAtChunkStart(HttpDataFactory factory, boolean allSplits)
+            throws IOException {
+        // "--BOUND" inside a value is data, since a delimiter is CRLF + "--" + boundary.
+        String body = "--BOUND\r\n" +
+                      "Content-Disposition: form-data; name=\"a\"\r\n\r\n" +
+                      "x--BOUNDy\r\n" +
+                      "--BOUND\r\n" +
+                      // A part without content: the CRLF that ends its headers is also the CRLF of the delimiter.
+                      "Content-Disposition: form-data; name=\"e\"\r\n\r\n" +
+                      "--BOUND\r\n" +
+                      "Content-Disposition: form-data; name=\"f\"; filename=\"f.txt\"\r\n" +
+                      "Content-Type: text/plain\r\n\r\n" +
+                      "--&b00--BOUND&z\r\n" +
+                      "--BOUND\r\n" +
+                      "Content-Disposition: form-data; name=\"g\"; filename=\"g.txt\"\r\n" +
+                      "Content-Type: text/plain\r\n\r\n" +
+                      "second\r\n" +
+                      "--BOUND--\r\n";
+        byte[] bytes = body.getBytes(CharsetUtil.US_ASCII);
+        List<String> expected = Arrays.asList("a=x--BOUNDy", "e=", "f=--&b00--BOUND&z", "g=second");
+        assertEquals(expected, decodeInTwoChunks(factory, bytes, bytes.length));
+
+        // A chunk ending exactly before the delimiter-like text used to truncate the value and drop the rest.
+        int beforeAttribute = body.indexOf("--BOUNDy");
+        assertEquals(expected, decodeInTwoChunks(factory, bytes, beforeAttribute));
+        int beforeFile = body.indexOf("--BOUND&z");
+        assertEquals(expected, decodeInTwoChunks(factory, bytes, beforeFile));
+
+        if (!allSplits) {
+            return;
+        }
+        for (int split = 1; split < bytes.length; split++) {
+            if (body.startsWith("\r\n--BOUND", split - 1)) {
+                // Split between the CR and LF of a real delimiter: a separate issue (#17383).
+                continue;
+            }
+            assertEquals(expected, decodeInTwoChunks(factory, bytes, split), "split at " + split);
+        }
+    }
+
+    private static List<String> decodeInTwoChunks(HttpDataFactory factory, byte[] bytes, int split)
+            throws IOException {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        request.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=BOUND");
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(factory, request);
+        try {
+            HttpContent first = new DefaultHttpContent(Unpooled.wrappedBuffer(bytes, 0, split));
+            try {
+                decoder.offer(first);
+            } finally {
+                first.release();
+            }
+            HttpContent last = new DefaultLastHttpContent(
+                    Unpooled.wrappedBuffer(bytes, split, bytes.length - split));
+            try {
+                decoder.offer(last);
+            } finally {
+                last.release();
+            }
+            List<String> result = new ArrayList<>();
+            for (InterfaceHttpData data : decoder.getBodyHttpDatas()) {
+                result.add(data.getName() + '=' + ((HttpData) data).getString(CharsetUtil.US_ASCII));
+            }
+            return result;
+        } finally {
+            decoder.destroy();
+        }
+    }
 }

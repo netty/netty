@@ -1192,6 +1192,24 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     }
 
     /**
+     * Returns {@code true} if the readable bytes of the buffer are shorter than the delimiter and equal to its
+     * beginning.
+     */
+    private static boolean isDelimiterPrefix(ByteBuf buffer, byte[] delimiter) {
+        final int readableBytes = buffer.readableBytes();
+        if (readableBytes >= delimiter.length) {
+            return false;
+        }
+        final int readerIndex = buffer.readerIndex();
+        for (int i = 0; i < readableBytes; i++) {
+            if (buffer.getByte(readerIndex + i) != delimiter[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Load the field value or file data from a Multipart request
      *
      * @return {@code true} if the last chunk is loaded (boundary delimiter found), {@code false} if need more chunks
@@ -1203,7 +1221,16 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         final int startReaderIndex = undecodedChunk.readerIndex();
         final byte[] bdelimiter = delimiter.getBytes(httpData.getCharset());
-        int posDelimiter = HttpPostBodyUtil.findDelimiter(undecodedChunk, startReaderIndex, bdelimiter, true);
+        // A delimiter at the very start of the buffer is only valid at the start of the part's data: once some
+        // content was added, the bytes before the buffer were not a line break (a trailing line break is always
+        // kept in the buffer), so a delimiter there is part of the content.
+        int searchIndex = httpData.length() > 0 ? startReaderIndex + 1 : startReaderIndex;
+        int posDelimiter = HttpPostBodyUtil.findDelimiter(undecodedChunk, searchIndex, bdelimiter, true);
+        if (posDelimiter < 0 && httpData.length() == 0 && isDelimiterPrefix(undecodedChunk, bdelimiter)) {
+            // At the start of the part's data the line break before the delimiter was already consumed with the
+            // headers, so the buffer may hold the beginning of the delimiter itself: wait for more bytes.
+            return false;
+        }
         if (posDelimiter < 0) {
             // Not found but however perhaps because incomplete so search LF or CRLF from the end.
             // Possible last bytes contain partially delimiter
