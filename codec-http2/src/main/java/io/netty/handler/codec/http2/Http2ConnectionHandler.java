@@ -835,9 +835,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     public ChannelFuture resetStream(final ChannelHandlerContext ctx, int streamId, long errorCode,
                                      ChannelPromise promise) {
+        promise = promise.unvoid();
         final Http2Stream stream = connection().stream(streamId);
         if (stream == null) {
-            return resetUnknownStream(ctx, streamId, errorCode, promise.unvoid());
+            // An RST_STREAM frame MUST NOT be sent for a stream in the "idle" state (RFC 9113, section 6.4):
+            // a stream that was never created is unknown to the peer as well. Non-positive stream ids keep
+            // going through the frame writer, which fails the promise during verification.
+            if (streamId > 0 && !connection().streamMayHaveExisted(streamId)) {
+                return promise.setSuccess();
+            }
+            return resetUnknownStream(ctx, streamId, errorCode, promise);
         }
 
        return resetStream(ctx, stream, errorCode, promise);
