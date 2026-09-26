@@ -1680,6 +1680,138 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(flushSniffer.checkFlush());
     }
 
+    @Test
+    public void windowUpdateFlushedWhenReadRequestedWhileReadInProgress() {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        FlushSniffer flushSniffer = new FlushSniffer();
+        parentChannel.pipeline().addFirst(flushSniffer);
+
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        // Each round: a read() is requested while the child is waiting for data (the same thing a
+        // setAutoRead(false) -> setAutoRead(true) flip does), auto-read is disabled again, and then a DATA frame
+        // arrives. The frame is still delivered because a read was pending, but its bytes are not returned yet.
+        for (int i = 0; i < 2; i++) {
+            childChannel.config().setAutoRead(false);
+            childChannel.config().setAutoRead(true);
+            childChannel.config().setAutoRead(false);
+            frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(16 * 1024), 0, false);
+            verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        }
+        verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
+        flushSniffer.checkFlush();
+
+        // Re-enabling auto-read triggers a read() which returns the consumed bytes to the flow controller. That
+        // results in a wire-level WINDOW_UPDATE which must be flushed, otherwise the remote peer may stall forever
+        // once its send window is exhausted.
+        childChannel.config().setAutoRead(true);
+        verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
+        verify(frameWriter).writeWindowUpdate(
+                eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
+        assertTrue(flushSniffer.checkFlush(), "WINDOW_UPDATE was written but never flushed");
+    }
+
+    @Test
+    public void framesDeliveredReentrantlyWhileFramesQueuedAreNotReordered() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        final Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        final int streamId = childChannel.stream().id();
+
+        // Queue two frames while auto-read is disabled. The first is dispatched immediately as a read was pending.
+        childChannel.config().setAutoRead(false);
+        frameInboundWriter.writeInboundData(streamId, bb(1), 0, false);
+        assertDataFrame(inboundHandler, 1, false);
+        frameInboundWriter.writeInboundData(streamId, bb(2), 0, false);
+        frameInboundWriter.writeInboundData(streamId, bb(3), 0, false);
+        assertNull(inboundHandler.readInbound());
+
+        // Stop reading again after the first queued frame, and have a new frame arrive re-entrantly (e.g. because a
+        // flush synchronously triggered the remote peer to send more) while the read loop is still completing.
+        final AtomicBoolean armed = new AtomicBoolean(true);
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.channel().config().setAutoRead(false);
+                ctx.fireChannelRead(msg);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                if (armed.getAndSet(false)) {
+                    frameInboundWriter.writeInboundData(streamId, bb(4), 0, false);
+                }
+                ctx.fireChannelReadComplete();
+            }
+        });
+        childChannel.config().setAutoRead(true);
+        assertDataFrame(inboundHandler, 2, false);
+        assertNull(inboundHandler.readInbound());
+
+        // The re-entrant frame must be delivered after the frame that was already queued.
+        childChannel.read();
+        assertDataFrame(inboundHandler, 3, false);
+        childChannel.read();
+        assertDataFrame(inboundHandler, 4, false);
+        assertNull(inboundHandler.readInbound());
+    }
+
+    @Test
+    public void endOfStreamDeliveredReentrantlyDoesNotDropQueuedFrames() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        final Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        final int streamId = childChannel.stream().id();
+        // Half-close our side so that receiving END_STREAM fully closes the stream.
+        assertTrue(childChannel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).isSuccess());
+
+        childChannel.config().setAutoRead(false);
+        frameInboundWriter.writeInboundData(streamId, bb(1), 0, false);
+        assertDataFrame(inboundHandler, 1, false);
+        frameInboundWriter.writeInboundData(streamId, bb(2), 0, false);
+        assertNull(inboundHandler.readInbound());
+
+        // While the read loop completes, stop reading and have the rest of the stream (including END_STREAM)
+        // arrive re-entrantly. The last frame gets queued and the stream is closed at the HTTP/2 level.
+        final AtomicBoolean armed = new AtomicBoolean(true);
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                if (armed.getAndSet(false)) {
+                    ctx.channel().config().setAutoRead(false);
+                    frameInboundWriter.writeInboundData(streamId, bb(3), 0, false);
+                    frameInboundWriter.writeInboundData(streamId, bb(4), 0, true);
+                }
+                ctx.fireChannelReadComplete();
+            }
+        });
+        childChannel.config().setAutoRead(true);
+        assertDataFrame(inboundHandler, 2, false);
+        assertDataFrame(inboundHandler, 3, false);
+        assertNull(inboundHandler.readInbound());
+
+        // The queued END_STREAM frame must not be dropped by closing the channel early.
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        assertDataFrame(inboundHandler, 4, true);
+        assertFalse(childChannel.isActive());
+    }
+
+    private static void assertDataFrame(LastInboundHandler inboundHandler, int expectedBytes, boolean endStream) {
+        Http2DataFrame frame = inboundHandler.readInbound();
+        assertNotNull(frame, "expected a DATA frame with " + expectedBytes + " bytes");
+        try {
+            assertEquals(expectedBytes, frame.content().readableBytes());
+            assertEquals(endStream, frame.isEndStream());
+        } finally {
+            frame.release();
+        }
+    }
+
     @ParameterizedTest(name = "{displayName} [{index}] value={0}")
     @MethodSource("userEvents")
     public void userEventsThatPropagatedToChildChannels(Object userEvent) {
