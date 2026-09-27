@@ -228,7 +228,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             return super.writeComplete0(op, res, flags, data, outstanding);
         }
 
-        private void takeWriteBuffers(long data) {
+        private void takeSendZCBuffers(long data) {
             PendingZeroCopyWrites.PendingWrite write = pendingZeroCopyWrites.register(data);
             if (retainedWriteBuffers == null) {
                 if (currentWrite.opcode() == Native.IORING_OP_SENDMSG_ZC) {
@@ -254,7 +254,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             writeOpCode = 0;
             if ((flags & Native.IORING_CQE_F_MORE) != 0) {
                 // Establish notification ownership before removeBytes() can notify a write listener.
-                takeWriteBuffers(data);
+                takeSendZCBuffers(data);
             } else {
                 pendingZeroCopyWrites.recycle(data);
             }
