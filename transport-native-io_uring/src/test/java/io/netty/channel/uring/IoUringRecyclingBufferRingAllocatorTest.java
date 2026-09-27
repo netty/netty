@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.unix.Buffer;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -262,6 +263,24 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         assertTrue(allocator.metric().usedDirectMemory() > 0);
         inFlight.take().release();
         assertEquals(0, allocator.metric().usedDirectMemory());
+        assertEquals(0, ringAllocator.fallbackAllocations());
+    }
+
+    @Test
+    public void regionIsReleasedWhenTheOwnerReturnsTheLastBufferAfterItsRegionWasHandedBack() throws Exception {
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator ringAllocator =
+                new IoUringRecyclingBufferRingAllocator(allocator, (short) 4, BUFFER_SIZE);
+        onEventLoopThread(() -> {
+            ByteBuf buffer = ringAllocator.allocate();
+            // What a terminating FastThreadLocalThread does: the region is handed back while a buffer is still out.
+            FastThreadLocal.removeAll();
+            assertTrue(allocator.metric().usedDirectMemory() > 0);
+            // Another FastThreadLocal removed after the region's own one can release that buffer, on the owner
+            // thread, after the region was already asked to free itself.
+            buffer.release();
+            assertEquals(0, allocator.metric().usedDirectMemory());
+        });
         assertEquals(0, ringAllocator.fallbackAllocations());
     }
 

@@ -51,6 +51,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * thread, and one that allocates on a thread which does not clean up its {@link FastThreadLocal}s is served from
  * the {@link ByteBufAllocator} instead of being given a region of its own.
  *
+ * <p>The region is sized for the buffers the ring keeps alive, so it pays off when the pipeline releases what it
+ * reads before the ring comes back for more: buffers that are handed further down and released much later are the
+ * ones that make it extend, and past that {@link #allocate()} falls back to the {@link ByteBufAllocator} and
+ * counts it in {@link #fallbackAllocations()}. A non-zero count means the region is too small for how long the
+ * application holds on to the data, not that anything is broken.
+ *
  * <p>Each instance registers one {@link FastThreadLocal} index for the life of the process, like the
  * {@code Recycler} and the pooled allocator's thread cache: create one allocator per configuration and share it,
  * do not create one per channel.
@@ -159,6 +165,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
         // Set by the owner as its last act. Written before it drains, so a release that offered its buffer after
         // that drain is guaranteed to see it and finish the job, which also relies on an offer being visible to
         // any later poll: the MPSC queue spins on a claimed but not yet stored slot instead of returning null.
+        // It also takes the owner off the stack fast path, see put(Slot).
         private volatile boolean closing;
 
         Region() {
@@ -173,7 +180,9 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
         }
 
         void put(Slot slot) {
-            if (Thread.currentThread() == owner) {
+            // Only before closing: afterwards the stack is mutated under the monitor in complete() alone, and the
+            // owner can still release a buffer that a FastThreadLocal removed after the region's own one held.
+            if (Thread.currentThread() == owner && !closing) {
                 unused[numUnused++] = slot.index();
                 return;
             }
@@ -191,8 +200,8 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
 
         /**
          * Give the memory back once every buffer is home. Runs on the thread that terminated the owner and on any
-         * thread that released a buffer afterwards, so the monitor is what makes the drain single-consumer - the
-         * owner is gone by then - and the release happen exactly once.
+         * thread that released a buffer afterwards, including the owner itself, so the monitor is what makes the
+         * drain single-consumer and the release happen exactly once.
          */
         private synchronized void complete() {
             if (numMemory == 0) {
