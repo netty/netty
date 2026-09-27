@@ -16,22 +16,30 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.unix.Buffer;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -351,6 +359,183 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         assertEquals(0, ringAllocator.fallbackAllocations());
         buffer.release();
         assertEquals(0, allocator.metric().usedDirectMemory());
+    }
+
+    /**
+     * Owner allocating and releasing while other threads release too, with slices in the mix, small region so the
+     * stack runs dry (drain), extension and fallback all happen. Checks the invariants a hand-back or count bug breaks:
+     * no buffer is handed out while still live, the payload written at allocation is intact at release (no two owners
+     * of one slot), nothing is lost (every region slot comes back) and the region is freed once the thread is gone.
+     */
+    @Test
+    @Timeout(60)
+    public void concurrentReleasesKeepEveryInvariant() throws Exception {
+        final UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
+        final IoUringRecyclingBufferRingAllocator ringAllocator =
+                new IoUringRecyclingBufferRingAllocator(allocator, (short) 32, BUFFER_SIZE, 1);
+        final int releasers = 3;
+        final int iterations = 200_000;
+        final BlockingQueue<ByteBuf> handoff = new ArrayBlockingQueue<ByteBuf>(32);
+        // Identity, not content: ByteBuf.equals()/hashCode() look at the bytes, which change after allocation.
+        final Set<ByteBuf> live = Collections.synchronizedSet(
+                Collections.newSetFromMap(new IdentityHashMap<ByteBuf, Boolean>()));
+        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        final ByteBuf poison = Unpooled.EMPTY_BUFFER;
+
+        Thread[] threads = new Thread[releasers];
+        for (int i = 0; i < releasers; i++) {
+            threads[i] = new Thread(() -> {
+                try {
+                    for (;;) {
+                        ByteBuf buffer = handoff.take();
+                        if (buffer == poison) {
+                            return;
+                        }
+                        checkMarkerAndRelease(live, buffer);
+                    }
+                } catch (Throwable t) {
+                    failure.compareAndSet(null, t);
+                }
+            });
+            threads[i].start();
+        }
+
+        onEventLoopThread(() -> {
+            try {
+                SplittableRandom random = new SplittableRandom(42);
+                for (int i = 0; i < iterations; i++) {
+                    ByteBuf buffer = ringAllocator.allocate();
+                    assertEquals(1, buffer.refCnt());
+                    assertEquals(0, buffer.readableBytes());
+                    assertTrue(live.add(buffer), "handed out while live");
+                    buffer.writeLong(i).writeLong(~i);
+                    switch (random.nextInt(4)) {
+                        case 0:
+                            // Owner releases it.
+                            checkMarkerAndRelease(live, buffer);
+                            break;
+                        case 1:
+                            // Another thread releases it.
+                            handoff.put(buffer);
+                            break;
+                        case 2:
+                            // A slice goes to another thread, the owner keeps the parent and releases it first.
+                            ByteBuf slice = buffer.retainedSlice(0, 16);
+                            live.remove(buffer);
+                            buffer.release();
+                            live.add(slice);
+                            handoff.put(slice);
+                            break;
+                        default:
+                            // Two references: one released here, one over there, in either order.
+                            buffer.retain();
+                            if (random.nextBoolean()) {
+                                buffer.release();
+                                handoff.put(buffer);
+                            } else {
+                                ByteBuf dup = buffer.retainedDuplicate();
+                                buffer.release();
+                                live.remove(buffer);
+                                live.add(dup);
+                                handoff.put(dup);
+                                buffer.release();
+                            }
+                    }
+                }
+                for (int i = 0; i < releasers; i++) {
+                    handoff.put(poison);
+                }
+                for (Thread t : threads) {
+                    t.join();
+                }
+                assertNull(failure.get());
+                assertTrue(live.isEmpty(), "still live: " + live.size());
+                // Nothing lost: the whole region (extended once to 2 * 33) comes back out without a new fallback.
+                long fallbacks = ringAllocator.fallbackAllocations();
+                List<ByteBuf> all = new ArrayList<ByteBuf>();
+                Set<Long> addresses = new HashSet<Long>();
+                for (int i = 0; i < 66; i++) {
+                    ByteBuf buffer = ringAllocator.allocate();
+                    all.add(buffer);
+                    assertTrue(addresses.add(IoUring.memoryAddress(buffer)), "same address twice");
+                    assertEquals(1, buffer.refCnt());
+                }
+                assertEquals(fallbacks, ringAllocator.fallbackAllocations());
+                for (ByteBuf buffer : all) {
+                    buffer.release();
+                }
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+        });
+        assertEquals(0, allocator.metric().usedDirectMemory());
+        assertEquals(0, ringAllocator.foreignThreadAllocations());
+    }
+
+    private static void checkMarkerAndRelease(Set<ByteBuf> live, ByteBuf buffer) {
+        if (buffer.readableBytes() >= 16) {
+            long marker = buffer.getLong(buffer.readerIndex());
+            assertEquals(~marker, buffer.getLong(buffer.readerIndex() + 8), "payload changed under us");
+        }
+        assertTrue(live.remove(buffer), "released but not live");
+        buffer.release();
+    }
+
+    /**
+     * The owner thread dies while other threads still hold its buffers and release them at random moments: the
+     * region must be released exactly once and only after the last of them, every time.
+     */
+    @Test
+    @Timeout(60)
+    public void regionSurvivesRacesBetweenTheDyingOwnerAndForeignReleases() throws Exception {
+        for (int round = 0; round < 200; round++) {
+            final UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
+            final IoUringRecyclingBufferRingAllocator ringAllocator =
+                    new IoUringRecyclingBufferRingAllocator(allocator, (short) 8, BUFFER_SIZE, 8);
+            final int inFlight = 12;
+            final BlockingQueue<ByteBuf> handoff = new ArrayBlockingQueue<ByteBuf>(inFlight);
+            final CountDownLatch start = new CountDownLatch(1);
+            Thread[] releasers = new Thread[3];
+            final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+            for (int i = 0; i < releasers.length; i++) {
+                releasers[i] = new Thread(() -> {
+                    try {
+                        start.await();
+                        for (ByteBuf buffer = handoff.poll(); buffer != null; buffer = handoff.poll()) {
+                            if (ThreadLocalRandom.current().nextBoolean()) {
+                                Thread.yield();
+                            }
+                            buffer.release();
+                        }
+                    } catch (Throwable t) {
+                        failure.compareAndSet(null, t);
+                    }
+                });
+                releasers[i].start();
+            }
+            Thread owner = new FastThreadLocalThread(() -> {
+                for (int i = 0; i < inFlight; i++) {
+                    ByteBuf buffer = ringAllocator.allocate();
+                    if ((i & 1) == 0) {
+                        // Half of them go over as slices, so the owner's own release of the parent is in the race too.
+                        ByteBuf slice = buffer.retainedSlice(0, 8);
+                        buffer.release();
+                        buffer = slice;
+                    }
+                    handoff.add(buffer);
+                }
+                start.countDown();
+                // Dies now: FastThreadLocal.removeAll() runs free() while the releasers are working.
+            });
+            owner.start();
+            owner.join();
+            for (Thread t : releasers) {
+                t.join();
+            }
+            assertNull(failure.get(), "round " + round);
+            assertEquals(0, allocator.metric().usedDirectMemory(), "round " + round);
+            assertEquals(0, ringAllocator.fallbackAllocations(), "round " + round);
+        }
     }
 
     @Test
