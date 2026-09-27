@@ -23,7 +23,9 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -74,8 +76,9 @@ public class IoUringRecyclingBufferRingAllocatorTest {
     }
 
     private static IoUringRecyclingBufferRingAllocator newAllocator(int bufferRingSize) {
+        // One buffer of headroom: the region holds bufferRingSize + 1 and extends once to twice that.
         return new IoUringRecyclingBufferRingAllocator(
-                UnpooledByteBufAllocator.DEFAULT, (short) bufferRingSize, BUFFER_SIZE);
+                UnpooledByteBufAllocator.DEFAULT, (short) bufferRingSize, BUFFER_SIZE, 1);
     }
 
     @Test
@@ -83,6 +86,8 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         assertThrows(IllegalArgumentException.class, () -> newAllocator(0));
         assertThrows(IllegalArgumentException.class,
                 () -> new IoUringRecyclingBufferRingAllocator(UnpooledByteBufAllocator.DEFAULT, (short) 4, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new IoUringRecyclingBufferRingAllocator(UnpooledByteBufAllocator.DEFAULT, (short) 4, 64, 0));
     }
 
     @Test
@@ -98,6 +103,19 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             assertEquals(1, buffer.refCnt());
             buffer.release();
             assertEquals(0, allocator.fallbackAllocations());
+        });
+    }
+
+    @Test
+    public void bufferNeverReallocates() throws Exception {
+        onEventLoopThread(() -> {
+            IoUringRecyclingBufferRingAllocator allocator = newAllocator(4);
+            ByteBuf buffer = allocator.allocate();
+            assertSame(buffer, buffer.capacity(BUFFER_SIZE));
+            assertThrows(UnsupportedOperationException.class, () -> buffer.capacity(BUFFER_SIZE / 2));
+            assertThrows(UnsupportedOperationException.class, () -> buffer.capacity(BUFFER_SIZE * 2));
+            assertEquals(BUFFER_SIZE, buffer.capacity());
+            buffer.release();
         });
     }
 
@@ -150,6 +168,8 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         onEventLoopThread(() -> {
             IoUringRecyclingBufferRingAllocator allocator = newAllocator(1);
             final ByteBuf buffer = allocator.allocate();
+            // Take the headroom buffer too, so the only way to serve the next allocate() is the hand-back queue.
+            ByteBuf spare = allocator.allocate();
 
             Thread releaser = new Thread(() -> buffer.release());
             releaser.start();
@@ -163,6 +183,7 @@ public class IoUringRecyclingBufferRingAllocatorTest {
             assertSame(buffer, allocator.allocate());
             assertEquals(0, allocator.fallbackAllocations());
             buffer.release();
+            spare.release();
         });
     }
 
@@ -170,19 +191,20 @@ public class IoUringRecyclingBufferRingAllocatorTest {
     public void extendsOnceAndThenFallsBack() throws Exception {
         onEventLoopThread(() -> {
             IoUringRecyclingBufferRingAllocator allocator = newAllocator(4);
-            ByteBuf[] held = new ByteBuf[4 * 2 + 3];
+            // Region of 4 + 1, extended once to 10: ten buffers come out of it, all different, and everything
+            // beyond that falls back instead of failing.
+            ByteBuf[] held = new ByteBuf[10 + 3];
             Set<Long> addresses = new HashSet<Long>();
-            // Twice bufferRingSize buffers come out of the region, all different; the region extends only once, so
-            // everything beyond that falls back instead of failing.
             for (int i = 0; i < held.length; i++) {
                 held[i] = allocator.allocate();
                 assertEquals(BUFFER_SIZE, held[i].capacity());
-                if (i < 8) {
+                if (i < 10) {
                     addresses.add(IoUring.memoryAddress(held[i]));
                 }
-                assertEquals(Math.max(0, i - 7), allocator.fallbackAllocations());
+                assertEquals(Math.max(0, i - 9), allocator.fallbackAllocations());
             }
-            assertEquals(8, addresses.size());
+            assertEquals(10, addresses.size());
+            assertEquals(0, allocator.foreignThreadAllocations());
             for (ByteBuf buffer : held) {
                 buffer.release();
             }
@@ -267,6 +289,30 @@ public class IoUringRecyclingBufferRingAllocatorTest {
     }
 
     @Test
+    public void fullRingPlusOneInFlightReadFitsTheFirstRegion() throws Exception {
+        // IoUringBufferRing.useBuffer(bid) allocates the replacement for the consumed bid before the pipeline
+        // sees the slice, so a ring at full size needs bufferRingSize + 1 buffers from the region at once. The
+        // default headroom (a quarter of the ring, at least one) must cover that without extending.
+        UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
+        IoUringRecyclingBufferRingAllocator ringAllocator =
+                new IoUringRecyclingBufferRingAllocator(allocator, (short) 8, BUFFER_SIZE);
+        onEventLoopThread(() -> {
+            List<ByteBuf> ring = new ArrayList<ByteBuf>();
+            for (int i = 0; i < 8; i++) {
+                ring.add(ringAllocator.allocate());
+            }
+            long regionBytes = allocator.metric().usedDirectMemory();
+            ByteBuf inFlight = ringAllocator.allocate();
+            assertEquals(regionBytes, allocator.metric().usedDirectMemory(), "the region was extended");
+            inFlight.release();
+            for (ByteBuf buffer : ring) {
+                buffer.release();
+            }
+        });
+        assertEquals(0, ringAllocator.fallbackAllocations());
+    }
+
+    @Test
     public void regionIsReleasedWhenTheOwnerReturnsTheLastBufferAfterItsRegionWasHandedBack() throws Exception {
         UnpooledByteBufAllocator allocator = new UnpooledByteBufAllocator(true);
         IoUringRecyclingBufferRingAllocator ringAllocator =
@@ -301,7 +347,8 @@ public class IoUringRecyclingBufferRingAllocatorTest {
         assertEquals('a', buffer.readByte());
         // No region was reserved for that thread: the only direct memory is the one buffer it was given.
         assertEquals(BUFFER_SIZE, allocator.metric().usedDirectMemory());
-        assertEquals(1, ringAllocator.fallbackAllocations());
+        assertEquals(1, ringAllocator.foreignThreadAllocations());
+        assertEquals(0, ringAllocator.fallbackAllocations());
         buffer.release();
         assertEquals(0, allocator.metric().usedDirectMemory());
     }

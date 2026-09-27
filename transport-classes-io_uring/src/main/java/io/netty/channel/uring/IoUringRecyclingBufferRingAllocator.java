@@ -37,11 +37,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * everything the pipeline derived from it released it, so nothing is allocated in the steady state.
  *
  * <p>The region is one buffer taken from the given {@link ByteBufAllocator}, so it is accounted for like every
- * other buffer of that allocator. It holds {@code bufferRingSize} buffers of {@code bufferSize} bytes, which is
- * what a buffer ring keeps alive anyway, and is extended <em>once</em> if the pipeline holds on to more buffers
- * than the ring keeps alive. Once even that is used up {@link #allocate()} takes a buffer from the same
- * {@link ByteBufAllocator} and counts it in {@link #fallbackAllocations()}, rather than failing a read. It starts
- * at a page boundary, so a {@code bufferSize} that is a multiple of the page size keeps every buffer aligned too.
+ * other buffer of that allocator. It holds {@code bufferRingSize + inFlightBuffers} buffers of {@code bufferSize}
+ * bytes: what the ring keeps alive, plus the buffers the pipeline may hold beyond that. At least one is always
+ * needed, because the ring allocates the replacement for a consumed buffer before the pipeline gets to release
+ * it. The region is extended <em>once</em>, to twice that, if the pipeline holds on to more; once even that is
+ * used up {@link #allocate()} takes a buffer from the same {@link ByteBufAllocator} and counts it in
+ * {@link #fallbackAllocations()}, rather than failing a read. So the footprint per event loop is
+ * {@code (bufferRingSize + inFlightBuffers) * bufferSize}, at most twice that. The region starts at a page
+ * boundary, so a {@code bufferSize} that is a multiple of the page size keeps every buffer aligned too.
  *
  * <p>Every thread that allocates gets its own region, which is the ring's event loop in every supported use, so
  * one instance can serve any number of buffer rings: that is what happens when one {@link IoUringIoHandlerConfig}
@@ -55,7 +58,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * reads before the ring comes back for more: buffers that are handed further down and released much later are the
  * ones that make it extend, and past that {@link #allocate()} falls back to the {@link ByteBufAllocator} and
  * counts it in {@link #fallbackAllocations()}. A non-zero count means the region is too small for how long the
- * application holds on to the data, not that anything is broken.
+ * application holds on to the data, not that anything is broken. With incremental consumption
+ * ({@link IoUringBufferRingConfig.Builder#incremental(boolean)}) a buffer serves several reads and comes back
+ * only after the last of their slices was released, so one retained small message holds a whole buffer: the
+ * count then follows the longest-lived message rather than how many are retained.
  *
  * <p>Each instance registers one {@link FastThreadLocal} index for the life of the process, like the
  * {@code Recycler} and the pooled allocator's thread cache: create one allocator per configuration and share it,
@@ -70,6 +76,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
     // Chosen once, exactly like UnpooledByteBufAllocator.newDirectBuffer(int, int) chooses per buffer.
     private final boolean unsafeSlots = PlatformDependent.hasUnsafe();
     private final AtomicLong fallbackAllocations = new AtomicLong();
+    private final AtomicLong foreignThreadAllocations = new AtomicLong();
     private final FastThreadLocal<Region> regions = new FastThreadLocal<Region>() {
         @Override
         protected Region initialValue() {
@@ -90,22 +97,35 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
     }
 
     /**
+     * Create a new instance with room for a quarter of {@code bufferRingSize} buffers in flight, see
+     * {@link #IoUringRecyclingBufferRingAllocator(ByteBufAllocator, short, int, int)}.
+     */
+    public IoUringRecyclingBufferRingAllocator(ByteBufAllocator allocator, short bufferRingSize, int bufferSize) {
+        this(allocator, bufferRingSize, bufferSize, Math.max(1, bufferRingSize / 4));
+    }
+
+    /**
      * Create a new instance.
      *
      * @param allocator         the {@link ByteBufAllocator} the region and any fallback buffer is taken from.
-     * @param bufferRingSize    the number of buffers to carve out of the region, which should be the value passed
-     *                          to {@link IoUringBufferRingConfig.Builder#bufferRingSize(short)}. If this instance
+     * @param bufferRingSize    the number of buffers the ring keeps alive, which should be the value passed to
+     *                          {@link IoUringBufferRingConfig.Builder#bufferRingSize(short)}. If this instance
      *                          serves more than one buffer ring, pass the sum of their sizes.
      * @param bufferSize        the size of each buffer.
+     * @param inFlightBuffers   how many buffers the pipeline may hold on top of the ring before the region is
+     *                          extended: the one being read at least, plus whatever decoders retain across reads.
      */
-    public IoUringRecyclingBufferRingAllocator(ByteBufAllocator allocator, short bufferRingSize, int bufferSize) {
+    public IoUringRecyclingBufferRingAllocator(ByteBufAllocator allocator, short bufferRingSize, int bufferSize,
+                                               int inFlightBuffers) {
         this.allocator = Objects.requireNonNull(allocator, "allocator");
-        this.buffers = ObjectUtil.checkPositive(bufferRingSize, "bufferRingSize");
         this.bufferSize = ObjectUtil.checkPositive(bufferSize, "bufferSize");
+        this.buffers = ObjectUtil.checkPositive(bufferRingSize, "bufferRingSize")
+                + ObjectUtil.checkPositive(inFlightBuffers, "inFlightBuffers");
         this.maxBuffers = buffers * 2;
         if ((long) maxBuffers * bufferSize + 2L * Native.PAGE_SIZE > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("bufferRingSize * bufferSize too large: " + bufferRingSize + " * "
-                    + bufferSize + " (plus 2 * " + Native.PAGE_SIZE + " bytes for page alignment)");
+            throw new IllegalArgumentException("(bufferRingSize + inFlightBuffers) * bufferSize too large: ("
+                    + bufferRingSize + " + " + inFlightBuffers + ") * " + bufferSize
+                    + " (plus 2 * " + Native.PAGE_SIZE + " bytes for page alignment)");
         }
     }
 
@@ -115,7 +135,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             // The same guard AdaptivePoolingAllocator uses for its thread-local heap: a thread that never runs
             // FastThreadLocal.removeAll() would keep a region alive forever, so it gets a plain buffer. A buffer
             // ring only ever allocates on its own event loop, which does clean up.
-            fallbackAllocations.incrementAndGet();
+            foreignThreadAllocations.incrementAndGet();
             return allocator.directBuffer(bufferSize, bufferSize);
         }
         return regions.get().take();
@@ -127,13 +147,25 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
     }
 
     /**
-     * Returns how often {@link #allocate()} could not be served out of a region and fell back to the
-     * {@link ByteBufAllocator}. Expected to be {@code 0} once the number of retained buffers has settled.
+     * Returns how often {@link #allocate()} found its region, extension included, used up and fell back to the
+     * {@link ByteBufAllocator}: the pipeline held more buffers than the region was sized for. Expected to be
+     * {@code 0} once the number of retained buffers has settled.
      *
-     * @return  the number of allocations not served out of a region.
+     * @return  the number of allocations not served out of a region because it was used up.
      */
     public long fallbackAllocations() {
         return fallbackAllocations.get();
+    }
+
+    /**
+     * Returns how often {@link #allocate()} was called on a thread that does not clean up its
+     * {@link FastThreadLocal}s and was served from the {@link ByteBufAllocator} instead of a region. Expected to
+     * be {@code 0}: a buffer ring allocates on its event loop.
+     *
+     * @return  the number of allocations not served out of a region because of the calling thread.
+     */
+    public long foreignThreadAllocations() {
+        return foreignThreadAllocations.get();
     }
 
     /**
@@ -306,6 +338,15 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             }
 
             @Override
+            public ByteBuf capacity(int newCapacity) {
+                // A fixed cut of the region: never reallocate, exactly like a slice.
+                if (newCapacity != capacity()) {
+                    throw new UnsupportedOperationException("fixed capacity buffer");
+                }
+                return this;
+            }
+
+            @Override
             protected void deallocate() {
                 put(this);
             }
@@ -329,6 +370,15 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             public ByteBuf reuse() {
                 resetRefCnt();
                 setIndex(0, 0);
+                return this;
+            }
+
+            @Override
+            public ByteBuf capacity(int newCapacity) {
+                // A fixed cut of the region: never reallocate, exactly like a slice.
+                if (newCapacity != capacity()) {
+                    throw new UnsupportedOperationException("fixed capacity buffer");
+                }
                 return this;
             }
 
