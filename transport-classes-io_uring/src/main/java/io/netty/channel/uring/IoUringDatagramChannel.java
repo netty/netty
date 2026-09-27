@@ -33,6 +33,7 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.channel.unix.Socket;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
@@ -388,19 +389,25 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         private ByteBuf readBuffer;
 
         private final class WriteProcessor implements ChannelOutboundBuffer.MessageProcessor {
+            private int written;
             @Override
             public boolean processMessage(Object msg) {
-                return scheduleWrite(msg, sendmsgHdrs.length() == 0);
+                if (scheduleWrite(msg, written == 0)) {
+                    written++;
+                    return true;
+                }
+                return false;
             }
 
             int write(ChannelOutboundBuffer in) {
+                written = 0;
                 try {
                     in.forEachFlushedMessage(this);
                 } catch (Exception e) {
                     // This should never happen as our processMessage(...) never throws.
                     throw new IllegalStateException(e);
                 }
-                return sendmsgHdrs.length();
+                return written;
             }
         }
 
@@ -549,12 +556,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 boolean writtenSomething = false;
                 int numWritten = sendmsgHdrs.length();
                 sendmsgHdrs.clear();
-                ChannelOutboundBuffer outboundBuffer = unsafe().outboundBuffer();
-                if (outboundBuffer == null || retainedWriteBuffers != null) {
+                ChannelOutboundBuffer outboundBuffer = outboundBuffer();
+                if (retainedWriteBuffers != null) {
                     // Close, shutdownOutput() or an inactive flush may already have failed this batch.
                     return true;
                 }
-                for (int i = 0; i < numWritten && retainedWriteBuffers == null; i++) {
+                for (int i = 0; i < numWritten; i++) {
                     writtenSomething |= removeFromOutboundBuffer(
                             outboundBuffer, sendmsgResArray[i], "io_uring sendmsg");
                 }
@@ -672,7 +679,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         @Override
         void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
-            buffers.set((int) data, null).release();
+            ReferenceCountUtil.safeRelease(buffers.set((int) data, null));
         }
 
         @Override

@@ -17,29 +17,65 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.LongObjectHashMap;
-import io.netty.util.internal.MathUtil;
 
 import java.util.Arrays;
 
 import static io.netty.channel.uring.AbstractIoUringStreamChannel.IovBufferCollector.remainingIovs;
 
+/**
+ * Retains buffers until their zero-copy notifications arrive.
+ *
+ * <p>{@code freeIdStack} is a LIFO stack of available IDs indexing {@code pooled}. Submission pops an ID;
+ * a failed submission, a primary CQE without MORE, or the NOTIF CQE returns it. This allows out-of-order
+ * notifications to recycle IDs independently.
+ *
+ * <p>The pool grows up to {@link Short#MAX_VALUE} IDs. If all are in use, for example because notifications
+ * lag behind new writes, further requests receive increasing long IDs above that range. Their retained
+ * buffers are stored in {@code overflow} until NOTIF, and these IDs are never reused. Returned pooled IDs
+ * are preferred even while overflow requests remain pending.
+ */
 final class PendingZeroCopyWrites {
     private static final int MAX_POOLED_ID = Short.MAX_VALUE;
 
-    private PendingWrite[] pooled = new PendingWrite[4];
-    private short[] freeIds = new short[4];
-    private int freeIdCount;
-    private int issuedIds;
+    private PendingWrite[] pooled;
+    private short[] freeIdStack;
+    // Next insertion index in the free ID stack.
+    private int freeStackTop;
+    // Overflow IDs are never reused; exhausting the positive long range is not feasible in practice.
     private long nextOverflowId = MAX_POOLED_ID + 1L;
     private LongObjectHashMap<PendingWrite> overflow;
 
-    long nextUserData() {
-        if (freeIdCount > 0) {
-            return freeIds[--freeIdCount];
+    PendingZeroCopyWrites() {
+        pooled = new PendingWrite[4];
+        freeIdStack = new short[pooled.length];
+        // Slot 0 is unused.
+        for (int id = pooled.length - 1; id > 0; id--) {
+            freeIdStack[freeStackTop++] = (short) id;
         }
-        return issuedIds < MAX_POOLED_ID ? ++issuedIds : nextOverflowId++;
+    }
+
+    long nextUserData() {
+        if (freeStackTop > 0) {
+            return freeIdStack[--freeStackTop];
+        }
+        return nextUserDataSlow();
+    }
+
+    private long nextUserDataSlow() {
+        int oldCapacity = pooled.length;
+        if (oldCapacity == MAX_POOLED_ID + 1) {
+            return nextOverflowId++;
+        }
+        int newCapacity = oldCapacity << 1;
+        pooled = Arrays.copyOf(pooled, newCapacity);
+        freeIdStack = new short[newCapacity];
+        for (int id = newCapacity - 1; id >= oldCapacity; id--) {
+            freeIdStack[freeStackTop++] = (short) id;
+        }
+        return nextUserData();
     }
 
     PendingWrite register(long userData) {
@@ -47,9 +83,6 @@ final class PendingZeroCopyWrites {
             return registerOverflow(userData);
         }
         int id = (int) userData;
-        if (id >= pooled.length) {
-            pooled = Arrays.copyOf(pooled, MathUtil.safeFindNextPositivePowerOfTwo(id + 1));
-        }
         PendingWrite write = pooled[id];
         if (write == null) {
             pooled[id] = write = new PendingWrite();
@@ -74,13 +107,10 @@ final class PendingZeroCopyWrites {
         recycle(userData);
     }
 
-    // A request without MORE has no notification slot; only its ID needs to be returned.
+    // Also used for requests without MORE, which retain no buffers.
     void recycle(long userData) {
         if (userData <= MAX_POOLED_ID) {
-            if (freeIdCount == freeIds.length) {
-                freeIds = Arrays.copyOf(freeIds, freeIdCount << 1);
-            }
-            freeIds[freeIdCount++] = (short) userData;
+            freeIdStack[freeStackTop++] = (short) userData;
         }
     }
 
@@ -125,7 +155,7 @@ final class PendingZeroCopyWrites {
 
         private void release() {
             for (int i = 0; i < count; i++) {
-                references[i].release();
+                ReferenceCountUtil.safeRelease(references[i]);
                 references[i] = null;
             }
             count = 0;

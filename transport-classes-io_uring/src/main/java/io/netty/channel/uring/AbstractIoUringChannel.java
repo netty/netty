@@ -368,7 +368,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     @Override
     protected final void prepareToReleaseOutboundMessages(ChannelOutboundBuffer buffer) {
         AbstractUringUnsafe unsafe = ioUringUnsafe();
-        if (unsafe.retainedWriteBuffers != null || unsafe.currentWrite == null) {
+        if (unsafe.retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
             return;
         }
         unsafe.retainedWriteBuffers = numOutstandingWrites != 0 ? unsafe.retainWriteBuffers(buffer) :
@@ -513,9 +513,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private boolean closed;
         private boolean socketIsEmpty;
         private ChannelPromise deregisterPromise;
-        private final WriteOpsSnapshot writeSnapshot = new WriteOpsSnapshot();
         // Only one primary write batch is submitted at a time. Notifications belong to older zero-copy writes.
-        WriteOpsSnapshot currentWrite;
+        final WriteOpsSnapshot currentWrite = new WriteOpsSnapshot();
         // References retained before outbound messages are released. Non-null until the batch completes,
         // even when empty, so subsequent completions no longer consume the outbound queue.
         List<ReferenceCounted> retainedWriteBuffers;
@@ -527,8 +526,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         final long submitWrite(IoUringIoOps ops) {
             long id = registration().submit(ops);
             if (id != 0) {
-                writeSnapshot.copyFrom(ops);
-                currentWrite = writeSnapshot;
+                currentWrite.copyFrom(ops);
             }
             return id;
         }
@@ -539,7 +537,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
             for (ReferenceCounted buffer : buffers) {
-                ReferenceCountUtil.release(buffer);
+                ReferenceCountUtil.safeRelease(buffer);
             }
         }
 
@@ -1075,6 +1073,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data  the data that was passed when submitting the op.
          */
         private void writeComplete(byte op, int res, int flags, long data) {
+            // UDP connect and ordinary writes can be in flight together, so CONNECT_SCHEDULED alone cannot identify TFO.
             if ((ioState & CONNECT_SCHEDULED) != 0 && op == Native.IORING_OP_SENDMSG &&
                     (currentWrite.union3() & Native.MSG_FASTOPEN) != 0) {
                 completeFastOpenWrite(op, res, flags, (short) data);
@@ -1098,7 +1097,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // We only reset this once we are done with calling removeBytes(...) as otherwise we may trigger a write
             // while still removing messages internally in removeBytes(...) which then may corrupt state.
             if (numOutstandingWrites == 0) {
-                currentWrite = null;
                 retainedWriteBuffers = null;
                 ioState &= ~WRITE_SCHEDULED;
 
@@ -1151,7 +1149,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (retainedWriteBuffers != null) {
                     releaseWriteBuffers(retainedWriteBuffers, data);
                 }
-                currentWrite = null;
                 retainedWriteBuffers = null;
                 ioState &= ~WRITE_SCHEDULED;
             }
