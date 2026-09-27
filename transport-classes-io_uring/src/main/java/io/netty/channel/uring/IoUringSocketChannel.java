@@ -258,7 +258,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             } else {
                 pendingZeroCopyWrites.recycle(data);
             }
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
             if (channelOutboundBuffer == null) {
                 return true;
             }

@@ -737,8 +737,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
-            writeId = 0;
-            writeOpCode = 0;
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                // We only want to reset these if IORING_CQE_F_NOTIF is not set.
+                // If it's set we know this is only an extra notification for a write but we already handled
+                // the write completions before.
+                // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
+                writeId = 0;
+                writeOpCode = 0;
+            }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             if (channelOutboundBuffer == null) {
                 // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
@@ -824,8 +830,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         public void unregistered() {
-            // Abandons the single slot through writeTracker.releaseAll() before the chunk buffer is
-            // dropped below, so a reference a shutdown retained on that buffer is released first.
             super.unregistered();
             assert readBuffer == null;
             releaseFileRegionChunkBuf();
