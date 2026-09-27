@@ -478,10 +478,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         // even when empty, so subsequent completions no longer consume the outbound queue.
         List<ReferenceCounted> retainedWriteBuffers;
 
-        final boolean hasPendingWrites() {
-            return numOutstandingWrites != 0;
-        }
-
         final long submitWrite(IoUringIoOps ops) {
             long id = registration().submit(ops);
             if (id != 0) {
