@@ -1028,7 +1028,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data  the data that was passed when submitting the op.
          */
         private void writeComplete(byte op, int res, int flags, long data) {
-            // UDP connect and ordinary writes can be in flight together, so CONNECT_SCHEDULED alone cannot identify TFO.
+            // UDP connect and ordinary writes can be in flight together,
+            // so CONNECT_SCHEDULED alone cannot identify TFO.
             if ((ioState & CONNECT_SCHEDULED) != 0 && op == Native.IORING_OP_SENDMSG &&
                     (currentWrite.union3() & Native.MSG_FASTOPEN) != 0) {
                 completeFastOpenWrite(op, res, flags, (short) data);
@@ -1042,7 +1043,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
             boolean writtenAll = retainedWriteBuffers == null ?
                     writeComplete0(op, res, flags, data, numOutstandingWrites) :
-                    releaseCompletedWriteBuffers(op, res, flags, data);
+                    writeCompleteAndReleaseBuffers(op, res, flags, data);
             if (!writtenAll && delayedClose == null && (ioState & POLL_OUT_SCHEDULED) == 0) {
 
                 // We were not able to write everything, let's register for POLLOUT
@@ -1062,7 +1063,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        private boolean releaseCompletedWriteBuffers(byte op, int res, int flags, long data) {
+        private boolean writeCompleteAndReleaseBuffers(byte op, int res, int flags, long data) {
             // The socket may transfer these references to its zero-copy notification before we release them.
             boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
