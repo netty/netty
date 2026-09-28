@@ -24,6 +24,10 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
+/**
+ * @deprecated Superseded by {@link JdkZlibDecompressor} and {@link BackpressureDecompressionHandler}
+ */
+@Deprecated
 public class JZlibDecoder extends ZlibDecoder {
 
     private static final int MIN_OUTPUT_BUFFER_SIZE = 512;

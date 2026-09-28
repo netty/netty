@@ -162,6 +162,8 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
 
         try {
             if (isCompressed) {
+                // Memory limit 64K because originalLength comes from readUnsignedShort. Assertion for fuzzing
+                assert originalLength < 64 * 1024 : originalLength;
                 output = allocator.buffer(originalLength);
                 int outputOffset = output.writerIndex();
                 final int decompressedBytes = decompress(in, idx, chunkLength,
