@@ -55,7 +55,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -72,9 +71,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -2263,22 +2263,23 @@ public class DefaultChannelPipelineTest {
                 removed.incrementAndGet();
             }
         });
-        ChannelPipelineException e = assertThrows(ChannelPipelineException.class, channel::checkException);
-        assertSame(error, e.getCause());
+        assertThatThrownBy(channel::checkException)
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
 
         assertPipelineLinked(channel.pipeline(), "first", "real");
-        assertEquals(1, removed.get());
-        assertEquals(1, replacement.added.get());
-        assertEquals(0, replacement.removed.get());
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
 
         Object msg = new Object();
-        assertTrue(channel.writeInbound(msg));
-        assertEquals(1, replacement.read.get());
-        assertSame(msg, channel.readInbound());
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(replacement.read).as("channelRead(...) calls of the replacement").hasValue(1);
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
 
-        assertFalse(channel.finish());
-        assertEquals(1, removed.get());
-        assertEquals(1, replacement.removed.get());
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
     }
 
     @Test
@@ -2301,17 +2302,18 @@ public class DefaultChannelPipelineTest {
             }
         });
         channel.pipeline().addLast("last", new ChannelInboundHandlerAdapter());
-        ChannelPipelineException e = assertThrows(ChannelPipelineException.class, channel::checkException);
-        assertSame(error, e.getCause());
+        assertThatThrownBy(channel::checkException)
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
 
         assertPipelineLinked(channel.pipeline(), "first", "last");
-        assertEquals(1, removed.get());
+        assertThat(removed).as("handlerRemoved(...) calls of the removed handler").hasValue(1);
 
         Object msg = new Object();
-        assertTrue(channel.writeInbound(msg));
-        assertSame(msg, channel.readInbound());
-        assertFalse(channel.finish());
-        assertEquals(1, removed.get());
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the removed handler").hasValue(1);
     }
 
     @Test
@@ -2335,21 +2337,22 @@ public class DefaultChannelPipelineTest {
         channel.pipeline().replace("handler", "replacement", replacement);
         // The deferred handlerAdded(...) of the replaced handler throws once the channel is registered.
         channel.register();
-        ChannelPipelineException e = assertThrows(ChannelPipelineException.class, channel::checkException);
-        assertSame(error, e.getCause());
+        assertThatThrownBy(channel::checkException)
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
 
         assertPipelineLinked(channel.pipeline(), "replacement");
-        assertEquals(1, removed.get());
-        assertEquals(1, replacement.added.get());
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
 
         Object msg = new Object();
-        assertTrue(channel.writeInbound(msg));
-        assertEquals(1, replacement.read.get());
-        assertSame(msg, channel.readInbound());
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(replacement.read).as("channelRead(...) calls of the replacement").hasValue(1);
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
 
-        assertFalse(channel.finish());
-        assertEquals(1, removed.get());
-        assertEquals(1, replacement.removed.get());
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
     }
 
     @Test
@@ -2366,13 +2369,13 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        assertTrue(channel.close().isSuccess());
+        assertThat(channel.close().isSuccess()).as("close() succeeded").isTrue();
 
         assertPipelineLinked(channel.pipeline());
-        assertEquals(1, handler.added.get());
-        assertEquals(1, handler.removed.get());
-        assertEquals(1, replacement.added.get());
-        assertEquals(1, replacement.removed.get());
+        assertThat(handler.added).as("handlerAdded(...) calls of the replaced handler").hasValue(1);
+        assertThat(handler.removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
     }
 
     @Test
@@ -2401,11 +2404,11 @@ public class DefaultChannelPipelineTest {
         }
         remover.join();
 
-        assertInstanceOf(NoSuchElementException.class, removeResult.get());
+        assertThat(removeResult.get()).as("result of remove(handler)").isInstanceOf(NoSuchElementException.class);
         assertPipelineLinked(pipeline, "replacement");
-        assertEquals(1, replacement.added.get());
-        assertEquals(0, replacement.removed.get());
-        assertFalse(channel.finish());
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
+        assertThat(channel.finish()).isFalse();
     }
 
     private static void assertPipelineLinked(ChannelPipeline pipeline, String... expectedNames) {
@@ -2414,15 +2417,16 @@ public class DefaultChannelPipelineTest {
         AbstractChannelHandlerContext ctx = p.head;
         while (ctx != p.tail) {
             AbstractChannelHandlerContext next = ctx.next;
-            assertNotSame(ctx, next, "self-loop at " + ctx.name());
-            assertSame(ctx, next.prev, "prev of " + next.name() + " is not " + ctx.name());
+            assertThat(next).as("next of %s (self-loop)", ctx.name()).isNotSameAs(ctx);
+            assertThat(next.prev).as("prev of %s", next.name()).isSameAs(ctx);
             if (next != p.tail) {
                 names.add(next.name());
-                assertTrue(names.size() <= expectedNames.length, "unexpected handlers: " + names);
+                // Stop early if the list contains a cycle.
+                assertThat(names).as("handlers in the pipeline").hasSizeLessThanOrEqualTo(expectedNames.length);
             }
             ctx = next;
         }
-        assertEquals(Arrays.asList(expectedNames), names);
+        assertThat(names).as("handlers in the pipeline").containsExactly(expectedNames);
     }
 
     private static final class LifecycleCountingHandler extends ChannelInboundHandlerAdapter {
