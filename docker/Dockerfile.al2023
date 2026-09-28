@@ -13,6 +13,7 @@ RUN dnf install -yq \
  autoconf \
  automake \
  bzip2 \
+ clang \
  cmake \
  gcc \
  gcc-c++ \
@@ -27,6 +28,7 @@ RUN dnf install -yq \
  make \
  ninja-build \
  patch \
+ patchelf \
  perl \
  perl-parent \
  perl-devel \

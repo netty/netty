@@ -124,7 +124,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+    protected void doShutdown0(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -166,7 +166,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+    boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
         throw new UnsupportedOperationException();
     }
 

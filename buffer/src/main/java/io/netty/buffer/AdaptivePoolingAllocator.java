@@ -2486,6 +2486,9 @@ final class AdaptivePoolingAllocator {
         public ByteBuf setBytes(int index, ByteBuffer src) {
             int length = src.remaining();
             checkIndex(index, length);
+            if (src == tmpNioBuf) {
+                src = src.duplicate();
+            }
             ByteBuffer tmp = internalNioBuffer();
             int offset = src.position();
             tmp.put(index, src, offset, length);
@@ -2507,6 +2510,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
+            checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
             buf.clear().position(index).limit(index + length);
             return out.write(buf);
@@ -2515,6 +2519,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
+            checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
             buf.clear().position(index).limit(index + length);
             return out.write(buf, position);

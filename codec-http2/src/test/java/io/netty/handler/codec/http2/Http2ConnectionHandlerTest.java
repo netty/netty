@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
@@ -41,6 +43,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -68,6 +71,7 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -333,6 +337,79 @@ public class Http2ConnectionHandlerTest {
         verify(remoteFlow).channelWritabilityChanged();
     }
 
+    /**
+     * See <a href="https://github.com/netty/netty/issues/17276">#17276</a>: {@code close()}'s own cascade
+     * (e.g. {@code SslHandler.closeOutboundAndChannel()} flushing a close_notify) can synchronously trigger
+     * {@code channelWritabilityChanged()} -&gt; {@code flush()} from outside any active {@code flush()} frame, so a
+     * reentrancy guard scoped only to {@code flush()} itself (as added for #17256) would never see it.
+     */
+    @Test
+    public void closeShouldNotAllowChannelWritabilityChangedToReenterFlush() throws Exception {
+        when(channel.isWritable()).thenReturn(true);
+        handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .decoupleCloseAndGoAway(true).build();
+        handler.handlerAdded(ctx);
+        clearInvocations(ctx);
+
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                // Simulate close()'s own cascade (e.g. SslHandler flushing a close_notify) completing a write and
+                // firing channelWritabilityChanged synchronously, from outside any Http2ConnectionHandler.flush()
+                // frame - exactly what AbstractKQueueStreamChannel's write-drain loop does when a write it just
+                // performed flips writability.
+                handler.channelWritabilityChanged(ctx);
+                return null;
+            }
+        }).when(ctx).close(any(CompletionHandler.class));
+
+        handler.close(ctx, CompletionHandler.ignore());
+
+        verify(ctx, never()).flush();
+    }
+
+    /**
+     * A large body must fully drain even when the channel briefly becomes unwritable while it is being written
+     * and then flips back to writable synchronously during {@code flush()}. That writable transition re-enters
+     * {@link Http2ConnectionHandler#channelWritabilityChanged(ChannelHandlerContext)} while the flush is still in
+     * progress; the handler must not recurse (which livelocks), but it must still write the frames that were
+     * queued in the remote flow controller. Dropping the reentrant flush strands the tail of the body forever.
+     */
+    @Test
+    public void largeWriteDrainsFullyWhenWritabilityTogglesDuringFlush() throws Exception {
+        // Small watermarks so writing ~1 KiB flips the channel unwritable, and EmbeddedChannel draining the
+        // outbound buffer during flush() flips it back to writable synchronously (ChannelOutboundBuffer.remove
+        // fires the event inline), re-entering flush().
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
+
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
+                .server(false)
+                .frameListener(new Http2FrameAdapter())
+                .validateHeaders(false)
+                .gracefulShutdownTimeoutMillis(0)
+                .build();
+
+        channel.connect(new InetSocketAddress(0));
+        channel.pipeline().addLast(handler);
+        channel.pipeline().fireChannelActive();
+        // Discard the connection preface + SETTINGS the handler wrote on activation.
+        channel.releaseOutbound();
+
+        ChannelHandlerContext ctx = channel.pipeline().context(handler);
+        handler.encoder().writeHeaders(ctx, 3, new DefaultHttp2Headers(), 0, false, ctx.newPromise());
+
+        // Larger than the write high-watermark but within the default 65535-byte flow-control window, so only
+        // channel writability (not flow control) gates the write.
+        final int size = 60 * 1024;
+        ByteBuf data = Unpooled.buffer(size).writeZero(size);
+        Promise<Void> dataPromise = ctx.newPromise();
+        handler.encoder().writeData(ctx, 3, data, 0, false, dataPromise);
+        handler.flush(ctx);
+        assertTrue(dataPromise.isSuccess());
+        channel.finishAndReleaseAll();
+    }
+
     @Test
     public void serverReceivingInvalidClientPrefaceStringShouldHandleException() throws Exception {
         when(connection.isServer()).thenReturn(true);
@@ -437,6 +514,56 @@ public class Http2ConnectionHandlerTest {
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), any(Promise.class));
         captor.getValue().release();
+    }
+
+    @Test
+    public void compositeStreamExceptionReportsEachAffectedStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "stream 1 error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR, "stream 2 error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // Each StreamException in the composite represents an independent error for a distinct stream
+        // (e.g. one per active stream whose flow-control window overflowed when the initial window size
+        // setting changed). Every affected stream must be reset individually, otherwise it would be left
+        // open with a corrupted flow-control window.
+        verify(encoder, times(2))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+        verify(encoder)
+            .writeRstStream(eq(ctx), eq(NON_EXISTANT_STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
+    }
+
+    @Test
+    public void compositeStreamExceptionOnlyReportsFirstErrorForSameStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "first error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(STREAM_ID, CANCEL, "second error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error per stream. Only the
+        // first StreamException seen for a given stream id should result in a RST_STREAM.
+        verify(encoder, times(1))
+            .writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        verify(encoder).writeRstStream(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()), any(Promise.class));
     }
 
     @Test

@@ -139,6 +139,25 @@ public class StompSubframeDecoderTest {
     }
 
     @Test
+    public void testFrameChunkedIncomplete() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 100));
+
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
+        // Let's truncate the buffer so we don't have anything complete after the header.
+        incoming.writerIndex(incoming.writerIndex() - 2);
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+
+        // There is nothing complete to read.
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testMultipleFramesDecoding() throws Exception {
         ByteBuf incoming = Unpooled.buffer();
         incoming.writeBytes(StompTestConstants.CONNECT_FRAME.getBytes());
@@ -529,5 +548,45 @@ public class StompSubframeDecoderTest {
 
         assertInstanceOf(TooLongFrameException.class,
                 headersSubFrame.decoderResult().cause());
+    }
+
+    @Test
+    void testContentLengthExceedingIntegerMaxValueIsRejected() throws Exception {
+        // content-length larger than Integer.MAX_VALUE must be rejected, otherwise the truncating
+        // cast to int when computing the remaining chunk length can wrap around and cause the
+        // decoder to loop indefinitely instead of terminating the frame.
+        String frame = "SEND\n"
+                + "destination:/queue/a\n"
+                + "content-length:2147483648\n"
+                + "\n" + '\0';
+        ByteBuf incoming = Unpooled.wrappedBuffer(frame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+        assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
+
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    void testContentLengthEqualToIntegerMaxValueIsAccepted() throws Exception {
+        channel = new EmbeddedChannel(new StompSubframeDecoder());
+        String frame = "SEND\n"
+                + "destination:/queue/a\n"
+                + "content-length:2147483647\n"
+                + "\n";
+        ByteBuf incoming = Unpooled.wrappedBuffer(frame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+
+        // No content was actually sent, so the decoder should simply wait for more bytes
+        // rather than producing any (partial) content subframes.
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
     }
 }

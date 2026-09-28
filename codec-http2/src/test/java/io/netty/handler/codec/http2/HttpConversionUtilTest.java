@@ -24,6 +24,8 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -55,6 +57,133 @@ public class HttpConversionUtilTest {
         assertNotNull(request);
         assertEquals(authority, request.uri());
         assertEquals(authority, request.headers().get(HOST));
+
+        // Regular CONNECT (RFC 9113) must not carry Extended CONNECT (RFC 8441) state.
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+    }
+
+    @Test
+    public void extendedConnectPreservesProtocolAndPathAsExtensionHeaders() throws Exception {
+        String authority = "ws.example:443";
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority(authority);
+        headers.scheme("https");
+        headers.path("/admin/ws");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+
+        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
+        assertNotNull(request);
+
+        // The request-target/URI for a CONNECT request stays the authority, same as a regular CONNECT
+        // request: this fix does not change wire-level CONNECT behavior.
+        assertEquals(authority, request.uri());
+        assertEquals(HttpMethod.CONNECT, request.method());
+        assertEquals(authority, request.headers().get(HOST));
+
+        // But the Extended CONNECT (RFC 8441) state, which changes CONNECT semantics such that ':authority'
+        // must not be treated as an ordinary tunnel target, is preserved so it is not confused with a
+        // regular CONNECT request once converted to an HTTP/1.x object.
+        assertEquals("websocket",
+                request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertEquals("/admin/ws",
+                request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+    }
+
+    @Test
+    public void extendedConnectAndRegularConnectProduceDifferentHttpObjectShape() throws Exception {
+        String authority = "ws.example:443";
+
+        Http2Headers regularConnect = new DefaultHttp2Headers();
+        regularConnect.method(HttpMethod.CONNECT.asciiName());
+        regularConnect.authority(authority);
+        HttpRequest regularConnectRequest = HttpConversionUtil.toHttpRequest(0, regularConnect, true);
+
+        Http2Headers extendedConnect = new DefaultHttp2Headers();
+        extendedConnect.method(HttpMethod.CONNECT.asciiName());
+        extendedConnect.authority(authority);
+        extendedConnect.scheme("https");
+        extendedConnect.path("/admin/ws");
+        extendedConnect.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+        HttpRequest extendedConnectRequest = HttpConversionUtil.toHttpRequest(0, extendedConnect, true);
+
+        // Both requests still have the same CONNECT method and request-target/Host, matching a regular
+        // CONNECT allowlist that keys off of those alone.
+        assertEquals(regularConnectRequest.method(), extendedConnectRequest.method());
+        assertEquals(regularConnectRequest.uri(), extendedConnectRequest.uri());
+        assertEquals(regularConnectRequest.headers().get(HOST), extendedConnectRequest.headers().get(HOST));
+
+        // A protocol-aware policy can still tell them apart via the extension headers.
+        assertFalse(regularConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertTrue(extendedConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+    }
+
+    @Test
+    public void regularConnectDropsExtensionHeaderReceivedFromPeer() throws Exception {
+        Http2Headers regularConnect = new DefaultHttp2Headers();
+        regularConnect.method(HttpMethod.CONNECT.asciiName());
+        regularConnect.authority("ws.example:443");
+        regularConnect.add(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text(), "websocket");
+        HttpRequest regularConnectRequest = HttpConversionUtil.toHttpRequest(0, regularConnect, true);
+        assertFalse(regularConnectRequest.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+    }
+
+    @Test
+    public void connectAuthorityFormUsesRequestTargetNotHost() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+        msg.headers().add(HOST, "attacker.example:443");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @Test
+    public void connectAuthorityFormWithMatchingHostOmitsSchemeAndPath() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+        msg.headers().add(HOST, "trusted.example:443");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @Test
+    public void connectAuthorityFormWithoutHostStillUsesRequestTarget() throws Exception {
+        boolean validateHeaders = true;
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "trusted.example:443", validateHeaders);
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+
+        assertEquals(HttpMethod.CONNECT.asciiName(), out.method());
+        assertEquals(new AsciiString("trusted.example:443"), out.authority());
+        assertNull(out.scheme());
+        assertNull(out.path());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "trusted.example:443@attacker.example:443",
+        "",
+        "/",
+        "http://www.example.com:80",
+        "trusted.example:443/../attacker.example"
+    })
+    public void connectAuthorityFormInvalid(String uri) {
+        HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, uri);
+        assertThrows(IllegalArgumentException.class, () -> HttpConversionUtil.toHttp2Headers(msg, true));
     }
 
     @Test
@@ -349,6 +478,79 @@ public class HttpConversionUtilTest {
                 HttpConversionUtil.toHttp2Headers(emptyQueryWithFragment, true).path());
         assertEquals(new AsciiString("/path?x"),
                 HttpConversionUtil.toHttp2Headers(queryWithEmptyFragment, true).path());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetAuthorityTakesPrecedenceOverConflictingHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://request-target.example/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("request-target.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetAuthorityMatchingHostIsUnaffected() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/admin", true);
+        msg.headers().add(HOST, "example.com");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("example.com"), out.authority());
+    }
+
+    @Test
+    public void originFormRequestStillUsesHostAsAuthority() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+        msg.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("/admin"), out.path());
+        assertEquals(new AsciiString("http"), out.scheme());
+        assertEquals(new AsciiString("host-header.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithUserInfoStripsUserInfoFromAuthority() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://user:pass@request-target.example/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("request-target.example"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithIPv6LiteralTakesPrecedenceOverHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://[::1]:8080/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("[::1]:8080"), out.authority());
+    }
+
+    @Test
+    public void absoluteFormRequestTargetWithExplicitPortTakesPrecedenceOverHost() {
+        HttpRequest msg = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://request-target.example:8080/admin", true);
+        msg.headers().add(HOST, "host-header.example");
+
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true);
+
+        assertEquals(new AsciiString("request-target.example:8080"), out.authority());
     }
 
     @Test

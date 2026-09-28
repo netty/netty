@@ -399,6 +399,16 @@ public class QpackEncoderDecoderTest {
     }
 
     @Test
+    public void sectionAcknowledgmentWithoutDynamicTableThrowsQpackException() throws Exception {
+        setup(0, 0);
+
+        // A peer must not send a Section Acknowledgment when the dynamic table is disabled
+        // (https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1). This must be reported as a
+        // QpackException rather than allowed to throw a NullPointerException.
+        assertThrows(QpackException.class, () -> encoder.sectionAcknowledgment(1));
+    }
+
+    @Test
     public void decoderThrowsOnInvalidInput() throws Exception {
         setup(0, 0);
 

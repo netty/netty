@@ -24,7 +24,6 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -336,8 +335,10 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                         }
                         encapsulatedTlvs.add(haProxyTLV);
                     } while (byteBuf.readableBytes() >= 4);
-                } catch (Throwable t) {
-                    releaseTlvs(encapsulatedTlvs);
+
+                }  catch (Throwable t) {
+                    // Release all previously read TLVs before rethrowing as otherwise we would leak.
+                    releaseDeep(encapsulatedTlvs);
                     throw t;
                 }
 

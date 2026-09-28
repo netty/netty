@@ -84,7 +84,7 @@ final class SniClientJava8TestUtil {
             throws Exception {
         final String sniHost = "sni.netty.io";
         SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-        LocalAddress address = new LocalAddress("test");
+        LocalAddress address = new LocalAddress(SniClientJava8TestUtil.class);
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;

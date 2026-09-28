@@ -1104,10 +1104,14 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(executor, new TestHandler(),
                 new TestHandler());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor,
-                QuicSslContextBuilder.forClient()
-                        .trustManager(new TrustManagerFactoryWrapper(trustManager))
-                        .applicationProtocols(QuicTestUtils.PROTOS).build()));
+        QuicSslContextBuilder ctxBuilder = QuicSslContextBuilder.forClient()
+            .trustManager(new TrustManagerFactoryWrapper(trustManager))
+            .applicationProtocols(QuicTestUtils.PROTOS);
+        if (!extended) {
+            ctxBuilder.endpointIdentificationAlgorithm(null);
+        }
+
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor, ctxBuilder.build()));
         try {
             Throwable cause = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new TestHandler())

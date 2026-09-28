@@ -210,7 +210,7 @@ public class HttpProxyHandlerTest {
         Channel clientChannel = null;
         try {
             group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
-            final LocalAddress addr = new LocalAddress("a");
+            final LocalAddress addr = new LocalAddress(HttpProxyHandlerTest.class);
             final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
             Future<Channel> sf =
                 new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(

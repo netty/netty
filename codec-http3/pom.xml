@@ -201,8 +201,7 @@
         <configuration>
           <!-- We need to also merge the dependencies defined by our profile. -->
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
-          <!-- Ensure excludes are set correctly -->
-          <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenDependencyMode>direct</flattenDependencyMode>
           <flattenMode>ossrh</flattenMode>
         </configuration>
         <executions>

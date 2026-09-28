@@ -203,7 +203,7 @@ final class Bzip2BlockDecompressor {
                 repeatIncrement <<= 1;
             } else {
                 if (repeatCount > 0) {
-                    if (bwtBlockLength + repeatCount > streamBlockSize) {
+                    if (repeatCount > streamBlockSize - bwtBlockLength) {
                         throw new DecompressionException("block exceeds declared block size");
                     }
                     final byte nextByte = huffmanSymbolMap[mtfValue];

@@ -204,16 +204,25 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
                     resetDecoder();
             }
         } catch (Exception e) {
-            if (lastContent != null) {
-                lastContent.release();
-                lastContent = null;
-            }
+            releaseLastContentIfNeeded();
 
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
             errorContent.setDecoderResult(DecoderResult.failure(e));
             out.add(errorContent);
             state = State.BAD_FRAME;
         }
+    }
+
+    private void releaseLastContentIfNeeded() {
+        if (lastContent != null) {
+            lastContent.release();
+            lastContent = null;
+        }
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        releaseLastContentIfNeeded();
     }
 
     private StompCommand readCommand(ByteBuf in) {
@@ -248,6 +257,10 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
         long contentLength = headers.getLong(StompHeaders.CONTENT_LENGTH, 0L);
         if (contentLength < 0) {
             throw new DecoderException(StompHeaders.CONTENT_LENGTH + " must be non-negative");
+        }
+        if (contentLength > Integer.MAX_VALUE) {
+            throw new TooLongFrameException(StompHeaders.CONTENT_LENGTH + " exceeds the maximum allowed value: "
+                    + contentLength);
         }
         return contentLength;
     }

@@ -24,10 +24,31 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SingleThreadIoEventLoopTest {
+
+    @Test
+    void testDefaultIoRatio() {
+        SingleThreadIoEventLoop loop = new SingleThreadIoEventLoop(null,
+                Executors.defaultThreadFactory(), TestIoHandler::new);
+        assertEquals(SingleThreadIoEventLoop.DEFAULT_IO_RATIO, loop.getIoRatio());
+        loop.shutdownGracefully();
+    }
+
+    @Test
+    void testSetIoRatio() {
+        SingleThreadIoEventLoop loop = new SingleThreadIoEventLoop(null,
+                Executors.defaultThreadFactory(), TestIoHandler::new);
+        loop.setIoRatio(50);
+        assertEquals(50, loop.getIoRatio());
+        assertThrows(IllegalArgumentException.class, () -> loop.setIoRatio(0));
+        assertThrows(IllegalArgumentException.class, () -> loop.setIoRatio(101));
+        loop.shutdownGracefully();
+    }
 
     @Test
     void testIsIoType() {
@@ -57,7 +78,6 @@ public class SingleThreadIoEventLoopTest {
 
     @Test
     void testIsCompatible() {
-
         IoHandle handle = new TestIoHandle() { };
         EventLoopGroup group = new SingleThreadIoEventLoop(null,
                 Executors.defaultThreadFactory(), CompatibleTestIoHandler::new);

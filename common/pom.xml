@@ -62,7 +62,6 @@
       <artifactId>jctools-core-jdk11</artifactId>
       <!-- Need compile scope to be taken into account by shade plugin -->
       <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.jetbrains</groupId>

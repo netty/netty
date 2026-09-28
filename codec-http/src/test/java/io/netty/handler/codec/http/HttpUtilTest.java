@@ -27,6 +27,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -161,6 +162,38 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameter() {
+        // RFC 9110 5.6.6: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the next parameter
+        testGetCharsetUtf8("text/html; charset=utf-8 ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetQuotedWithWhitespaceBeforeNextParameter() {
+        testGetCharsetUtf8("text/html; charset=\"utf-8\" ; action=\"foo\"");
+    }
+
+    @Test
+    public void testGetCharsetWithWhitespaceBeforeNextParameterNonStringCharSequence() {
+        // must behave identically for a general CharSequence implementation
+        CharSequence contentType = CharBuffer.wrap("text/html; charset=utf-8 ; action=\"foo\"");
+        assertEquals(CharsetUtil.UTF_8, HttpUtil.getCharset(contentType, CharsetUtil.ISO_8859_1));
+
+        CharSequence emptyCharset = CharBuffer.wrap("text/html; charset= ; action=\"foo\"");
+        assertEquals(CharsetUtil.ISO_8859_1, HttpUtil.getCharset(emptyCharset, CharsetUtil.ISO_8859_1));
+    }
+
+    @Test
+    public void testGetCharsetWithLeadingWhitespaceIsNotAccepted() {
+        // Only trailing OWS is grammar-legal per RFC 9110 5.6.6; whitespace after '='
+        // is not, so such values keep falling back to the default charset.
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= utf-8 ; action=\"foo\"", CharsetUtil.ISO_8859_1));
+        assertEquals(CharsetUtil.ISO_8859_1,
+                HttpUtil.getCharset("text/html; charset= ; action=\"foo\"", CharsetUtil.ISO_8859_1));
+    }
+
+    @Test
     public void testGetCharsetNoLeadingQuotes() {
         testGetCharsetInvalidQuotes("text/html;charset=utf-8\"");
     }
@@ -256,6 +289,20 @@ public class HttpUtilTest {
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, NORMAL_CONTENT_TYPE);
         assertEquals("text/html", HttpUtil.getMimeType(message));
         assertEquals("text/html", HttpUtil.getMimeType(NORMAL_CONTENT_TYPE));
+    }
+
+    @Test
+    public void testGetMimeTypeWithWhitespaceBeforeParameter() {
+        // RFC 9110 8.3.1: parameters = *( OWS ";" OWS [ parameter ] ), so optional
+        // whitespace is allowed before the semicolon starting the first parameter
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html\t; charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html \t ;charset=utf-8"));
+        assertEquals("text/html", HttpUtil.getMimeType("text/html ;"));
+
+        HttpMessage message = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        message.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json ; charset=UTF-8");
+        assertEquals("application/json", HttpUtil.getMimeType(message));
     }
 
     @Test
