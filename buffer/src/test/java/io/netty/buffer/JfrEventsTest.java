@@ -434,6 +434,45 @@ public class JfrEventsTest {
         }
     }
 
+    /**
+     * A buffer above the size classes on a thread-local heap comes from a chunk of that heap: both events say so.
+     */
+    @SuppressWarnings("Since15")
+    @Test
+    public void adaptiveLargeBufferOnAThreadLocalHeapIsThreadLocalInBothEvents() throws Exception {
+        final int size = 512 * 1024;
+        AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
+        Callable<Void> allocateAndRelease = () -> {
+            try (RecordingStream stream = new RecordingStream()) {
+                CompletableFuture<RecordedEvent> chunkFuture = new CompletableFuture<>();
+                CompletableFuture<RecordedEvent> bufferFuture = new CompletableFuture<>();
+                stream.enable(AllocateChunkEvent.class);
+                stream.onEvent(AllocateChunkEvent.NAME, e -> {
+                    if (e.getInt("capacity") > size) {
+                        chunkFuture.complete(e);
+                    }
+                });
+                stream.enable(AllocateBufferEvent.class);
+                stream.onEvent(AllocateBufferEvent.NAME, e -> {
+                    if (e.getInt("size") == size) {
+                        bufferFuture.complete(e);
+                    }
+                });
+                stream.startAsync();
+
+                alloc.directBuffer(size, size).release();
+
+                assertTrue(chunkFuture.get().getBoolean("threadLocal"), "the chunk event");
+                assertTrue(bufferFuture.get().getBoolean("chunkThreadLocal"), "the buffer event");
+                return null;
+            }
+        };
+        FutureTask<Void> task = new FutureTask<>(allocateAndRelease);
+        FastThreadLocalThread thread = new FastThreadLocalThread(task);
+        thread.start();
+        task.get();
+    }
+
     @SuppressWarnings("Since15")
     @Test
     public void adaptiveJfrBufferAllocation() throws Exception {

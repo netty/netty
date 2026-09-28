@@ -1236,6 +1236,264 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         }
     }
 
+    /** Runs {@code body} on a new thread whose heap is thread-local, freed when the body returns. */
+    private static void onThreadLocalHeap(final ThrowingRunnable body) throws Throwable {
+        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        Thread thread = new Thread(() -> FastThreadLocalThread.runWithFastThreadLocal(() -> {
+            try {
+                body.run();
+            } catch (Throwable t) {
+                failure.set(t);
+            }
+        }));
+        thread.start();
+        thread.join();
+        if (failure.get() != null) {
+            throw failure.get();
+        }
+    }
+
+    /** How many stripes created a magazine for buffers above the size classes. */
+    private static int stripesWithABuddyMagazine(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
+        stripesField.setAccessible(true);
+        int stripes = 0;
+        for (Object stripe : (Object[]) stripesField.get(pooling)) {
+            Field magField = stripe.getClass().getDeclaredField("buddyMagazine");
+            magField.setAccessible(true);
+            if (magField.get(stripe) != null) {
+                stripes++;
+            }
+        }
+        return stripes;
+    }
+
+    /** The wholly free chunks the buddy magazine of {@code idleDecay}'s heap keeps. */
+    private static int buddyIdleChunks(IdleDecay idleDecay) throws Exception {
+        Object magazine = idleDecay.buddyMagazine;
+        assertNotNull(magazine, "no magazine for buffers above the size classes");
+        Method idleChunks = magazine.getClass().getDeclaredMethod("idleChunks");
+        idleChunks.setAccessible(true);
+        return (Integer) idleChunks.invoke(magazine);
+    }
+
+    /** Small allocations on the calling thread's heap, enough to complete one count of its {@link IdleDecay}. */
+    private static void sizeClassTraffic(AdaptiveByteBufAllocator allocator) {
+        for (int i = 0; i < 4 * IdleDecay.DECAY_MIN_ALLOCATIONS; i++) {
+            allocator.heapBuffer(256).release();
+        }
+    }
+
+    /**
+     * A thread with its own heap takes buffers above the size classes from that heap too: no stripe, no lock.
+     */
+    @Test
+    void threadLocalHeapServesBuffersAboveTheSizeClasses() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            ByteBuf buf = allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE);
+            try {
+                assertNotNull(threadLocalIdleDecay(allocator).buddyMagazine, "the heap's own magazine");
+                assertEquals(0, stripesWithABuddyMagazine(allocator), "no stripe involved");
+            } finally {
+                buf.release();
+            }
+        });
+    }
+
+    /**
+     * The point of a thread-local heap's own magazine for large buffers: its idle chunks age with the heap's other
+     * allocations. Only small buffers are allocated after the burst, and they give the idle chunks back by halves.
+     */
+    @Test
+    void idleLargeChunksOfAThreadLocalHeapAgeWithItsSmallAllocations() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        assumeTrue(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE >= 2, "keeps fewer than two idle chunks");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            List<ByteBuf> held = new ArrayList<ByteBuf>();
+            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            long chunk = allocator.usedHeapMemory();
+            if (AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES < 2 * chunk) {
+                held.get(0).release();
+                assumeTrue(false, "keeps fewer than two idle chunks' bytes");
+            }
+            int perChunk = (int) (chunk / BUDDY_NOTE_SIZE);
+            // Three chunks' worth: chunks 1 and 2 become wholly free, chunk 3 is the one the magazine allocates from.
+            while (held.size() < 3 * perChunk) {
+                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            }
+            for (ByteBuf buf : held) {
+                buf.release();
+            }
+            held.clear();
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            assertEquals(2, buddyIdleChunks(idleDecay));
+
+            // Each round: the interval has passed, and only small buffers are allocated.
+            idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+            sizeClassTraffic(allocator);
+            assertEquals(2, buddyIdleChunks(idleDecay), "idle since before the first decay: not a whole interval");
+            long used = allocator.usedHeapMemory();
+
+            idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+            sizeClassTraffic(allocator);
+            assertEquals(1, buddyIdleChunks(idleDecay), "half of two");
+            assertEquals(used - chunk, allocator.usedHeapMemory());
+
+            idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+            sizeClassTraffic(allocator);
+            assertEquals(0, buddyIdleChunks(idleDecay), "half of one, rounded up");
+            assertEquals(used - 2 * chunk, allocator.usedHeapMemory());
+        });
+    }
+
+    /**
+     * Another thread cannot touch a thread-local heap's magazine: its release leaves a note. The decay applies the
+     * notes first, so a chunk those releases emptied starts aging at once instead of waiting for a large allocation.
+     */
+    @Test
+    void largeChunkEmptiedByAnotherThreadIsNotedAndAgesToo() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final List<ByteBuf> held = new ArrayList<ByteBuf>();
+            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            int perChunk = (int) (allocator.usedHeapMemory() / BUDDY_NOTE_SIZE);
+            // Chunk 1 full, chunk 2 the one the magazine allocates from.
+            while (held.size() < perChunk + 1) {
+                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            }
+            Thread releaser = new Thread(() -> {
+                for (int i = 0; i < perChunk; i++) {
+                    held.get(i).release();
+                }
+            });
+            releaser.start();
+            releaser.join();
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            assertEquals(0, buddyIdleChunks(idleDecay), "only noted, not filed yet");
+            // Nothing idle is filed yet, only a note: the heap's small allocations must still get to the decay.
+            idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+            sizeClassTraffic(allocator);
+            assertEquals(1, buddyIdleChunks(idleDecay), "the decay applied the note");
+            held.get(perChunk).release();
+        });
+    }
+
+    /**
+     * A thread-local heap that dies gives its large chunks back; one with a buffer still out goes when that buffer
+     * is released, from whatever thread.
+     */
+    @Test
+    void largeChunksOfADeadThreadLocalHeapAreFreed() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        final AtomicReference<ByteBuf> survivor = new AtomicReference<ByteBuf>();
+        onThreadLocalHeap(() -> {
+            List<ByteBuf> held = new ArrayList<ByteBuf>();
+            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            int perChunk = (int) (allocator.usedHeapMemory() / BUDDY_NOTE_SIZE);
+            while (held.size() < 2 * perChunk + 1) {
+                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            }
+            survivor.set(held.remove(held.size() - 1));
+            for (ByteBuf buf : held) {
+                buf.release();
+            }
+        });
+        assertEquals(survivor.get().capacity() * (long) BUFS_PER_LARGE_CHUNK, allocator.usedHeapMemory(),
+                "only the chunk of the buffer still out");
+        survivor.get().release();
+        assertEquals(0, allocator.usedHeapMemory(), "the last buffer freed its chunk");
+    }
+
+    /** Buffers per chunk for buffers above the size classes: the chunk is sized for about this many. */
+    private static final int BUFS_PER_LARGE_CHUNK = 8;
+
+    /**
+     * On a thread-local heap every other thread's release is a note, so the idle bound only holds once the notes are
+     * applied: the heap's next size-class slow path applies them too, without waiting for a decay or a large
+     * allocation.
+     */
+    @Test
+    void idleBoundHoldsForLargeChunksAnotherThreadEmptied() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final List<ByteBuf> held = new ArrayList<ByteBuf>();
+            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            long chunk = allocator.usedHeapMemory();
+            int perChunk = (int) (chunk / BUDDY_NOTE_SIZE);
+            long bound = Math.min(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE * chunk,
+                    AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES / chunk * chunk);
+            // Four chunks beyond the bound, plus the one the magazine allocates from.
+            int chunks = (int) (bound / chunk) + 5;
+            while (held.size() < chunks * perChunk) {
+                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            }
+            ByteBuf last = held.remove(held.size() - 1);
+            try {
+                Thread releaser = new Thread(() -> {
+                    for (ByteBuf buf : held) {
+                        buf.release();
+                    }
+                });
+                releaser.start();
+                releaser.join();
+                IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+                assertEquals(0, buddyIdleChunks(idleDecay), "only noted so far");
+                assertEquals(chunks * chunk, allocator.usedHeapMemory());
+
+                // Two chunks' worth of small buffers: the size class goes to its slow path, which applies the notes.
+                List<ByteBuf> small = new ArrayList<ByteBuf>();
+                for (int i = 0; i < 2 * 1024; i++) {
+                    small.add(allocator.heapBuffer(256));
+                }
+                for (ByteBuf buf : small) {
+                    buf.release();
+                }
+                assertEquals(bound / chunk, buddyIdleChunks(idleDecay), "idle large chunks kept to the bound");
+                // The rest was freed: the bound, the active chunk, and what the small buffers took (under 2 MiB).
+                long used = allocator.usedHeapMemory();
+                assertTrue(used <= bound + chunk + 2 * 1024 * 1024, "used " + used + ", bound " + bound);
+            } finally {
+                last.release();
+            }
+        });
+    }
+
+    /**
+     * A buffer that grows from a size class into the sizes above them on a thread-local heap moves to the heap's own
+     * magazine, keeping its content, without a stripe.
+     */
+    @Test
+    void reallocationIntoTheLargeSizesStaysOnTheThreadLocalHeap() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            ByteBuf buf = allocator.heapBuffer(64 * 1024);
+            try {
+                for (int i = 0; i < 64 * 1024; i++) {
+                    buf.writeByte(i);
+                }
+                buf.capacity(BUDDY_NOTE_SIZE);
+                assertEquals(BUDDY_NOTE_SIZE, buf.capacity());
+                for (int i = 0; i < 64 * 1024; i++) {
+                    assertEquals((byte) i, buf.getByte(i));
+                }
+                assertNotNull(threadLocalIdleDecay(allocator).buddyMagazine, "the heap's own magazine");
+                assertEquals(0, stripesWithABuddyMagazine(allocator), "no stripe involved");
+            } finally {
+                buf.release();
+            }
+        });
+    }
+
     private static boolean isLowMemory() throws Exception {
         Field f = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
         f.setAccessible(true);
