@@ -2462,7 +2462,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().position(index);
             tmp.put(src, srcIndex, length);
             return this;
         }
@@ -2503,7 +2503,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 throws IOException {
             checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf);
         }
 
@@ -2512,7 +2512,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 throws IOException {
             checkIndex(index, length);
             ByteBuffer buf = internalNioBuffer().duplicate();
-            buf.clear().position(index).limit(index + length);
+            buf.position(index).limit(index + length);
             return out.write(buf, position);
         }
 
