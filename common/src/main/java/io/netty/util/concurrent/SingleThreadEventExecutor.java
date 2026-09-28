@@ -1152,7 +1152,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void startThread() {
         int currentState = state;
-        if (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
+        while (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
             if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
                 resetIdleCycles();
                 resetBusyCycles();
@@ -1165,7 +1165,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
                     }
                 }
+                break;
             }
+            // The state changed after we read it. If trySuspend() moved it from ST_NOT_STARTED to ST_SUSPENDED no
+            // thread was started, so we need to try again. Otherwise the task that was just added might never run.
+            // This may deliberately un-suspend an executor that trySuspend() has just suspended, which is the same
+            // thing execute() does for an executor that is already suspended. We only loop again if another thread
+            // changed the state in between, so this can't spin.
+            currentState = state;
         }
     }
 
