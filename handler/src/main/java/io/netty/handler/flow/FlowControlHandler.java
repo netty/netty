@@ -97,6 +97,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int unsatisfiedReads;
 
     /**
+     * {@code true} after a message was received and before its upstream read cycle completes.
+     */
+    private boolean readCycleHasMessage;
+
+    /**
+     * Number of downstream reads requested after the most recently received message.
+     */
+    private int readsAfterLastMessage;
+
+    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
@@ -165,6 +175,9 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     public void read(ChannelHandlerContext ctx) throws Exception {
         if (!config.isAutoRead()) {
             unsatisfiedReads++;
+            if (readCycleHasMessage) {
+                readsAfterLastMessage++;
+            }
         }
 
         boolean didSatisfyARead = dequeue(ctx);
@@ -187,6 +200,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        readCycleHasMessage = true;
+        readsAfterLastMessage = 0;
         if (queue == null) {
             queue = RecyclableArrayDeque.newInstance();
         }
@@ -203,9 +218,14 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped.
-        if (config.isAutoRead() || unsatisfiedReads > 0) {
-            unsatisfiedReads = 0;
+        // channelReadComplete; spurious upstream completions with no pending read are dropped. Reads requested
+        // after the last delivered message belong to the next upstream read cycle and must not be consumed by
+        // this completion.
+        boolean hadUnsatisfiedReads = unsatisfiedReads > 0;
+        unsatisfiedReads = readsAfterLastMessage;
+        readsAfterLastMessage = 0;
+        readCycleHasMessage = false;
+        if (config.isAutoRead() || hadUnsatisfiedReads) {
             ctx.fireChannelReadComplete();
         }
     }
