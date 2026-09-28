@@ -24,6 +24,7 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.parallel.Isolated;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @Timeout(10)
 @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
@@ -88,6 +90,102 @@ public class JfrEventsTest {
                 }
                 bufs.clear();
             }
+        }
+    }
+
+    /**
+     * The chunk events describe the memory the allocator takes from and gives back to its chunk allocator, so over
+     * any workload the bytes allocated minus the bytes freed must equal the allocator's used memory: chunk buffers
+     * that a heap's recycler takes over and hands to a chunk of another size class are neither freed nor allocated
+     * again, a one-shot buffer is announced both ways, and a thread-local heap that dies frees what its recycler
+     * held. The workload runs on one thread, whose events are the only ones counted.
+     */
+    @SuppressWarnings("Since15")
+    @Test
+    public void adaptiveChunkEventsAddUpToUsedMemory() throws Exception {
+        Field lowMem = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
+        lowMem.setAccessible(true);
+        assumeFalse(lowMem.getBoolean(null), "low-memory mode has no thread-local heaps and pools less");
+        // useCacheForNonEventLoopThreads: the workload thread gets a thread-local heap, which its end frees.
+        final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(false, true);
+        final String threadName = "adaptive-chunk-events";
+        // A one-shot chunk of a size nothing else allocates, committed after the workload: events arrive in the
+        // order they were committed, so once it is seen every event of the workload has been.
+        final int sentinel = 3 * 1024 * 1024 + 4099;
+        final CountDownLatch sentinelSeen = new CountDownLatch(1);
+        final long[] allocatedFreed = new long[2];
+        final int[] oneShots = new int[2];
+        final AtomicInteger sizeClassChunksFreed = new AtomicInteger();
+        final AtomicInteger sizeClassChunksAllocated = new AtomicInteger();
+        try (RecordingStream stream = new RecordingStream()) {
+            stream.enable(AllocateChunkEvent.class);
+            stream.enable(FreeChunkEvent.class);
+            stream.onEvent(AllocateChunkEvent.NAME, event -> {
+                if (event.getInt("capacity") == sentinel) {
+                    sentinelSeen.countDown();
+                } else if (onWorkloadThread(event, threadName)) {
+                    allocatedFreed[0] += event.getInt("capacity");
+                    if (event.getInt("capacity") == 512 * 1024) {
+                        sizeClassChunksAllocated.incrementAndGet();
+                    }
+                    oneShots[0] += event.getBoolean("pooled") ? 0 : 1;
+                }
+            });
+            stream.onEvent(FreeChunkEvent.NAME, event -> {
+                if (onWorkloadThread(event, threadName)) {
+                    int capacity = event.getInt("capacity");
+                    allocatedFreed[1] += capacity;
+                    oneShots[1] += event.getBoolean("pooled") ? 0 : 1;
+                    if (event.getBoolean("pooled") && capacity == 512 * 1024) {
+                        sizeClassChunksFreed.incrementAndGet();
+                    }
+                }
+            });
+            stream.startAsync();
+
+            Thread thread = new FastThreadLocalThread(() -> {
+                // 16 KiB and 64 KiB buffers use 512 KiB chunks and share a recycler pool: a burst of one, fully
+                // released, leaves chunk buffers in the recycler that the other then builds its chunks from.
+                releaseAll(allocateMany(alloc, 16 * 1024, 32 * 8));
+                releaseAll(allocateMany(alloc, 64 * 1024, 8 * 8));
+                // One-shot: above the largest pooled buffer.
+                alloc.heapBuffer(4 * 1024 * 1024).release();
+                // Above the size classes: buddy chunks, on a stripe, kept idle there after the release.
+                releaseAll(allocateMany(alloc, 512 * 1024, 8));
+                // The thread-local heap is freed when this thread ends, with what its recycler holds.
+            }, threadName);
+            thread.start();
+            thread.join();
+            new AdaptiveByteBufAllocator(false).heapBuffer(sentinel).release();
+            sentinelSeen.await();
+        }
+        // 8 chunks of 16 KiB buffers, then 8 of 64 KiB: the second burst must build some of its chunks from the
+        // buffers the first one gave up, or the balance below would not cover the recycled path.
+        assertTrue(sizeClassChunksAllocated.get() < 16,
+                sizeClassChunksAllocated.get() + " chunk buffers allocated: none came from the recycler");
+        assertEquals(1, oneShots[0], "the one-shot chunk is announced when it is allocated");
+        assertEquals(1, oneShots[1], "and when it is freed");
+        assertTrue(sizeClassChunksFreed.get() > 0, "the dying thread-local heap must free its chunk buffers");
+        assertEquals(alloc.metric().usedHeapMemory(), allocatedFreed[0] - allocatedFreed[1],
+                "allocated " + allocatedFreed[0] + " - freed " + allocatedFreed[1] + " must be the used memory");
+    }
+
+    @SuppressWarnings("Since15")
+    private static boolean onWorkloadThread(RecordedEvent event, String threadName) {
+        return event.getThread() != null && threadName.equals(event.getThread().getJavaName());
+    }
+
+    private static List<ByteBuf> allocateMany(ByteBufAllocator alloc, int size, int count) {
+        List<ByteBuf> bufs = new ArrayList<ByteBuf>(count);
+        for (int i = 0; i < count; i++) {
+            bufs.add(alloc.heapBuffer(size, size));
+        }
+        return bufs;
+    }
+
+    private static void releaseAll(List<ByteBuf> bufs) {
+        for (ByteBuf buf : bufs) {
+            buf.release();
         }
     }
 

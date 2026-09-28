@@ -60,6 +60,37 @@ public class SizeClassChunkRecyclerTest {
         return new IntStack(new int[capacity]);
     }
 
+    /** A recycler whose allocator only serves as the account the pooled buffers are released from. */
+    private static SizeClassChunkRecycler newRecycler() {
+        return new SizeClassChunkRecycler(new AdaptivePoolingAllocator(new UnpooledHeapChunkAllocator(), false));
+    }
+
+    private static ChunkInfo chunkInfo(final AbstractByteBuf buffer) {
+        return new ChunkInfo() {
+            @Override
+            public int capacity() {
+                return buffer.capacity();
+            }
+
+            @Override
+            public boolean isDirect() {
+                return buffer.isDirect();
+            }
+
+            @Override
+            public long memoryAddress() {
+                return 0;
+            }
+        };
+    }
+
+    private static final class UnpooledHeapChunkAllocator implements AdaptivePoolingAllocator.ChunkAllocator {
+        @Override
+        public AbstractByteBuf allocate(int initialCapacity, int maxCapacity) {
+            return new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, initialCapacity, maxCapacity);
+        }
+    }
+
     @Test
     public void poolSharingFollowsChunkSize() {
         assertEquals(chunkSize(SMALL), chunkSize(SMALL2));
@@ -68,7 +99,7 @@ public class SizeClassChunkRecyclerTest {
 
     @Test
     public void bufferComesBackWithItsFreeLists() {
-        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        SizeClassChunkRecycler recycler = newRecycler();
         AbstractByteBuf buf = buffer(SMALL);
         MpscIntQueue fl = freeList(64);
         IntStack local = localFreeList(64);
@@ -87,7 +118,7 @@ public class SizeClassChunkRecyclerTest {
 
     @Test
     public void sizeClassesWithTheSameChunkSizeShareOnePool() {
-        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        SizeClassChunkRecycler recycler = newRecycler();
         AbstractByteBuf buf = buffer(SMALL);
         MpscIntQueue fl = freeList(64);
 
@@ -104,7 +135,7 @@ public class SizeClassChunkRecyclerTest {
 
     @Test
     public void poolIsBoundedPerChunkSize() {
-        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        SizeClassChunkRecycler recycler = newRecycler();
         int capacity = SizeClassChunkRecycler.poolCapacity(SMALL);
         assertTrue(capacity > 1);
         List<AbstractByteBuf> offered = new ArrayList<AbstractByteBuf>();
@@ -133,7 +164,7 @@ public class SizeClassChunkRecyclerTest {
 
     @Test
     public void oneByteBudgetBoundsAllThePools() {
-        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        SizeClassChunkRecycler recycler = newRecycler();
         // Fill the budget with buffers of one chunk size.
         int capacity = SizeClassChunkRecycler.poolCapacity(LARGE);
         List<AbstractByteBuf> offered = new ArrayList<AbstractByteBuf>();
@@ -156,14 +187,23 @@ public class SizeClassChunkRecyclerTest {
 
     @Test
     public void freeAllReleasesPooledBuffersAndDropsLists() {
-        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler();
+        AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(new UnpooledHeapChunkAllocator(), false);
+        SizeClassChunkRecycler recycler = new SizeClassChunkRecycler(allocator);
         AbstractByteBuf a = buffer(SMALL);
         AbstractByteBuf b = buffer(LARGE);
+        // As the allocator does when it takes a chunk buffer from its chunk allocator.
+        allocator.chunkBufferAllocated(chunkInfo(a), true, false);
+        allocator.chunkBufferAllocated(chunkInfo(b), true, false);
         assertTrue(recycler.offer(a, freeList(64), localFreeList(64), SMALL));
         assertTrue(recycler.offer(b, freeList(32), localFreeList(32), LARGE));
+        // Pooled buffers are still the allocator's memory.
+        assertEquals(a.capacity() + b.capacity(), recycler.retainedBytes());
+        assertEquals(a.capacity() + b.capacity(), allocator.usedMemory());
 
         recycler.freeAll();
 
+        assertEquals(0, allocator.usedMemory());
+        assertEquals(0, recycler.retainedBytes());
         assertEquals(0, a.refCnt());
         assertEquals(0, b.refCnt());
         assertEquals(0, recycler.size(SMALL));

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.netty.buffer.AdaptivePoolingAllocator.SizeClassChunkRecycler;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunk;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunkCache;
 
@@ -717,13 +718,16 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             assertEquals(used, allocator.usedHeapMemory());
 
             // Control: in the same state, a fully free chunk that is not active is evicted, so the assertions
-            // above are about the active chunk and not about a cache that would evict nothing.
+            // above are about the active chunk and not about a cache that would evict nothing. Its buffer goes to
+            // the heap's recycler, where it is still the allocator's memory.
+            int recycled = cache.chunkRecycler.retainedBytes();
             for (int i = 0; i < BURST_SEGMENTS_PER_CHUNK; i++) {
                 release(held.get(i), foreignRelease);
             }
             held.subList(0, BURST_SEGMENTS_PER_CHUNK).clear();
             underStripeLocks(allocator, sharedStripe, cache::drainPending);
-            assertEquals(used - BURST_CHUNK_SIZE, allocator.usedHeapMemory());
+            assertEquals(recycled + BURST_CHUNK_SIZE, cache.chunkRecycler.retainedBytes(), "evicted to the recycler");
+            assertEquals(used, allocator.usedHeapMemory());
         } finally {
             for (ByteBuf buf : held) {
                 buf.release();
@@ -946,22 +950,23 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     }
 
     @Test
-    void memoryFallsBackToTheRetentionFloorAfterAnIdleBurst() throws Exception {
+    void memoryFallsBackToOneChunkPerSizeClassAndTheRecyclerBudgetAfterAnIdleBurst() throws Exception {
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
         long peak = runBurstWithCrossThreadReleases(allocator, false);
 
         int caches = sizeClassChunkCaches(allocator).size();
-        int floor = Math.max(1, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MIN_BYTES / BURST_CHUNK_SIZE);
-        // Per cache: the floor it is allowed to retain, plus the magazine's current chunk, plus slack.
-        long bound = (long) caches * (floor + 4) * BURST_CHUNK_SIZE;
+        // Per cache: the one chunk it never gives up, the magazine's active chunk, and slack; and the stripe's
+        // recycler, which keeps the chunk buffers the caches let go up to its byte budget. The burst ran on one
+        // stripe (see runBurstWithCrossThreadReleases).
+        long bound = (long) caches * 4 * BURST_CHUNK_SIZE + SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET;
         long settled = allocator.usedHeapMemory();
 
+        assertTrue(peak > bound, "the burst must go beyond what may be retained, or this tests nothing: peak "
+                + peak + ", bound " + bound);
         assertTrue(settled <= bound,
-                "after the burst went idle the cache must fall back to the retention floor: settled "
-                        + settled + " > " + bound + " (" + caches + " caches, floor " + floor
-                        + " chunks of " + BURST_CHUNK_SIZE + "), peak was " + peak);
-        assertTrue(settled * 2 < peak,
-                "the burst must not still be resident: settled " + settled + ", peak " + peak);
+                "after the burst went idle the caches must fall back to one chunk each and the recycler to its "
+                        + "budget: settled " + settled + " > " + bound + " (" + caches + " caches, chunks of "
+                        + BURST_CHUNK_SIZE + "), peak was " + peak);
     }
 
     /**
