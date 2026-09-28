@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class FlowControlHandlerTest {
+
     private static EventLoopGroup GROUP;
 
     @BeforeAll
@@ -1057,6 +1058,36 @@ public class FlowControlHandlerTest {
         assertEquals(0, upstream.reads.get());
         assertEquals(1, readCompletes.get());
 
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testReadIssuedAfterMessageSurvivesSameReadComplete() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (reads.incrementAndGet() == 1) {
+                            ctx.read();
+                        }
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        channel.read();
+        channel.writeOneInbound("first");
+        assertEquals(1, reads.get());
+
+        // This completes the upstream read which delivered "first". It must not cancel the new read requested
+        // by the downstream handler while processing that message.
+        channel.flushInbound();
+        channel.writeOneInbound("second");
+
+        assertEquals(2, reads.get());
         assertFalse(channel.finishAndReleaseAll());
     }
 
