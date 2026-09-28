@@ -145,8 +145,8 @@ final class AdaptivePoolingAllocator {
     /**
      * {@code io.netty.allocator.chunkReuseQueueBytes}: how many bytes of wholly free chunks for buffers above the
      * size classes each stripe keeps, at most, next to {@link #CHUNK_REUSE_QUEUE}. Those chunks are 2 to 8 MiB, so
-     * a count alone let a burst of large buffers stay whole. Default: 32 MiB, 4 MiB in low-memory mode; never below
-     * the largest chunk.
+     * a count alone let a burst of large buffers stay whole. Those that stay idle are given back by halves, see
+     * {@link IdleDecay}. Default: 32 MiB, 4 MiB in low-memory mode; never below the largest chunk.
      */
     static final int CHUNK_REUSE_QUEUE_BYTES = Math.max(MAX_CHUNK_SIZE, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
@@ -584,28 +584,18 @@ final class AdaptivePoolingAllocator {
      * size classes, whose chunks are given up at the rate of the small ones (measured on E_COMMERCE heap 16384:
      * 12 GiB of chunk buffers allocated in 20 s, and four times the garbage collections).
      * <p>
-     * Buffers nobody takes go back to the chunk allocator slowly. Every {@link #DECAY_MIN_ALLOCATIONS} allocations
-     * of the heap the recycler looks at the clock once, and when {@link #DECAY_INTERVAL_NANOS} passed since its last
-     * decay it frees half, rounded up, of the buffers that sat in its pools through the whole interval, oldest first;
-     * otherwise it waits for the next count. A heap that keeps allocating keeps what it reuses, and gives back what
-     * it stopped needing by halves; a heap that stops allocating keeps its buffers until it is freed. The count is
-     * carried by the heap's purge ticks, so it costs nothing per allocation, nothing is allocated on the way, and no
-     * thread but the heap's own is involved. Allocations above the size classes never tick, so a stripe serving only
-     * those does not decay.
+     * Buffers nobody takes go back to the chunk allocator slowly: when its heap's {@link IdleDecay} says so, the
+     * recycler frees half, rounded up, of the buffers that sat in its pools through the whole interval, oldest first.
      * <p>
      * Accessed only under the owning stripe lock, or by the owner thread of a thread-local heap.
      */
     static final class SizeClassChunkRecycler {
-        /** At most one decay per this interval: 10 s. */
-        static final long DECAY_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(10);
-        /** How many allocations of the heap between two looks at the clock. */
-        static final long DECAY_MIN_ALLOCATIONS = 10000;
-
         /**
          * {@code io.netty.allocator.recycledChunkBytes}: how many bytes of chunk buffers each heap (a stripe, or the
          * thread-local heap of an event loop) keeps for the next chunk of any of its size classes, at most, once the
-         * size classes gave them up. They stay in {@link #usedMemory()} until they are freed. Default: 32 MiB, 4 MiB in
-         * low-memory mode; never below the smallest chunk.
+         * size classes gave them up. They stay in {@link #usedMemory()} until they are freed, and those nobody takes
+         * are given back by halves, see {@link IdleDecay}. Default: 32 MiB, 4 MiB in low-memory mode; never below the
+         * smallest chunk.
          */
         static final int RECYCLED_BYTES_BUDGET = Math.max(MIN_CHUNK_SIZE, SystemPropertyUtil.getInt(
                 "io.netty.allocator.recycledChunkBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
@@ -623,10 +613,6 @@ final class AdaptivePoolingAllocator {
          * touched for the whole interval, so those buffers are the cold ones.
          */
         private final int[] coldCounts = new int[CHUNK_POOL_COUNT];
-        /** Allocations of the heap since the last decay, added by each purge tick for the allocations it counted. */
-        private long allocationsSinceDecay;
-        // Visible for testing.
-        long lastDecayNanos = System.nanoTime();
 
         // What the last successful poll() returned, read once by the caller.
         private AbstractByteBuf polledBuffer;
@@ -769,35 +755,11 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * A purge tick of a size class of this heap, which counted {@code allocations} allocations: decay the cold
-         * buffers when both the interval and enough allocations have passed. Cheap when they have not: no clock read
-         * until the allocation count and the pools say there could be something to do.
-         */
-        void tick(long allocations) {
-            allocationsSinceDecay += allocations;
-            if (allocationsSinceDecay < DECAY_MIN_ALLOCATIONS) {
-                return;
-            }
-            // A new count starts whether or not the interval passed: one look at the clock per count, no more.
-            allocationsSinceDecay = 0;
-            if (retainedBytes == 0) {
-                return;
-            }
-            long now = System.nanoTime();
-            if (now - lastDecayNanos >= DECAY_INTERVAL_NANOS) {
-                decay(now);
-            }
-        }
-
-        /**
          * Free half of the cold buffers, rounded up once over all the pools rather than once per pool, so that a few
          * pools of one cold buffer each do not all empty in one go; each pool's from the bottom of its stack. Then
          * start a new interval in which the buffers still pooled are the candidates.
          */
-        // Visible for testing.
-        void decay(long now) {
-            lastDecayNanos = now;
-            allocationsSinceDecay = 0;
+        void decay() {
             int cold = 0;
             for (int pool = 0; pool < CHUNK_POOL_COUNT; pool++) {
                 cold += coldCounts[pool];
@@ -830,10 +792,78 @@ final class AdaptivePoolingAllocator {
         }
     }
 
+    /**
+     * When a heap gives back the memory it keeps idle: the chunk buffers of its {@link SizeClassChunkRecycler} and, on
+     * a stripe, the wholly free chunks of its {@link BuddyMagazine}.
+     * <p>
+     * The only signal is the heap's own allocations, counted where the heap already does work: each purge tick of a
+     * size class adds the allocations it counted, and each slow path of the large-buffer magazine adds one, which
+     * undercounts its allocations and so can only age more slowly. Nothing is added to any allocation's fast path.
+     * Every {@link #DECAY_MIN_ALLOCATIONS} of them the clock is read once, and when {@link #DECAY_INTERVAL_NANOS}
+     * passed since the last decay, both free half, rounded up, of what they kept unused through the whole interval,
+     * oldest first; otherwise nothing happens until the next count. With the default bounds a decay frees at most 8
+     * large-buffer chunks and 128 recycled buffers. A heap that keeps allocating keeps what it reuses and gives back
+     * by halves what it stopped needing; a heap that stops allocating keeps its memory until it is freed. Nothing is
+     * allocated on the way, and no thread but the heap's own is involved: it is guarded like the heap, by the stripe
+     * lock or by the owner thread of a thread-local heap.
+     */
+    static final class IdleDecay {
+        /** At most one decay per this interval: 10 s. */
+        static final long DECAY_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(10);
+        /** How many allocations of the heap between two looks at the clock. */
+        static final long DECAY_MIN_ALLOCATIONS = 10000;
+
+        /** Set once the heap has one. */
+        SizeClassChunkRecycler recycler;
+        /** Set once the stripe has one; never on a thread-local heap. */
+        BuddyMagazine buddyMagazine;
+        // Visible for testing.
+        long allocationsSinceCheck;
+        // Visible for testing.
+        long lastDecayNanos = System.nanoTime();
+
+        /** The heap made {@code allocations} more allocations. */
+        void count(long allocations) {
+            allocationsSinceCheck += allocations;
+            if (allocationsSinceCheck < DECAY_MIN_ALLOCATIONS) {
+                return;
+            }
+            // A new count starts whether or not the interval passed: one look at the clock per count, no more.
+            allocationsSinceCheck = 0;
+            if (!holdsIdleMemory()) {
+                return;
+            }
+            long now = System.nanoTime();
+            if (now - lastDecayNanos >= DECAY_INTERVAL_NANOS) {
+                decay(now);
+            }
+        }
+
+        private boolean holdsIdleMemory() {
+            SizeClassChunkRecycler recycler = this.recycler;
+            BuddyMagazine buddyMagazine = this.buddyMagazine;
+            return recycler != null && recycler.retainedBytes() != 0 ||
+                    buddyMagazine != null && buddyMagazine.idleChunks() != 0;
+        }
+
+        // Visible for testing.
+        void decay(long now) {
+            lastDecayNanos = now;
+            allocationsSinceCheck = 0;
+            if (recycler != null) {
+                recycler.decay();
+            }
+            if (buddyMagazine != null) {
+                buddyMagazine.decay();
+            }
+        }
+    }
+
     // Striped heap holding all size-class magazines under one lock.
     // One StampedLock per stripe covers ALL size classes.
     private static final class StripedHeap {
         final StampedLock lock = new StampedLock();
+        final IdleDecay idleDecay = new IdleDecay();
         SizeClassMagazine[] magazines;
         BuddyMagazine buddyMagazine;
         AdaptiveRecycler recycler;
@@ -854,6 +884,7 @@ final class AdaptivePoolingAllocator {
         private SizeClassMagazine createFirstMagazine(int sizeClassIndex, AdaptivePoolingAllocator allocator) {
             magazines = new SizeClassMagazine[SIZE_CLASSES_COUNT];
             chunkRecycler = new SizeClassChunkRecycler(allocator);
+            idleDecay.recycler = chunkRecycler;
             return createMagazine(sizeClassIndex, allocator);
         }
 
@@ -862,8 +893,8 @@ final class AdaptivePoolingAllocator {
                 recycler = AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, sizeClassIndex,
-                    null, recycler, lock, magazines);
+            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, idleDecay,
+                    sizeClassIndex, null, recycler, lock, magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -880,8 +911,9 @@ final class AdaptivePoolingAllocator {
             if (recycler == null) {
                 recycler = AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
-            BuddyMagazine mag = new BuddyMagazine(allocator, allocator.buddyStrategy, recycler, lock);
+            BuddyMagazine mag = new BuddyMagazine(allocator, allocator.buddyStrategy, recycler, lock, idleDecay);
             buddyMagazine = mag;
+            idleDecay.buddyMagazine = mag;
             return mag;
         }
 
@@ -901,6 +933,7 @@ final class AdaptivePoolingAllocator {
                 if (buddyMagazine != null) {
                     buddyMagazine.free();
                     buddyMagazine = null;
+                    idleDecay.buddyMagazine = null;
                 }
                 if (chunkRecycler != null) {
                     chunkRecycler.freeAll();
@@ -929,8 +962,7 @@ final class AdaptivePoolingAllocator {
                         return buf;
                     }
                 } else {
-                    // Cache purging is size-class management: the buddy magazine has no size
-                    // class, no sibling magazines and no chunk recycler to feed, so it never ticks.
+                    // No purge tick here: the buddy magazine counts its allocations on its slow path.
                     BuddyMagazine mag = getOrCreateBuddyMagazine(allocator);
                     if (buf == null) {
                         buf = mag.newBuffer();
@@ -952,11 +984,14 @@ final class AdaptivePoolingAllocator {
     private static final class ThreadLocalSizeClassHeap {
         private final SizeClassMagazine[] magazines = new SizeClassMagazine[SIZE_CLASSES_COUNT];
         private final SizeClassChunkRecycler chunkRecycler;
+        // Visible for testing.
+        final IdleDecay idleDecay = new IdleDecay();
         private final AdaptivePoolingAllocator allocator;
 
         ThreadLocalSizeClassHeap(AdaptivePoolingAllocator allocator) {
             this.allocator = allocator;
             chunkRecycler = new SizeClassChunkRecycler(allocator);
+            idleDecay.recycler = chunkRecycler;
         }
 
         AdaptiveByteBuf allocate(int sizeClassIndex, int size, int maxCapacity, AdaptiveByteBuf buf) {
@@ -981,8 +1016,8 @@ final class AdaptivePoolingAllocator {
 
         private SizeClassMagazine createMagazine(int sizeClassIndex) {
             SizeClassChunkManagementStrategy strategy = allocator.sizeClassStrategies[sizeClassIndex];
-            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, sizeClassIndex,
-                                       Thread.currentThread(), null, null, magazines);
+            SizeClassMagazine mag = new SizeClassMagazine(allocator, strategy, chunkRecycler, idleDecay,
+                                       sizeClassIndex, Thread.currentThread(), null, null, magazines);
             magazines[sizeClassIndex] = mag;
             return mag;
         }
@@ -1731,14 +1766,16 @@ final class AdaptivePoolingAllocator {
         private final SizeClassMagazine[] heapMagazines;
         final int sizeClassIndex;
         final SizeClassChunkRecycler chunkRecycler;
+        private final IdleDecay idleDecay;
         final AdaptiveRecycler bufRecycler; // for ByteBuf wrapper pooling; null → EVENT_LOOP_LOCAL_BUFFER_POOL
         private final int purgeTickThreshold;
         private int allocCount;
 
         SizeClassMagazine(AdaptivePoolingAllocator allocator, SizeClassChunkManagementStrategy strategy,
-                          SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
+                          SizeClassChunkRecycler chunkRecycler, IdleDecay idleDecay, int sizeClassIndex,
                           Thread ownerThread, AdaptiveRecycler bufRecycler, StampedLock stripeLock,
                           SizeClassMagazine[] heapMagazines) {
+            this.idleDecay = idleDecay;
             this.heapMagazines = heapMagazines;
             this.allocator = allocator;
             this.ownerThread = ownerThread;
@@ -1753,7 +1790,8 @@ final class AdaptivePoolingAllocator {
 
         /**
          * Count one successful allocation and, when the budget is spent, purge this magazine's cache
-         * and those of every other size class on this heap, then let the heap's recycler decay.
+         * and those of every other size class on this heap, then count the allocations for the heap's
+         * {@link IdleDecay}.
          *
          * <p>Call exactly once per successful {@link #allocate}.
          */
@@ -1762,7 +1800,7 @@ final class AdaptivePoolingAllocator {
                 allocCount = 0;
                 chunkCache.tickPurge();
                 purgeHeapSiblings();
-                chunkRecycler.tick(purgeTickThreshold);
+                idleDecay.count(purgeTickThreshold);
             }
         }
 
@@ -1936,10 +1974,15 @@ final class AdaptivePoolingAllocator {
         private final StampedLock stripeLock;
         /** The chunk the magazine allocates from, on no queue; {@code null} before the first allocation. */
         private BuddyChunk active;
+        /** The stripe's; counts this magazine's allocations and tells it when to {@link #decay}. */
+        private final IdleDecay idleDecay;
+        /** How many decays ran; a chunk filed wholly free records it in {@link BuddyChunk#whollyFreeSince}. */
+        private int decays;
 
-        BuddyMagazine(AdaptivePoolingAllocator allocator,
-                      BuddyChunkManagementStrategy strategy, AdaptiveRecycler bufRecycler, StampedLock stripeLock) {
+        BuddyMagazine(AdaptivePoolingAllocator allocator, BuddyChunkManagementStrategy strategy,
+                      AdaptiveRecycler bufRecycler, StampedLock stripeLock, IdleDecay idleDecay) {
             this.allocator = allocator;
+            this.idleDecay = idleDecay;
             this.bufRecycler = bufRecycler;
             this.stripeLock = stripeLock;
             this.chunkController = strategy.createController(allocator);
@@ -1976,6 +2019,9 @@ final class AdaptivePoolingAllocator {
             boolean success = chunk.readInitInto(buf, size, blockSize, maxCapacity);
             // A polled chunk's largest free block was exact when it was filed, and can only have grown since.
             assert success : "no free block of " + blockSize + " in " + chunk;
+            // One per slow path: a slow path is at least one allocation, and may be exactly one (a polled chunk with a
+            // single fitting block), so counting more could age the stripe faster than its allocations do.
+            idleDecay.count(1);
             return success;
         }
 
@@ -2049,6 +2095,7 @@ final class AdaptivePoolingAllocator {
                     return;
                 }
                 idleBytes += chunk.capacity;
+                chunk.whollyFreeSince = decays;
                 whollyFree.pushFront(chunk);
             } else {
                 int order = chunk.largestFreeOrder();
@@ -2058,6 +2105,40 @@ final class AdaptivePoolingAllocator {
                     byLargestFreeOrder[order].pushFront(chunk);
                     ordersInUse |= 1 << order;
                 }
+            }
+        }
+
+        int idleChunks() {
+            return whollyFree.size;
+        }
+
+        /**
+         * Free half, rounded up, of the chunks that stayed wholly free through the whole last interval, oldest first.
+         * {@link #whollyFree} is newest first, and a chunk that is taken off it and filed again gets a new stamp, so
+         * the cold ones are exactly those stamped before the previous decay.
+         */
+        void decay() {
+            int previous = decays++;
+            int cold = 0;
+            Chunk oldest = null;
+            for (Chunk cur = whollyFree.head; cur != null; cur = cur.nextInQueue) {
+                if (((BuddyChunk) cur).whollyFreeSince < previous) {
+                    cold++;
+                }
+                oldest = cur;
+            }
+            int free = (cold + 1) >>> 1;
+            Chunk cur = oldest;
+            while (free > 0 && cur != null) {
+                // Read the link first: unfile clears it.
+                Chunk newer = cur.prevInQueue;
+                BuddyChunk chunk = (BuddyChunk) cur;
+                if (chunk.whollyFreeSince < previous) {
+                    unfile(chunk);
+                    chunk.markToDeallocate();
+                    free--;
+                }
+                cur = newer;
             }
         }
 
@@ -2634,6 +2715,8 @@ final class AdaptivePoolingAllocator {
         private final int freeListCapacity;
         /** The magazine this chunk belongs to for its whole life, or {@code null} for a one-shot chunk. */
         private final BuddyMagazine owner;
+        /** The magazine's decay count when this chunk was last filed wholly free; see {@link BuddyMagazine#decay}. */
+        int whollyFreeSince;
 
         /**
          * Constructor for a one-shot chunk: no tree, no magazine. The caller owns the reference it gets here and
