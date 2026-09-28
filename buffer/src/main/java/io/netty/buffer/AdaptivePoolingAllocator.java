@@ -31,6 +31,8 @@ import io.netty.util.internal.RefCnt;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -80,6 +82,7 @@ import java.util.function.IntConsumer;
  */
 @UnstableApi
 final class AdaptivePoolingAllocator {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AdaptivePoolingAllocator.class);
     private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
     private static final boolean IS_LOW_MEM = SystemPropertyUtil.getBoolean(
             "io.netty.allocator.lowMemory",
@@ -131,41 +134,60 @@ final class AdaptivePoolingAllocator {
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
-     * The capacity of each stripe's buddy chunk cache (large buffer reuse).
+     * {@code io.netty.allocator.chunkReuseQueueCapacity}: how many wholly free chunks for buffers above the size
+     * classes each stripe keeps for its next allocations, at most. Default: twice the number of processors.
+     * {@link #CHUNK_REUSE_QUEUE_BYTES} bounds the same chunks in bytes; a chunk beyond either bound is freed.
      */
     static final int CHUNK_REUSE_QUEUE = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
 
     /**
-     * The bytes of wholly free chunks a buddy magazine keeps for reuse.
+     * {@code io.netty.allocator.chunkReuseQueueBytes}: how many bytes of wholly free chunks for buffers above the
+     * size classes each stripe keeps, at most, next to {@link #CHUNK_REUSE_QUEUE}. Those chunks are 2 to 8 MiB, so
+     * a count alone let a burst of large buffers stay whole. Default: 32 MiB, 4 MiB in low-memory mode; never below
+     * the largest chunk.
      */
-    static final int BUDDY_IDLE_BYTES = Math.max(MAX_CHUNK_SIZE, SystemPropertyUtil.getInt(
-            "io.netty.allocator.buddyIdleBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
-
-    static final long CHUNK_PURGE_POLLS_THREAD_LOCAL = Math.max(1, SystemPropertyUtil.getLong(
-            "io.netty.allocator.chunkPurgePollsThreadLocal", 4L));
+    static final int CHUNK_REUSE_QUEUE_BYTES = Math.max(MAX_CHUNK_SIZE, SystemPropertyUtil.getInt(
+            "io.netty.allocator.chunkReuseQueueBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
 
     /**
-     * Derivation basis for the per-size-class retention floor. No longer enforced as a cap.
+     * {@code io.netty.allocator.chunkPurgeInterval}: how often a size-class magazine gives up idle chunks, counted in
+     * chunks' worth of allocations. After this many times the segments of one of its chunks have been allocated,
+     * the magazine applies the notes left by other threads and gives its wholly free chunks, except the one each
+     * size class keeps, to its heap's {@link SizeClassChunkRecycler}, and does the same for every other size class of
+     * its heap, including the idle ones that no longer allocate. Default: 4. Read from
+     * {@code io.netty.allocator.chunkPurgePollsThreadLocal} when only that, its former name, is set.
      */
-    static final int THREAD_LOCAL_CACHE_MAX_BYTES = Math.max(1, SystemPropertyUtil.getInt(
-            "io.netty.allocator.threadLocalChunkCacheMaxBytes", 8 * 1024 * 1024));
+    static final long CHUNK_PURGE_INTERVAL = Math.max(1, SystemPropertyUtil.getLong(
+            "io.netty.allocator.chunkPurgeInterval",
+            SystemPropertyUtil.getLong("io.netty.allocator.chunkPurgePollsThreadLocal", 4L)));
 
     /**
-     * Per-size-class retention floor (in bytes) on the chunk cache.
-     * Chunks below this floor are kept cached to avoid hysteresis.
-     */
-    static final int THREAD_LOCAL_CACHE_MIN_BYTES = Math.min(THREAD_LOCAL_CACHE_MAX_BYTES,
-            Math.max(1, SystemPropertyUtil.getInt(
-                    "io.netty.allocator.threadLocalChunkCacheMinBytes",
-                    THREAD_LOCAL_CACHE_MAX_BYTES / 2)));
-
-    /**
-     * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
-     * the actual memory and so helps to reduce GC pressure.
+     * {@code io.netty.allocator.magazineBufferQueueCapacity}: how many {@link AdaptiveByteBuf} instances a stripe, and
+     * the allocations that fall back to unpooled chunks, keep for reuse. This pools the buffer objects only, not
+     * their memory, to save garbage. Default: 1024.
      */
     private static final int MAGAZINE_BUFFER_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
             "io.netty.allocator.magazineBufferQueueCapacity", 1024);
+
+    static {
+        warnIfSet("io.netty.allocator.chunkPurgePollsThreadLocal",
+                "is deprecated, use -Dio.netty.allocator.chunkPurgeInterval instead");
+        warnIfSet("io.netty.allocator.chunkPurgePollsShared",
+                "has no effect: use -Dio.netty.allocator.chunkPurgeInterval, which covers shared stripes too");
+        warnIfSet("io.netty.allocator.chunkPurgeThreshold",
+                "has no effect: see -Dio.netty.allocator.chunkPurgeInterval");
+        warnIfSet("io.netty.allocator.threadLocalChunkCacheMaxBytes",
+                "has no effect: a size class keeps one idle chunk, see -Dio.netty.allocator.recycledChunkBytes");
+        warnIfSet("io.netty.allocator.threadLocalChunkCacheMinBytes",
+                "has no effect: a size class keeps one idle chunk, see -Dio.netty.allocator.recycledChunkBytes");
+    }
+
+    private static void warnIfSet(String property, String what) {
+        if (SystemPropertyUtil.contains(property)) {
+            logger.warn("-D{} {}", property, what);
+        }
+    }
 
     /**
      * The size classes are chosen based on the following observation:
@@ -566,7 +588,10 @@ final class AdaptivePoolingAllocator {
      */
     static final class SizeClassChunkRecycler {
         /**
-         * The bytes of chunk buffers a heap keeps for reuse.
+         * {@code io.netty.allocator.recycledChunkBytes}: how many bytes of chunk buffers each heap (a stripe, or the
+         * thread-local heap of an event loop) keeps for the next chunk of any of its size classes, at most, once the
+         * size classes gave them up. They stay in {@link #usedMemory()} until they are freed. Default: 32 MiB, 4 MiB in
+         * low-memory mode; never below the smallest chunk.
          */
         static final int RECYCLED_BYTES_BUDGET = Math.max(MIN_CHUNK_SIZE, SystemPropertyUtil.getInt(
                 "io.netty.allocator.recycledChunkBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
@@ -1643,7 +1668,7 @@ final class AdaptivePoolingAllocator {
             this.chunkController = strategy.createController(allocator);
             this.chunkCache = strategy.createChunkCache(chunkRecycler, sizeClassIndex, stripeLock);
             this.purgeTickThreshold = (int) Math.min(Integer.MAX_VALUE,
-                    CHUNK_PURGE_POLLS_THREAD_LOCAL * (strategy.chunkSize / strategy.segmentSize));
+                    CHUNK_PURGE_INTERVAL * (strategy.chunkSize / strategy.segmentSize));
         }
 
         /**
@@ -1824,7 +1849,7 @@ final class AdaptivePoolingAllocator {
         private final ChunkQueue full = new ChunkQueue();
         /** Chunks with no block claimed; the only ones the magazine can free while it holds more than it may keep. */
         private final ChunkQueue whollyFree = new ChunkQueue();
-        /** Bytes of the chunks on {@link #whollyFree}; never above {@link #BUDDY_IDLE_BYTES}. */
+        /** Bytes of the chunks on {@link #whollyFree}; never above {@link #CHUNK_REUSE_QUEUE_BYTES}. */
         private long idleBytes;
         /** The lock of the stripe this magazine lives on, which guards everything here but {@link #pending}. */
         private final StampedLock stripeLock;
@@ -1930,7 +1955,7 @@ final class AdaptivePoolingAllocator {
 
         /**
          * File {@code chunk}, on no queue, by its tree once its free list is applied. A wholly free chunk is freed
-         * instead when keeping it would take the idle chunks above {@link #BUDDY_IDLE_BYTES}, or above
+         * instead when keeping it would take the idle chunks above {@link #CHUNK_REUSE_QUEUE_BYTES}, or above
          * {@link #CHUNK_REUSE_QUEUE} chunks: the limits are on idle memory, whatever the number of chunks in use.
          * A count alone is no bound: chunks are 2 to 8 MiB, and a burst of large buffers was kept whole (measured on
          * one heap: 192 MiB of 192 held after every buffer was released).
@@ -1938,7 +1963,7 @@ final class AdaptivePoolingAllocator {
         private void file(BuddyChunk chunk) {
             chunk.processFreelistEntries();
             if (chunk.isWhollyFree()) {
-                if (whollyFree.size >= CHUNK_REUSE_QUEUE || idleBytes + chunk.capacity > BUDDY_IDLE_BYTES) {
+                if (whollyFree.size >= CHUNK_REUSE_QUEUE || idleBytes + chunk.capacity > CHUNK_REUSE_QUEUE_BYTES) {
                     chunk.markToDeallocate();
                     return;
                 }

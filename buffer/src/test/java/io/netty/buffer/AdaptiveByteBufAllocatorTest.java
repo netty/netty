@@ -348,7 +348,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         List<ByteBuf> bufs = new ArrayList<ByteBuf>();
         bufs.add(first);
         // Four times the idle bound, in whole chunks.
-        long burst = 4L * AdaptivePoolingAllocator.BUDDY_IDLE_BYTES;
+        long burst = 4L * AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES;
         while (allocator.usedHeapMemory() < burst) {
             bufs.add(allocator.heapBuffer(size, size));
         }
@@ -359,8 +359,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         // No allocation follows: a heap that goes quiet must not keep the burst. The releases themselves apply the
         // bound (nothing else holds the stripe lock here, so every release acts in place).
         long settled = allocator.usedHeapMemory();
-        assertTrue(settled <= AdaptivePoolingAllocator.BUDDY_IDLE_BYTES + chunkSize,
-                "peak " + peak + ", settled " + settled + ", bound " + AdaptivePoolingAllocator.BUDDY_IDLE_BYTES);
+        long bound = AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES;
+        assertTrue(settled <= bound + chunkSize, "peak " + peak + ", settled " + settled + ", bound " + bound);
     }
 
     /**
@@ -1051,7 +1051,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                     // allocations are what drives the heap-wide drain and the purge tick; the releases
                     // are uncontended now, so they take the inline path and leave no new notes.
                     int allocations = 8 * BURST_SEGMENTS_PER_CHUNK
-                            * (int) AdaptivePoolingAllocator.CHUNK_PURGE_POLLS_THREAD_LOCAL * 4;
+                            * (int) AdaptivePoolingAllocator.CHUNK_PURGE_INTERVAL * 4;
                     for (int i = 0; i < allocations; i++) {
                         allocator.heapBuffer(BURST_BUF_SIZE).release();
                     }
