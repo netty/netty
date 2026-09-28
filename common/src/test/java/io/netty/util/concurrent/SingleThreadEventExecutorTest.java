@@ -208,6 +208,54 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void testSuspendDoesNotRaceWithCancelledScheduledTask() throws Exception {
+        // Regression test: cancelling a scheduled task right as the executor is about to suspend used to
+        // be able to race with the suspend confirmation in doStartThread(). The cancelled task schedules
+        // its own removal via scheduleRemoveScheduled(), which can land in the task queue in the tiny
+        // window between run() deciding it can suspend and doStartThread() re-checking canSuspend().
+        // That caused the executor to treat the situation as if run() returned without confirming
+        // shutdown, spuriously shutting itself down instead of suspending (or continuing to run).
+        // The race is timing dependent, so we repeat the scenario many times to make a regression likely
+        // to be caught.
+        for (int i = 0; i < 2000; i++) {
+            TestThreadFactory threadFactory = new TestThreadFactory();
+            final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
+
+            Future<?> future = executor.schedule(() -> { }, 1, TimeUnit.DAYS);
+            TestThread currentThread = threadFactory.threads.take();
+            currentThread.awaitStarted();
+            currentThread.awaitRunnableExecution();
+            assertTrue(executor.trySuspend(), "iteration " + i);
+
+            assertTrue(future.cancel(false), "iteration " + i);
+            future.await();
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+            while (!executor.trySuspend()) {
+                if (System.nanoTime() > deadline) {
+                    fail("executor got stuck instead of suspending at iteration " + i
+                            + " (isShutdown=" + executor.isShutdown() + ')');
+                }
+                Thread.sleep(1);
+            }
+
+            currentThread.join(TimeUnit.SECONDS.toMillis(2));
+            assertFalse(currentThread.isAlive(), "worker thread did not terminate at iteration " + i);
+
+            assertTrue(executor.trySuspend(), "iteration " + i + " (isShutdown=" + executor.isShutdown() + ')');
+            assertTrue(executor.isSuspended(), "iteration " + i);
+
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+
+            TestThread t;
+            while ((t = threadFactory.threads.poll()) != null) {
+                t.join();
+            }
+        }
+    }
+
+    @Test
     void testNotSuspendedUntilScheduledTaskDidRun() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
         final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
