@@ -2102,7 +2102,10 @@ final class AdaptivePoolingAllocator {
         private final StampedLock stripeLock;
         /** The thread of the thread-local heap this magazine lives on, which alone touches it; null on a stripe. */
         private final Thread ownerThread;
-        /** The chunk the magazine allocates from, on no queue; {@code null} before the first allocation. */
+        /**
+         * The chunk the magazine allocates from, on no queue; {@code null} before the first allocation, and after a
+         * decay filed it with the idle chunks (see {@link #decay}).
+         */
         private BuddyChunk active;
         /** The heap's; counts this magazine's allocations and tells it when to {@link #decay}. */
         private final IdleDecay idleDecay;
@@ -2257,6 +2260,18 @@ final class AdaptivePoolingAllocator {
         void decay() {
             // Chunks other threads' releases made wholly free are filed as such first, so they start aging now.
             drainPending();
+            // So is the active chunk once nothing in it is in use: it ages like the others from here, and the next
+            // allocation polls it back (one slow path) unless it stayed idle through the whole next interval. Only
+            // while the idle chunks have room for it: filing would otherwise free it at once, before any interval.
+            BuddyChunk current = active;
+            if (current != null) {
+                current.processFreelistEntries();
+                if (current.isWhollyFree() && whollyFree.size < CHUNK_REUSE_QUEUE &&
+                        idleBytes + current.capacity <= CHUNK_REUSE_QUEUE_BYTES) {
+                    active = null;
+                    file(current);
+                }
+            }
             int previous = decays++;
             int cold = 0;
             Chunk oldest = null;
