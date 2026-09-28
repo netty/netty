@@ -72,7 +72,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void offerChunkCategorizesByCapacity() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         cache.offerChunk(chunkWithCapacity());
         cache.offerChunk(chunkWithoutCapacity());
@@ -84,11 +84,11 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void offerChunkNeverRejects() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Offer far more than any cap would allow
         for (int i = 0; i < 200; i++) {
-            assertTrue(cache.offerChunk(chunkWithCapacity()));
+            cache.offerChunk(chunkWithCapacity());
         }
         assertEquals(200, cache.reusable.size);
     }
@@ -97,13 +97,13 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void pollChunkTakesFromReusableList() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk cap = chunkWithCapacity();
         cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(cap);
 
-        SizeClassedChunk polled = cache.pollChunk(256);
+        SizeClassedChunk polled = cache.pollChunk();
         assertSame(cap, polled);
         assertEquals(1, cache.exhausted.size);
         assertEquals(0, cache.reusable.size);
@@ -111,17 +111,17 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void pollChunkReturnsNullWhenEmpty() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
-        assertNull(cache.pollChunk(256));
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
+        assertNull(cache.pollChunk());
     }
 
     @Test
     void pollChunkReturnsNullWhenOnlyExhaustedChunks() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         cache.offerChunk(chunkWithoutCapacity());
         cache.offerChunk(chunkWithoutCapacity());
 
-        assertNull(cache.pollChunk(256));
+        assertNull(cache.pollChunk());
     }
 
     // --- Notification: exhausted chunks that gained capacity ---
@@ -132,7 +132,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void pollChunkFindsExhaustedChunkThatGainedCapacityAfterNotification() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -143,7 +143,7 @@ public class SizeClassedChunkCacheTest {
         when(chunk.hasRemainingCapacity()).thenReturn(true);
         cache.notifyHasCapacity(chunk);
 
-        assertSame(chunk, cache.pollChunk(256));
+        assertSame(chunk, cache.pollChunk());
         assertEquals(0, cache.exhausted.size);
     }
 
@@ -152,24 +152,24 @@ public class SizeClassedChunkCacheTest {
     // the caller would allocate a fresh chunk while a usable one sat in the exhausted list.
     @Test
     void pollProbesTheExhaustedListForAChunkWithNoPendingNotification() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
         // gains capacity, but deliberately NO notifyHasCapacity - models a note racing the drain
         when(chunk.hasRemainingCapacity()).thenReturn(true);
 
-        assertSame(chunk, cache.pollChunk(256), "the probe must find a chunk with no pending note");
+        assertSame(chunk, cache.pollChunk(), "the probe must find a chunk with no pending note");
         assertEquals(0, cache.exhausted.size);
     }
 
     @Test
     void pollReturnsNullWhenNothingWithinTheProbeBoundHasCapacity() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         for (int i = 0; i < 50; i++) {
             cache.offerChunk(chunkWithoutCapacity());
         }
-        assertNull(cache.pollChunk(256));
+        assertNull(cache.pollChunk());
         assertEquals(50, cache.exhausted.size);
     }
 
@@ -177,7 +177,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void forcePurgeDetectsCapacityGainOnExhaustedChunks() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -196,7 +196,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void purgeEvictsFullyFreeChunksAboveFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         int floor = RETENTION_FLOOR;
 
@@ -216,7 +216,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void purgeKeepsFullyFreeChunksAtOrBelowFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Add just one fully-free chunk — below retention floor
         SizeClassedChunk idle = fullChunk();
@@ -228,7 +228,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void cacheEvictsExcessFullyFreeChunksAfterBurst() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         int floor = RETENTION_FLOOR;
         int excess = 10;
@@ -260,7 +260,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void chunkThatIsNotFullyFreeIsNotEvictedAboveTheFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Pad above retention floor
         for (int i = 0; i < RETENTION_FLOOR; i++) {
@@ -286,7 +286,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void activeChunkIsOnNoListAndChunksFiledLaterGoToTheReusableFront() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         SizeClassedChunk older = chunkWithCapacity();
         cache.offerChunk(older);
 
@@ -316,7 +316,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void activeChunkIsNotEvictedByTheDrainOrThePurge() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         // Well above the retention floor, so any fully-free reusable chunk would be evicted.
         for (int i = 0; i < RETENTION_FLOOR + 2; i++) {
             cache.offerChunk(chunkWithoutCapacity());
@@ -340,7 +340,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void activeChunkDoesNotCountAgainstTheRetentionFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         int floor = RETENTION_FLOOR;
         for (int i = 0; i < floor - 1; i++) {
             cache.offerChunk(chunkWithCapacity());
@@ -365,7 +365,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void deactivatedActiveChunkWithoutFreeSegmentsMovesToTheExhaustedList() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         SizeClassedChunk other = chunkWithCapacity();
         cache.offerChunk(other);
         SizeClassedChunk active = chunkWithCapacity();
@@ -383,7 +383,7 @@ public class SizeClassedChunkCacheTest {
         assertEquals(1, cache.reusable.size);
         assertEquals(1, cache.exhausted.size);
         // The next reusable head becomes the next active chunk.
-        assertSame(other, cache.pollChunk(256));
+        assertSame(other, cache.pollChunk());
     }
 
     // Invariant N on the active chunk, first half: a note drained while the chunk is active is dropped,
@@ -391,7 +391,7 @@ public class SizeClassedChunkCacheTest {
     // so this checks the filing (offerChunk's classification after deactivation), not the memory ordering.
     @Test
     void deactivateFilesTheChunkByCapacityAfterItsNoteWasDroppedWhileActive() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         SizeClassedChunk active = chunkWithoutCapacity();
         cache.activate(active);
 
@@ -403,7 +403,7 @@ public class SizeClassedChunkCacheTest {
 
         cache.deactivate(active);
         assertSame(cache.reusable, active.queue);
-        assertSame(active, cache.pollChunk(256));
+        assertSame(active, cache.pollChunk());
     }
 
     // Invariant N on the active chunk, second half: a foreign-thread return lands while the magazine
@@ -411,7 +411,7 @@ public class SizeClassedChunkCacheTest {
     // chunk goes to the exhausted list with a free segment, and the note left behind is what moves it back.
     @Test
     void noteLeftDuringDeactivationMovesTheChunkBackToReusable() {
-        final SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        final SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
         final SizeClassedChunk active = chunkWithoutCapacity();
         cache.activate(active);
 
@@ -445,7 +445,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void signalAMovesExhaustedToReusable() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -465,7 +465,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void signalBEvictsAboveFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Fill above retention floor
         for (int i = 0; i < RETENTION_FLOOR; i++) {
@@ -485,7 +485,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void signalBKeepsAtFloor() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Only one chunk — at or below floor
         SizeClassedChunk chunk = chunkWithCapacity();
@@ -502,7 +502,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void pollChunkCannotDrainExhaustedChunks() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         cache.offerChunk(chunkWithCapacity());
         cache.offerChunk(chunkWithoutCapacity());
@@ -510,7 +510,7 @@ public class SizeClassedChunkCacheTest {
         cache.offerChunk(chunkWithoutCapacity());
 
         int drained = 0;
-        while (cache.pollChunk(0) != null) {
+        while (cache.pollChunk() != null) {
             drained++;
             if (drained > 100) {
                 break;
@@ -528,7 +528,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void pollDoesNotTouchTheExhaustedList() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         int tail = 200;
         SizeClassedChunk[] rest = new SizeClassedChunk[tail];
@@ -547,7 +547,7 @@ public class SizeClassedChunkCacheTest {
             clearInvocations(c);
         }
 
-        assertSame(notified, cache.pollChunk(256));
+        assertSame(notified, cache.pollChunk());
 
         int visited = 0;
         for (SizeClassedChunk c : rest) {
@@ -564,7 +564,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void concurrentReturnsOnOneChunkQueueItAtMostOncePerDrain() throws Exception {
         final SizeClassedChunkCache cache =
-                new SizeClassedChunkCache(128 * 1024, null, 0);
+                new SizeClassedChunkCache(null, 0);
 
         final SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -605,7 +605,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void returnLandingDuringProcessingRequeuesTheChunk() {
         final SizeClassedChunkCache cache =
-                new SizeClassedChunkCache(128 * 1024, null, 0);
+                new SizeClassedChunkCache(null, 0);
 
         final SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -631,7 +631,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void drainMovesNotifiedExhaustedChunkToReusable() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -649,7 +649,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void drainEvictsNotifiedReusableChunkThatBecameFullyFree() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         // Pad above the retention floor so eviction is allowed.
         for (int i = 0; i < RETENTION_FLOOR; i++) {
@@ -676,7 +676,7 @@ public class SizeClassedChunkCacheTest {
     @Test
     void chunkMisclassifiedAtOfferTimeStillBecomesReusable() {
         final SizeClassedChunkCache cache =
-                new SizeClassedChunkCache(128 * 1024, null, 0);
+                new SizeClassedChunkCache(null, 0);
 
         final SizeClassedChunk chunk = chunkWithoutCapacity();
         // The releasing thread offered its segment just after offerChunk read the capacity, so the
@@ -708,12 +708,12 @@ public class SizeClassedChunkCacheTest {
 
         cache.drainPending();
         assertSame(cache.reusable, chunk.queue);
-        assertSame(chunk, cache.pollChunk(256));
+        assertSame(chunk, cache.pollChunk());
     }
 
     @Test
     void pollAppliesAPendingNoteBeforeTakingTheChunk() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk chunk = chunkWithoutCapacity();
         cache.offerChunk(chunk);
@@ -721,7 +721,7 @@ public class SizeClassedChunkCacheTest {
         cache.notifyHasCapacity(chunk);
 
         // The poll drains first: the note moves the chunk to the reusable list, and the poll takes it.
-        assertSame(chunk, cache.pollChunk(256));
+        assertSame(chunk, cache.pollChunk());
         assertNull(chunk.queue);
         assertEquals(0, cache.pendingCount());
         assertEquals(0, cache.exhausted.size);
@@ -730,7 +730,7 @@ public class SizeClassedChunkCacheTest {
 
     @Test
     void freeDrainsAllChunks() {
-        SizeClassedChunkCache cache = new SizeClassedChunkCache(128 * 1024, null, 0);
+        SizeClassedChunkCache cache = new SizeClassedChunkCache(null, 0);
 
         SizeClassedChunk cap1 = chunkWithCapacity();
         SizeClassedChunk cap2 = chunkWithCapacity();
