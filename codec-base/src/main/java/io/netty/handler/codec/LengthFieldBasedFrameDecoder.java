@@ -430,7 +430,11 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             return null;
         }
         if (initialBytesToStrip > frameLengthInt) {
-            failOnFrameLengthLessThanInitialBytesToStrip(in, frameLength, initialBytesToStrip);
+            // Reset the state before failing so the next frame is decoded again. Use frameLengthInt, as frameLength
+            // is 0 if the length field was decoded by a previous call.
+            int frameLengthToSkip = frameLengthInt;
+            frameLengthInt = -1;
+            failOnFrameLengthLessThanInitialBytesToStrip(in, frameLengthToSkip, initialBytesToStrip);
         }
         in.skipBytes(initialBytesToStrip);
 
