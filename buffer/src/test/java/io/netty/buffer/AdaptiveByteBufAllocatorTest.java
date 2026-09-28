@@ -905,6 +905,55 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         });
     }
 
+    /**
+     * A heap's own purge ticks drive the decay of its recycler: chunk buffers its size classes gave up and nobody
+     * took are freed, half of them per interval, once the interval and the allocations have passed.
+     */
+    @Test
+    void purgeTicksDecayTheBuffersNobodyTakesFromTheRecycler() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onHeapThread(true, () -> {
+            // A burst of 16 chunks, released by the owner: all but the one a size class keeps go to the recycler.
+            int perChunk = AdaptivePoolingAllocator.chunkSizeOf(NOTE_ALLOCATING_SIZE) / NOTE_ALLOCATING_SIZE;
+            List<ByteBuf> burst = new ArrayList<ByteBuf>();
+            for (int i = 0; i < 16 * perChunk; i++) {
+                burst.add(allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE));
+            }
+            SizeClassChunkRecycler recycler = chunkOf(burst.get(0)).owningCache.chunkRecycler;
+            for (ByteBuf buf : burst) {
+                buf.release();
+            }
+            int sizeClass = AdaptivePoolingAllocator.sizeClassIndexOf(NOTE_ALLOCATING_SIZE);
+            int pooled = recycler.size(sizeClass);
+            assertTrue(pooled >= 8, pooled + " chunk buffers pooled");
+            long used = allocator.usedHeapMemory();
+
+            // Allocations served by the chunk still in use: they tick, and take nothing from the recycler.
+            int allocations = (int) SizeClassChunkRecycler.DECAY_MIN_ALLOCATIONS + perChunk;
+            recycler.lastDecayNanos -= 2 * SizeClassChunkRecycler.DECAY_INTERVAL_NANOS;
+            for (int i = 0; i < allocations; i++) {
+                allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+            }
+            assertEquals(pooled, recycler.size(sizeClass), "the first decay only finds out what sat idle");
+
+            recycler.lastDecayNanos -= 2 * SizeClassChunkRecycler.DECAY_INTERVAL_NANOS;
+            for (int i = 0; i < allocations; i++) {
+                allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+            }
+            int freed = (pooled + 1) / 2;
+            assertEquals(pooled - freed, recycler.size(sizeClass), "the second frees half, rounded up");
+            assertEquals(used - (long) freed * AdaptivePoolingAllocator.chunkSizeOf(NOTE_ALLOCATING_SIZE),
+                    allocator.usedHeapMemory());
+
+            // Without the interval passing, more ticks free nothing more.
+            for (int i = 0; i < allocations; i++) {
+                allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+            }
+            assertEquals(pooled - freed, recycler.size(sizeClass));
+        });
+    }
+
     private static final int BUDDY_NOTE_SIZE = 512 * 1024;
 
     /** Buddy buffers held by a test, and how many of them a chunk holds. */
