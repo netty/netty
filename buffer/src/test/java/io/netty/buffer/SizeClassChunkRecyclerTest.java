@@ -268,7 +268,7 @@ public class SizeClassChunkRecyclerTest {
      * came along - smaller than it needs (4096 then 32), larger (32 then 4096), or one of each (1152: 113 segments,
      * an external list rounded up to 128 entries and a local one of exactly 113; then 1024: 128 segments).
      * Size classes that are not adjacent share chunks too: 16896 then 67584. From 16 KiB up a whole family (2^n, and
-     * 2^n plus header) shares one chunk size, as the blocks of a mimalloc medium page do: 131072 then 16384.
+     * 2^n plus header) shares one chunk size: 131072 then 16384.
      */
     @ParameterizedTest
     @CsvSource({
