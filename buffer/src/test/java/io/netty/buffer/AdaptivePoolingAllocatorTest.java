@@ -69,22 +69,19 @@ class AdaptivePoolingAllocatorTest {
      * chunk of a size class" instead of 4 MiB per class: the same 73 chunk buffers are allocated, the peaks are the
      * same, and the troughs hold 7 to 13 MiB instead of 15 to 19. One chunk buffer fewer is allocated (72) since the
      * trace's 16 KiB and 64 KiB size classes, which both use 512 KiB chunks, share a recycler pool.
+     * <p>
+     * The used-memory column was re-recorded, with the chunk counts unchanged at every checkpoint, when the buffers a
+     * recycler holds started to count: the troughs above were memory parked in the heap's recycler, which the metric
+     * used to drop. The allocator never gives a chunk buffer back in this trace, because everything its caches let go
+     * fits the recycler's budget, so used memory only grows, to the peak of chunk buffers ever allocated.
      */
-    private static final long[][] EXPECTED_SHARED = {
-            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 29360128},
-            {67, 7208960}, {67, 19267584}, {69, 36044800}, {69, 36175872},
-            {69, 13500416}, {69, 25559040}, {69, 25690112}, {69, 17956864},
-            {69, 11403264}, {69, 23986176}, {72, 37355520}, {72, 35782656},
-            {72, 11403264}, {72, 23461888}, {72, 36175872}, {72, 34603008},
-            {72, 11403264}, {72, 11403264}, {72, 11403264},
-    };
-    private static final long[][] EXPECTED_THREAD_LOCAL = {
-            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 30932992},
-            {67, 7208960}, {67, 19267584}, {69, 36044800}, {69, 36175872},
-            {69, 12976128}, {69, 25559040}, {69, 25690112}, {69, 18481152},
-            {69, 11403264}, {69, 23986176}, {72, 37355520}, {72, 35782656},
-            {72, 11403264}, {72, 23461888}, {72, 36175872}, {72, 34603008},
-            {72, 11403264}, {72, 11403264}, {72, 11403264},
+    private static final long[][] EXPECTED = {
+            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 31981568},
+            {67, 31981568}, {67, 31981568}, {69, 36175872}, {69, 36175872},
+            {69, 36175872}, {69, 36175872}, {69, 36175872}, {69, 36175872},
+            {69, 36175872}, {69, 36175872}, {72, 37355520}, {72, 37355520},
+            {72, 37355520}, {72, 37355520}, {72, 37355520}, {72, 37355520},
+            {72, 37355520}, {72, 37355520}, {72, 37355520},
     };
 
     private static final int[] TRACE_SIZES = {64, 1024, 4096, 16384, 65536};
@@ -96,12 +93,38 @@ class AdaptivePoolingAllocatorTest {
     /** Counts the chunk buffers the allocator asks for, which is every chunk not re-created from a recycled one. */
     private static final class CountingChunkAllocator implements AdaptivePoolingAllocator.ChunkAllocator {
         long count;
+        private final List<AbstractByteBuf> allocated = new ArrayList<AbstractByteBuf>();
 
         @Override
         public AbstractByteBuf allocate(int initialCapacity, int maxCapacity) {
             count++;
-            return new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, initialCapacity, maxCapacity);
+            AbstractByteBuf buf =
+                    new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, initialCapacity, maxCapacity);
+            allocated.add(buf);
+            return buf;
         }
+
+        /** The bytes of the buffers handed out and not released yet: what the allocator holds, seen from outside. */
+        long unreleasedBytes() {
+            long bytes = 0;
+            for (AbstractByteBuf buf : allocated) {
+                if (buf.refCnt() > 0) {
+                    bytes += buf.capacity();
+                }
+            }
+            return bytes;
+        }
+    }
+
+    /**
+     * One checkpoint row, after checking {@link AdaptivePoolingAllocator#usedMemory()} against the chunk allocator's
+     * own view of what it handed out and got back: they must agree whatever the allocator did with the memory in
+     * between (a chunk, a recycler pool, a one-shot buffer).
+     */
+    private static long[] checkpoint(CountingChunkAllocator counter, AdaptivePoolingAllocator allocator) {
+        long used = allocator.usedMemory();
+        assertEquals(counter.unreleasedBytes(), used, "usedMemory() and the chunk allocator disagree");
+        return new long[] {counter.count, used};
     }
 
     /**
@@ -116,9 +139,11 @@ class AdaptivePoolingAllocatorTest {
     void seededTraceKeepsChunkAllocationsAndUsedMemory(boolean threadLocal) throws Throwable {
         assumeFalse(isLowMemory(), "low-memory mode pools fewer size classes and has no thread-local heaps");
         final AtomicReference<Object> result = new AtomicReference<Object>();
+        final CountingChunkAllocator counter = new CountingChunkAllocator();
+        final AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(counter, true);
         Runnable trace = () -> {
             try {
-                result.set(runTrace(threadLocal));
+                result.set(runTrace(counter, allocator, threadLocal));
             } catch (Throwable t) {
                 result.set(t);
             }
@@ -129,15 +154,17 @@ class AdaptivePoolingAllocatorTest {
         if (result.get() instanceof Throwable) {
             throw (Throwable) result.get();
         }
+        // The thread is gone: a thread-local heap has been freed, chunks and recycler alike.
+        assertEquals(counter.unreleasedBytes(), allocator.usedMemory(), "after the allocating thread ended");
         long[][] actual = (long[][]) result.get();
-        long[][] expected = threadLocal ? EXPECTED_THREAD_LOCAL : EXPECTED_SHARED;
-        assertTrue(Arrays.deepEquals(expected, actual), "trace diverged (threadLocal=" + threadLocal
+        // Both heaps go through the same checkpoints: the notes a foreign release leaves are applied before any
+        // decision they could change.
+        assertTrue(Arrays.deepEquals(EXPECTED, actual), "trace diverged (threadLocal=" + threadLocal
                 + "); actual checkpoints: " + Arrays.deepToString(actual).replace("], [", "],\n ["));
     }
 
-    private static long[][] runTrace(boolean threadLocal) throws Exception {
-        CountingChunkAllocator counter = new CountingChunkAllocator();
-        AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(counter, true);
+    private static long[][] runTrace(CountingChunkAllocator counter, AdaptivePoolingAllocator allocator,
+                                     boolean threadLocal) throws Exception {
         List<StampedLock> locks = threadLocal ? new ArrayList<StampedLock>() : stripeLocks(allocator);
         ExecutorService helper = Executors.newSingleThreadExecutor();
         SplittableRandom rng = new SplittableRandom(42);
@@ -147,7 +174,7 @@ class AdaptivePoolingAllocatorTest {
         try {
             for (int op = 0; op < TRACE_OPS; op++) {
                 if (op % TRACE_CHECKPOINT_OPS == 0) {
-                    checkpoints.add(new long[] {counter.count, allocator.usedMemory()});
+                    checkpoints.add(checkpoint(counter, allocator));
                 }
                 if (op % TRACE_PHASE_OPS == 0) {
                     // Alternate bursts and idle phases, so caches grow above their floors and are purged back.
@@ -178,17 +205,17 @@ class AdaptivePoolingAllocatorTest {
                     }
                 }
             }
-            checkpoints.add(new long[] {counter.count, allocator.usedMemory()});
+            checkpoints.add(checkpoint(counter, allocator));
             for (ByteBuf buf : live) {
                 buf.release();
             }
             live.clear();
-            checkpoints.add(new long[] {counter.count, allocator.usedMemory()});
+            checkpoints.add(checkpoint(counter, allocator));
             // Settle on a tiny working set: drives the drains and purge ticks on every size class used above.
             for (int i = 0; i < TRACE_SETTLE_OPS; i++) {
                 allocator.allocate(TRACE_SIZES[i % TRACE_SIZES.length], Integer.MAX_VALUE).release();
             }
-            checkpoints.add(new long[] {counter.count, allocator.usedMemory()});
+            checkpoints.add(checkpoint(counter, allocator));
             return checkpoints.toArray(new long[0][]);
         } finally {
             helper.shutdown();
