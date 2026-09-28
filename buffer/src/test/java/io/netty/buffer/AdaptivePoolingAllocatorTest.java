@@ -263,8 +263,8 @@ class AdaptivePoolingAllocatorTest {
         int chunkSize = (int) allocator.usedMemory();
         int perChunk = chunkSize / size;
         assumeTrue(perChunk >= 4, "chunk holds " + perChunk + " segments");
-        // More chunks in use than the retention floor, so a chunk that empties is given up.
-        int chunks = Math.max(1, AdaptivePoolingAllocator.THREAD_LOCAL_CACHE_MIN_BYTES / chunkSize) + 6;
+        // More chunks in use than the one a size class keeps, so a chunk that empties is given up.
+        int chunks = 1 + 6;
         while (live.size() < chunks * perChunk) {
             live.add(allocator.allocate(size, size));
         }
