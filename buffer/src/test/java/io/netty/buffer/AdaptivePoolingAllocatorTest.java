@@ -138,6 +138,9 @@ class AdaptivePoolingAllocatorTest {
     @ValueSource(booleans = {false, true})
     void seededTraceKeepsChunkAllocationsAndUsedMemory(boolean threadLocal) throws Throwable {
         assumeFalse(isLowMemory(), "low-memory mode pools fewer size classes and has no thread-local heaps");
+        // The recorded memory column keeps three idle 2 MiB chunks of the reallocated buffers above the size classes
+        // (their byte bound is never below 8 MiB); with fewer (one processor gives two) one of them is freed instead.
+        assumeTrue(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE >= 3, "keeps fewer than three idle large-buffer chunks");
         final AtomicReference<Object> result = new AtomicReference<Object>();
         final CountingChunkAllocator counter = new CountingChunkAllocator();
         final AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(counter, true);

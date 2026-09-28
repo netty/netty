@@ -610,8 +610,11 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         int buffersPerChunk = (int) (chunkSize / 256);
         probe.release();
 
-        // Create a burst: allocate many chunks' worth of buffers
-        int totalChunks = Math.max(16, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4 + 10;
+        // Create a burst: allocate many chunks' worth of buffers, twice what the heap's recycler keeps, so that some
+        // must be freed whatever the number of processors (usedMemory() counts what the recycler keeps).
+        int recyclerChunks = (int) (SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET / chunkSize);
+        int totalChunks = Math.max(Math.max(16, AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE) * 4,
+                2 * recyclerChunks) + 10;
         int totalBuffers = totalChunks * buffersPerChunk;
         List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
@@ -641,6 +644,10 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertTrue(memoryAfterSettled < memoryDuringBurst,
                 "Memory should decrease after burst release. " +
                 "During burst: " + memoryDuringBurst + ", after settled: " + memoryAfterSettled);
+        // What stays is what the recycler keeps plus the few chunks the size class still holds.
+        assertTrue(memoryAfterSettled <= SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET + 4 * chunkSize,
+                "After settled: " + memoryAfterSettled + ", recycler budget: " +
+                SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET + ", chunk: " + chunkSize);
     }
 
     /**
