@@ -578,11 +578,10 @@ final class AdaptivePoolingAllocator {
      * larger than needed, so within a shared pool the lists drift towards the largest need (up to 4096 entries,
      * for the 32-byte class).
      * <p>
-     * <p>
      * The pool is bounded by one number of bytes per heap, {@link #RECYCLED_BYTES_BUDGET}, across every chunk size:
      * whichever chunk sizes are churning get the room. A bound per chunk size left one or two buffers to the large
      * size classes, whose chunks are given up at the rate of the small ones (measured on E_COMMERCE heap 16384:
-     * 12 GiB of chunk buffers allocated in 20 s, and four times the garbage collections, for the same used memory).
+     * 12 GiB of chunk buffers allocated in 20 s, and four times the garbage collections).
      * <p>
      * Accessed only under the owning stripe lock, or by the owner thread of a thread-local heap.
      */
@@ -1111,7 +1110,7 @@ final class AdaptivePoolingAllocator {
      * reusing a fully-free chunk beats evicting it and allocating a fresh one. mimalloc makes the
      * same trade, cancelling a page's retirement when a scan selects it.
      *
-     * <p><b>No cap.</b> {@code offerChunk} always returns true; cache size follows the working set,
+     * <p><b>No cap.</b> {@code offerChunk} files every chunk; cache size follows the working set,
      * and idle chunks leave via Signal B rather than a byte threshold. Evicted buffers go to the
      * {@link SizeClassChunkRecycler}, which every size class on the heap draws from.
      */
@@ -1142,12 +1141,11 @@ final class AdaptivePoolingAllocator {
          */
         final StampedLock stripeLock;
 
-        SizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
-            this(chunkSize, chunkRecycler, sizeClassIndex, null);
+        SizeClassedChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex) {
+            this(chunkRecycler, sizeClassIndex, null);
         }
 
-        SizeClassedChunkCache(int chunkSize, SizeClassChunkRecycler chunkRecycler,
-                                         int sizeClassIndex, StampedLock stripeLock) {
+        SizeClassedChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex, StampedLock stripeLock) {
             this.chunkRecycler = chunkRecycler;
             this.sizeClassIndex = sizeClassIndex;
             this.stripeLock = stripeLock;
@@ -1293,13 +1291,13 @@ final class AdaptivePoolingAllocator {
             stripeLock.unlockWrite(stamp);
         }
 
-        /** Visible for testing: runs a purge tick bypassing the budget counter, then polls. */
+        /** Visible for testing: runs a purge tick without waiting for {@link #CHUNK_PURGE_INTERVAL}, then polls. */
         SizeClassedChunk forcePurge() {
             tickPurge();
             return pollChunkInternal();
         }
 
-        SizeClassedChunk pollChunk(int size) {
+        SizeClassedChunk pollChunk() {
             // Slow-path only (once per chunk-worth of allocations), which is exactly where a chunk is
             // wanted. Draining per allocation is what made the old notification cache expensive.
             drainPending();
@@ -1374,13 +1372,12 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        boolean offerChunk(SizeClassedChunk chunk) {
+        void offerChunk(SizeClassedChunk chunk) {
             if (chunk.hasRemainingCapacity()) {
                 reusable.pushFront(chunk);
             } else {
                 exhausted.pushFront(chunk);
             }
-            return true;
         }
 
         /**
@@ -1464,7 +1461,7 @@ final class AdaptivePoolingAllocator {
 
         SizeClassedChunkCache createChunkCache(SizeClassChunkRecycler chunkRecycler, int sizeClassIndex,
                                                StampedLock stripeLock) {
-            return new SizeClassedChunkCache(chunkSize, chunkRecycler, sizeClassIndex, stripeLock);
+            return new SizeClassedChunkCache(chunkRecycler, sizeClassIndex, stripeLock);
         }
     }
 
@@ -1561,7 +1558,7 @@ final class AdaptivePoolingAllocator {
         /**
          * Compute the "fast max capacity" value for the buffer.
          */
-        int computeBufferCapacity(int requestedSize, int maxCapacity) {
+        int computeBufferCapacity(int requestedSize) {
             return MathUtil.safeFindNextPositivePowerOfTwo(requestedSize);
         }
 
@@ -1757,7 +1754,7 @@ final class AdaptivePoolingAllocator {
 
             // Now try to poll from the cache first
             drainHeapPending();
-            curr = chunkCache.pollChunk(size);
+            curr = chunkCache.pollChunk();
             if (curr != null) {
                 chunkCache.activate(curr);
                 // The size-class cache only hands out chunks with a free segment, and a segment always fits the size,
@@ -1868,7 +1865,7 @@ final class AdaptivePoolingAllocator {
         }
 
         boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
-            int blockSize = chunkController.computeBufferCapacity(size, maxCapacity);
+            int blockSize = chunkController.computeBufferCapacity(size);
             BuddyChunk chunk = active;
             if (chunk != null && chunk.readInitInto(buf, size, blockSize, maxCapacity)) {
                 return true;
@@ -1878,7 +1875,7 @@ final class AdaptivePoolingAllocator {
 
         /**
          * The active chunk (if any) had no free block of {@code blockSize}: file it, apply the notes, and make the
-         * chunk with the smallest fitting free block active, or a new chunk when none has one.
+         * chunk with the largest free block active if that block fits (see {@link #poll}), or a new chunk.
          */
         private boolean allocateSlow(int size, int maxCapacity, AdaptiveByteBuf buf, int blockSize) {
             BuddyChunk chunk = active;
@@ -2769,7 +2766,6 @@ final class AdaptivePoolingAllocator {
          */
         int claim(int size) {
             if (size < MIN_BLOCK_SIZE || (size & size - 1) != 0) {
-                // BuddyMagazine asks for a chunk's remaining capacity, which is the sum of its free blocks.
                 return -1;
             }
             int order = Integer.numberOfTrailingZeros(size / MIN_BLOCK_SIZE);

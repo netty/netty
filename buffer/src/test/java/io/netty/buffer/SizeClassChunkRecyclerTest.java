@@ -290,7 +290,7 @@ public class SizeClassChunkRecyclerTest {
                                                       int reusingSize) {
         int chunkSize = AdaptivePoolingAllocator.chunkSizeOf(freedSize);
         assertEquals(chunkSize, AdaptivePoolingAllocator.chunkSizeOf(reusingSize));
-        // 64 chunks: well past the cache floor (32 chunks of MIN_CHUNK_SIZE), so the rest go to the recycler.
+        // 64 chunks: well past the one chunk a size class keeps, so the rest go to the recycler.
         int chunks = 64;
 
         Set<byte[]> freedArrays = Collections.newSetFromMap(new IdentityHashMap<byte[], Boolean>());
