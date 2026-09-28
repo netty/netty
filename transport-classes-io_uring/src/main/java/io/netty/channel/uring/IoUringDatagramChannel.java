@@ -679,6 +679,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         @Override
         void releaseWriteBuffers(List<ReferenceCounted> buffers, long data) {
+            // Batched SENDMSG requests may complete out of order; clear and release only the slot indexed by data.
             ReferenceCountUtil.safeRelease(buffers.set((int) data, null));
         }
 
