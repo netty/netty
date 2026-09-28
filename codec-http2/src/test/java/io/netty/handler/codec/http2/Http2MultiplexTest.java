@@ -1729,7 +1729,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Stop reading again after the first queued frame, and have a new frame arrive re-entrantly (e.g. because a
         // flush synchronously triggered the remote peer to send more) while the read loop is still completing.
         final AtomicBoolean armed = new AtomicBoolean(true);
-        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+        childChannel.pipeline().addFirst(new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ctx.channel().config().setAutoRead(false);
@@ -1775,7 +1775,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // While the read loop completes, stop reading and have the rest of the stream (including END_STREAM)
         // arrive re-entrantly. The last frame gets queued and the stream is closed at the HTTP/2 level.
         final AtomicBoolean armed = new AtomicBoolean(true);
-        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+        childChannel.pipeline().addFirst(new ChannelInboundHandler() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) {
                 if (armed.getAndSet(false)) {

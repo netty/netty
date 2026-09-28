@@ -890,8 +890,8 @@ public class Http2MultiplexTransportTest {
         Http2StreamChannel outStream = null;
         final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
         try {
-            inGroup = new DefaultEventLoop();
-            outGroup = new DefaultEventLoop();
+            inGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+            outGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
 
             LocalAddress inAddress = new LocalAddress(getClass().getName() + ".in");
             LocalAddress outAddress = new LocalAddress(getClass().getName() + ".out");
@@ -904,7 +904,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
-                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
@@ -917,7 +917,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            inServerChannel = inSb.bind(inAddress).sync().channel();
+            inServerChannel = inSb.bind(inAddress).get();
 
             Bootstrap inBs = new Bootstrap();
             inBs.group(inGroup);
@@ -929,7 +929,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            inClientChannel = inBs.connect(inAddress).sync().channel();
+            inClientChannel = inBs.connect(inAddress).get();
 
             // "out" server: a receiver that (like a slow / congested downstream) doesn't drain anything -- and
             // hence doesn't send WINDOW_UPDATE -- for a little while, so the proxied "out" stream genuinely
@@ -951,13 +951,13 @@ public class Http2MultiplexTransportTest {
                         @Override
                         protected void initChannel(Http2StreamChannel ch) {
                             ch.config().setAutoRead(false);
-                            ch.eventLoop().schedule(new Runnable() {
+                            ch.executor().schedule(new Runnable() {
                                 @Override
                                 public void run() {
                                     ch.config().setAutoRead(true);
                                 }
                             }, 500, MILLISECONDS);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     try {
@@ -979,7 +979,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            outServerChannel = outSb.bind(outAddress).sync().channel();
+            outServerChannel = outSb.bind(outAddress).get();
 
             Bootstrap outBs = new Bootstrap();
             outBs.group(outGroup);
@@ -991,7 +991,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            outClientChannel = outBs.connect(outAddress).sync().channel();
+            outClientChannel = outBs.connect(outAddress).get();
 
             // Open "out" first so "in"'s handler can forward straight onto it.
             outStream = new Http2StreamChannelBootstrap(outClientChannel).open().syncUninterruptibly().getNow();
@@ -999,7 +999,7 @@ public class Http2MultiplexTransportTest {
 
             final Http2StreamChannel finalOutStream = outStream;
             Http2StreamChannelBootstrap inH2Bootstrap = new Http2StreamChannelBootstrap(inClientChannel);
-            inH2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+            inH2Bootstrap.handler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     if (msg instanceof Http2DataFrame) {
@@ -1017,7 +1017,7 @@ public class Http2MultiplexTransportTest {
             // so this ends up calling Http2StreamChannelConfig#setAutoRead() from a thread other than the one
             // "in" is registered to.
             final Http2StreamChannel finalInStream = inStream;
-            outStream.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            outStream.pipeline().addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                     finalInStream.config().setAutoRead(finalOutStream.isWritable());
@@ -1086,8 +1086,8 @@ public class Http2MultiplexTransportTest {
         Thread hammer = null;
         final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
         try {
-            serverGroup = new DefaultEventLoop();
-            clientGroup = new DefaultEventLoop();
+            serverGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+            clientGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName() + ".torture");
 
             ServerBootstrap sb = new ServerBootstrap();
@@ -1097,7 +1097,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
-                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
@@ -1110,7 +1110,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            serverChannel = sb.bind(serverAddress).sync().channel();
+            serverChannel = sb.bind(serverAddress).get();
 
             Bootstrap bs = new Bootstrap();
             bs.group(clientGroup);
@@ -1122,7 +1122,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            clientChannel = bs.connect(serverAddress).sync().channel();
+            clientChannel = bs.connect(serverAddress).get();
 
             final CountDownLatch dataComplete = new CountDownLatch(1);
             final ByteBuf received = Unpooled.buffer(payloadLength);
@@ -1130,7 +1130,7 @@ public class Http2MultiplexTransportTest {
             final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
 
             Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
-            h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+            h2Bootstrap.handler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     try {
