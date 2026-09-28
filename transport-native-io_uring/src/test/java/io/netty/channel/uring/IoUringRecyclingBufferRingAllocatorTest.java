@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -238,6 +239,60 @@ public class IoUringRecyclingBufferRingAllocatorTest {
                 buffer.release();
             }
         });
+    }
+
+    @Test
+    public void outOfMemoryWhenUsedUpLeavesTheRegionUsable() throws Exception {
+        FailingAllocator allocator = new FailingAllocator();
+        IoUringRecyclingBufferRingAllocator ringAllocator =
+                new IoUringRecyclingBufferRingAllocator(allocator, (short) 4, BUFFER_SIZE, 1);
+        onEventLoopThread(() -> {
+            ByteBuf[] held = new ByteBuf[5];
+            for (int i = 0; i < held.length; i++) {
+                held[i] = ringAllocator.allocate();
+            }
+            // Used up: extending fails without throwing, and the fallback throws what the allocator throws.
+            allocator.fail = true;
+            assertThrows(OutOfMemoryError.class, ringAllocator::allocate);
+            assertEquals(1, ringAllocator.fallbackAllocations());
+            allocator.fail = false;
+
+            held[0].release();
+            assertSame(held[0], ringAllocator.allocate());
+            for (ByteBuf buffer : held) {
+                buffer.release();
+            }
+        });
+    }
+
+    /**
+     * Direct buffers from {@link UnpooledByteBufAllocator#DEFAULT}, or an {@link OutOfMemoryError} while
+     * {@link #fail} is set.
+     */
+    private static final class FailingAllocator extends AbstractByteBufAllocator {
+        volatile boolean fail;
+
+        FailingAllocator() {
+            super(true);
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return UnpooledByteBufAllocator.DEFAULT.heapBuffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            if (fail) {
+                throw new OutOfMemoryError("Direct buffer memory");
+            }
+            return UnpooledByteBufAllocator.DEFAULT.directBuffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
     }
 
     @Test

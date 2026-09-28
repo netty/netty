@@ -258,7 +258,9 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
                 return slots[unused[--numUnused]].reuse();
             }
             fallbackAllocations.incrementAndGet();
-            // Must not throw: IoUringBufferRing marks the ring as corrupted if allocate() fails.
+            // A used up region is no reason to fail a read, so it is not reported by throwing. The allocator can
+            // still throw an OutOfMemoryError, exactly as for every other IoUringBufferRingAllocator: then there is
+            // no buffer to return, and the region is left as it was.
             return allocator.directBuffer(bufferSize, bufferSize);
         }
 
