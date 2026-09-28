@@ -21,10 +21,13 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -37,8 +40,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import io.netty.buffer.AbstractByteBufTest.TestGatheringByteChannel;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -143,6 +148,42 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
         while (!bufs.isEmpty()) {
             bufs.pop().release();
+        }
+    }
+
+    @Test
+    public void getBytesBoundaryCheckWithFileChannel() {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, (FileChannel) null, 0L, 8);
+                }
+            });
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testGetBytesBoundaryCheckWithGatheringByteChannel() throws Exception {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        final TestGatheringByteChannel channel = new TestGatheringByteChannel();
+        final ByteBuf buf = allocator.directBuffer(7);
+        try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws IOException {
+                    // capacity 7，4+8=12 <= maxFastCapacity 32
+                    buf.getBytes(4, channel, 8);
+                }
+            });
+        } finally {
+            channel.close();
+            buf.release();
         }
     }
 
