@@ -224,8 +224,8 @@ class AdaptivePoolingAllocatorTest {
 
     /**
      * What a heap pays to hold one buffer of each size class from 16 KiB up: a 512 KiB chunk for each 2^n class and
-     * a 528 KiB one for each class that adds a header, whatever the segment size, as mimalloc's 512 KiB medium page
-     * serves every block size to 128 KiB. At 32 segments per chunk the six classes from 32 KiB up alone cost 14.2 MiB.
+     * a 528 KiB one for each class that adds a header, whatever the segment size. At 32 segments per chunk the six
+     * classes from 32 KiB up alone cost 14.2 MiB.
      */
     @Test
     void sizeClassesFromSixteenKibShareTheChunkSizeOfTheirFamily() throws Exception {

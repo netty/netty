@@ -110,9 +110,9 @@ final class AdaptivePoolingAllocator {
     private static final int MIN_SEGMENTS_PER_CHUNK = 32;
     /**
      * From this segment size up, every size class uses the chunk size of the first one of its family: 512 KiB for
-     * 16, 32, 64 and 128 KiB, and 528 KiB for the four that add a header. This is mimalloc's medium page, which holds
-     * 32 blocks of 16 KiB down to 4 of 128 KiB: a heap pays the same for its first buffer of any of these classes,
-     * and a chunk given up by one of them is reused by the other three.
+     * 16, 32, 64 and 128 KiB, and 528 KiB for the four that add a header. One such chunk holds 32 segments of 16 KiB
+     * down to 4 of 128 KiB: a heap pays the same for its first buffer of any of these classes, and a chunk given up
+     * by one of them is reused by the other three.
      */
     private static final int MEDIUM_SEGMENT_SIZE = 16 * 1024;
     private static final AtomicIntegerFieldUpdater<AdaptivePoolingAllocator> STRIPE_SCAN_LENGTH =
@@ -911,7 +911,7 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * An intrusive doubly linked list of chunks, newest first, like mimalloc's page queue. The links live on the
+     * An intrusive doubly linked list of chunks, newest first. The links live on the
      * chunk, so removing any chunk is O(1), and so does the chunk's membership: {@code chunk.queue} is the queue it
      * is on, or {@code null}. Not concurrent: the magazine that owns it holds the stripe lock, or is the only thread
      * that touches it. Used by both magazines: by capacity on the size-class path, by largest free block on the
@@ -1081,8 +1081,7 @@ final class AdaptivePoolingAllocator {
      * <ol>
      *   <li><b>Inline</b>, when the returning thread can synchronise — it is the owner thread, or it
      *       won the stripe lock. Plain field reads and pointer writes, no atomics. Signal A
-     *       (exhausted → reusable, mimalloc's {@code pageUnfull}) and Signal B (fully free →
-     *       evicted above the floor, mimalloc's {@code pageRetire}).</li>
+     *       (exhausted → reusable) and Signal B (fully free → evicted above the floor).</li>
      *   <li><b>Deferred</b>, when it cannot: {@link #notifyHasCapacity} leaves a note and
      *       {@link #drainPending} applies the transition under the lock. See Invariant N.</li>
      *   <li><b>Probed</b>, as a last resort: {@link #probeExhausted()} looks at a bounded number of
@@ -1090,16 +1089,14 @@ final class AdaptivePoolingAllocator {
      *       with the drain has not been applied yet. Without it the caller would allocate a fresh
      *       chunk while a usable one sat in the exhausted list.</li>
      * </ol>
-     * Routes 2 and 3 overlap deliberately, as they do in mimalloc: notifications reach chunks a
-     * bounded scan would not, and a bounded scan covers what notifications are late for.
+     * Routes 2 and 3 overlap deliberately: notifications reach chunks a bounded scan would not, and
+     * a bounded scan covers what notifications are late for.
      *
      * <p>There is deliberately no periodic sweep of the exhausted list. A note is never dropped -
      * {@link #drainPending} re-arms a chunk's link before processing it, so a return that lands
      * mid-processing queues the chunk again rather than being swallowed - so a sweep could only ever
      * find a chunk whose notification was lost, which is a bug in this protocol and not something a
-     * periodic rescue should paper over. mimalloc reasons the same way: its collect walks the page
-     * queues but deliberately stops one bin short of {@code pages_full}, because the free that would
-     * un-full a page cannot be lost either.
+     * periodic rescue should paper over.
      *
      * <p><b>Eviction only ever operates on the reusable list</b> — {@link #evictIfAboveFloor} calls
      * {@code reusable.remove} unconditionally, and every caller either walks the reusable list
@@ -1107,8 +1104,7 @@ final class AdaptivePoolingAllocator {
      * and {@link #probeExhausted()} cannot encounter one that does.
      *
      * <p>Note that route 3 can hand out a chunk that route 2 would have evicted. That is intended:
-     * reusing a fully-free chunk beats evicting it and allocating a fresh one. mimalloc makes the
-     * same trade, cancelling a page's retirement when a scan selects it.
+     * reusing a fully-free chunk beats evicting it and allocating a fresh one.
      *
      * <p><b>No cap.</b> {@code offerChunk} files every chunk; cache size follows the working set,
      * and idle chunks leave via Signal B rather than a byte threshold. Evicted buffers go to the
@@ -1153,9 +1149,10 @@ final class AdaptivePoolingAllocator {
 
         /**
          * {@code true} when the two queues hold at most one chunk between them. This is the retention floor:
-         * eviction must never take the last chunk of a size class besides the active one, which is what mimalloc's
-         * {@code pageRetire} does by refusing to free the only page left in a bin. Every other chunk that empties
-         * goes to the heap's {@link SizeClassChunkRecycler}, whose byte budget is what bounds idle memory.
+         * eviction must never take the last chunk of a size class besides the active one, so a size class that
+         * empties and fills again around one chunk does not give it up and allocate it again each time. Every other
+         * chunk that empties goes to the heap's {@link SizeClassChunkRecycler}, whose byte budget bounds idle
+         * memory.
          */
         private boolean atOrBelowFloor() {
             return exhausted.size + reusable.size <= 1;
@@ -1333,11 +1330,8 @@ final class AdaptivePoolingAllocator {
          * probe the caller would allocate a new chunk while a usable one sat in the exhausted list,
          * which is the chunk-count growth this cache exists to avoid.
          *
-         * <p>mimalloc does the same and for the same reason: {@code findFreePage} calls
-         * {@code pageFreeCollect} on the queue head before its fast path, and
-         * {@code pageQueueFindFreeEx} calls it on every page it visits, bounded by
-         * {@code MAX_PAGE_CANDIDATE_SEARCH}. Notifications cover what a scan cannot reach; a
-         * bounded scan covers what notifications are late for.
+         * <p>Notifications cover what a scan cannot reach; a bounded scan covers what notifications
+         * are late for.
          *
          * <p>Bounded by chunks <em>visited</em>, not by anything found - a bound on work done is
          * the only kind that holds when nothing matches.
