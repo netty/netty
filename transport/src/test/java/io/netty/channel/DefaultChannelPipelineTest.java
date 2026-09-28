@@ -859,7 +859,7 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
+        ChannelFuture future = pipeline.bind(new LocalAddress(DefaultChannelPipelineTest.class), promise);
         assertTrue(future.isCancelled());
     }
 
@@ -870,7 +870,7 @@ public class DefaultChannelPipelineTest {
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
+        ChannelFuture future = pipeline.connect(new LocalAddress(DefaultChannelPipelineTest.class), promise);
         assertTrue(future.isCancelled());
     }
 

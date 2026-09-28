@@ -147,7 +147,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         ChannelFuture cf = serverChannelClass() == LocalServerChannel.class
-                ? b.bind(new LocalAddress("local")) : b.bind(0);
+                ? b.bind(new LocalAddress(AbstractSingleThreadEventLoopTest.class)) : b.bind(0);
         cf.sync().channel();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);

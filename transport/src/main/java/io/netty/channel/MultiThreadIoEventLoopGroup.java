@@ -15,8 +15,10 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -210,6 +212,23 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
     protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory,
                                    @SuppressWarnings("unused") Object... args) {
         return new SingleThreadIoEventLoop(this, executor, ioHandlerFactory);
+    }
+
+    /**
+     * Sets the {@link SingleThreadIoEventLoop#setIoRatio(int)} for all the {@link SingleThreadIoEventLoop}s
+     * managed by this group.
+     */
+    public void setIoRatio(int ioRatio) {
+        ObjectUtil.checkInRange(ioRatio, 1, 100, "ioRatio");
+        for (EventExecutor e: this) {
+            if (!(e instanceof SingleThreadIoEventLoop)) {
+                throw new UnsupportedOperationException("Only support by " +
+                    SingleThreadIoEventLoop.class.getSimpleName() + ": " + e);
+            }
+        }
+        for (EventExecutor e: this) {
+            ((SingleThreadIoEventLoop) e).setIoRatio(ioRatio);
+        }
     }
 
     @Override

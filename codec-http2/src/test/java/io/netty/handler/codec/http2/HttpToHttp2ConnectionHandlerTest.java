@@ -72,6 +72,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -563,12 +564,18 @@ public class HttpToHttp2ConnectionHandlerTest {
         awaitRequests();
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2Headers), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(false));
-        verify(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3), any(ByteBuf.class), eq(0),
-                eq(false));
+        // The two HttpContent writes may or may not be coalesced into a single DATA frame by the flow controller
+        // depending on timing, so tolerate either 1 or 2 onDataRead(...) invocations and just verify the
+        // concatenation of everything that was received matches what was sent.
+        verify(serverListener, atLeastOnce()).onDataRead(any(ChannelHandlerContext.class), eq(3),
+                any(ByteBuf.class), eq(0), eq(false));
         verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(http2TrailingHeaders), eq(0),
                 anyShort(), anyBoolean(), eq(0), eq(true));
-        assertEquals(1, receivedBuffers.size());
-        assertEquals(text + text2, receivedBuffers.get(0));
+        StringBuilder receivedText = new StringBuilder();
+        for (String buffer : receivedBuffers) {
+            receivedText.append(buffer);
+        }
+        assertEquals(text + text2, receivedText.toString());
     }
 
     private void bootstrapEnv(int requestCountDown, int serverSettingsAckCount, int trailersCount) throws Exception {

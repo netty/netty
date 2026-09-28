@@ -237,7 +237,10 @@ public class SimpleChannelPool implements ChannelPool {
             if (future.isSuccess() && future.getNow()) {
                 channel.attr(POOL_KEY).set(this);
                 handler.channelAcquired(channel);
-                promise.setSuccess(channel);
+                if (!promise.trySuccess(channel)) {
+                    // Promise was completed in the meantime (like cancelled), just release the channel again
+                    release(channel);
+                }
             } else {
                 closeChannel(channel);
                 acquireHealthyFromPoolOrNew(promise);

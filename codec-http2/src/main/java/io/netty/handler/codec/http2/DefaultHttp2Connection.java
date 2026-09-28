@@ -365,14 +365,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     /**
-     * Verifies that the key is valid and returns it as the internal {@link DefaultPropertyKey} type.
+     * Verifies that the key was created by this connection.
      *
-     * @throws NullPointerException if the key is {@code null}.
-     * @throws ClassCastException if the key is not of type {@link DefaultPropertyKey}.
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
-    final DefaultPropertyKey verifyKey(PropertyKey key) {
-        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+    final DefaultPropertyKey verifyKey(DefaultPropertyKey key) {
+        return key.verifyConnection(this);
     }
 
     /**
@@ -467,17 +465,38 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public final <V> V setProperty(PropertyKey key, V value) {
-            return properties.add(verifyKey(key), value);
+            checkNotNull(key, "key");
+            if (key instanceof DefaultPropertyKey) {
+                return properties.add(verifyKey((DefaultPropertyKey) key), value);
+            }
+            if (key instanceof Http2ConnectionPropertyKeys.GlobalPropertyKey) {
+                return properties.addGlobal((Http2ConnectionPropertyKeys.GlobalPropertyKey) key, value);
+            }
+            throw new IllegalArgumentException("Unsupported key: " + key);
         }
 
         @Override
         public final <V> V getProperty(PropertyKey key) {
-            return properties.get(verifyKey(key));
+            checkNotNull(key, "key");
+            if (key instanceof DefaultPropertyKey) {
+                return properties.get(verifyKey((DefaultPropertyKey) key));
+            }
+            if (key instanceof Http2ConnectionPropertyKeys.GlobalPropertyKey) {
+                return properties.getGlobal((Http2ConnectionPropertyKeys.GlobalPropertyKey) key);
+            }
+            throw new IllegalArgumentException("Unsupported key: " + key);
         }
 
         @Override
         public final <V> V removeProperty(PropertyKey key) {
-            return properties.remove(verifyKey(key));
+            checkNotNull(key, "key");
+            if (key instanceof DefaultPropertyKey) {
+                return properties.remove(verifyKey((DefaultPropertyKey) key));
+            }
+            if (key instanceof Http2ConnectionPropertyKeys.GlobalPropertyKey) {
+                return properties.removeGlobal((Http2ConnectionPropertyKeys.GlobalPropertyKey) key);
+            }
+            throw new IllegalArgumentException("Unsupported key: " + key);
         }
 
         @Override
@@ -567,6 +586,12 @@ public class DefaultHttp2Connection implements Http2Connection {
         private class PropertyMap {
             Object[] values = EmptyArrays.EMPTY_OBJECTS;
 
+            /**
+             * Storage for keys that are not tied to this connection. Allocated lazily as such keys are expected to
+             * be used rarely, if ever, compared to keys created via {@link Http2Connection#newKey()}.
+             */
+            Object[] globalValues = EmptyArrays.EMPTY_OBJECTS;
+
             <V> V add(DefaultPropertyKey key, V value) {
                 resizeIfNecessary(key.index);
                 @SuppressWarnings("unchecked")
@@ -596,6 +621,38 @@ public class DefaultHttp2Connection implements Http2Connection {
             void resizeIfNecessary(int index) {
                 if (index >= values.length) {
                     values = Arrays.copyOf(values, propertyKeyRegistry.size());
+                }
+            }
+
+            <V> V addGlobal(Http2ConnectionPropertyKeys.GlobalPropertyKey key, V value) {
+                resizeGlobalIfNecessary(key.index);
+                @SuppressWarnings("unchecked")
+                V prevValue = (V) globalValues[key.index];
+                globalValues[key.index] = value;
+                return prevValue;
+            }
+
+            @SuppressWarnings("unchecked")
+            <V> V getGlobal(Http2ConnectionPropertyKeys.GlobalPropertyKey key) {
+                if (key.index >= globalValues.length) {
+                    return null;
+                }
+                return (V) globalValues[key.index];
+            }
+
+            @SuppressWarnings("unchecked")
+            <V> V removeGlobal(Http2ConnectionPropertyKeys.GlobalPropertyKey key) {
+                V prevValue = null;
+                if (key.index < globalValues.length) {
+                    prevValue = (V) globalValues[key.index];
+                    globalValues[key.index] = null;
+                }
+                return prevValue;
+            }
+
+            void resizeGlobalIfNecessary(int index) {
+                if (index >= globalValues.length) {
+                    globalValues = Arrays.copyOf(globalValues, Http2ConnectionPropertyKeys.keyCount());
                 }
             }
         }
