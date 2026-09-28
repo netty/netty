@@ -175,7 +175,7 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
     private interface Slot {
         int index();
 
-        /** Refcount and indices back to their initial state, so the ring can write into the buffer again. */
+        /** Refcount, indices and marks back to their initial state, so the ring can write into the buffer again. */
         ByteBuf reuse();
     }
 
@@ -333,7 +333,8 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             @Override
             public ByteBuf reuse() {
                 resetRefCnt();
-                setIndex(0, 0);
+                // Marks back to 0 as well, like PooledByteBuf.reuse(int) does with discardMarks().
+                setIndex(0, 0).markReaderIndex().markWriterIndex();
                 return this;
             }
 
@@ -369,7 +370,8 @@ public final class IoUringRecyclingBufferRingAllocator implements IoUringBufferR
             @Override
             public ByteBuf reuse() {
                 resetRefCnt();
-                setIndex(0, 0);
+                // Marks back to 0 as well, like PooledByteBuf.reuse(int) does with discardMarks().
+                setIndex(0, 0).markReaderIndex().markWriterIndex();
                 return this;
             }
 

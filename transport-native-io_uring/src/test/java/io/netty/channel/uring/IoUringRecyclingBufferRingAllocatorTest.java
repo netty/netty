@@ -147,6 +147,27 @@ public class IoUringRecyclingBufferRingAllocatorTest {
     }
 
     @Test
+    public void reusedBufferHasNoMarksOfItsPreviousUse() throws Exception {
+        onEventLoopThread(() -> {
+            IoUringRecyclingBufferRingAllocator allocator = newAllocator(4);
+            ByteBuf buffer = allocator.allocate();
+            buffer.writeLong(1).markWriterIndex();
+            buffer.readInt();
+            buffer.markReaderIndex();
+            buffer.release();
+
+            assertSame(buffer, allocator.allocate());
+            buffer.writeLong(2).writeLong(3);
+            // Like a new buffer: without marking first, a reset goes back to 0.
+            buffer.resetReaderIndex();
+            assertEquals(0, buffer.readerIndex());
+            buffer.resetWriterIndex();
+            assertEquals(0, buffer.writerIndex());
+            buffer.release();
+        });
+    }
+
+    @Test
     public void bufferReturnsOnlyAfterTheLastSlice() throws Exception {
         onEventLoopThread(() -> {
             IoUringRecyclingBufferRingAllocator allocator = newAllocator(1);
