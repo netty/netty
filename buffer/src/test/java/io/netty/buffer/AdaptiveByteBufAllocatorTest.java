@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.netty.buffer.AdaptivePoolingAllocator.PendingChunks;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassChunkRecycler;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunk;
 import io.netty.buffer.AdaptivePoolingAllocator.SizeClassedChunkCache;
@@ -63,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import io.netty.buffer.AbstractByteBufTest.TestGatheringByteChannel;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
@@ -733,6 +735,311 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 buf.release();
             }
         }
+    }
+
+    // --- Where a note is applied -----------------------------------------------------------------------------
+    //
+    // A release that cannot apply itself - another thread's, on a thread-local heap or while the stripe lock is
+    // taken - puts the segment or block on its chunk's free list and leaves a note for the chunk's cache. The tests
+    // below pin each place that applies notes, and set things up so that nothing else could have: a size class that
+    // went idle never takes its own slow path again, so its notes wait for another size class's slow path or for a
+    // purge tick of its heap; a buddy chunk's note waits for the magazine's next slow path, and a block whose note
+    // is still in flight is found by the bounded probe of the full chunks.
+
+    private static final int NOTE_ALLOCATING_SIZE = 4096;
+    private static final int NOTE_IDLE_SIZE = 1024;
+
+    /** A size class left idle with notes outstanding on two of its three chunks; see {@link #leaveNotes}. */
+    private static final class IdleSizeClass {
+        final SizeClassedChunkCache cache;
+        final List<ByteBuf> stillHeld;
+        final int chunkSize;
+        final int recycledBefore;
+
+        IdleSizeClass(SizeClassedChunkCache cache, List<ByteBuf> stillHeld, int chunkSize, int recycledBefore) {
+            this.cache = cache;
+            this.stillHeld = stillHeld;
+            this.chunkSize = chunkSize;
+            this.recycledBefore = recycledBefore;
+        }
+
+        /** The two emptied chunks left the cache, which keeps the one still in use, for the heap's recycler. */
+        void assertNotesApplied(String when) {
+            assertEquals(0, cache.pendingCount(), when + ": the notes must be applied");
+            assertEquals(0, cache.reusable.size, when);
+            assertEquals(1, cache.exhausted.size, when + ": only the chunk still in use stays");
+        }
+
+        void releaseRest() {
+            for (ByteBuf buf : stillHeld) {
+                buf.release();
+            }
+        }
+    }
+
+    /**
+     * Fill three chunks of {@link #NOTE_IDLE_SIZE} exactly, so all three are filed as exhausted, then release the
+     * buffers of the first two from another thread that cannot apply the release: on a thread-local heap it is not
+     * the owner, and on a stripe it runs while the stripe lock is held. Each of the two chunks gets one note.
+     */
+    private static IdleSizeClass leaveNotes(AdaptiveByteBufAllocator allocator, boolean sharedStripe)
+            throws Exception {
+        int chunkSize = AdaptivePoolingAllocator.chunkSizeOf(NOTE_IDLE_SIZE);
+        int perChunk = chunkSize / NOTE_IDLE_SIZE;
+        final List<ByteBuf> released = new ArrayList<ByteBuf>();
+        List<ByteBuf> stillHeld = new ArrayList<ByteBuf>();
+        for (int i = 0; i < 3 * perChunk; i++) {
+            ByteBuf buf = allocator.heapBuffer(NOTE_IDLE_SIZE, NOTE_IDLE_SIZE);
+            (i < 2 * perChunk ? released : stillHeld).add(buf);
+        }
+        SizeClassedChunkCache cache = chunkOf(stillHeld.get(0)).owningCache;
+        assertEquals(3, cache.exhausted.size, "three full chunks");
+        int recycledBefore = cache.chunkRecycler.retainedBytes();
+        underStripeLocks(allocator, sharedStripe, () -> {
+            try {
+                Thread t = new Thread(() -> {
+                    for (ByteBuf buf : released) {
+                        buf.release();
+                    }
+                });
+                t.start();
+                t.join();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+        });
+        assertEquals(2, cache.pendingCount(), "one note per emptied chunk");
+        assertEquals(3, cache.exhausted.size, "nothing applied the notes yet");
+        return new IdleSizeClass(cache, stillHeld, chunkSize, recycledBefore);
+    }
+
+    /** Run on the thread that owns a thread-local heap, or on a plain thread that allocates from a stripe. */
+    private static void onHeapThread(boolean threadLocal, final ThrowingRunnable body) throws Exception {
+        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        Runnable task = () -> {
+            try {
+                body.run();
+            } catch (Throwable t) {
+                failure.set(t);
+            }
+        };
+        Thread thread = threadLocal ? new FastThreadLocalThread(task) : new Thread(task);
+        thread.start();
+        thread.join();
+        if (failure.get() != null) {
+            throw new AssertionError(failure.get());
+        }
+    }
+
+    private interface ThrowingRunnable {
+        void run() throws Exception;
+    }
+
+    /**
+     * The slow path of one size class applies the notes of every other size class of its heap, so the notes of a
+     * size class that went idle are applied by the first allocation of another one. The chunk that allocation needs
+     * is then built from a buffer the idle size class just gave up: no memory is allocated.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void anotherSizeClassSlowPathAppliesTheNotesOfAnIdleOne(final boolean threadLocal) throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
+        onHeapThread(threadLocal, () -> {
+            IdleSizeClass idle = leaveNotes(allocator, !threadLocal);
+            ByteBuf first = null;
+            try {
+                long used = allocator.usedHeapMemory();
+                assertEquals(AdaptivePoolingAllocator.chunkSizeOf(NOTE_ALLOCATING_SIZE), idle.chunkSize,
+                        "both size classes must share a chunk size, and so a recycler pool");
+
+                first = allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE);
+                idle.assertNotesApplied("after another size class's slow path");
+                // Two chunk buffers went to the recycler, and the new size class took one of them for its chunk.
+                assertEquals(idle.recycledBefore + idle.chunkSize, idle.cache.chunkRecycler.retainedBytes());
+                assertEquals(used, allocator.usedHeapMemory(), "the new chunk must be built from a recycled buffer");
+            } finally {
+                if (first != null) {
+                    first.release();
+                }
+                idle.releaseRest();
+            }
+        });
+    }
+
+    /**
+     * A size class that keeps allocating from its active chunk never takes its slow path, so the notes of an idle
+     * size class of the same heap wait for its purge tick: exactly {@code chunkPurgeInterval} chunks' worth of its
+     * allocations, not one fewer.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void purgeTickAppliesTheNotesOfAnIdleSizeClassAtItsInterval(final boolean threadLocal) throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
+        onHeapThread(threadLocal, () -> {
+            // The allocating size class gets its active chunk first: from here on, allocating and releasing one
+            // buffer at a time never runs it out of segments, so it never takes its slow path again.
+            allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+            IdleSizeClass idle = leaveNotes(allocator, !threadLocal);
+            try {
+                long used = allocator.usedHeapMemory();
+                int interval = (int) AdaptivePoolingAllocator.CHUNK_PURGE_INTERVAL
+                        * (AdaptivePoolingAllocator.chunkSizeOf(NOTE_ALLOCATING_SIZE) / NOTE_ALLOCATING_SIZE);
+
+                // One allocation is counted already; the tick comes with the interval-th.
+                for (int i = 1; i < interval - 1; i++) {
+                    allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+                }
+                assertEquals(2, idle.cache.pendingCount(),
+                        "one allocation before the tick, the notes must still wait");
+
+                allocator.heapBuffer(NOTE_ALLOCATING_SIZE, NOTE_ALLOCATING_SIZE).release();
+                idle.assertNotesApplied("after the purge tick of another size class");
+                assertEquals(idle.recycledBefore + 2 * idle.chunkSize, idle.cache.chunkRecycler.retainedBytes(),
+                        "both emptied chunks must go to the recycler");
+                assertEquals(used, allocator.usedHeapMemory(), "recycled, not freed");
+            } finally {
+                idle.releaseRest();
+            }
+        });
+    }
+
+    private static final int BUDDY_NOTE_SIZE = 512 * 1024;
+
+    /** Buddy buffers held by a test, and how many of them a chunk holds. */
+    private static final class BuddyHeld {
+        final List<ByteBuf> held = new ArrayList<ByteBuf>();
+        int perChunk;
+
+        void releaseAll() {
+            for (ByteBuf buf : held) {
+                buf.release();
+            }
+        }
+    }
+
+    /**
+     * Fill {@code fullChunks} buddy chunks and open one more, then have another thread release one block of the
+     * {@code chunk}-th of the full ones while the stripe lock is held, so that it leaves a note.
+     */
+    private static BuddyHeld buddyReleaseThatLeavesANote(AdaptiveByteBufAllocator allocator, int fullChunks,
+                                                         int chunk) throws Exception {
+        BuddyHeld b = new BuddyHeld();
+        b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        b.perChunk = (int) (allocator.usedHeapMemory() / BUDDY_NOTE_SIZE);
+        assumeTrue(b.perChunk >= 2, "a buddy chunk holds " + b.perChunk + " buffers");
+        // fullChunks full, and one more block that opens the chunk the magazine allocates from next.
+        while (b.held.size() < fullChunks * b.perChunk + 1) {
+            b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        }
+        final ByteBuf victim = b.held.remove(chunk * b.perChunk);
+        underStripeLocks(allocator, true, () -> {
+            try {
+                release(victim, true);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+        });
+        return b;
+    }
+
+    /** Allocate until the chunk the magazine allocates from is full, then once more: that one takes the slow path. */
+    private static void allocateThroughTheNextSlowPath(AdaptiveByteBufAllocator allocator, BuddyHeld b,
+                                                       PendingChunks pending, int notesBefore) {
+        long used = allocator.usedHeapMemory();
+        for (int i = 1; i < b.perChunk; i++) {
+            b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        }
+        assertEquals(notesBefore, pending.size(), "no slow path yet, the notes wait");
+        b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        assertEquals(0, pending.size(), "the slow path must apply the notes");
+        assertEquals(used, allocator.usedHeapMemory(), "the released block must be reused, not a new chunk allocated");
+    }
+
+    /**
+     * A buddy block released by a thread that could not take the stripe lock is found through its note by the
+     * magazine's next slow path, even in a chunk beyond the reach of the probe of the full chunks.
+     */
+    @Test
+    void buddyReleaseNoteIsAppliedByTheNextSlowPath() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        // The probe looks at the newest full chunks only: the oldest of this many is out of its reach.
+        int fullChunks = maxFullProbe() + 2;
+        BuddyHeld b = buddyReleaseThatLeavesANote(allocator, fullChunks, 0);
+        try {
+            PendingChunks pending = buddyPending(allocator);
+            assertEquals(1, pending.size(), "the release must leave a note");
+            allocateThroughTheNextSlowPath(allocator, b, pending, 1);
+        } finally {
+            b.releaseAll();
+        }
+    }
+
+    /**
+     * A buddy block whose note is not there yet - the releaser offered it and has not pushed the note, or pushed it
+     * after the drain - is found by the bounded probe of the full chunks.
+     */
+    @Test
+    void buddyBlockWhoseNoteIsStillInFlightIsFoundByTheProbe() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        int fullChunks = 2;
+        // The newest full chunk, which the probe reaches first.
+        BuddyHeld b = buddyReleaseThatLeavesANote(allocator, fullChunks, fullChunks - 1);
+        try {
+            PendingChunks pending = buddyPending(allocator);
+            assertEquals(1, pending.size(), "the release must leave a note");
+            // Take the note away, as a drain that ran before the releaser pushed it would never have seen it.
+            for (AdaptivePoolingAllocator.Chunk c = pending.takeAll(); c != null; c = PendingChunks.rearm(c)) {
+                // Only unlink.
+            }
+            allocateThroughTheNextSlowPath(allocator, b, pending, 0);
+        } finally {
+            b.releaseAll();
+        }
+    }
+
+    private static boolean isLowMemory() throws Exception {
+        Field f = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
+        f.setAccessible(true);
+        return f.getBoolean(null);
+    }
+
+    /** How many full chunks the buddy magazine's last-resort probe looks at. */
+    private static int maxFullProbe() throws Exception {
+        for (Class<?> c : AdaptivePoolingAllocator.class.getDeclaredClasses()) {
+            if ("BuddyMagazine".equals(c.getSimpleName())) {
+                Field f = c.getDeclaredField("MAX_FULL_PROBE");
+                f.setAccessible(true);
+                return f.getInt(null);
+            }
+        }
+        throw new AssertionError("no BuddyMagazine");
+    }
+
+    /** The notes of the buddy magazine of the one stripe this test's thread allocated on. */
+    private static PendingChunks buddyPending(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
+        stripesField.setAccessible(true);
+        PendingChunks found = null;
+        for (Object stripe : (Object[]) stripesField.get(pooling)) {
+            Field magField = stripe.getClass().getDeclaredField("buddyMagazine");
+            magField.setAccessible(true);
+            Object magazine = magField.get(stripe);
+            if (magazine != null) {
+                assertNull(found, "one stripe only");
+                Field pendingField = magazine.getClass().getDeclaredField("pending");
+                pendingField.setAccessible(true);
+                found = (PendingChunks) pendingField.get(magazine);
+            }
+        }
+        assertNotNull(found, "no buddy magazine");
+        return found;
     }
 
     /** Runs a cache operation the way the allocator does: under the stripe lock when the cache is a stripe's. */
