@@ -1494,6 +1494,237 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         });
     }
 
+    /** The calling thread's thread-local heap. */
+    private static Object threadLocalHeap(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field tlField = pooling.getClass().getDeclaredField("threadLocalSizeClassHeap");
+        tlField.setAccessible(true);
+        return ((io.netty.util.concurrent.FastThreadLocal<?>) tlField.get(pooling)).get();
+    }
+
+    /** The current chunk of the calling thread's size-class magazine for {@code size}, or null. */
+    private static Object currentChunk(AdaptiveByteBufAllocator allocator, int size) throws Exception {
+        Object heap = threadLocalHeap(allocator);
+        Field magsField = heap.getClass().getDeclaredField("magazines");
+        magsField.setAccessible(true);
+        Object mag = ((Object[]) magsField.get(heap))[AdaptivePoolingAllocator.sizeClassIndexOf(size)];
+        Field currentField = mag.getClass().getDeclaredField("current");
+        currentField.setAccessible(true);
+        return currentField.get(mag);
+    }
+
+    /**
+     * A size class that made no allocation through a whole decay interval gives up its chunks, the one it keeps as
+     * its floor included, to the heap's recycler, which gives them back by halves; a class still allocating keeps its
+     * own.
+     */
+    @Test
+    void sizeClassIdleForAWholeIntervalGivesUpItsChunks() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final int idleSize = 64 * 1024;
+            final int busySize = 256;
+            allocator.heapBuffer(idleSize, idleSize).release();
+            long idleChunk = allocator.usedHeapMemory();
+            allocator.heapBuffer(busySize).release();
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            SizeClassChunkRecycler recycler = idleDecay.recycler;
+            long used = allocator.usedHeapMemory();
+            assertNotNull(currentChunk(allocator, idleSize));
+
+            // The first decay only records where each class stands.
+            idleDecay.decay(System.nanoTime());
+            assertNotNull(currentChunk(allocator, idleSize), "allocated since the heap was created: not idle");
+            allocator.heapBuffer(busySize).release();
+
+            // Idle through a whole interval: its chunk goes to the recycler, still counted as used.
+            idleDecay.decay(System.nanoTime());
+            assertNull(currentChunk(allocator, idleSize), "the idle class gave its chunk up");
+            assertNotNull(currentChunk(allocator, busySize), "the class in use keeps its chunk");
+            assertEquals(idleChunk, recycler.retainedBytes());
+            assertEquals(used, allocator.usedHeapMemory());
+
+            // Then the recycler gives it back at the next decay, once it stayed there through a whole interval.
+            allocator.heapBuffer(busySize).release();
+            idleDecay.decay(System.nanoTime());
+            assertEquals(0, recycler.retainedBytes());
+            assertEquals(used - idleChunk, allocator.usedHeapMemory());
+        });
+    }
+
+    /**
+     * An idle size class whose chunks the recycler has no room for keeps them until the recycler's halving makes room:
+     * idle memory only reaches the chunk allocator by halves.
+     */
+    @Test
+    void idleSizeClassWaitsForRoomInTheRecycler() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final int idleSize = 64 * 1024;
+            final int idleClass = AdaptivePoolingAllocator.sizeClassIndexOf(idleSize);
+            allocator.heapBuffer(idleSize, idleSize).release();
+            // Fill the recycler past its budget with the chunks of another class.
+            int perChunk = AdaptivePoolingAllocator.chunkSizeOf(256) / 256;
+            int chunks = SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET / AdaptivePoolingAllocator.chunkSizeOf(256) + 4;
+            List<ByteBuf> burst = new ArrayList<ByteBuf>();
+            for (int i = 0; i < chunks * perChunk; i++) {
+                burst.add(allocator.heapBuffer(256, 256));
+            }
+            for (ByteBuf b : burst) {
+                b.release();
+            }
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            SizeClassChunkRecycler recycler = idleDecay.recycler;
+            idleDecay.decay(System.nanoTime());
+            allocator.heapBuffer(256).release();
+            long used = allocator.usedHeapMemory();
+            long retained = recycler.retainedBytes();
+
+            idleDecay.decay(System.nanoTime());
+            assertNull(currentChunk(allocator, idleSize), "the idle class gave its chunk up");
+            assertEquals(0, recycler.size(idleClass), "no room: kept by the class");
+            assertEquals(retained - recycler.retainedBytes(), used - allocator.usedHeapMemory(),
+                    "only the recycler's halving freed memory");
+
+            allocator.heapBuffer(256).release();
+            idleDecay.decay(System.nanoTime());
+            assertEquals(1, recycler.size(idleClass), "offered once the halving made room");
+        });
+    }
+
+    /** A size class that allocated exactly one purge tick's worth since the previous decay is not idle. */
+    @Test
+    void sizeClassWithOneTickBetweenDecaysIsNotIdle() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final int size = 64 * 1024;
+            allocator.heapBuffer(size, size).release();
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            idleDecay.decay(System.nanoTime());
+            int threshold = (int) AdaptivePoolingAllocator.CHUNK_PURGE_INTERVAL
+                    * (AdaptivePoolingAllocator.chunkSizeOf(size) / size);
+            for (int i = 0; i < threshold; i++) {
+                allocator.heapBuffer(size, size).release();
+            }
+            Object current = currentChunk(allocator, size);
+            assertNotNull(current);
+            idleDecay.decay(System.nanoTime());
+            assertSame(current, currentChunk(allocator, size), "its allocation count came back to where it was");
+        });
+    }
+
+    /** On a stripe too, a size class idle through a whole interval gives up its chunk while another one allocates. */
+    @Test
+    void sizeClassIdleOnAStripeGivesUpItsChunks() throws Throwable {
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        onHeapThread(false, () -> {
+            final int idleSize = 16 * 1024;
+            allocator.heapBuffer(idleSize, idleSize).release();
+            long idleChunk = allocator.usedHeapMemory();
+            allocator.heapBuffer(256).release();
+            Object stripe = stripeHeapWithMagazines(allocator);
+            Field decayField = stripe.getClass().getDeclaredField("idleDecay");
+            decayField.setAccessible(true);
+            IdleDecay idleDecay = (IdleDecay) decayField.get(stripe);
+            Field lockField = stripe.getClass().getDeclaredField("lock");
+            lockField.setAccessible(true);
+            StampedLock lock = (StampedLock) lockField.get(stripe);
+            for (int round = 0; round < 2; round++) {
+                long stamp = lock.writeLock();
+                try {
+                    idleDecay.decay(System.nanoTime());
+                } finally {
+                    lock.unlockWrite(stamp);
+                }
+                allocator.heapBuffer(256).release();
+            }
+            assertNull(magazineCurrent(stripe, idleSize), "the idle class gave its chunk up");
+            assertNotNull(magazineCurrent(stripe, 256), "the class in use keeps its chunk");
+            assertEquals(idleChunk, idleDecay.recycler.retainedBytes());
+        });
+    }
+
+    /** A current chunk emptied by another thread's release, still only noted, is given up like any other. */
+    @Test
+    void idleSizeClassGivesUpAChunkAnotherThreadEmptied() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final int idleSize = 64 * 1024;
+            ByteBuf buf = allocator.heapBuffer(idleSize, idleSize);
+            long idleChunk = allocator.usedHeapMemory();
+            SizeClassedChunk chunk = chunkOf(buf);
+            release(buf, true);
+            assertEquals(1, chunk.owningCache.pendingCount(), "the other thread's release left a note");
+            allocator.heapBuffer(256).release();
+            IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+            idleDecay.decay(System.nanoTime());
+            allocator.heapBuffer(256).release();
+            idleDecay.decay(System.nanoTime());
+            assertNull(currentChunk(allocator, idleSize));
+            assertEquals(idleChunk, idleDecay.recycler.retainedBytes());
+            assertEquals(0, chunk.owningCache.pendingCount());
+        });
+    }
+
+    /** The one stripe that created size-class magazines. */
+    private static Object stripeHeapWithMagazines(AdaptiveByteBufAllocator allocator) throws Exception {
+        Field heapField = AdaptiveByteBufAllocator.class.getDeclaredField("heap");
+        heapField.setAccessible(true);
+        Object pooling = heapField.get(allocator);
+        Field stripesField = pooling.getClass().getDeclaredField("stripedHeaps");
+        stripesField.setAccessible(true);
+        Object found = null;
+        for (Object stripe : (Object[]) stripesField.get(pooling)) {
+            Field magsField = stripe.getClass().getDeclaredField("magazines");
+            magsField.setAccessible(true);
+            if (magsField.get(stripe) != null) {
+                assertNull(found, "one stripe only");
+                found = stripe;
+            }
+        }
+        assertNotNull(found);
+        return found;
+    }
+
+    /** The current chunk of {@code heap}'s size-class magazine for {@code size}. */
+    private static Object magazineCurrent(Object heap, int size) throws Exception {
+        Field magsField = heap.getClass().getDeclaredField("magazines");
+        magsField.setAccessible(true);
+        Object mag = ((Object[]) magsField.get(heap))[AdaptivePoolingAllocator.sizeClassIndexOf(size)];
+        Field currentField = mag.getClass().getDeclaredField("current");
+        currentField.setAccessible(true);
+        return currentField.get(mag);
+    }
+
+    /** A chunk with a buffer out is never given up, however long its class stays idle. */
+    @Test
+    void idleSizeClassKeepsAChunkWithABufferOut() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
+        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
+        onThreadLocalHeap(() -> {
+            final int size = 64 * 1024;
+            ByteBuf out = allocator.heapBuffer(size, size);
+            try {
+                IdleDecay idleDecay = threadLocalIdleDecay(allocator);
+                long used = allocator.usedHeapMemory();
+                Object chunk = currentChunk(allocator, size);
+                for (int i = 0; i < 4; i++) {
+                    idleDecay.decay(System.nanoTime());
+                }
+                assertSame(chunk, currentChunk(allocator, size));
+                assertEquals(used, allocator.usedHeapMemory());
+            } finally {
+                out.release();
+            }
+        });
+    }
+
     private static boolean isLowMemory() throws Exception {
         Field f = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
         f.setAccessible(true);
