@@ -962,7 +962,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
                         @Override
-                        protected void initChannel(Http2StreamChannel ch) {
+                        protected void initChannel(final Http2StreamChannel ch) {
                             ch.config().setAutoRead(false);
                             ch.eventLoop().schedule(new Runnable() {
                                 @Override
