@@ -71,8 +71,8 @@ import java.util.function.IntConsumer;
  * <p>
  * The magazines are grouped into {@link StripedHeap}s, each guarded by one lock, and a thread picks a stripe by its
  * id; more stripes are used when threads collide on the lock. A {@link FastThreadLocalThread} instead gets a
- * {@link ThreadLocalSizeClassHeap} of its own for the size classes, which needs no lock at all; buffers above the
- * size classes always come from a stripe.
+ * {@link ThreadLocalSizeClassHeap} of its own, which needs no lock at all, for the size classes and for the buffers
+ * above them; the stripes serve the other threads.
  * <p>
  * A buffer released by the thread that owns its chunk is returned to it directly. A buffer released by any other
  * thread puts its segment or block on the chunk's lock-free free list and leaves a note for the owner, which applies
@@ -136,15 +136,18 @@ final class AdaptivePoolingAllocator {
 
     /**
      * {@code io.netty.allocator.chunkReuseQueueCapacity}: how many wholly free chunks for buffers above the size
-     * classes each stripe keeps for its next allocations, at most. Default: twice the number of processors.
-     * {@link #CHUNK_REUSE_QUEUE_BYTES} bounds the same chunks in bytes; a chunk beyond either bound is freed.
+     * classes each heap (a stripe, or a thread-local heap) keeps for its next allocations, at most. Default: twice
+     * the number of processors.
+     * {@link #CHUNK_REUSE_QUEUE_BYTES} bounds the same chunks in bytes; a chunk beyond either bound is freed. A chunk
+     * emptied by releases the heap could not apply at once (another thread's, on a thread-local heap or a busy
+     * stripe) counts from the heap's next slow path or decay, which applies them.
      */
     static final int CHUNK_REUSE_QUEUE = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
 
     /**
      * {@code io.netty.allocator.chunkReuseQueueBytes}: how many bytes of wholly free chunks for buffers above the
-     * size classes each stripe keeps, at most, next to {@link #CHUNK_REUSE_QUEUE}. Those chunks are 2 to 8 MiB, so
+     * size classes each heap keeps, at most, next to {@link #CHUNK_REUSE_QUEUE}. Those chunks are 2 to 8 MiB, so
      * a count alone let a burst of large buffers stay whole. Those that stay idle are given back by halves, see
      * {@link IdleDecay}. Default: 32 MiB, 4 MiB in low-memory mode; never below the largest chunk.
      */
@@ -319,18 +322,23 @@ final class AdaptivePoolingAllocator {
         AdaptiveByteBuf allocated = null;
         if (size <= MAX_POOLED_BUF_SIZE) {
             final int index = sizeClassIndexOf(size);
+            ThreadLocalSizeClassHeap heap = null;
+            if (!IS_LOW_MEM && FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
+                heap = threadLocalSizeClassHeap.get();
+            }
             if (index < POOLED_SIZE_CLASSES_COUNT) {
-                ThreadLocalSizeClassHeap heap = null;
-                if (!IS_LOW_MEM && FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
-                    heap = threadLocalSizeClassHeap.get();
-                }
                 if (heap != null) {
                     allocated = heap.allocate(index, size, maxCapacity, buf);
                 } else {
                     allocated = allocateShared(index, size, maxCapacity, currentThread, buf);
                 }
             } else if (!IS_LOW_MEM) {
-                allocated = allocateShared(index, size, maxCapacity, currentThread, buf);
+                // Above the size classes: a thread with its own heap never takes a stripe lock for these either.
+                if (heap != null) {
+                    allocated = heap.allocateLarge(size, maxCapacity, buf);
+                } else {
+                    allocated = allocateShared(index, size, maxCapacity, currentThread, buf);
+                }
             }
         }
         if (allocated == null) {
@@ -793,8 +801,9 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * When a heap gives back the memory it keeps idle: the chunk buffers of its {@link SizeClassChunkRecycler} and, on
-     * a stripe, the wholly free chunks of its {@link BuddyMagazine}.
+     * When a heap gives back the memory it keeps idle: the chunk buffers of its {@link SizeClassChunkRecycler} and
+     * the wholly free chunks of its {@link BuddyMagazine}. On a thread-local heap both age with all of the thread's
+     * allocations, whatever their size.
      * <p>
      * The only signal is the heap's own allocations, counted where the heap already does work: each purge tick of a
      * size class adds the allocations it counted, and each slow path of the large-buffer magazine adds one, which
@@ -815,7 +824,7 @@ final class AdaptivePoolingAllocator {
 
         /** Set once the heap has one. */
         SizeClassChunkRecycler recycler;
-        /** Set once the stripe has one; never on a thread-local heap. */
+        /** Set once the heap has one: a stripe's, or a thread-local heap's for its buffers above the size classes. */
         BuddyMagazine buddyMagazine;
         // Visible for testing.
         long allocationsSinceCheck;
@@ -843,7 +852,7 @@ final class AdaptivePoolingAllocator {
             SizeClassChunkRecycler recycler = this.recycler;
             BuddyMagazine buddyMagazine = this.buddyMagazine;
             return recycler != null && recycler.retainedBytes() != 0 ||
-                    buddyMagazine != null && buddyMagazine.idleChunks() != 0;
+                    buddyMagazine != null && (buddyMagazine.idleChunks() != 0 || !buddyMagazine.pending.isEmpty());
         }
 
         // Visible for testing.
@@ -911,7 +920,7 @@ final class AdaptivePoolingAllocator {
             if (recycler == null) {
                 recycler = AdaptiveRecycler.sharedExclusiveGet(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             }
-            BuddyMagazine mag = new BuddyMagazine(allocator, allocator.buddyStrategy, recycler, lock, idleDecay);
+            BuddyMagazine mag = new BuddyMagazine(allocator, allocator.buddyStrategy, recycler, lock, null, idleDecay);
             buddyMagazine = mag;
             idleDecay.buddyMagazine = mag;
             return mag;
@@ -984,6 +993,8 @@ final class AdaptivePoolingAllocator {
     private static final class ThreadLocalSizeClassHeap {
         private final SizeClassMagazine[] magazines = new SizeClassMagazine[SIZE_CLASSES_COUNT];
         private final SizeClassChunkRecycler chunkRecycler;
+        /** Buffers above the size classes; {@code null} until the first one. */
+        private BuddyMagazine buddyMagazine;
         // Visible for testing.
         final IdleDecay idleDecay = new IdleDecay();
         private final AdaptivePoolingAllocator allocator;
@@ -1004,6 +1015,32 @@ final class AdaptivePoolingAllocator {
             assert success : "Thread-local allocation must always succeed";
             mag.tickAllocPurge();
             return buf;
+        }
+
+        /**
+         * A buffer above the size classes, from this heap's own {@link BuddyMagazine}, created on first use: the
+         * owner thread needs no lock, and the heap's {@link IdleDecay}, which its size classes' allocations keep
+         * counting, ages the magazine's idle chunks with the rest of the heap.
+         */
+        AdaptiveByteBuf allocateLarge(int size, int maxCapacity, AdaptiveByteBuf buf) {
+            BuddyMagazine mag = buddyMagazine;
+            if (mag == null) {
+                mag = new BuddyMagazine(allocator, allocator.buddyStrategy, null, null, Thread.currentThread(),
+                                        idleDecay);
+                buddyMagazine = mag;
+                idleDecay.buddyMagazine = mag;
+            }
+            boolean reallocate = buf != null;
+            if (!reallocate) {
+                buf = mag.newBuffer();
+            }
+            if (mag.allocate(size, maxCapacity, buf)) {
+                return buf;
+            }
+            if (!reallocate) {
+                buf.release();
+            }
+            return null;
         }
 
         SizeClassMagazine getOrCreateMagazine(int sizeClassIndex) {
@@ -1029,6 +1066,12 @@ final class AdaptivePoolingAllocator {
                     mag.free();
                     magazines[i] = null;
                 }
+            }
+            BuddyMagazine buddy = buddyMagazine;
+            if (buddy != null) {
+                buddy.free();
+                buddyMagazine = null;
+                idleDecay.buddyMagazine = null;
             }
             chunkRecycler.freeAll();
         }
@@ -1139,6 +1182,11 @@ final class AdaptivePoolingAllocator {
             Chunk next = chunk.pendingNext;
             NEXT.set(chunk, null);
             return next == END ? null : next;
+        }
+
+        /** Whether no note is queued; a volatile read, a note pushed right after is not seen. */
+        boolean isEmpty() {
+            return head == null;
         }
 
         /**
@@ -1692,8 +1740,7 @@ final class AdaptivePoolingAllocator {
                 this.maxChunkSize.set(chunkSize);
             }
             BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine);
-            // Buddy magazines live on the shared stripes only, so a buddy chunk is never thread-local.
-            magazine.allocator.chunkBufferAllocated(chunk, true, false);
+            magazine.allocator.chunkBufferAllocated(chunk, true, magazine.isThreadLocal());
             return chunk;
         }
     }
@@ -1827,7 +1874,7 @@ final class AdaptivePoolingAllocator {
          * buffers go to the {@link SizeClassChunkRecycler} that every size class draws from.
          *
          * <p>Called on the allocation slow path only, right before {@link SizeClassedChunkCache#pollChunk},
-         * which is once per chunk-worth of allocations.
+         * which is once per chunk-worth of allocations. One volatile read per magazine when there are no notes.
          *
          * <p>This magazine's own cache is skipped: {@code pollChunk} drains it on the very next
          * line, which is both the last moment before the poll and therefore the freshest - it also
@@ -1840,6 +1887,12 @@ final class AdaptivePoolingAllocator {
                 if (mag != null && mag != this) {
                     mag.chunkCache.drainPending();
                 }
+            }
+            // And the heap's magazine for buffers above the size classes: on a thread-local heap every other
+            // thread's release is a note, and its idle bound only holds once the note is applied.
+            BuddyMagazine buddy = idleDecay.buddyMagazine;
+            if (buddy != null) {
+                buddy.drainPending();
             }
         }
 
@@ -1936,24 +1989,29 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * The magazine for buffers above the largest size class, one per stripe, guarded by the stripe lock. It carves
+     * The magazine for buffers above the largest size class: one per stripe, guarded by the stripe lock, and one per
+     * thread-local heap, touched only by its owner thread. It carves
      * power-of-two blocks out of {@link BuddyChunk}s: it allocates from its {@link #active} chunk and files every other
      * chunk it owns by the order of its largest free block, so the next chunk to allocate from is the one with the
      * largest free block, found in O(1).
      * <p>
-     * Only the stripe lock holder touches the queues and the chunks' trees. A buffer released by any thread puts
-     * its block on the chunk's MPSC free list and leaves a note in {@link #pending} (see
+     * Only the stripe lock holder, or the owner thread, touches the queues and the chunks' trees. A buffer released by
+     * any other thread puts its block on the chunk's MPSC free list and leaves a note in {@link #pending} (see
      * {@link BuddyChunk#releaseSegment}); the next slow path drains the notes and refiles each chunk by its tree,
      * after applying its free list. The same protocol as {@link SizeClassedChunkCache}'s Invariant N: the block is
      * offered before the note is pushed, notes say only "look at this chunk", a note is re-armed before it is
-     * processed, and filing and draining both run under the stripe lock. A bounded probe of the full chunks covers
-     * notes that are still in flight.
+     * processed, and filing and draining both run under the stripe lock, or on the owner thread. A bounded probe of
+     * the full chunks covers notes that are still in flight. On a thread-local heap the heap's size-class slow path
+     * applies the notes too (see {@link SizeClassMagazine#drainHeapPending}), since there every other thread's
+     * release is a note.
      */
     private static final class BuddyMagazine {
         /** One queue per order of largest free block: {@link BuddyTree#MIN_BLOCK_SIZE} up to the largest chunk. */
         private static final int ORDERS = Integer.numberOfTrailingZeros(MAX_CHUNK_SIZE / BuddyTree.MIN_BLOCK_SIZE) + 1;
         /** Bound on the last-resort look at the full chunks; see {@link #probeFull}. */
         private static final int MAX_FULL_PROBE = 8;
+        /** What {@link #tryLockForRelease} returns to the owner thread of a thread-local heap: any non-zero value. */
+        private static final long OWNER_STAMP = 1;
 
         final AdaptivePoolingAllocator allocator;
         private final BuddyChunkController chunkController;
@@ -1972,19 +2030,28 @@ final class AdaptivePoolingAllocator {
         private long idleBytes;
         /** The lock of the stripe this magazine lives on, which guards everything here but {@link #pending}. */
         private final StampedLock stripeLock;
+        /** The thread of the thread-local heap this magazine lives on, which alone touches it; null on a stripe. */
+        private final Thread ownerThread;
         /** The chunk the magazine allocates from, on no queue; {@code null} before the first allocation. */
         private BuddyChunk active;
-        /** The stripe's; counts this magazine's allocations and tells it when to {@link #decay}. */
+        /** The heap's; counts this magazine's allocations and tells it when to {@link #decay}. */
         private final IdleDecay idleDecay;
         /** How many decays ran; a chunk filed wholly free records it in {@link BuddyChunk#whollyFreeSince}. */
         private int decays;
 
+        /**
+         * @param bufRecycler the stripe's buffer pool, or {@code null} on a thread-local heap for the event-loop pool
+         * @param stripeLock  the stripe's lock, or {@code null} on a thread-local heap
+         * @param ownerThread the thread-local heap's thread, or {@code null} on a stripe
+         */
         BuddyMagazine(AdaptivePoolingAllocator allocator, BuddyChunkManagementStrategy strategy,
-                      AdaptiveRecycler bufRecycler, StampedLock stripeLock, IdleDecay idleDecay) {
+                      AdaptiveRecycler bufRecycler, StampedLock stripeLock, Thread ownerThread, IdleDecay idleDecay) {
+            assert (stripeLock == null) != (ownerThread == null);
             this.allocator = allocator;
             this.idleDecay = idleDecay;
             this.bufRecycler = bufRecycler;
             this.stripeLock = stripeLock;
+            this.ownerThread = ownerThread;
             this.chunkController = strategy.createController(allocator);
             for (int order = 0; order < ORDERS; order++) {
                 byLargestFreeOrder[order] = new ChunkQueue();
@@ -2020,7 +2087,7 @@ final class AdaptivePoolingAllocator {
             // A polled chunk's largest free block was exact when it was filed, and can only have grown since.
             assert success : "no free block of " + blockSize + " in " + chunk;
             // One per slow path: a slow path is at least one allocation, and may be exactly one (a polled chunk with a
-            // single fitting block), so counting more could age the stripe faster than its allocations do.
+            // single fitting block), so counting more could age the heap faster than its allocations do.
             idleDecay.count(1);
             return success;
         }
@@ -2118,6 +2185,8 @@ final class AdaptivePoolingAllocator {
          * the cold ones are exactly those stamped before the previous decay.
          */
         void decay() {
+            // Chunks other threads' releases made wholly free are filed as such first, so they start aging now.
+            drainPending();
             int previous = decays++;
             int cold = 0;
             Chunk oldest = null;
@@ -2144,21 +2213,28 @@ final class AdaptivePoolingAllocator {
 
         /**
          * Try to take the stripe lock so a releasing thread can put its block back and refile the chunk itself.
-         * Returns 0 when the lock is busy: it is never waited on, and the release leaves a note instead.
+         * Returns 0 when the lock is busy: it is never waited on, and the release leaves a note instead. On a
+         * thread-local heap there is no lock: the owner thread gets {@link #OWNER_STAMP}, any other thread 0.
          */
         long tryLockForRelease() {
+            Thread owner = ownerThread;
+            if (owner != null) {
+                return owner == Thread.currentThread() ? OWNER_STAMP : 0;
+            }
             return stripeLock.tryWriteLock();
         }
 
         void unlockAfterRelease(long stamp) {
-            stripeLock.unlockWrite(stamp);
+            if (ownerThread == null) {
+                stripeLock.unlockWrite(stamp);
+            }
         }
 
         /**
          * Put a block back in its chunk and move the chunk to the queue its tree now calls for; a chunk that became
-         * wholly free is kept or given up here, by {@link #file}. Caller holds the stripe lock. This is what makes
-         * the idle bound hold for a magazine that stops allocating: a release that only left a note would wait for
-         * the magazine's next slow path.
+         * wholly free is kept or given up here, by {@link #file}. Caller holds the stripe lock, or is the owner
+         * thread. This is what makes the idle bound hold for a magazine that stops allocating: a release that only
+         * left a note waits for the next drain (a slow path of the heap, or a decay).
          */
         void releaseInPlace(BuddyChunk chunk, int offset, int size) {
             chunk.releaseToTree(offset, size);
@@ -2219,10 +2295,15 @@ final class AdaptivePoolingAllocator {
         }
 
         AdaptiveByteBuf newBuffer() {
-            AdaptiveByteBuf buf = bufRecycler.get();
+            AdaptiveByteBuf buf = bufRecycler != null ? bufRecycler.get()
+                    : SizeClassMagazine.EVENT_LOOP_LOCAL_BUFFER_POOL.get();
             buf.resetRefCnt();
             buf.discardMarks();
             return buf;
+        }
+
+        boolean isThreadLocal() {
+            return ownerThread != null;
         }
     }
 
@@ -2740,7 +2821,7 @@ final class AdaptivePoolingAllocator {
 
         /**
          * Claim a free block of {@code blockSize} for {@code buf}, after applying the blocks released since the last
-         * look. Owner (stripe lock holder) only.
+         * look. The magazine's owner thread or stripe lock holder only.
          */
         boolean readInitInto(AdaptiveByteBuf buf, int size, int blockSize, int maxCapacity) {
             processFreelistEntries();
@@ -2800,8 +2881,9 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Any thread. If the stripe lock is free, take it and put the block straight back in the tree, refiling the
-         * chunk. Otherwise put the block on the free list, then leave a note for the owner: offer before note, so a
+         * Any thread. If the stripe lock is free, or this is the owner thread of a thread-local magazine, put the block
+         * straight back in the tree, refiling the chunk. Otherwise put the block on the free list, then leave a note
+         * for the owner: offer before note, so a
          * drain that pops the note sees the block. Either way the buffer's reference is dropped last, so the chunk
          * is alive throughout. A one-shot chunk only drops the reference.
          */
@@ -2841,7 +2923,12 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        /** Owner or stripe lock holder only. */
+        @Override
+        boolean inThreadLocalMagazine() {
+            return owner != null && owner.isThreadLocal();
+        }
+
+        /** The magazine's owner thread or stripe lock holder only. */
         void releaseToTree(int offset, int size) {
             tree.release(offset, size);
         }
