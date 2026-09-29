@@ -29,20 +29,17 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.PeerCredentials;
-import io.netty.util.AbstractReferenceCounted;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * {@link DomainSocketChannel} implementation that uses linux io_uring
  */
 public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel implements DomainSocketChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringDomainSocketChannel.class);
 
     private final IoUringDomainSocketChannelConfig config;
 
@@ -91,8 +88,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof FileDescriptor) {
-            // Duplicate the fd because a failed write listener may close the original before SENDMSG completes.
-            return new DuplicatedFileDescriptor((FileDescriptor) msg);
+            return msg;
         }
         return super.filterOutboundMessage(msg);
     }
@@ -130,36 +126,51 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
 
         private MsgHdrMemory writeMsgHdrMemory;
         private MsgHdrMemory readMsgHdrMemory;
+        private FileDescriptor pendingSendFd;
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
-            if (msg instanceof DuplicatedFileDescriptor) {
+            if (msg instanceof FileDescriptor) {
                 // we can reuse the same memory for any fd
                 // because we never have more than a single outstanding write.
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
-                IoUringIoOps ioUringIoOps = prepSendFdIoOps(((DuplicatedFileDescriptor) msg).fd, writeMsgHdrMemory);
-                writeId = submitWrite(ioUringIoOps);
-                writeOpCode = Native.IORING_OP_SENDMSG;
-                if (writeId == 0) {
-                    MsgHdrMemory memory = writeMsgHdrMemory;
-                    writeMsgHdrMemory = null;
-                    memory.release();
+                try {
+                    // Keep a private fd until SENDMSG completes, even if a failed write listener closes the original.
+                    pendingSendFd = new FileDescriptor(Native.duplicateFd(((FileDescriptor) msg).intValue()));
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
                     return 0;
                 }
-                return 1;
+                try {
+                    IoUringIoOps ioUringIoOps = prepSendFdIoOps(pendingSendFd, writeMsgHdrMemory);
+                    writeId = submitWrite(ioUringIoOps);
+                    writeOpCode = Native.IORING_OP_SENDMSG;
+                    if (writeId == 0) {
+                        MsgHdrMemory memory = writeMsgHdrMemory;
+                        writeMsgHdrMemory = null;
+                        memory.release();
+                        return 0;
+                    }
+                    return 1;
+                } finally {
+                    if (writeId == 0) {
+                        closePendingSendFd();
+                    }
+                }
             }
             return super.scheduleWriteSingle(msg);
         }
 
-        @Override
-        List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
-            Object msg = buffer.current();
-            if (msg instanceof DuplicatedFileDescriptor) {
-                return Collections.singletonList(((DuplicatedFileDescriptor) msg).retain());
+        private void closePendingSendFd() {
+            FileDescriptor fd = pendingSendFd;
+            pendingSendFd = null;
+            try {
+                fd.close();
+            } catch (IOException e) {
+                logger.debug("Error while closing a duplicated file descriptor", e);
             }
-            return super.retainWriteBuffers(buffer);
         }
 
         @Override
@@ -167,6 +178,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
             if (op == Native.IORING_OP_SENDMSG) {
                 writeId = 0;
                 writeOpCode = 0;
+                closePendingSendFd();
                 ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
                 // A failed batch may still return an error after shutdownOutput(). It must not close the input.
                 if (channelOutboundBuffer == null || res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -295,30 +307,6 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 return false;
             default:
                 throw new Error("Unexpected read mode: " + readMode);
-        }
-    }
-
-    private static final class DuplicatedFileDescriptor extends AbstractReferenceCounted {
-        private static final InternalLogger logger = InternalLoggerFactory.getInstance(DuplicatedFileDescriptor.class);
-
-        private final FileDescriptor fd;
-
-        DuplicatedFileDescriptor(FileDescriptor descriptor) {
-            fd = new FileDescriptor(Native.duplicateFd(descriptor.intValue()));
-        }
-
-        @Override
-        public ReferenceCounted touch(Object hint) {
-            return this;
-        }
-
-        @Override
-        protected void deallocate() {
-            try {
-                fd.close();
-            } catch (IOException e) {
-                logger.debug("Error while closing a duplicated file descriptor", e);
-            }
         }
     }
 }
