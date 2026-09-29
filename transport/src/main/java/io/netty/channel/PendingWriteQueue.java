@@ -214,8 +214,9 @@ public final class PendingWriteQueue {
         }
         ReferenceCountUtil.safeRelease(write.msg);
         ChannelPromise promise = write.promise;
-        safeFail(promise, cause);
+        // Unlink the write before failing the promise, as a listener may use the queue again.
         recycle(write, true);
+        safeFail(promise, cause);
     }
 
     private void assertEmpty() {
