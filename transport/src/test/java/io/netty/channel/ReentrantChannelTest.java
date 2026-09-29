@@ -35,8 +35,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class ReentrantChannelTest extends BaseChannelTest {
 
@@ -276,13 +276,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
         });
 
-        try {
-            clientChannel.writeAndFlush(createTestBuf(2000)).sync();
-            fail();
-        } catch (Exception e) {
-            // FIXME:  shouldn't this contain the "intentional failure" exception?
-            assertThat(e).isInstanceOf(ClosedChannelException.class);
-        }
+        Exception e = assertThrows(Exception.class, () -> clientChannel.writeAndFlush(createTestBuf(2000)).sync());
+        // FIXME:  shouldn't this contain the "intentional failure" exception?
+        assertThat(e).isInstanceOf(ClosedChannelException.class);
 
         clientChannel.closeFuture().sync();
 

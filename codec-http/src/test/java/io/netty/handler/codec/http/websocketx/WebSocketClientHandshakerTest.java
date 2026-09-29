@@ -55,8 +55,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
@@ -463,9 +463,8 @@ public abstract class WebSocketClientHandshakerTest {
         response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "realm = access token required");
 
         try {
-            handshaker.finishHandshake(null, response);
-            fail("Expected WebSocketClientHandshakeException");
-        } catch (WebSocketClientHandshakeException exception) {
+            WebSocketClientHandshakeException exception = assertThrows(WebSocketClientHandshakeException.class, () ->
+                    handshaker.finishHandshake(null, response));
             assertEquals("Invalid handshake response getStatus: 401 Unauthorized", exception.getMessage());
             assertEquals(HttpResponseStatus.UNAUTHORIZED, exception.response().status());
             assertTrue(exception.response().headers().contains(HttpHeaderNames.WWW_AUTHENTICATE,

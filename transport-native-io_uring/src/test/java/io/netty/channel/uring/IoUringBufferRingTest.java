@@ -266,13 +266,14 @@ public class IoUringBufferRingTest {
             assumeThat(ioUringBufRingAddr)
                     .as("ioUringSetupBufRing result must be greater than 0, but now result is %d", ioUringBufRingAddr)
                     .isGreaterThan(0);
+            IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
+                    Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
+                    entries, 2, (short) 1, false,
+                    new IoUringFixedBufferRingAllocator(entrySize), false);
+            bufferRing.initialize();
+            // close() unregisters the ring and releases the buffers it still owns; unregistering by hand
+            // leaks every entry that initialize() filled but the test did not use.
             try {
-                IoUringBufferRing bufferRing = new IoUringBufferRing(ringFd,
-                        Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(entries)),
-                        entries, 2, (short) 1, false,
-                        new IoUringFixedBufferRingAllocator(entrySize), false);
-                bufferRing.initialize();
-
                 int bundleTotal = entrySize * 2 + 1;
                 ByteBuf buffer = bufferRing.useBuffer((short) 0, bundleTotal, true);
                 try {
@@ -281,7 +282,7 @@ public class IoUringBufferRingTest {
                     buffer.release();
                 }
             } finally {
-                Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, (short) 1);
+                bufferRing.close();
             }
         } finally {
             ringBuffer.close();

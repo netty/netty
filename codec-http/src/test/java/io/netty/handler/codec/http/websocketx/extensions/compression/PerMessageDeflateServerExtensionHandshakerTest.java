@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,8 +53,8 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // execute
         data = extension.newReponseData();
@@ -73,8 +74,8 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // execute
         data = extension.newReponseData();
@@ -119,8 +120,8 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // execute
         data = extension.newReponseData();
@@ -146,8 +147,8 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         // test
         assertNotNull(extension);
         assertEquals(WebSocketServerExtension.RSV1, extension.rsv());
-        assertTrue(extension.newExtensionDecoder() instanceof PerMessageDeflateDecoder);
-        assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
+        assertInstanceOf(PerMessageDeflateDecoder.class, extension.newExtensionDecoder());
+        assertInstanceOf(PerMessageDeflateEncoder.class, extension.newExtensionEncoder());
 
         // execute
         data = extension.newReponseData();

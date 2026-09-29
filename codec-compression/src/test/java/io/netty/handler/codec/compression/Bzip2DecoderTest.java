@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class Bzip2DecoderTest extends AbstractDecoderTest {
 
@@ -54,12 +53,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         try {
             channel.writeInbound(in);
         } finally {
-            try {
-                destroyChannel();
-                fail();
-            } catch (DecompressionException ignored) {
-                // expected
-            }
+            assertThrows(DecompressionException.class, () -> destroyChannel());
         }
     }
 

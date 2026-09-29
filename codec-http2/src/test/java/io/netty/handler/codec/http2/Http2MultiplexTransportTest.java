@@ -83,6 +83,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -90,6 +91,7 @@ import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forClient;
 import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forServer;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -860,6 +862,351 @@ public class Http2MultiplexTransportTest {
             }
             if (group != null) {
                 group.shutdownGracefully(0, 3, SECONDS);
+            }
+        }
+    }
+
+    // https://github.com/netty/netty/issues/17600
+    @Test
+    @Timeout(value = 30000L, unit = MILLISECONDS)
+    public void proxyMirroringWritabilityToAutoReadAcrossEventLoopsDoesNotStallStream() throws Exception {
+        // Large enough to force many rounds of the (default 64KiB) HTTP/2 stream flow-control window.
+        final int payloadLength = 2 * 1024 * 1024;
+        final byte[] payloadBytes = new byte[payloadLength];
+        for (int i = 0; i < payloadLength; i++) {
+            payloadBytes[i] = (byte) i;
+        }
+
+        // Two independent Http2 "connections" (each with its own EventLoop/thread) are proxied together: data
+        // received on "in" is forwarded onto "out", and "out"'s writability is mirrored onto "in"'s auto-read
+        // state -- exactly the pattern from https://github.com/netty/netty/issues/17600. Because "in" and "out"
+        // live on different EventLoops, this ends up calling setAutoRead() across threads.
+        EventLoopGroup inGroup = null;
+        EventLoopGroup outGroup = null;
+        Channel inServerChannel = null;
+        Channel inClientChannel = null;
+        Channel outServerChannel = null;
+        Channel outClientChannel = null;
+        Http2StreamChannel inStream = null;
+        Http2StreamChannel outStream = null;
+        final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
+        try {
+            inGroup = new DefaultEventLoop();
+            outGroup = new DefaultEventLoop();
+
+            LocalAddress inAddress = new LocalAddress(getClass().getName() + ".in");
+            LocalAddress outAddress = new LocalAddress(getClass().getName() + ".out");
+
+            // "in" server: sends the whole payload as fast as its peer's flow-control window allows.
+            ServerBootstrap inSb = new ServerBootstrap();
+            inSb.group(inGroup);
+            inSb.channel(LocalServerChannel.class);
+            inSb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+                                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false));
+                                ctx.writeAndFlush(new DefaultHttp2DataFrame(
+                                        Unpooled.wrappedBuffer(payloadBytes), true));
+                            }
+                            ReferenceCountUtil.release(msg);
+                        }
+                    }));
+                }
+            });
+            inServerChannel = inSb.bind(inAddress).sync().channel();
+
+            Bootstrap inBs = new Bootstrap();
+            inBs.group(inGroup);
+            inBs.channel(LocalChannel.class);
+            inBs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                }
+            });
+            inClientChannel = inBs.connect(inAddress).sync().channel();
+
+            // "out" server: a receiver that (like a slow / congested downstream) doesn't drain anything -- and
+            // hence doesn't send WINDOW_UPDATE -- for a little while, so the proxied "out" stream genuinely
+            // accumulates a write backlog and becomes unwritable, rather than always draining instantly (as it
+            // would with local, same-JVM, always-on auto-read).
+            final CountDownLatch outComplete = new CountDownLatch(1);
+            final ByteBuf received = Unpooled.buffer(payloadLength);
+            receivedHolder.set(received);
+            final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+
+            ServerBootstrap outSb = new ServerBootstrap();
+            outSb.group(outGroup);
+            outSb.channel(LocalServerChannel.class);
+            outSb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                        @Override
+                        protected void initChannel(Http2StreamChannel ch) {
+                            ch.config().setAutoRead(false);
+                            ch.eventLoop().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ch.config().setAutoRead(true);
+                                }
+                            }, 500, MILLISECONDS);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    try {
+                                        if (msg instanceof Http2DataFrame) {
+                                            Http2DataFrame data = (Http2DataFrame) msg;
+                                            received.writeBytes(data.content());
+                                            if (data.isEndStream()) {
+                                                outComplete.countDown();
+                                            }
+                                        }
+                                    } catch (Throwable cause) {
+                                        failure.compareAndSet(null, cause);
+                                    } finally {
+                                        ReferenceCountUtil.release(msg);
+                                    }
+                                }
+                            });
+                        }
+                    }));
+                }
+            });
+            outServerChannel = outSb.bind(outAddress).sync().channel();
+
+            Bootstrap outBs = new Bootstrap();
+            outBs.group(outGroup);
+            outBs.channel(LocalChannel.class);
+            outBs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                }
+            });
+            outClientChannel = outBs.connect(outAddress).sync().channel();
+
+            // Open "out" first so "in"'s handler can forward straight onto it.
+            outStream = new Http2StreamChannelBootstrap(outClientChannel).open().syncUninterruptibly().getNow();
+            outStream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false)).sync();
+
+            final Http2StreamChannel finalOutStream = outStream;
+            Http2StreamChannelBootstrap inH2Bootstrap = new Http2StreamChannelBootstrap(inClientChannel);
+            inH2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    if (msg instanceof Http2DataFrame) {
+                        Http2DataFrame data = (Http2DataFrame) msg;
+                        finalOutStream.writeAndFlush(
+                                new DefaultHttp2DataFrame(data.content().retain(), data.isEndStream()));
+                    }
+                    ReferenceCountUtil.release(msg);
+                }
+            });
+            inStream = inH2Bootstrap.open().syncUninterruptibly().getNow();
+
+            // Mirror "out"'s writability onto "in"'s auto-read state, exactly like
+            // https://github.com/netty/netty/issues/17600. "in" and "out" are registered to different EventLoops,
+            // so this ends up calling Http2StreamChannelConfig#setAutoRead() from a thread other than the one
+            // "in" is registered to.
+            final Http2StreamChannel finalInStream = inStream;
+            outStream.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                    finalInStream.config().setAutoRead(finalOutStream.isWritable());
+                }
+            });
+
+            inStream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).sync();
+
+            assertTrue(outComplete.await(20, SECONDS), "proxying stalled: never received the full payload");
+            Throwable cause = failure.get();
+            if (cause != null) {
+                throw new AssertionError(cause);
+            }
+            assertEquals(payloadLength, received.readableBytes());
+            byte[] actual = new byte[payloadLength];
+            received.readBytes(actual);
+            assertArrayEquals(payloadBytes, actual);
+        } finally {
+            ByteBuf received = receivedHolder.get();
+            if (received != null) {
+                received.release();
+            }
+            if (inStream != null) {
+                inStream.close().syncUninterruptibly();
+            }
+            if (outStream != null) {
+                outStream.close().syncUninterruptibly();
+            }
+            if (inClientChannel != null) {
+                inClientChannel.close().syncUninterruptibly();
+            }
+            if (outClientChannel != null) {
+                outClientChannel.close().syncUninterruptibly();
+            }
+            if (inServerChannel != null) {
+                inServerChannel.close().syncUninterruptibly();
+            }
+            if (outServerChannel != null) {
+                outServerChannel.close().syncUninterruptibly();
+            }
+            if (inGroup != null) {
+                inGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+            if (outGroup != null) {
+                outGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+        }
+    }
+
+    // https://github.com/netty/netty/issues/17600
+    @Test
+    @Timeout(value = 30000L, unit = MILLISECONDS)
+    public void tortureCrossThreadSetAutoReadRace() throws Exception {
+        // Large enough to require many rounds of the (default 64KiB) HTTP/2 stream flow-control window.
+        final int payloadLength = 4 * 1024 * 1024;
+        final byte[] payloadBytes = new byte[payloadLength];
+        for (int i = 0; i < payloadLength; i++) {
+            payloadBytes[i] = (byte) i;
+        }
+
+        EventLoopGroup serverGroup = null;
+        EventLoopGroup clientGroup = null;
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        Http2StreamChannel clientStream = null;
+        Thread hammer = null;
+        final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
+        try {
+            serverGroup = new DefaultEventLoop();
+            clientGroup = new DefaultEventLoop();
+            LocalAddress serverAddress = new LocalAddress(getClass().getName() + ".torture");
+
+            ServerBootstrap sb = new ServerBootstrap();
+            sb.group(serverGroup);
+            sb.channel(LocalServerChannel.class);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+                                ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false));
+                                ctx.writeAndFlush(new DefaultHttp2DataFrame(
+                                        Unpooled.wrappedBuffer(payloadBytes), true));
+                            }
+                            ReferenceCountUtil.release(msg);
+                        }
+                    }));
+                }
+            });
+            serverChannel = sb.bind(serverAddress).sync().channel();
+
+            Bootstrap bs = new Bootstrap();
+            bs.group(clientGroup);
+            bs.channel(LocalChannel.class);
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                }
+            });
+            clientChannel = bs.connect(serverAddress).sync().channel();
+
+            final CountDownLatch dataComplete = new CountDownLatch(1);
+            final ByteBuf received = Unpooled.buffer(payloadLength);
+            receivedHolder.set(received);
+            final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+
+            Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
+            h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    try {
+                        if (msg instanceof Http2DataFrame) {
+                            Http2DataFrame data = (Http2DataFrame) msg;
+                            received.writeBytes(data.content());
+                            if (data.isEndStream()) {
+                                dataComplete.countDown();
+                            }
+                        }
+                    } catch (Throwable cause) {
+                        failure.compareAndSet(null, cause);
+                    } finally {
+                        ReferenceCountUtil.release(msg);
+                    }
+                }
+            });
+            clientStream = h2Bootstrap.open().syncUninterruptibly().getNow();
+
+            final Http2StreamChannel finalClientStream = clientStream;
+            final AtomicBoolean stop = new AtomicBoolean();
+            // A plain background thread (never the stream's own EventLoop) hammering setAutoRead() as fast as
+            // possible for the whole transfer -- the maximum-contention version of the cross-thread,
+            // writability-driven auto-read toggling from https://github.com/netty/netty/issues/17600.
+            hammer = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    boolean v = false;
+                    while (!stop.get()) {
+                        v = !v;
+                        finalClientStream.config().setAutoRead(v);
+                        java.util.concurrent.locks.LockSupport.parkNanos(1000);
+                    }
+                }
+            }, "setAutoRead-hammer");
+            hammer.setDaemon(true);
+            hammer.start();
+
+            clientStream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).sync();
+
+            boolean completed = dataComplete.await(20, SECONDS);
+            stop.set(true);
+            hammer.join(5000);
+
+            assertTrue(completed, "stream stalled under concurrent cross-thread setAutoRead() toggling");
+            Throwable cause = failure.get();
+            if (cause != null) {
+                throw new AssertionError(cause);
+            }
+            assertEquals(payloadLength, received.readableBytes());
+            byte[] actual = new byte[payloadLength];
+            received.readBytes(actual);
+            assertArrayEquals(payloadBytes, actual);
+        } finally {
+            ByteBuf received = receivedHolder.get();
+            if (received != null) {
+                received.release();
+            }
+            if (hammer != null) {
+                hammer.interrupt();
+            }
+            if (clientStream != null) {
+                clientStream.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (serverGroup != null) {
+                serverGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+            if (clientGroup != null) {
+                clientGroup.shutdownGracefully(0, 0, MILLISECONDS);
             }
         }
     }

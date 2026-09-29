@@ -37,6 +37,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -178,7 +179,7 @@ public class HttpServerUpgradeHandlerTest {
         assertThat(req).isNotInstanceOf(FullHttpRequest.class); // Should not be aggregated.
         assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
         assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
-        assertTrue(channel.readInbound() instanceof LastHttpContent);
+        assertInstanceOf(LastHttpContent.class, channel.readInbound());
         assertNull(channel.readInbound());
 
         // No response should be written because we're just passing through.

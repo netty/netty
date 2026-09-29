@@ -51,9 +51,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 
@@ -244,7 +244,7 @@ public class HttpProxyHandlerTest {
             clientChannel = cf.sync().channel();
             clientChannel.close().sync();
 
-            assertTrue(exception.get() instanceof HttpProxyConnectException);
+            assertInstanceOf(HttpProxyConnectException.class, exception.get());
             HttpProxyConnectException actual = (HttpProxyConnectException) exception.get();
             assertNotNull(actual.headers());
             assertEquals("value", actual.headers().get("name"));
