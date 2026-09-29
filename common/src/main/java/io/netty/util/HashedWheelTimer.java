@@ -442,7 +442,12 @@ public class HashedWheelTimer implements Timer {
                 + "timeouts (" + maxPendingTimeouts + ")");
         }
 
-        start();
+        try {
+            start();
+        } catch (Throwable cause) {
+            pendingTimeouts.decrementAndGet();
+            throw cause;
+        }
 
         // Add the timeout to the timeout queue which will be processed on the next tick.
         // During processing all the queued HashedWheelTimeouts will be added to the correct HashedWheelBucket.
@@ -454,6 +459,15 @@ public class HashedWheelTimer implements Timer {
         }
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         timeouts.add(timeout);
+
+        // stop() might have been called after start() returned, in which case the worker might have already drained
+        // the timeouts queue for the last time. If we can still cancel the timeout it was neither expired nor returned
+        // by stop(), so reject it as if start() had failed.
+        if (WORKER_STATE_UPDATER.get(this) == WORKER_STATE_SHUTDOWN &&
+                timeout.compareAndSetState(HashedWheelTimeout.ST_INIT, HashedWheelTimeout.ST_CANCELLED)) {
+            pendingTimeouts.decrementAndGet();
+            throw new IllegalStateException("cannot be started once stopped");
+        }
         return timeout;
     }
 
