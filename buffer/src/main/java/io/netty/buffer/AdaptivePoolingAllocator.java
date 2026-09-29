@@ -274,18 +274,6 @@ final class AdaptivePoolingAllocator {
     private final StripedHeap[] stripedHeaps;
     private volatile int stripeScanLength;
 
-    /**
-     * Decay every stripe in use whose last decay is at least an interval old, skipping those whose lock is busy.
-     * Called by thread-local heaps' decays, at most once per interval each: event loops take their buffers above the
-     * size classes from the stripes but count their allocations on their own heap.
-     */
-    void decayStaleStripes(long now) {
-        StripedHeap[] stripes = stripedHeaps;
-        int inUse = Math.min(stripeScanLength, stripes.length);
-        for (int i = 0; i < inUse; i++) {
-            stripes[i].decayIfStale(now);
-        }
-    }
     private final BuddyChunkManagementStrategy buddyStrategy;
     private final AdaptiveRecycler fallbackRecycler;
     private final FastThreadLocal<ThreadLocalSizeClassHeap> threadLocalSizeClassHeap;
@@ -817,9 +805,11 @@ final class AdaptivePoolingAllocator {
      * stripe the wholly free chunks of its {@link BuddyMagazine}, and the chunks of a size class that made no
      * allocation through a whole interval, which go to the recycler first (see {@link SizeClassMagazine#decayIfIdle}).
      * <p>
-     * The only signal is the heap's own allocations, counted where the heap already does work: each purge tick of a
-     * size class adds the allocations it counted, and each slow path of the large-buffer magazine adds one, which
-     * undercounts its allocations and so can only age more slowly. Nothing is added to any allocation's fast path.
+     * The only signal is the heap's own allocations, by whichever thread makes them: each purge tick of a size class
+     * adds the allocations it counted, and each allocation of the large-buffer magazine, already under the stripe
+     * lock, adds its block size in units of the smallest size class, so that large buffers read the clock about as
+     * often per byte as small ones. The count only paces the clock reads, not the aging. Nothing is added to the size
+     * classes' allocation fast paths.
      * Every {@link #DECAY_MIN_ALLOCATIONS} of them the clock is read once, and when {@link #DECAY_INTERVAL_NANOS}
      * passed since the last decay, the recycler and the large-buffer magazine free half, rounded up, of what they kept
      * unused through the whole interval, oldest first; otherwise nothing happens until the next count. A size class
@@ -832,10 +822,8 @@ final class AdaptivePoolingAllocator {
      * defaults, for every event loop that allocates; a stripe also keeps up to {@link #CHUNK_REUSE_QUEUE_BYTES} of
      * wholly free large-buffer chunks and the one it allocates from (up to {@link #MAX_CHUNK_SIZE}), about 84 MiB.
      * <p>
-     * Event loops take their buffers above the size classes from the stripes, but count their allocations on their
-     * own heap, so a stripe that only they use would never count enough to decay. A thread-local heap's decay
-     * therefore also decays each stripe in use whose last decay is at least an interval old, if its lock is free
-     * (see {@link AdaptivePoolingAllocator#decayStaleStripes}): still at most once per interval per stripe. Nothing is
+     * Event loops take their buffers above the size classes from the stripes, where those allocations count: a
+     * stripe that only event loops use for large buffers ages with them. Nothing is
      * allocated on the way, and no thread but the heap's own is involved: it is guarded like the heap, by the stripe
      * lock or by the owner thread of a thread-local heap.
      */
@@ -849,8 +837,6 @@ final class AdaptivePoolingAllocator {
         SizeClassChunkRecycler recycler;
         /** The heap's size-class magazines, set once the heap has them; see {@link SizeClassMagazine#decayIfIdle}. */
         SizeClassMagazine[] magazines;
-        /** On a thread-local heap, the allocator whose stale stripes its decays also decay; null on a stripe. */
-        AdaptivePoolingAllocator stripesOf;
         /** Set once the stripe has one; never on a thread-local heap. */
         BuddyMagazine buddyMagazine;
         // Visible for testing.
@@ -894,10 +880,6 @@ final class AdaptivePoolingAllocator {
             }
             if (buddyMagazine != null) {
                 buddyMagazine.decay();
-            }
-            AdaptivePoolingAllocator stripesOf = this.stripesOf;
-            if (stripesOf != null) {
-                stripesOf.decayStaleStripes(now);
             }
         }
     }
@@ -961,25 +943,6 @@ final class AdaptivePoolingAllocator {
             return mag;
         }
 
-        /**
-         * Decay this stripe on behalf of a thread-local heap's decay, when its lock is free and its own last decay is
-         * at least an interval old; never waits for the lock.
-         */
-        void decayIfStale(long now) {
-            final StampedLock l = lock;
-            long stamp = l.tryWriteLock();
-            if (stamp == 0) {
-                return;
-            }
-            try {
-                if (now - idleDecay.lastDecayNanos >= IdleDecay.DECAY_INTERVAL_NANOS) {
-                    idleDecay.decay(now);
-                }
-            } finally {
-                l.unlockWrite(stamp);
-            }
-        }
-
         void freeStripe() {
             final StampedLock l = lock;
             long stamp = l.writeLock();
@@ -1025,7 +988,7 @@ final class AdaptivePoolingAllocator {
                         return buf;
                     }
                 } else {
-                    // No purge tick here: the buddy magazine counts its allocations on its slow path.
+                    // No purge tick here: the buddy magazine counts its allocations itself.
                     BuddyMagazine mag = getOrCreateBuddyMagazine(allocator);
                     if (buf == null) {
                         buf = mag.newBuffer();
@@ -1056,7 +1019,6 @@ final class AdaptivePoolingAllocator {
             chunkRecycler = new SizeClassChunkRecycler(allocator);
             idleDecay.recycler = chunkRecycler;
             idleDecay.magazines = magazines;
-            idleDecay.stripesOf = allocator;
         }
 
         AdaptiveByteBuf allocate(int sizeClassIndex, int size, int maxCapacity, AdaptiveByteBuf buf) {
@@ -2071,6 +2033,11 @@ final class AdaptivePoolingAllocator {
         private static final int ORDERS = Integer.numberOfTrailingZeros(MAX_CHUNK_SIZE / BuddyTree.MIN_BLOCK_SIZE) + 1;
         /** Bound on the last-resort look at the full chunks; see {@link #probeFull}. */
         private static final int MAX_FULL_PROBE = 8;
+        /**
+         * An allocation counts toward the stripe's {@link IdleDecay} as its block size in units of the smallest size
+         * class (32 bytes): a large buffer paces the clock reads like the small buffers its bytes would make.
+         */
+        private static final int COUNT_SHIFT = 5;
 
         final AdaptivePoolingAllocator allocator;
         private final BuddyChunkController chunkController;
@@ -2115,6 +2082,7 @@ final class AdaptivePoolingAllocator {
             int blockSize = chunkController.computeBufferCapacity(size);
             BuddyChunk chunk = active;
             if (chunk != null && chunk.readInitInto(buf, size, blockSize, maxCapacity)) {
+                idleDecay.count(blockSize >>> COUNT_SHIFT);
                 return true;
             }
             return allocateSlow(size, maxCapacity, buf, blockSize);
@@ -2139,9 +2107,7 @@ final class AdaptivePoolingAllocator {
             boolean success = chunk.readInitInto(buf, size, blockSize, maxCapacity);
             // A polled chunk's largest free block was exact when it was filed, and can only have grown since.
             assert success : "no free block of " + blockSize + " in " + chunk;
-            // One per slow path: a slow path is at least one allocation, and may be exactly one (a polled chunk with a
-            // single fitting block), so counting more could age the stripe faster than its allocations do.
-            idleDecay.count(1);
+            idleDecay.count(blockSize >>> COUNT_SHIFT);
             return success;
         }
 
