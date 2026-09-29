@@ -325,16 +325,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected final void prepareToReleaseOutboundMessages(ChannelOutboundBuffer buffer) {
-        AbstractUringUnsafe unsafe = ioUringUnsafe();
-        if (unsafe.retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
-            return;
-        }
-        unsafe.retainedWriteBuffers = numOutstandingWrites != 0 ? unsafe.retainWriteBuffers(buffer) :
-                Collections.<ReferenceCounted>emptyList();
-    }
-
-    @Override
     protected final void doBeginRead() {
         if (inputClosedSeenErrorOnRead) {
             // We did see an error while reading and so closed the input. Stop reading.
@@ -484,6 +474,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 currentWrite.copyFrom(ops);
             }
             return id;
+        }
+
+        @Override
+        public final void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
+            if (retainedWriteBuffers != null || (ioState & WRITE_SCHEDULED) == 0) {
+                return;
+            }
+            retainedWriteBuffers = numOutstandingWrites != 0 ? retainWriteBuffers(buffer) :
+                    Collections.<ReferenceCounted>emptyList();
         }
 
         List<ReferenceCounted> retainWriteBuffers(ChannelOutboundBuffer buffer) {
