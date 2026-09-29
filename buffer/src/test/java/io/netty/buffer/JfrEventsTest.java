@@ -151,8 +151,7 @@ public class JfrEventsTest {
                 releaseAll(allocateMany(alloc, 64 * 1024, 8 * 8));
                 // One-shot: above the largest pooled buffer.
                 alloc.heapBuffer(4 * 1024 * 1024).release();
-                // Above the size classes: large-buffer chunks of the thread-local heap, kept idle there after the
-                // release.
+                // Above the size classes: large-buffer chunks, on a stripe, kept idle there after the release.
                 releaseAll(allocateMany(alloc, 512 * 1024, 8));
                 // The thread-local heap is freed when this thread ends, with what its recycler holds.
             }, threadName);
@@ -434,48 +433,6 @@ public class JfrEventsTest {
             eventsFlushed.await();
             assertEquals(1, chunksAllocations.get());
         }
-    }
-
-    /**
-     * A buffer above the size classes on a thread-local heap comes from a chunk of that heap: both events say so.
-     */
-    @SuppressWarnings("Since15")
-    @Test
-    public void adaptiveLargeBufferOnAThreadLocalHeapIsThreadLocalInBothEvents() throws Exception {
-        Field lowMem = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
-        lowMem.setAccessible(true);
-        assumeFalse(lowMem.getBoolean(null), "low-memory mode has no thread-local heaps and pools no 512 KiB buffers");
-        final int size = 512 * 1024;
-        AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
-        Callable<Void> allocateAndRelease = () -> {
-            try (RecordingStream stream = new RecordingStream()) {
-                CompletableFuture<RecordedEvent> chunkFuture = new CompletableFuture<>();
-                CompletableFuture<RecordedEvent> bufferFuture = new CompletableFuture<>();
-                stream.enable(AllocateChunkEvent.class);
-                stream.onEvent(AllocateChunkEvent.NAME, e -> {
-                    if (e.getInt("capacity") > size) {
-                        chunkFuture.complete(e);
-                    }
-                });
-                stream.enable(AllocateBufferEvent.class);
-                stream.onEvent(AllocateBufferEvent.NAME, e -> {
-                    if (e.getInt("size") == size) {
-                        bufferFuture.complete(e);
-                    }
-                });
-                stream.startAsync();
-
-                alloc.directBuffer(size, size).release();
-
-                assertTrue(chunkFuture.get(10, TimeUnit.SECONDS).getBoolean("threadLocal"), "the chunk event");
-                assertTrue(bufferFuture.get(10, TimeUnit.SECONDS).getBoolean("chunkThreadLocal"), "the buffer event");
-                return null;
-            }
-        };
-        FutureTask<Void> task = new FutureTask<>(allocateAndRelease);
-        FastThreadLocalThread thread = new FastThreadLocalThread(task);
-        thread.start();
-        task.get();
     }
 
     @SuppressWarnings("Since15")
