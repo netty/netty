@@ -1261,8 +1261,7 @@ public class DnsNameResolver extends InetNameResolver {
                 // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
                 if (hasEntries(entries)) {
                     cachedEntries = entries; // Returns the last cached entry if none of the resolution was successful
-                    boolean successfulResolution = entries.get(0).cause() == null;
-                    if (successfulResolution) {
+                    if (entries.get(0).cause() == null) {
                         break;
                     }
                 }
