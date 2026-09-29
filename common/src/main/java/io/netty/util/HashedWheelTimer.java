@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import static io.netty.util.internal.ObjectUtil.checkInRange;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -446,7 +445,7 @@ public class HashedWheelTimer implements Timer {
             start();
         } catch (Throwable cause) {
             pendingTimeouts.decrementAndGet();
-            throw cause;
+            PlatformDependent.throwException(cause);
         }
 
         // Add the timeout to the timeout queue which will be processed on the next tick.
