@@ -459,6 +459,17 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         ChannelPromise voidPromise();
 
         /**
+         * Called before flushed outbound messages are failed and released. Asynchronous transports may retain
+         * messages that are still used by pending I/O. This method must not remove messages or notify promises.
+         * The default implementation does nothing.
+         *
+         * @param buffer the outbound buffer whose flushed messages will be discarded
+         */
+        default void prepareToDiscardOutboundMessages(ChannelOutboundBuffer buffer) {
+            // Noop by default.
+        }
+
+        /**
          * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
          */
         ChannelOutboundBuffer outboundBuffer();
