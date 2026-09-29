@@ -26,6 +26,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 public final class WebSocketServerProtocolConfig {
 
     static final long DEFAULT_HANDSHAKE_TIMEOUT_MILLIS = 10000L;
+    static final long DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS = 10000L;
 
     private final String websocketPath;
     private final String subprotocols;
@@ -115,8 +116,9 @@ public final class WebSocketServerProtocolConfig {
     }
 
     public static Builder newBuilder() {
-        return new Builder("/", null, false, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS, 0L,
-                           true, WebSocketCloseStatus.NORMAL_CLOSURE, true, WebSocketDecoderConfig.DEFAULT);
+        return new Builder("/", null, false, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS,
+            DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS, true, WebSocketCloseStatus.NORMAL_CLOSURE, true,
+            WebSocketDecoderConfig.DEFAULT);
     }
 
     public static final class Builder {

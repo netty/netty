@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -55,7 +54,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
      *            {@code true} if {@link PongWebSocketFrame}s should be dropped
      */
     WebSocketProtocolHandler(boolean dropPongFrames) {
-        this(dropPongFrames, null, 0L);
+        this(dropPongFrames, null, WebSocketServerProtocolConfig.DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
     }
 
     WebSocketProtocolHandler(boolean dropPongFrames,
