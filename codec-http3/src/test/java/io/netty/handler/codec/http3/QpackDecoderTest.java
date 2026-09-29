@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 import static io.netty.handler.codec.http3.Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
@@ -182,6 +183,49 @@ public class QpackDecoderTest {
                 in.release();
             }
         }
+    }
+
+    @Test
+    public void blockedStreamsCountReleasedAfterStreamAbandoned() throws Exception {
+        int maxBlockedStreams = 2;
+        setup(128, maxBlockedStreams);
+
+        AtomicInteger abandoned = new AtomicInteger();
+        BiConsumer<CharSequence, CharSequence> sink = (n, v) -> { };
+        for (long streamId = 0; streamId < maxBlockedStreams; streamId++) {
+            ByteBuf in = encodeBlockingFrame(1);
+            try {
+                assertFalse(decoder.decode(attributes, streamId, in, in.readableBytes(), sink,
+                        abandoned::incrementAndGet), "Stream " + streamId + " should be blocked");
+            } finally {
+                in.release();
+            }
+        }
+
+        for (long streamId = 0; streamId < maxBlockedStreams; streamId++) {
+            decoder.streamAbandoned(decoderStream, streamId);
+            ByteBuf cancel = decoderStream.readOutbound();
+            try {
+                assertThat(cancel.readUnsignedByte(), is((short) (0b0100_0000 | streamId)));
+            } finally {
+                cancel.release();
+            }
+        }
+
+        AtomicInteger resumed = new AtomicInteger();
+        for (long streamId = 100; streamId < 100 + maxBlockedStreams; streamId++) {
+            ByteBuf in = encodeBlockingFrame(1);
+            try {
+                assertFalse(decoder.decode(attributes, streamId, in, in.readableBytes(), sink,
+                        resumed::incrementAndGet), "Stream " + streamId + " should be blocked");
+            } finally {
+                in.release();
+            }
+        }
+
+        insertLiterals(1);
+        assertThat(abandoned.get(), is(0));
+        assertThat(resumed.get(), is(maxBlockedStreams));
     }
 
     /**
