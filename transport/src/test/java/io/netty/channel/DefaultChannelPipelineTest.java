@@ -41,6 +41,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -2141,7 +2142,7 @@ public class DefaultChannelPipelineTest {
         final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
         final AtomicInteger removed = new AtomicInteger();
         final IllegalStateException error = new IllegalStateException();
-        EmbeddedChannel channel = new EmbeddedChannel();
+        final EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast("first", new ChannelInboundHandlerAdapter());
         channel.pipeline().addLast("boot", new ChannelInboundHandlerAdapter() {
             @Override
@@ -2155,7 +2156,12 @@ public class DefaultChannelPipelineTest {
                 removed.incrementAndGet();
             }
         });
-        assertThatThrownBy(channel::checkException)
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.checkException();
+            }
+        })
                 .isInstanceOf(ChannelPipelineException.class)
                 .cause().isSameAs(error);
 
@@ -2214,7 +2220,7 @@ public class DefaultChannelPipelineTest {
         final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
         final AtomicInteger removed = new AtomicInteger();
         final IllegalStateException error = new IllegalStateException();
-        EmbeddedChannel channel = new EmbeddedChannel(false, false);
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false);
         channel.pipeline().addLast("handler", new ChannelInboundHandlerAdapter() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) {
@@ -2229,7 +2235,12 @@ public class DefaultChannelPipelineTest {
         channel.pipeline().replace("handler", "replacement", replacement);
         // The deferred handlerAdded(...) of the replaced handler throws once the channel is registered.
         channel.register();
-        assertThatThrownBy(channel::checkException)
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() {
+                channel.checkException();
+            }
+        })
                 .isInstanceOf(ChannelPipelineException.class)
                 .cause().isSameAs(error);
 
@@ -2286,7 +2297,7 @@ public class DefaultChannelPipelineTest {
             pipeline.addLast("after", new ChannelInboundHandlerAdapter());
 
             final AtomicInteger ready = new AtomicInteger();
-            final AtomicReference<Throwable> removeResult = new AtomicReference<>();
+            final AtomicReference<Throwable> removeResult = new AtomicReference<Throwable>();
             final AtomicBoolean removed = new AtomicBoolean();
             Thread remover = new Thread(() -> {
                 awaitOtherThread(ready);
@@ -2341,7 +2352,7 @@ public class DefaultChannelPipelineTest {
 
     private static void assertPipelineLinked(ChannelPipeline pipeline, String... expectedNames) {
         DefaultChannelPipeline p = (DefaultChannelPipeline) pipeline;
-        List<String> names = new ArrayList<>();
+        List<String> names = new ArrayList<String>();
         AbstractChannelHandlerContext ctx = p.head;
         while (ctx != p.tail) {
             AbstractChannelHandlerContext next = ctx.next;
