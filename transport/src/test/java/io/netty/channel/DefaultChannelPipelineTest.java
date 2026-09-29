@@ -2379,36 +2379,72 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testRemoveOfHandlerReplacedConcurrently() throws Exception {
-        final ChannelHandler handler = new ChannelInboundHandlerAdapter();
-        final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
-        EmbeddedChannel channel = new EmbeddedChannel(handler);
-        final ChannelPipeline pipeline = channel.pipeline();
-        final AtomicReference<Throwable> removeResult = new AtomicReference<>();
-        Thread remover = new Thread(() -> {
-            try {
-                pipeline.remove(handler);
-            } catch (Throwable cause) {
-                removeResult.set(cause);
-            }
-        });
+        // remove(...) and replace(...) look up the context before they take the pipeline lock, so run them
+        // concurrently many times to hit the window in which one of them works on a context that the other one has
+        // already unlinked.
+        for (int i = 0; i < 2000; i++) {
+            final LifecycleCountingHandler handler = new LifecycleCountingHandler();
+            final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
+            EmbeddedChannel channel = new EmbeddedChannel();
+            final ChannelPipeline pipeline = channel.pipeline();
+            pipeline.addLast("before", new ChannelInboundHandlerAdapter());
+            pipeline.addLast("handler", handler);
+            pipeline.addLast("after", new ChannelInboundHandlerAdapter());
 
-        synchronized (pipeline) {
-            // The remover looks up the context of the handler and then blocks on the pipeline lock.
+            final AtomicInteger ready = new AtomicInteger();
+            final AtomicReference<Throwable> removeResult = new AtomicReference<>();
+            final AtomicBoolean removed = new AtomicBoolean();
+            Thread remover = new Thread(() -> {
+                awaitOtherThread(ready);
+                try {
+                    pipeline.remove(handler);
+                    removed.set(true);
+                } catch (Throwable cause) {
+                    removeResult.set(cause);
+                }
+            });
             remover.start();
-            while (remover.getState() != Thread.State.BLOCKED) {
-                Thread.sleep(1);
+            awaitOtherThread(ready);
+            Throwable replaceResult = null;
+            try {
+                pipeline.replace(handler, "replacement", replacement);
+            } catch (Throwable cause) {
+                replaceResult = cause;
             }
-            pipeline.replace(handler, "replacement", replacement);
-        }
-        remover.join();
+            remover.join();
 
-        assertThat(removeResult.get()).as("result of remove(handler)").isInstanceOf(NoSuchElementException.class);
-        assertPipelineLinked(pipeline, "replacement");
-        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
-        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
-        assertThat(channel.finish()).isFalse();
+            // Exactly one of remove(...) and replace(...) wins, the other one fails as if the handler was never
+            // part of the pipeline.
+            if (removed.get()) {
+                assertThat(replaceResult).as("result of replace(...) after remove(...) won (iteration %d)", i)
+                        .isInstanceOf(NoSuchElementException.class);
+                assertPipelineLinked(pipeline, "before", "after");
+                assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(0);
+            } else {
+                assertThat(removeResult.get()).as("result of remove(...) after replace(...) won (iteration %d)", i)
+                        .isInstanceOf(NoSuchElementException.class);
+                assertThat(replaceResult).as("result of replace(...) (iteration %d)", i).isNull();
+                assertPipelineLinked(pipeline, "before", "replacement", "after");
+                assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+            }
+            assertThat(handler.removed).as("handlerRemoved(...) calls of the handler (iteration %d)", i).hasValue(1);
+            assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
+
+            assertThat(channel.finish()).isFalse();
+            assertThat(handler.removed).as("handlerRemoved(...) calls of the handler (iteration %d)", i).hasValue(1);
+            assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement")
+                    .hasValue(removed.get() ? 0 : 1);
+        }
+    }
+
+    private static void awaitOtherThread(AtomicInteger ready) {
+        // Spin instead of blocking so both threads start at (nearly) the same time.
+        ready.incrementAndGet();
+        while (ready.get() < 2) {
+            Thread.yield();
+        }
     }
 
     private static void assertPipelineLinked(ChannelPipeline pipeline, String... expectedNames) {
