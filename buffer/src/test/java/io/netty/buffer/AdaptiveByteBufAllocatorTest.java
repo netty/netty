@@ -1119,35 +1119,66 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     }
 
     /**
-     * Allocations above the size classes feed the stripe's {@link IdleDecay} from their slow path only, one per slow
-     * path; the fast path counts nothing.
+     * Allocations above the size classes feed the stripe's {@link IdleDecay} on the fast path as on the slow one, each
+     * with its block size in units of the smallest size class: a 160 KiB buffer takes a 256 KiB block, 8192 units, so
+     * the second one completes a count.
      */
     @Test
-    void buddySlowPathsCountTowardTheIdleDecay() throws Exception {
-        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+    void buddyAllocationsCountTheirBlockSizeTowardTheIdleDecay() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 160 KiB buffers");
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        int size = 160 * 1024;
         List<ByteBuf> held = new ArrayList<ByteBuf>();
         try {
             // The first allocation opens a chunk on the slow path.
-            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+            held.add(allocator.heapBuffer(size, size));
             IdleDecay idleDecay = buddyStripeIdleDecay(allocator);
-            long perSlowPath = idleDecay.allocationsSinceCheck;
-            assertTrue(perSlowPath > 0, "the slow path must count");
-            int perChunk = (int) (allocator.usedHeapMemory() / BUDDY_NOTE_SIZE);
-            // The rest of the chunk: fast path only.
-            while (held.size() < perChunk) {
-                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
-            }
-            assertEquals(perSlowPath, idleDecay.allocationsSinceCheck, "the fast path must not count");
-            // One more opens a second chunk.
-            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
-            assertEquals(2 * perSlowPath, idleDecay.allocationsSinceCheck);
-            assertEquals(1, perSlowPath, "one per slow path: at least one allocation each");
+            assertEquals(256 * 1024 / 32, idleDecay.allocationsSinceCheck, "the slow path counts the block");
+            // The second one comes from the same chunk, on the fast path: it counts too, and completes the count.
+            held.add(allocator.heapBuffer(size, size));
+            assertEquals(0, idleDecay.allocationsSinceCheck, "the fast path counted and completed the count");
         } finally {
             for (ByteBuf buf : held) {
                 buf.release();
             }
         }
+    }
+
+    /**
+     * A stripe serving a trickle of large buffers from the chunk it allocates from, with no slow path at all, still
+     * gives its idle large-buffer chunks back by halves: the fast path counts.
+     */
+    @Test
+    void largeBufferTrickleAgesTheStripesIdleChunks() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool 512 KiB buffers");
+        assumeTrue(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE >= 2, "keeps fewer than two idle chunks");
+        AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, false);
+        List<ByteBuf> held = new ArrayList<ByteBuf>();
+        held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        long chunk = allocator.usedHeapMemory();
+        if (AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES < 2 * chunk) {
+            held.get(0).release();
+            assumeTrue(false, "keeps fewer than two idle chunks' bytes");
+        }
+        int perChunk = (int) (chunk / BUDDY_NOTE_SIZE);
+        // Three chunks' worth: chunks 1 and 2 become idle, chunk 3 is the one the stripe allocates from.
+        while (held.size() < 3 * perChunk) {
+            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
+        }
+        for (ByteBuf buf : held) {
+            buf.release();
+        }
+        IdleDecay idleDecay = buddyStripeIdleDecay(allocator);
+        assertEquals(2, buddyIdleChunks(idleDecay));
+        long used = allocator.usedHeapMemory();
+        // Each round: the interval has passed, and one large buffer comes from chunk 3, on the fast path.
+        idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+        allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE).release();
+        assertEquals(used, allocator.usedHeapMemory(), "idle since before the first decay: not a whole interval");
+        idleDecay.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
+        allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE).release();
+        assertEquals(1, buddyIdleChunks(idleDecay), "half of two");
+        assertEquals(used - chunk, allocator.usedHeapMemory());
     }
 
     private static final int BUDDY_NOTE_SIZE = 512 * 1024;
@@ -1327,60 +1358,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         idleDecay.decay(System.nanoTime());
         assertTrue(allocator.usedHeapMemory() < used, "the idle ones are given back by halves");
         assertTrue(buddyIdleChunks(idleDecay) <= idle);
-    }
-
-    /**
-     * An event loop takes its buffers above the size classes from a stripe but counts its allocations on its own
-     * heap. Its decays also decay the stripe, so the stripe's idle large-buffer chunks are given back by halves while
-     * the event loop only allocates small buffers; a stripe that decayed within the interval is left alone.
-     */
-    @Test
-    void eventLoopDecaysAlsoAgeTheStripesItsLargeBuffersCameFrom() throws Throwable {
-        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
-        assumeTrue(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE >= 3, "keeps fewer than three idle chunks");
-        final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
-        onThreadLocalHeap(() -> {
-            List<ByteBuf> held = new ArrayList<ByteBuf>();
-            held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
-            long chunk = allocator.usedHeapMemory();
-            if (AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES < 3 * chunk) {
-                held.get(0).release();
-                assumeTrue(false, "keeps fewer than three idle chunks' bytes");
-            }
-            int perChunk = (int) (chunk / BUDDY_NOTE_SIZE);
-            // Three chunks' worth, all released: two idle chunks and the one the stripe allocates from.
-            while (held.size() < 3 * perChunk) {
-                held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
-            }
-            for (ByteBuf buf : held) {
-                buf.release();
-            }
-            IdleDecay stripe = buddyStripeIdleDecay(allocator);
-            IdleDecay own = threadLocalIdleDecay(allocator);
-            assertEquals(2, buddyIdleChunks(stripe));
-
-            // The stripe decays (its active chunk joins the idle ones), then counts as recently decayed: the event
-            // loop's decay leaves it alone.
-            stripe.decay(System.nanoTime());
-            assertEquals(3, buddyIdleChunks(stripe));
-            own.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
-            sizeClassTraffic(allocator);
-            assertEquals(3, buddyIdleChunks(stripe), "decayed within the interval: left alone");
-            long used = allocator.usedHeapMemory();
-
-            // Once the stripe's interval passed too, each of the event loop's decays decays it: half of the three
-            // idle chunks, rounded up, then the last one.
-            stripe.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
-            own.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
-            sizeClassTraffic(allocator);
-            assertEquals(1, buddyIdleChunks(stripe), "half of three, rounded up");
-            assertEquals(used - 2 * chunk, allocator.usedHeapMemory());
-            stripe.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
-            own.lastDecayNanos -= 2 * IdleDecay.DECAY_INTERVAL_NANOS;
-            sizeClassTraffic(allocator);
-            assertEquals(0, buddyIdleChunks(stripe), "half of one, rounded up");
-            assertEquals(used - 3 * chunk, allocator.usedHeapMemory());
-        });
     }
 
     /** Buffers per chunk for buffers above the size classes: the chunk is sized for about this many. */
