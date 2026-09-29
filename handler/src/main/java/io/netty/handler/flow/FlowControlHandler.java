@@ -217,12 +217,10 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped. Reads requested
-        // after the last delivered message belong to the next upstream read cycle and must not be consumed by
-        // this completion.
+        // Upstream closed the read cycle. Preserve outstanding reads across empty cycles because a decoder may
+        // issue another upstream read after receiving only a partial frame. Spurious upstream completions with
+        // no pending read are dropped.
         boolean hadUnsatisfiedReads = unsatisfiedReads > 0;
-        unsatisfiedReads = readsAfterLastMessage;
         readsAfterLastMessage = 0;
         readCycleHasMessage = false;
         if (config.isAutoRead() || hadUnsatisfiedReads) {
