@@ -204,7 +204,7 @@ jobs:
             JAVA_HOME=/usr/lib/jvm/zulu25 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
