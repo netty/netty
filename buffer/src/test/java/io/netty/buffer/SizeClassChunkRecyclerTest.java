@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SizeClassChunkRecyclerTest {
     // 2048 and 4096 share the MIN_CHUNK_SIZE pool; 8192 has a chunk size of its own (asserted below).
@@ -423,6 +425,10 @@ public class SizeClassChunkRecyclerTest {
     })
     public void chunksAreReusedAcrossSizeClassesWithTheirFreeLists(int freedSize, int reusingSize, boolean threadLocal)
             throws Exception {
+        Field lowMem = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
+        lowMem.setAccessible(true);
+        assumeFalse(lowMem.getBoolean(null) && Math.max(freedSize, reusingSize) > 16896,
+                "low-memory mode pools the size classes up to 16896 only");
         AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, threadLocal);
         Runnable test = () -> assertReusedAcrossSizeClasses(allocator, freedSize, reusingSize);
         if (threadLocal) {

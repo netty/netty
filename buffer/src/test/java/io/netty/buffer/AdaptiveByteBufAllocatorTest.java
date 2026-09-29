@@ -371,7 +371,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
      * leave at most {@link AdaptivePoolingAllocator#CHUNK_REUSE_QUEUE} idle chunks plus the ones in use.
      */
     @Test
-    void idleBuddyChunksAboveTheReuseLimitAreFreed() {
+    void idleBuddyChunksAboveTheReuseLimitAreFreed() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool buffers above its size classes");
         AdaptiveByteBufAllocator allocator = newAllocator(true);
         int size = 256 * 1024; // above the largest size class, so buddy chunks
         // The first buffer creates the first chunk: its size and how many buffers it holds come from the allocator,
@@ -470,13 +471,17 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
      * allocates from serves many requests before it runs out, instead of one.
      */
     @Test
-    void buddyAllocationPrefersTheChunkWithTheLargestFreeBlock() {
+    void buddyAllocationPrefersTheChunkWithTheLargestFreeBlock() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool buffers above its size classes");
         AdaptiveByteBufAllocator allocator = newAllocator(true);
         int size = 256 * 1024; // above the largest size class, so buddy chunks
         ByteBuf first = allocator.heapBuffer(size, size);
         long chunkSize = allocator.usedHeapMemory();
         int perChunk = (int) (chunkSize / size);
-        assumeTrue(perChunk >= 8 && perChunk % 4 == 0, "chunk holds " + perChunk + " buffers");
+        if (perChunk < 8 || perChunk % 4 != 0) {
+            first.release();
+            assumeTrue(false, "chunk holds " + perChunk + " buffers");
+        }
 
         // Three chunks, each filled completely: A, B, then C, which stays the magazine's active chunk.
         List<ByteBuf> bufs = new ArrayList<ByteBuf>();
@@ -513,7 +518,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
      */
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void buddyChunksAreReusedAcrossRounds(boolean direct) {
+    void buddyChunksAreReusedAcrossRounds(boolean direct) throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode does not pool buffers above its size classes");
         AdaptiveByteBufAllocator allocator = newAllocator(true);
         ByteBufAllocatorMetric metric = allocator.metric();
         int size = 512 * 1024; // above the largest size class, below the unpooled fallback
@@ -1904,6 +1910,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     // buffers of its magazine's active chunk are still live, and they come back from another thread.
     @Test
     void segmentReturnedAfterThreadLocalHeapFreeMustStillDeallocateChunk() throws Exception {
+        assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
         final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
         final List<ByteBuf> live = new ArrayList<ByteBuf>();
         final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();

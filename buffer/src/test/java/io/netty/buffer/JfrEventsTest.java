@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -440,6 +441,9 @@ public class JfrEventsTest {
     @SuppressWarnings("Since15")
     @Test
     public void adaptiveLargeBufferOnAThreadLocalHeapIsThreadLocalInBothEvents() throws Exception {
+        Field lowMem = AdaptivePoolingAllocator.class.getDeclaredField("IS_LOW_MEM");
+        lowMem.setAccessible(true);
+        assumeFalse(lowMem.getBoolean(null), "low-memory mode has no thread-local heaps and pools no 512 KiB buffers");
         final int size = 512 * 1024;
         AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
         Callable<Void> allocateAndRelease = () -> {
@@ -462,8 +466,8 @@ public class JfrEventsTest {
 
                 alloc.directBuffer(size, size).release();
 
-                assertTrue(chunkFuture.get().getBoolean("threadLocal"), "the chunk event");
-                assertTrue(bufferFuture.get().getBoolean("chunkThreadLocal"), "the buffer event");
+                assertTrue(chunkFuture.get(10, TimeUnit.SECONDS).getBoolean("threadLocal"), "the chunk event");
+                assertTrue(bufferFuture.get(10, TimeUnit.SECONDS).getBoolean("chunkThreadLocal"), "the buffer event");
                 return null;
             }
         };
