@@ -1337,7 +1337,7 @@ public class LocalChannelTest {
     @Test
     public void testClientCloseAfterServerClosedWithQueuedConnection() throws Exception {
         BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<LocalChannel>();
-        Channel sc = bindServerWithAutoReadDisabled(accepted);
+        final Channel sc = bindServerWithAutoReadDisabled(accepted);
         ChannelFuture cf = null;
         try {
             cf = connectClient();
@@ -1347,7 +1347,7 @@ public class LocalChannelTest {
             // learns that the queued connection was closed: closing the server only schedules that notification on
             // the client's event loop. Calling both from this thread would let the event loop run the server's
             // close, and so the notification, before the client's close is submitted.
-            Channel client = cf.channel();
+            final Channel client = cf.channel();
             ChannelFuture closeFuture = sc.eventLoop().submit(new Callable<ChannelFuture>() {
                 @Override
                 public ChannelFuture call() throws Exception {
