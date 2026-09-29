@@ -1290,6 +1290,9 @@ public class LocalChannelTest {
 
             assertTrue(cf.await(5, SECONDS));
             assertInstanceOf(ConnectException.class, cf.cause());
+            // The connect promise is failed before the channel is closed (as for any refused connection), and
+            // await() may return before the close, so wait for it.
+            assertTrue(cf.channel().closeFuture().await(5, SECONDS));
             assertFalse(cf.channel().isOpen());
             assertTrue(cf.channel().close().await().isSuccess());
         } finally {
@@ -1307,9 +1310,15 @@ public class LocalChannelTest {
             cf = connectClient();
             assertNotNull(accepted.poll(5, SECONDS));
 
-            // Both closes run on the event loop before the client learns that the queued connection was closed.
-            sc.close();
-            ChannelFuture closeFuture = cf.channel().close();
+            // Close the server and then the client in one event loop task, so the client is closed before it
+            // learns that the queued connection was closed: closing the server only schedules that notification on
+            // the client's event loop. Calling both from this thread would let the event loop run the server's
+            // close, and so the notification, before the client's close is submitted.
+            Channel client = cf.channel();
+            ChannelFuture closeFuture = sc.eventLoop().submit(() -> {
+                sc.close();
+                return client.close();
+            }).get(5, SECONDS);
 
             assertTrue(closeFuture.await(5, SECONDS));
             assertTrue(closeFuture.isSuccess(), () -> String.valueOf(closeFuture.cause()));
@@ -1413,6 +1422,7 @@ public class LocalChannelTest {
 
             assertTrue(cf.await(5, SECONDS));
             assertInstanceOf(ConnectException.class, cf.cause());
+            assertTrue(cf.channel().closeFuture().await(5, SECONDS));
             assertFalse(cf.channel().isOpen());
             assertTrue(cf.channel().close().await().isSuccess());
         } finally {
