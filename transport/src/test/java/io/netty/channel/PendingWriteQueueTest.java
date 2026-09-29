@@ -243,7 +243,12 @@ public class PendingWriteQueueTest {
         ByteBuf buf3 = Unpooled.buffer().writeZero(8);
 
         ChannelPromise promise1 = channel.newPromise();
-        promise1.addListener(future -> queue.removeAndFail(new IllegalStateException()));
+        promise1.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                queue.removeAndFail(new IllegalStateException());
+            }
+        });
         ChannelPromise promise2 = channel.newPromise();
         ChannelPromise promise3 = channel.newPromise();
         queue.add(buf1, promise1);
