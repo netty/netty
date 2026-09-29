@@ -2185,7 +2185,7 @@ public class DefaultChannelPipelineTest {
     public void testHandlerAddedRemovesItselfAndThrows() {
         final AtomicInteger removed = new AtomicInteger();
         final IllegalStateException error = new IllegalStateException();
-        EmbeddedChannel channel = new EmbeddedChannel();
+        final EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast("first", new ChannelInboundHandlerAdapter());
         channel.pipeline().addLast("boot", new ChannelInboundHandlerAdapter() {
             @Override
@@ -2200,7 +2200,12 @@ public class DefaultChannelPipelineTest {
             }
         });
         channel.pipeline().addLast("last", new ChannelInboundHandlerAdapter());
-        assertThatThrownBy(channel::checkException)
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.checkException();
+            }
+        })
                 .isInstanceOf(ChannelPipelineException.class)
                 .cause().isSameAs(error);
 
@@ -2299,13 +2304,16 @@ public class DefaultChannelPipelineTest {
             final AtomicInteger ready = new AtomicInteger();
             final AtomicReference<Throwable> removeResult = new AtomicReference<Throwable>();
             final AtomicBoolean removed = new AtomicBoolean();
-            Thread remover = new Thread(() -> {
-                awaitOtherThread(ready);
-                try {
-                    pipeline.remove(handler);
-                    removed.set(true);
-                } catch (Throwable cause) {
-                    removeResult.set(cause);
+            Thread remover = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    awaitOtherThread(ready);
+                    try {
+                        pipeline.remove(handler);
+                        removed.set(true);
+                    } catch (Throwable cause) {
+                        removeResult.set(cause);
+                    }
                 }
             });
             remover.start();
