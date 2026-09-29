@@ -42,12 +42,7 @@ public class ByteBufStreamTest {
     public void testAll() throws Exception {
         ByteBuf buf = Unpooled.buffer(0, 65536);
 
-        try {
-            new ByteBufOutputStream(null);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, () -> new ByteBufOutputStream(null));
 
         assertThrows(IndexOutOfBoundsException.class, () -> new ByteBufOutputStream(buf).write(EMPTY_BYTES, -1, 0));
 
@@ -73,19 +68,9 @@ public class ByteBufStreamTest {
             out.write(new byte[]{1, 3, 3, 4}, 0, 0);
         }
 
-        try {
-            new ByteBufInputStream(null, true);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, () -> new ByteBufInputStream(null, true));
 
-        try {
-            new ByteBufInputStream(null, 0, true);
-            fail();
-        } catch (NullPointerException e) {
-            // Expected
-        }
+        assertThrows(NullPointerException.class, () -> new ByteBufInputStream(null, 0, true));
 
         try {
             new ByteBufInputStream(buf.retainedSlice(), -1, true);
@@ -157,26 +142,11 @@ public class ByteBufStreamTest {
             assertEquals(-1, in.read());
             assertEquals(-1, in.read(tmp));
 
-            try {
-                in.readByte();
-                fail();
-            } catch (EOFException e) {
-                // Expected
-            }
+            assertThrows(EOFException.class, () -> in.readByte());
 
-            try {
-                in.readFully(tmp, 0, -1);
-                fail();
-            } catch (IndexOutOfBoundsException e) {
-                // Expected
-            }
+            assertThrows(IndexOutOfBoundsException.class, () -> in.readFully(tmp, 0, -1));
 
-            try {
-                in.readFully(tmp);
-                fail();
-            } catch (EOFException e) {
-                // Expected
-            }
+            assertThrows(EOFException.class, () -> in.readFully(tmp));
         } finally {
             // Ownership was transferred to the ByteBufOutputStream, before we close we must retain the underlying
             // buffer.

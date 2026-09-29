@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -165,7 +166,7 @@ public class GlobalEventExecutorTest {
         // trigger the lazy initialization of INSTANCE (see https://github.com/netty/netty/issues/17128).
         Throwable cause = e.terminationFuture().cause();
         assertNotNull(cause);
-        assertTrue(cause instanceof UnsupportedOperationException);
+        assertInstanceOf(UnsupportedOperationException.class, cause);
 
         StackTraceElement[] before = cause.getStackTrace();
         assertEquals(1, before.length);

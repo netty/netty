@@ -47,8 +47,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class EpollReuseAddrTest {
@@ -104,12 +105,9 @@ public class EpollReuseAddrTest {
     private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap) {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
-        try {
-            bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof IOException);
-        }
+        Exception e = assertThrows(Exception.class, () ->
+                bootstrap.bind(future.channel().localAddress()).syncUninterruptibly());
+        assertInstanceOf(IOException.class, e);
         future.channel().close().syncUninterruptibly();
     }
 

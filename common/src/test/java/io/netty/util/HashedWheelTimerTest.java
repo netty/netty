@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -111,12 +112,8 @@ public class HashedWheelTimerTest {
         latch.await();
         timer.stop();
 
-        try {
-            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
-            fail("Expected exception didn't occur.");
-        } catch (IllegalStateException ignored) {
-            // expected
-        }
+        assertThrows(IllegalStateException.class, () ->
+                timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -203,10 +200,8 @@ public class HashedWheelTimerTest {
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         timer.newTimeout(createNoOpTimerTask(), 5, TimeUnit.SECONDS);
         try {
-            timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS);
-            fail("Timer allowed adding 3 timeouts when maxPendingTimeouts was 2");
-        } catch (RejectedExecutionException e) {
-            // Expected
+            assertThrows(RejectedExecutionException.class, () ->
+                    timer.newTimeout(createNoOpTimerTask(), 1, TimeUnit.MILLISECONDS));
         } finally {
             timer.stop();
         }

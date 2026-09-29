@@ -29,7 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultFileRegionTest {
 
@@ -99,12 +99,7 @@ public class DefaultFileRegionTest {
             assertEquals(data.length - 1024, region.transferTo(channel, 0));
             assertEquals(data.length, region.count());
             assertEquals(data.length - 1024, region.transferred());
-            try {
-                region.transferTo(channel, data.length - 1024);
-                fail();
-            } catch (IOException expected) {
-                // expected
-            }
+            assertThrows(IOException.class, () -> region.transferTo(channel, data.length - 1024));
         } finally {
             file.delete();
         }

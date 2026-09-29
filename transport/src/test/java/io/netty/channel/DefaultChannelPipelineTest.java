@@ -2103,16 +2103,13 @@ public class DefaultChannelPipelineTest {
         group.register(channel).syncUninterruptibly();
         group.register(channel2).syncUninterruptibly();
 
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             if (flush) {
                 channel.writeAndFlush(referenceCounted, channel2.newPromise());
             } else {
                 channel.write(referenceCounted, channel2.newPromise());
             }
-            fail();
-        } catch (IllegalArgumentException expected) {
-            // expected
-        }
+        });
         assertEquals(0, referenceCounted.refCnt());
 
         channel.close().syncUninterruptibly();

@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -74,19 +73,9 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         assertEquals(AbstractByteBufAllocator.CALCULATE_THRESHOLD * 2,
                 allocator.calculateNewCapacity(AbstractByteBufAllocator.CALCULATE_THRESHOLD + 1,
                         AbstractByteBufAllocator.CALCULATE_THRESHOLD * 4));
-        try {
-            allocator.calculateNewCapacity(8, 7);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, () -> allocator.calculateNewCapacity(8, 7));
 
-        try {
-            allocator.calculateNewCapacity(-1, 8);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, () -> allocator.calculateNewCapacity(-1, 8));
     }
 
     @Test

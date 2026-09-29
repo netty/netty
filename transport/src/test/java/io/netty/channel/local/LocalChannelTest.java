@@ -178,17 +178,14 @@ public class LocalChannelTest {
 
             // Close the channel and write something.
             cc.close().sync();
-            try {
-                cc.writeAndFlush(new Object()).sync();
-                fail("must raise a ClosedChannelException");
-            } catch (Exception e) {
-                assertInstanceOf(ClosedChannelException.class, e);
-                // Ensure that the actual write attempt on a closed channel was never made by asserting that
-                // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
-                if (e.getStackTrace().length > 0) {
-                   assertEquals(AbstractChannel.class.getName() +
-                           "$AbstractUnsafe", e.getStackTrace()[0].getClassName());
-                }
+            Channel finalCc = cc;
+            Exception e = assertThrows(Exception.class, () -> finalCc.writeAndFlush(new Object()).sync());
+            assertInstanceOf(ClosedChannelException.class, e);
+            // Ensure that the actual write attempt on a closed channel was never made by asserting that
+            // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
+            if (e.getStackTrace().length > 0) {
+               assertEquals(AbstractChannel.class.getName() +
+                       "$AbstractUnsafe", e.getStackTrace()[0].getClassName());
             }
         } finally {
             closeChannel(cc);
