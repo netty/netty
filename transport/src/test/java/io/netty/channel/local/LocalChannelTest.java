@@ -60,10 +60,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1278,20 +1278,43 @@ public class LocalChannelTest {
 
     @Test
     public void testConnectFailsWhenServerClosedWithQueuedConnection() throws Exception {
-        CountDownLatch queued = new CountDownLatch(1);
-        Channel sc = bindServerWithAutoReadDisabled(queued);
+        BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+        Channel sc = bindServerWithAutoReadDisabled(accepted);
         ChannelFuture cf = null;
         try {
             cf = connectClient();
-            assertThat(queued.await(5, SECONDS)).isTrue();
+            assertNotNull(accepted.poll(5, SECONDS));
 
             // The connection is queued but was not accepted yet.
             sc.close().sync();
 
-            assertThat(cf.await(5, SECONDS)).isTrue();
-            assertThat(cf.cause()).isInstanceOf(ClosedChannelException.class);
-            assertThat(cf.channel().isOpen()).isFalse();
-            assertThat(cf.channel().close().await().isSuccess()).isTrue();
+            assertTrue(cf.await(5, SECONDS));
+            assertInstanceOf(ConnectException.class, cf.cause());
+            assertFalse(cf.channel().isOpen());
+            assertTrue(cf.channel().close().await().isSuccess());
+        } finally {
+            closeQuietly(cf);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testClientCloseAfterServerClosedWithQueuedConnection() throws Exception {
+        BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+        Channel sc = bindServerWithAutoReadDisabled(accepted);
+        ChannelFuture cf = null;
+        try {
+            cf = connectClient();
+            assertNotNull(accepted.poll(5, SECONDS));
+
+            // Both closes run on the event loop before the client learns that the queued connection was closed.
+            sc.close();
+            ChannelFuture closeFuture = cf.channel().close();
+
+            assertTrue(closeFuture.await(5, SECONDS));
+            assertTrue(closeFuture.isSuccess(), () -> String.valueOf(closeFuture.cause()));
+            assertTrue(cf.isDone());
+            assertInstanceOf(ClosedChannelException.class, cf.cause());
         } finally {
             closeQuietly(cf);
             closeChannel(sc);
@@ -1300,21 +1323,24 @@ public class LocalChannelTest {
 
     @Test
     public void testClientCloseWhileConnectionIsQueued() throws Exception {
-        CountDownLatch queued = new CountDownLatch(1);
-        Channel sc = bindServerWithAutoReadDisabled(queued);
+        BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+        Channel sc = bindServerWithAutoReadDisabled(accepted);
         ChannelFuture cf = null;
         try {
             cf = connectClient();
-            assertThat(queued.await(5, SECONDS)).isTrue();
+            LocalChannel child = accepted.poll(5, SECONDS);
+            assertNotNull(child);
 
-            assertThat(cf.channel().close().await().isSuccess()).isTrue();
-            assertThat(cf.cause()).isInstanceOf(ClosedChannelException.class);
+            assertTrue(cf.channel().close().await().isSuccess());
+            assertInstanceOf(ClosedChannelException.class, cf.cause());
 
-            // Accepting the queued connection now must not reopen or activate the client.
+            // Accepting the queued connection now must not reopen or activate the client, and the accepted
+            // channel must be closed.
             sc.config().setAutoRead(true);
-            sc.eventLoop().submit(() -> { }).sync();
-            assertThat(cf.channel().isOpen()).isFalse();
-            assertThat(cf.channel().isActive()).isFalse();
+            assertTrue(child.closeFuture().await(5, SECONDS));
+            assertFalse(child.isActive());
+            assertFalse(cf.channel().isOpen());
+            assertFalse(cf.channel().isActive());
         } finally {
             closeQuietly(cf);
             closeChannel(sc);
@@ -1322,7 +1348,58 @@ public class LocalChannelTest {
     }
 
     @Test
+    public void testConnectFailsWhenServerClosesBeforeConnectionArrives() throws Exception {
+        CountDownLatch arrived = new CountDownLatch(1);
+        Channel sc = new ServerBootstrap()
+                .group(group2)
+                .channelFactory(() -> new LocalServerChannel() {
+                    @Override
+                    protected LocalChannel newLocalChannel(LocalChannel peer) {
+                        arrived.countDown();
+                        return super.newLocalChannel(peer);
+                    }
+                })
+                .childHandler(new TestHandler())
+                .bind(TEST_ADDRESS).sync().channel();
+        CountDownLatch release = new CountDownLatch(1);
+        ChannelFuture cf = null;
+        try {
+            // Block the server's event loop, so the close below is queued and the server stays in the registry.
+            sc.eventLoop().execute(() -> {
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            ChannelFuture closeFuture = sc.close();
+            cf = new Bootstrap()
+                    .group(group1)
+                    .channel(LocalChannel.class)
+                    .handler(new TestHandler())
+                    .connect(TEST_ADDRESS);
+            // Wait until the client found the server and handed the connection to the server's event loop, behind
+            // the close.
+            assertTrue(arrived.await(5, SECONDS));
+            cf.channel().eventLoop().submit(() -> { }).sync();
+            release.countDown();
+            closeFuture.sync();
+
+            assertTrue(cf.await(5, SECONDS));
+            assertInstanceOf(ConnectException.class, cf.cause());
+            assertTrue(cf.channel().close().await().isSuccess());
+        } finally {
+            release.countDown();
+            closeQuietly(cf);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
     public void testConnectFailsWhenAcceptedChannelCannotBeRegistered() throws Exception {
+        // The child group is terminated, so registering the accepted channel fails. This logs a WARN
+        // ("Force-closing a channel whose registration task was not accepted by an event loop") and an ERROR
+        // (a listener notification that cannot be submitted to the terminated event loop). Both are expected.
         EventLoopGroup childGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         childGroup.shutdownGracefully(0, 0, SECONDS).sync();
         Channel sc = new ServerBootstrap()
@@ -1334,10 +1411,10 @@ public class LocalChannelTest {
         try {
             cf = connectClient();
 
-            assertThat(cf.await(5, SECONDS)).isTrue();
-            assertThat(cf.isSuccess()).isFalse();
-            assertThat(cf.channel().isOpen()).isFalse();
-            assertThat(cf.channel().close().await().isSuccess()).isTrue();
+            assertTrue(cf.await(5, SECONDS));
+            assertInstanceOf(ConnectException.class, cf.cause());
+            assertFalse(cf.channel().isOpen());
+            assertTrue(cf.channel().close().await().isSuccess());
         } finally {
             closeQuietly(cf);
             closeChannel(sc);
@@ -1346,14 +1423,16 @@ public class LocalChannelTest {
 
     // Client and server share the single event loop of sharedGroup, so the connection is queued by the time
     // newLocalChannel(...) returns.
-    private static Channel bindServerWithAutoReadDisabled(CountDownLatch queued) throws InterruptedException {
+    private static Channel bindServerWithAutoReadDisabled(BlockingQueue<LocalChannel> accepted)
+            throws InterruptedException {
         return new ServerBootstrap()
                 .group(sharedGroup)
                 .channelFactory(() -> new LocalServerChannel() {
                     @Override
                     protected LocalChannel newLocalChannel(LocalChannel peer) {
-                        queued.countDown();
-                        return super.newLocalChannel(peer);
+                        LocalChannel child = super.newLocalChannel(peer);
+                        accepted.add(child);
+                        return child;
                     }
                 })
                 .option(ChannelOption.AUTO_READ, false)
