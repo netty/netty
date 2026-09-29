@@ -590,4 +590,45 @@ public class StompSubframeDecoderTest {
         assertNull(channel.readInbound());
         assertTrue(channel.finishAndReleaseAll());
     }
+
+    @Test
+    void testMaxNumHeadersNotExceededWhenHeadersSplitAcrossReads() {
+        // 10 headers and a limit of 10: the frame must be accepted however it is split into reads.
+        byte[] frame = frameWithHeaders(10);
+        for (int readSize : new int[] { 1, 7, frame.length / 2 + 1, frame.length }) {
+            StompHeadersSubframe headersSubFrame = decodeHeaders(frame, readSize, 10);
+            assertTrue(headersSubFrame.decoderResult().isSuccess(),
+                    "read size " + readSize + ": " + headersSubFrame.decoderResult());
+            assertEquals(10, headersSubFrame.headers().size());
+        }
+    }
+
+    @Test
+    void testMaxNumHeadersEnforcedWhenHeadersSplitAcrossReads() {
+        byte[] frame = frameWithHeaders(11);
+        for (int readSize : new int[] { 1, 7, frame.length / 2 + 1, frame.length }) {
+            StompHeadersSubframe headersSubFrame = decodeHeaders(frame, readSize, 10);
+            assertTrue(headersSubFrame.decoderResult().isFailure(), "read size " + readSize);
+            assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
+        }
+    }
+
+    private static byte[] frameWithHeaders(int numHeaders) {
+        StringBuilder frame = new StringBuilder("SEND\ndestination:/queue/a\n");
+        for (int i = 1; i < numHeaders; i++) {
+            frame.append("header").append(i).append(":value").append(i).append('\n');
+        }
+        return frame.append("\nbody\0").toString().getBytes(UTF_8);
+    }
+
+    private static StompHeadersSubframe decodeHeaders(byte[] frame, int readSize, int maxNumHeaders) {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, maxNumHeaders, true));
+        for (int i = 0; i < frame.length; i += readSize) {
+            channel.writeInbound(Unpooled.wrappedBuffer(frame, i, Math.min(readSize, frame.length - i)));
+        }
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        channel.finishAndReleaseAll();
+        return headersSubFrame;
+    }
 }
