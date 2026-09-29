@@ -47,7 +47,10 @@ import javax.net.ssl.SSLHandshakeException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OpenSslCertificateCompressionTest {
@@ -72,6 +75,22 @@ public class OpenSslCertificateCompressionTest {
         testZstdAlgoServer = new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZSTD);
         testZlibAlgoClient = new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZLIB);
         testBrotliAlgoClient = new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_BROTLI);
+    }
+
+    @Test
+    public void testDefaultCompressionConfigVersionBoundary() {
+        assertNull(ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 26, true));
+        assertNull(ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 27, false));
+
+        OpenSslCertificateCompressionConfig config =
+                ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(null, 27, true);
+        OpenSslCertificateCompressionConfig.AlgorithmConfig algorithmConfig = config.iterator().next();
+        assertSame(ZlibCertificateCompressionAlgorithm.INSTANCE, algorithmConfig.algorithm());
+        assertEquals(OpenSslCertificateCompressionConfig.AlgorithmMode.Both, algorithmConfig.mode());
+
+        OpenSslCertificateCompressionConfig explicitConfig = OpenSslCertificateCompressionConfig.newBuilder().build();
+        assertSame(explicitConfig,
+                ReferenceCountedOpenSslContext.resolveCertificateCompressionConfig(explicitConfig, 27, true));
     }
 
     @Test

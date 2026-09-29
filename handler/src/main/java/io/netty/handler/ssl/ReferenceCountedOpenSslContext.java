@@ -104,7 +104,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
-    private static final int MIN_MAX_CERTIFICATE_LIST_BYTES = 16 * 1024;
     // Let's use tasks by default but still allow the user to disable it via system property just in case.
     static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", true);
@@ -297,9 +296,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         if (isCertificateCompressionDisabled(mode)) {
             certCompressionConfig = null;
-        } else if (certCompressionConfig == null && PlatformDependent.javaVersion() >= 27 &&
-                (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC())) {
-            certCompressionConfig = DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
+        } else {
+            certCompressionConfig = resolveCertificateCompressionConfig(certCompressionConfig,
+                    PlatformDependent.javaVersion(), OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         }
 
         this.tlsFalseStart = tlsFalseStart;
@@ -479,8 +478,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
             }
             if (maxCertificateList != null) {
-                SSLContext.setMaxCertList(ctx, maxCertificateList > 0 ?
-                        Math.max(maxCertificateList, MIN_MAX_CERTIFICATE_LIST_BYTES) : maxCertificateList);
+                SSLContext.setMaxCertList(ctx, maxCertificateList);
             }
 
             // Set the curves / groups if anything is configured.
@@ -522,6 +520,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
         }
         return false;
+    }
+
+    static OpenSslCertificateCompressionConfig resolveCertificateCompressionConfig(
+            OpenSslCertificateCompressionConfig config, int javaVersion, boolean supportsCertificateCompression) {
+        if (config == null && javaVersion >= 27 && supportsCertificateCompression) {
+            return DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
+        }
+        return config;
     }
 
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {

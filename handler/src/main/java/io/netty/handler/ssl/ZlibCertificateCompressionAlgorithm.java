@@ -21,12 +21,19 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import javax.net.ssl.SSLEngine;
 
-final class ZlibCertificateCompressionAlgorithm implements OpenSslCertificateCompressionAlgorithm {
-    static final ZlibCertificateCompressionAlgorithm INSTANCE = new ZlibCertificateCompressionAlgorithm();
+/**
+ * The zlib certificate compression algorithm defined by RFC 8879.
+ */
+public final class ZlibCertificateCompressionAlgorithm implements OpenSslCertificateCompressionAlgorithm {
+    /**
+     * The shared zlib certificate compression algorithm instance.
+     */
+    public static final ZlibCertificateCompressionAlgorithm INSTANCE = new ZlibCertificateCompressionAlgorithm();
 
     // The zlib algorithm identifier assigned by RFC 8879.
     private static final int ALGORITHM_ID = 1;
     private static final int BUFFER_SIZE = 8192;
+    private static final int MAX_UNCOMPRESSED_CERTIFICATE_LENGTH = 0xFFFFFF;
 
     private ZlibCertificateCompressionAlgorithm() { }
 
@@ -51,8 +58,9 @@ final class ZlibCertificateCompressionAlgorithm implements OpenSslCertificateCom
     @Override
     public byte[] decompress(SSLEngine engine, int uncompressedLen, byte[] compressedCertificate)
             throws DataFormatException {
-        if (uncompressedLen < 0) {
-            throw new DataFormatException("uncompressed length must be non-negative");
+        if (uncompressedLen < 0 || uncompressedLen > MAX_UNCOMPRESSED_CERTIFICATE_LENGTH) {
+            throw new DataFormatException("uncompressed length must be between 0 and " +
+                    MAX_UNCOMPRESSED_CERTIFICATE_LENGTH);
         }
 
         Inflater inflater = new Inflater();

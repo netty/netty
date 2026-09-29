@@ -77,4 +77,10 @@ class ZlibCertificateCompressionAlgorithmTest {
         assertThrows(DataFormatException.class,
                 () -> algorithm.decompress(null, 16, new byte[] { 1, 2, 3, 4 }));
     }
+
+    @Test
+    void rejectsLengthLargerThanTlsMaximum() {
+        assertThrows(DataFormatException.class,
+                () -> algorithm.decompress(null, 0x1000000, new byte[0]));
+    }
 }
