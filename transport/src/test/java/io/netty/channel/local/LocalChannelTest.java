@@ -1311,7 +1311,7 @@ public class LocalChannelTest {
 
     @Test
     public void testConnectFailsWhenServerClosedWithQueuedConnection() throws Exception {
-        BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+        BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<LocalChannel>();
         Channel sc = bindServerWithAutoReadDisabled(accepted);
         ChannelFuture cf = null;
         try {
