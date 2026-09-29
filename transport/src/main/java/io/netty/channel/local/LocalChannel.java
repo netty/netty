@@ -54,6 +54,8 @@ public class LocalChannel extends AbstractChannel {
     @SuppressWarnings({ "rawtypes" })
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
+    private static final AtomicReferenceFieldUpdater<LocalChannel, State> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, State.class, "state");
     private static final int MAX_READER_STACK_DEPTH = 8;
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
@@ -204,6 +206,7 @@ public class LocalChannel extends AbstractChannel {
     protected void doClose(Promise<Void> promise) {
         final LocalChannel peer = this.peer;
         State oldState = state;
+        State closedFrom = oldState;
         try {
             if (oldState != State.CLOSED) {
                 // Update all internal state before the closeFuture is notified.
@@ -216,7 +219,9 @@ public class LocalChannel extends AbstractChannel {
 
                 // State change must happen before finishPeerRead to ensure writes are released either in doWrite or
                 // channelRead.
-                state = State.CLOSED;
+                // Use getAndSet() as an accepted channel may concurrently move this channel from BOUND to CONNECTED
+                // when it is registered. See LocalUnsafe.registered().
+                closedFrom = STATE_UPDATER.getAndSet(this, State.CLOSED);
 
                 // Preserve order of event and force a read operation now before the close operation is processed.
                 if (writeInProgress && peer != null) {
@@ -231,7 +236,13 @@ public class LocalChannel extends AbstractChannel {
                 }
             }
 
-            if (peer != null) {
+            if (peer != null && parent() == null && closedFrom != State.CONNECTED) {
+                // The accepted channel did not complete the connection. Don't touch it: it may not have an event
+                // loop yet and is owned by the server channel or its own event loop. When it is registered it sees
+                // that this channel is closed and closes itself. If it was closed already, its close has notified
+                // this channel or will do so.
+                this.peer = null;
+            } else if (peer != null) {
                 this.peer = null;
                 // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
                 // This ensures that if both channels are on the same event loop, the peer's channelInActive
@@ -274,6 +285,15 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
+            ioTransport().close(CompletionHandler.ignore());
+        } else if (connectPromise != null) {
+            // The accepted channel was closed before the connection was established, for example because the server
+            // channel was closed. It is closed already, so don't notify it again. Fail the connect like a refused
+            // connection and close this channel.
+            Promise<Void> promise = connectPromise;
+            connectPromise = null;
+            peer = null;
+            promise.tryFailure(new ConnectException("connection refused: the accepted channel was closed"));
             ioTransport().close(CompletionHandler.ignore());
         } else {
             releaseInboundBuffers();
@@ -479,28 +499,44 @@ public class LocalChannel extends AbstractChannel {
             // deregistered / registered later again.
             //
             // See https://github.com/netty/netty/issues/2400
+            //
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // See https://github.com/netty/netty/issues/2144
+            final LocalChannel peer = LocalChannel.this.peer;
             if (peer != null && parent() != null) {
-                // Store the peer in a local variable as it may be set to null if doClose() is called.
-                // See https://github.com/netty/netty/issues/2144
-                final LocalChannel peer = LocalChannel.this.peer;
+                // Set our state before the peer's, so the peer sees this channel as active once it is connected.
+                State oldState = state;
                 state = State.CONNECTED;
 
-                peer.remoteAddress = parent() == null ? null : parent().localAddress();
-                peer.state = State.CONNECTED;
+                // Move the peer from BOUND to CONNECTED atomically, as it may be closed concurrently on its own
+                // event loop. If this channel was connected before and is registered again, the peer is CONNECTED
+                // already.
+                if (STATE_UPDATER.compareAndSet(peer, State.BOUND, State.CONNECTED) ||
+                        peer.state == State.CONNECTED) {
+                    peer.remoteAddress = parent().localAddress();
+                    // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+                    // This ensures that if both channels are on the same event loop, the peer's channelActive
+                    // event is triggered *after* this channel's channelRegistered event, so that this channel's
+                    // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+                    peer.executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            Promise<Void> promise = peer.connectPromise;
 
-                // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
-                // This ensures that if both channels are on the same event loop, the peer's channelActive
-                // event is triggered *after* this channel's channelRegistered event, so that this channel's
-                // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-                peer.executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        Promise<Void> promise = peer.connectPromise;
-                        if (promise != null) {
-                            promise.trySuccess(null);
+                            // Only trigger fireChannelActive() if the promise was not null and was not completed
+                            // yet. connectPromise may be set to null if doClose() was called in the meantime.
+                            if (promise != null) {
+                                promise.trySuccess(null);
+                            }
                         }
-                    }
-                });
+                    });
+                } else {
+                    // The peer was closed before this channel was registered, so it never uses this channel.
+                    // Close this channel once the registration is complete.
+                    LocalChannel.this.peer = null;
+                    state = oldState;
+                    executor().execute(this::closeNow);
+                }
             }
         }
 
@@ -508,6 +544,10 @@ public class LocalChannel extends AbstractChannel {
         public void closeNow() {
            ioTransport().close(CompletionHandler.ignore());
         }
+    }
+
+    void closeNow() {
+        ioHandle.closeNow();
     }
 
     @Override

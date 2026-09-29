@@ -128,6 +128,13 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
+
+        // Close connections that were queued but never accepted, so their connect attempt fails instead of
+        // never completing.
+        Object m;
+        while ((m = inboundBuffer.poll()) != null) {
+            ((LocalChannel) m).closeNow();
+        }
         promise.setSuccess(null);
     }
 
@@ -196,10 +203,13 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     private void serve0(final LocalChannel child) {
+        if (!isOpen() || child.executor().isShuttingDown()) {
+            child.closeNow();
+            return;
+        }
         inboundBuffer.add(child);
         if (acceptInProgress) {
             acceptInProgress = false;
-
             readInbound();
         }
     }
