@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -101,6 +102,13 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // Nothing will write the queued messages once this handler was removed, not even channelInactive(),
+        // so fail them now and close / release what they hold.
+        discard(new ChannelException("Pending write on removal of ChunkedWriteHandler"));
     }
 
     /**
@@ -266,7 +274,15 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // as this had to be done already by someone who resolved the
                 // promise (using ChunkedInput.close method).
                 // See https://github.com/netty/netty/issues/8700.
+                // A promise that was cancelled by the user is different: nobody closed or released the message.
                 queue.remove();
+                if (currentWrite.promise.isCancelled()) {
+                    if (currentWrite.msg instanceof ChunkedInput) {
+                        closeInput((ChunkedInput<?>) currentWrite.msg);
+                    } else {
+                        ReferenceCountUtil.release(currentWrite.msg);
+                    }
+                }
                 continue;
             }
 
