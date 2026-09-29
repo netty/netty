@@ -216,15 +216,10 @@ public final class PendingWriteQueue {
             return;
         }
         ReferenceCountUtil.safeRelease(write.msg);
-<<<<<<< HEAD
         CompletionHandler<Void> handler = write.handler;
-        handler.failure(cause);
-=======
-        ChannelPromise promise = write.promise;
         // Unlink the write before failing the promise, as a listener may use the queue again.
->>>>>>> 45042366d3 (PendingWriteQueue: unlink the write before failing it in removeAndFail (#17657))
         recycle(write, true);
-        safeFail(promise, cause);
+        handler.failure(cause);
     }
 
     private void assertEmpty() {
