@@ -108,7 +108,10 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         // Nothing will write the queued messages once this handler was removed, not even channelInactive(),
         // so fail them now and close / release what they hold.
-        discard(new ChannelException("Pending write on removal of ChunkedWriteHandler"));
+        if (!queueIsEmpty()) {
+            // Only create the exception if there is something to fail, as creating it is expensive.
+            discard(new ChannelException("Pending write on removal of ChunkedWriteHandler"));
+        }
     }
 
     /**
