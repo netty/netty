@@ -57,23 +57,12 @@ class AdaptivePoolingAllocatorTest {
     }
 
     /**
-     * Fresh chunk allocations and used memory at fixed checkpoints of a seeded, single-stripe allocation trace.
-     * One row per checkpoint: {@code {fresh chunks allocated so far, usedMemory}}. The used-memory values were
-     * recorded on 004e4cc8a3, before the magazine's current chunk became the cache's active chunk, and must not
-     * change. They move when the retention floor counts the active chunk, or when a poll takes the oldest reusable
-     * chunk instead of the newest. The chunk counts were re-recorded when the recycler got one byte budget per heap
-     * instead of a bound per chunk size (43 chunk buffers over the trace instead of 59, same used memory), and both
-     * columns when the size classes from 32 KiB up went from 32 to 8 segments per chunk: the trace's 64 KiB buffers
-     * come from chunks a quarter of the size, so less memory is used at every checkpoint and more chunk buffers are
-     * allocated (73). The used-memory column moved once more when the retention floor became "never give up the last
-     * chunk of a size class" instead of 4 MiB per class: the same 73 chunk buffers are allocated, the peaks are the
-     * same, and the troughs hold 7 to 13 MiB instead of 15 to 19. One chunk buffer fewer is allocated (72) since the
-     * trace's 16 KiB and 64 KiB size classes, which both use 512 KiB chunks, share a recycler pool.
-     * <p>
-     * The used-memory column was re-recorded, with the chunk counts unchanged at every checkpoint, when the buffers a
-     * recycler holds started to count: the troughs above were memory parked in the heap's recycler, which the metric
-     * used to drop. The allocator never gives a chunk buffer back in this trace, because everything its caches let go
-     * fits the recycler's budget, so used memory only grows, to the peak of chunk buffers ever allocated.
+     * Fresh chunk allocations and used memory at fixed checkpoints of a seeded allocation trace, the same on a stripe
+     * and on a thread-local heap. One row per checkpoint: {@code {fresh chunks allocated so far, usedMemory}}. The
+     * values pin the allocator's reuse and retention decisions: they move when a poll picks a different chunk, when
+     * the retention floor, the recycler's budget or the chunk sizes change, or when the notes other threads leave are
+     * applied at a different point. {@code usedMemory} counts the chunk buffers the heap's recycler holds too. No
+     * decay runs during the trace (it takes well under the decay interval), so the values do not depend on time.
      */
     private static final long[][] EXPECTED = {
             {0, 0}, {38, 17563648}, {67, 31981568}, {67, 31981568},
@@ -152,11 +141,15 @@ class AdaptivePoolingAllocatorTest {
             }
         };
         Thread thread = threadLocal ? new FastThreadLocalThread(trace) : new Thread(trace);
+        long start = System.nanoTime();
         thread.start();
         thread.join();
         if (result.get() instanceof Throwable) {
             throw (Throwable) result.get();
         }
+        // A trace that took a whole decay interval may have seen a decay, which the recorded values do not include.
+        assumeTrue(System.nanoTime() - start < AdaptivePoolingAllocator.IdleDecay.DECAY_INTERVAL_NANOS,
+                "the trace ran longer than a decay interval");
         // The thread is gone: a thread-local heap has been freed, chunks and recycler alike.
         assertEquals(counter.unreleasedBytes(), allocator.usedMemory(), "after the allocating thread ended");
         long[][] actual = (long[][]) result.get();
