@@ -107,8 +107,13 @@ public interface MpscIntQueue {
 
     /**
      * Return the fixed capacity of this queue.
+     *
+     * @throws UnsupportedOperationException if this queue does not know its capacity; the queues made by
+     * {@link #create(int, int)} do.
      */
-    int capacity();
+    default int capacity() {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Reset the queue and fill with {@code count} values: 0, stride, 2*stride, ...
@@ -119,8 +124,13 @@ public interface MpscIntQueue {
      * caller has no way to observe that it is still in flight. Resetting underneath such a
      * producer would let its store land in the reset queue, so this method waits for those
      * stores to complete before resetting.
+     *
+     * @throws UnsupportedOperationException if this queue cannot be reset; the queues made by
+     * {@link #create(int, int)} can.
      */
-    void resetAndFill(int count, int stride);
+    default void resetAndFill(int count, int stride) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * This implementation is based on MpscAtomicUnpaddedArrayQueue from JCTools.

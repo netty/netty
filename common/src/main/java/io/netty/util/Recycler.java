@@ -138,8 +138,18 @@ public abstract class Recycler<T> {
         this(maxCapacity, unguarded, false);
     }
 
+    /**
+     * As {@link #Recycler(int, boolean)}, for a pool whose {@link #get()} is only ever called by one thread at a time
+     * (for example under a lock the caller holds), while any thread may recycle into it: the pool can then take
+     * instances without contending with other takers. Only supported with {@code unguarded}.
+     *
+     * @throws IllegalArgumentException if {@code exclusiveGet} is set without {@code unguarded}
+     */
     @SuppressWarnings("unchecked")
     protected Recycler(int maxCapacity, boolean unguarded, boolean exclusiveGet) {
+        if (exclusiveGet && !unguarded) {
+            throw new IllegalArgumentException("exclusiveGet requires unguarded");
+        }
         if (maxCapacity <= 0) {
             maxCapacity = 0;
         } else {
