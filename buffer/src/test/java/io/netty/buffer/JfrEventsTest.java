@@ -151,7 +151,8 @@ public class JfrEventsTest {
                 releaseAll(allocateMany(alloc, 64 * 1024, 8 * 8));
                 // One-shot: above the largest pooled buffer.
                 alloc.heapBuffer(4 * 1024 * 1024).release();
-                // Above the size classes: buddy chunks, on a stripe, kept idle there after the release.
+                // Above the size classes: large-buffer chunks of the thread-local heap, kept idle there after the
+                // release.
                 releaseAll(allocateMany(alloc, 512 * 1024, 8));
                 // The thread-local heap is freed when this thread ends, with what its recycler holds.
             }, threadName);

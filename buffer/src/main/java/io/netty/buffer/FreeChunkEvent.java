@@ -22,7 +22,7 @@ import jdk.jfr.Name;
 @SuppressWarnings("Since15")
 @Label("Chunk Free")
 @Name(FreeChunkEvent.NAME)
-@Description("Triggered when a memory chunk is freed from an allocator")
+@Description("Triggered when an allocator gives a memory chunk back to the memory it is built on")
 final class FreeChunkEvent extends AbstractChunkEvent {
     static final String NAME = "io.netty.FreeChunk";
     private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();

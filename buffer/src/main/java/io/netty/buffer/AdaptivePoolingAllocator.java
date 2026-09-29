@@ -78,7 +78,7 @@ import java.util.function.IntConsumer;
  * thread puts its segment or block on the chunk's lock-free free list and leaves a note for the owner, which applies
  * it on its next slow path: the chunk's own structures are only ever touched by one thread at a time.
  * <p>
- * Chunks that are given up are kept for reuse, bounded per magazine, and freed beyond that. Their buffers go to a
+ * Chunks that are given up are kept for reuse, bounded per heap, and freed beyond that. Their buffers go to a
  * {@link SizeClassChunkRecycler} so a chunk of another size class can be built from the same memory.
  */
 @UnstableApi
@@ -589,8 +589,8 @@ final class AdaptivePoolingAllocator {
      * <p>
      * The pool is bounded by one number of bytes per heap, {@link #RECYCLED_BYTES_BUDGET}, across every chunk size:
      * whichever chunk sizes are churning get the room. A bound per chunk size left one or two buffers to the large
-     * size classes, whose chunks are given up at the rate of the small ones (measured on E_COMMERCE heap 16384:
-     * 12 GiB of chunk buffers allocated in 20 s, and four times the garbage collections).
+     * size classes, whose chunks are given up at the rate of the small ones, so most of their chunks needed a new
+     * chunk buffer.
      * <p>
      * Buffers nobody takes go back to the chunk allocator slowly: when its heap's {@link IdleDecay} says so, the
      * recycler frees half, rounded up, of the buffers that sat in its pools through the whole interval, oldest first.
@@ -695,7 +695,8 @@ final class AdaptivePoolingAllocator {
         /** Whether {@link #offer} would keep a buffer of {@code sizeClassIndex}'s chunk size now. */
         boolean hasRoomFor(int sizeClassIndex) {
             int pool = SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex];
-            return sizes[pool] < buffers[pool].length && retainedBytes + CHUNK_SIZES[pool] <= RECYCLED_BYTES_BUDGET;
+            return sizes[pool] < buffers[pool].length
+                    && (long) retainedBytes + CHUNK_SIZES[pool] <= RECYCLED_BYTES_BUDGET;
         }
 
         /**
@@ -819,9 +820,14 @@ final class AdaptivePoolingAllocator {
      * passed since the last decay, the recycler and the large-buffer magazine free half, rounded up, of what they kept
      * unused through the whole interval, oldest first; otherwise nothing happens until the next count. A size class
      * that gave up its chunks only hands them to the recycler, so memory reaches the chunk allocator by halves only.
-     * With the default bounds a decay frees at most 128 recycled buffers and 9 large-buffer chunks (8 idle and the
-     * one allocated from). A heap that keeps allocating keeps what it reuses and gives back
-     * by halves what it stopped needing; a heap that stops allocating keeps its memory until it is freed. Nothing is
+     * A heap that keeps allocating keeps what it reuses and gives back by halves what it stopped needing; a heap that
+     * stops allocating keeps its memory until it is freed.
+     * <p>
+     * What a heap keeps idle is bounded: up to {@link SizeClassChunkRecycler#RECYCLED_BYTES_BUDGET} in its recycler,
+     * up to {@link #CHUNK_REUSE_QUEUE_BYTES} of wholly free large-buffer chunks, the large-buffer chunk it allocates
+     * from (up to {@link #MAX_CHUNK_SIZE}), and the chunk each size class in use allocates from plus the one it
+     * keeps. With the defaults that is about 84 MiB per heap at most, for every event loop that allocates and every
+     * stripe in use. Nothing is
      * allocated on the way, and no thread but the heap's own is involved: it is guarded like the heap, by the stripe
      * lock or by the owner thread of a thread-local heap.
      */
@@ -882,8 +888,8 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    // Striped heap holding all size-class magazines under one lock.
-    // One StampedLock per stripe covers ALL size classes.
+    // A stripe: the heap of the threads without a thread-local one that pick it. One StampedLock covers all its
+    // size-class magazines and its magazine for buffers above the size classes.
     private static final class StripedHeap {
         final StampedLock lock = new StampedLock();
         final IdleDecay idleDecay = new IdleDecay();
@@ -1569,7 +1575,7 @@ final class AdaptivePoolingAllocator {
             while (cur != null) {
                 SizeClassedChunk next = (SizeClassedChunk) cur.nextInQueue;
                 if (cur.hasFullCapacity()) {
-                    if (!chunkRecycler.hasRoomFor(sizeClassIndex)) {
+                    if (chunkRecycler != null && !chunkRecycler.hasRoomFor(sizeClassIndex)) {
                         return;
                     }
                     reusable.remove(cur);
@@ -1814,12 +1820,10 @@ final class AdaptivePoolingAllocator {
         }
 
         public static AdaptiveRecycler threadLocal() {
-            // Interval 0: pool every recycled buffer, matching what the shared-stripe recycler
-            // gets from sharedExclusiveGet. The global default interval of 8 admits one buffer
-            // in eight and pays a stateful counter plus a data-dependent branch per allocation;
-            // retention is already bounded by the recycler's capacity, so the interval buys
-            // nothing here. Measured on SOCKET_PROXY, t=1: -15.0 ns/op at MLB=65536,
-            // -3.3 ns/op at MLB=1024, neutral on API_GATEWAY.
+            // Interval 0: pool every recycled buffer object, as the stripes' pools do, instead of the
+            // io.netty.recycler.ratio default, which admits one in eight at the cost of a counter and a
+            // data-dependent branch per allocation; retention is already bounded by the recycler's
+            // capacity. Measured: up to 15 ns less per allocation with many buffers live, neutral otherwise.
             return new AdaptiveRecycler(true, 0);
         }
 
@@ -2173,7 +2177,7 @@ final class AdaptivePoolingAllocator {
          * The largest rather than the smallest that fits: the chunk polled here becomes the one the magazine allocates
          * from, and one with a big free block serves many more requests before it runs out. Taking the smallest fit
          * picks the chunk that is nearly full, which serves about one request and sends the next allocation down here
-         * again (measured on E_COMMERCE heap 65536: 47% of buddy allocations took this path, against 9%).
+         * again (measured: about half of the allocations came down here, against under a tenth).
          */
         private BuddyChunk poll(int blockSize) {
             int order = Integer.numberOfTrailingZeros(blockSize / BuddyTree.MIN_BLOCK_SIZE);
@@ -2224,8 +2228,8 @@ final class AdaptivePoolingAllocator {
          * File {@code chunk}, on no queue, by its tree once its free list is applied. A wholly free chunk is freed
          * instead when keeping it would take the idle chunks above {@link #CHUNK_REUSE_QUEUE_BYTES}, or above
          * {@link #CHUNK_REUSE_QUEUE} chunks: the limits are on idle memory, whatever the number of chunks in use.
-         * A count alone is no bound: chunks are 2 to 8 MiB, and a burst of large buffers was kept whole (measured on
-         * one heap: 192 MiB of 192 held after every buffer was released).
+         * A count alone is no bound: chunks are 2 to 8 MiB, and a burst of large buffers was kept whole after every
+         * buffer was released.
          */
         private void file(BuddyChunk chunk) {
             chunk.processFreelistEntries();
@@ -3076,9 +3080,8 @@ final class AdaptivePoolingAllocator {
             assert leaves > 0 && (leaves & leaves - 1) == 0 : "capacity " + capacity;
             maxOrder = Integer.numberOfTrailingZeros(leaves);
             byte[] nodes = new byte[leaves << 1];
-            // All free: the nodes at depth d, [2^d, 2^(d+1)), are whole blocks of order maxOrder - d.
-            // One constant per level. A loop computing each node's order (numberOfLeadingZeros of its index) into
-            // the byte array was miscompiled by JDK 21's C2 (SuperWord), which built corrupt trees.
+            // All free: the nodes at depth d, [2^d, 2^(d+1)), are whole blocks of order maxOrder - d,
+            // one constant per level.
             for (int depth = 0; depth <= maxOrder; depth++) {
                 Arrays.fill(nodes, 1 << depth, 2 << depth, (byte) (maxOrder - depth + 1));
             }
