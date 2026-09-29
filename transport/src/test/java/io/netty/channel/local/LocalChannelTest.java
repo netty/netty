@@ -60,6 +60,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -1272,6 +1273,105 @@ public class LocalChannelTest {
                 closeChannel(connectFuture.channel());
             }
             closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testConnectFailsWhenServerClosedWithQueuedConnection() throws Exception {
+        CountDownLatch queued = new CountDownLatch(1);
+        Channel sc = bindServerWithAutoReadDisabled(queued);
+        ChannelFuture cf = null;
+        try {
+            cf = connectClient();
+            assertThat(queued.await(5, SECONDS)).isTrue();
+
+            // The connection is queued but was not accepted yet.
+            sc.close().sync();
+
+            assertThat(cf.await(5, SECONDS)).isTrue();
+            assertThat(cf.cause()).isInstanceOf(ClosedChannelException.class);
+            assertThat(cf.channel().isOpen()).isFalse();
+            assertThat(cf.channel().close().await().isSuccess()).isTrue();
+        } finally {
+            closeQuietly(cf);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testClientCloseWhileConnectionIsQueued() throws Exception {
+        CountDownLatch queued = new CountDownLatch(1);
+        Channel sc = bindServerWithAutoReadDisabled(queued);
+        ChannelFuture cf = null;
+        try {
+            cf = connectClient();
+            assertThat(queued.await(5, SECONDS)).isTrue();
+
+            assertThat(cf.channel().close().await().isSuccess()).isTrue();
+            assertThat(cf.cause()).isInstanceOf(ClosedChannelException.class);
+
+            // Accepting the queued connection now must not reopen or activate the client.
+            sc.config().setAutoRead(true);
+            sc.eventLoop().submit(() -> { }).sync();
+            assertThat(cf.channel().isOpen()).isFalse();
+            assertThat(cf.channel().isActive()).isFalse();
+        } finally {
+            closeQuietly(cf);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
+    public void testConnectFailsWhenAcceptedChannelCannotBeRegistered() throws Exception {
+        EventLoopGroup childGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        childGroup.shutdownGracefully(0, 0, SECONDS).sync();
+        Channel sc = new ServerBootstrap()
+                .group(sharedGroup, childGroup)
+                .channel(LocalServerChannel.class)
+                .childHandler(new TestHandler())
+                .bind(TEST_ADDRESS).sync().channel();
+        ChannelFuture cf = null;
+        try {
+            cf = connectClient();
+
+            assertThat(cf.await(5, SECONDS)).isTrue();
+            assertThat(cf.isSuccess()).isFalse();
+            assertThat(cf.channel().isOpen()).isFalse();
+            assertThat(cf.channel().close().await().isSuccess()).isTrue();
+        } finally {
+            closeQuietly(cf);
+            closeChannel(sc);
+        }
+    }
+
+    // Client and server share the single event loop of sharedGroup, so the connection is queued by the time
+    // newLocalChannel(...) returns.
+    private static Channel bindServerWithAutoReadDisabled(CountDownLatch queued) throws InterruptedException {
+        return new ServerBootstrap()
+                .group(sharedGroup)
+                .channelFactory(() -> new LocalServerChannel() {
+                    @Override
+                    protected LocalChannel newLocalChannel(LocalChannel peer) {
+                        queued.countDown();
+                        return super.newLocalChannel(peer);
+                    }
+                })
+                .option(ChannelOption.AUTO_READ, false)
+                .childHandler(new TestHandler())
+                .bind(TEST_ADDRESS).sync().channel();
+    }
+
+    private static ChannelFuture connectClient() {
+        return new Bootstrap()
+                .group(sharedGroup)
+                .channel(LocalChannel.class)
+                .handler(new TestHandler())
+                .connect(TEST_ADDRESS);
+    }
+
+    private static void closeQuietly(ChannelFuture cf) {
+        if (cf != null) {
+            cf.channel().close().awaitUninterruptibly();
         }
     }
 

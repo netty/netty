@@ -242,7 +242,12 @@ public class LocalChannel extends AbstractChannel {
                 }
             }
 
-            if (peer != null) {
+            if (peer != null && peer.state == null) {
+                // The peer was never registered, so it has no event loop and never saw any data.
+                // Close it directly so it is not activated later.
+                this.peer = null;
+                peer.unsafe().closeForcibly();
+            } else if (peer != null) {
                 this.peer = null;
                 // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
                 // This ensures that if both channels are on the same event loop, the peer's channelInActive
@@ -283,6 +288,11 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
+            unsafe().close(unsafe().voidPromise());
+        } else if (connectPromise != null) {
+            // The peer was closed before the connection was established. It is closed already, so don't
+            // notify it again and close this channel, which fails the connect.
+            peer = null;
             unsafe().close(unsafe().voidPromise());
         } else {
             releaseInboundBuffers();
