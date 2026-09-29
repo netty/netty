@@ -53,6 +53,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -1347,13 +1348,16 @@ public class LocalChannelTest {
             // the client's event loop. Calling both from this thread would let the event loop run the server's
             // close, and so the notification, before the client's close is submitted.
             Channel client = cf.channel();
-            ChannelFuture closeFuture = sc.eventLoop().submit(() -> {
-                sc.close();
-                return client.close();
+            ChannelFuture closeFuture = sc.eventLoop().submit(new Callable<ChannelFuture>() {
+                @Override
+                public ChannelFuture call() throws Exception {
+                    sc.close();
+                    return client.close();
+                }
             }).get(5, SECONDS);
 
             assertTrue(closeFuture.await(5, SECONDS));
-            assertTrue(closeFuture.isSuccess(), () -> String.valueOf(closeFuture.cause()));
+            assertTrue(closeFuture.isSuccess());
             assertTrue(cf.isDone());
             assertInstanceOf(ClosedChannelException.class, cf.cause());
         } finally {
@@ -1390,27 +1394,35 @@ public class LocalChannelTest {
 
     @Test
     public void testConnectFailsWhenServerClosesBeforeConnectionArrives() throws Exception {
-        CountDownLatch arrived = new CountDownLatch(1);
+        final CountDownLatch arrived = new CountDownLatch(1);
         Channel sc = new ServerBootstrap()
                 .group(group2)
-                .channelFactory(() -> new LocalServerChannel() {
+                .channelFactory(new ChannelFactory<ServerChannel>() {
                     @Override
-                    protected LocalChannel newLocalChannel(LocalChannel peer) {
-                        arrived.countDown();
-                        return super.newLocalChannel(peer);
+                    public ServerChannel newChannel() {
+                        return new LocalServerChannel() {
+                            @Override
+                            protected LocalChannel newLocalChannel(LocalChannel peer) {
+                                arrived.countDown();
+                                return super.newLocalChannel(peer);
+                            }
+                        };
                     }
                 })
                 .childHandler(new TestHandler())
                 .bind(TEST_ADDRESS).sync().channel();
-        CountDownLatch release = new CountDownLatch(1);
+        final CountDownLatch release = new CountDownLatch(1);
         ChannelFuture cf = null;
         try {
             // Block the server's event loop, so the close below is queued and the server stays in the registry.
-            sc.eventLoop().execute(() -> {
-                try {
-                    release.await();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+            sc.eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        release.await();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             });
             ChannelFuture closeFuture = sc.close();
@@ -1422,7 +1434,12 @@ public class LocalChannelTest {
             // Wait until the client found the server and handed the connection to the server's event loop, behind
             // the close.
             assertTrue(arrived.await(5, SECONDS));
-            cf.channel().eventLoop().submit(() -> { }).sync();
+            cf.channel().eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP
+                }
+            }).sync();
             release.countDown();
             closeFuture.sync();
 
@@ -1465,16 +1482,21 @@ public class LocalChannelTest {
 
     // Client and server share the single event loop of sharedGroup, so the connection is queued by the time
     // newLocalChannel(...) returns.
-    private static Channel bindServerWithAutoReadDisabled(BlockingQueue<LocalChannel> accepted)
+    private static Channel bindServerWithAutoReadDisabled(final BlockingQueue<LocalChannel> accepted)
             throws InterruptedException {
         return new ServerBootstrap()
                 .group(sharedGroup)
-                .channelFactory(() -> new LocalServerChannel() {
+                .channelFactory(new ChannelFactory<ServerChannel>() {
                     @Override
-                    protected LocalChannel newLocalChannel(LocalChannel peer) {
-                        LocalChannel child = super.newLocalChannel(peer);
-                        accepted.add(child);
-                        return child;
+                    public ServerChannel newChannel() {
+                        return new LocalServerChannel() {
+                            @Override
+                            protected LocalChannel newLocalChannel(LocalChannel peer) {
+                                LocalChannel child = super.newLocalChannel(peer);
+                                accepted.add(child);
+                                return child;
+                            }
+                        };
                     }
                 })
                 .option(ChannelOption.AUTO_READ, false)
