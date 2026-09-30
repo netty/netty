@@ -279,7 +279,7 @@ public class ChunkedWriteHandler implements ChannelInboundHandler, ChannelOutbou
                 // See https://github.com/netty/netty/issues/8700.
                 // A promise that was cancelled by the user is different: nobody closed or released the message.
                 queue.remove();
-                if (((Promise<?>)currentWrite.handler).isCancelled()) {
+                if (((Promise<?>) currentWrite.handler).isCancelled()) {
                     if (currentWrite.msg instanceof ChunkedInput) {
                         closeInput((ChunkedInput<?>) currentWrite.msg);
                     } else {
