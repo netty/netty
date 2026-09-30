@@ -19,14 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -40,12 +43,16 @@ import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.TimeUnit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -994,6 +1001,217 @@ public class ChunkedWriteHandlerTest {
         @Override
         public long progress() {
             return 0;
+        }
+    }
+
+    /**
+     * A {@link ChunkedInput} that has no data available yet (the producer has not called resumeTransfer()).
+     */
+    private static final class PendingInput implements ChunkedInput<ByteBuf> {
+        boolean closed;
+
+        @Override
+        public boolean isEndOfInput() {
+            return false;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        @Deprecated
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) {
+            return null;
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) {
+            return null;
+        }
+
+        @Override
+        public long length() {
+            return -1;
+        }
+
+        @Override
+        public long progress() {
+            return 0;
+        }
+    }
+
+    @Test
+    public void testPendingWritesFailedWhenHandlerRemoved() throws Exception {
+        ChunkedWriteHandler handler = new ChunkedWriteHandler();
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        PendingInput input = new PendingInput();
+        Future<Void> inputFuture = ch.writeAndFlush(input);
+        ByteBuf buffer = Unpooled.copiedBuffer("queued", CharsetUtil.US_ASCII);
+        Future<Void> bufferFuture = ch.writeAndFlush(buffer);
+        assertFalse(inputFuture.isDone());
+        assertFalse(bufferFuture.isDone());
+
+        ch.pipeline().remove(handler);
+
+        assertTrue(inputFuture.isDone());
+        assertInstanceOf(ChannelException.class, inputFuture.cause());
+        assertTrue(input.closed);
+        assertTrue(bufferFuture.isDone());
+        assertInstanceOf(ChannelException.class, bufferFuture.cause());
+        assertEquals(0, buffer.refCnt());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testCancelledWritesAreClosedAndReleased() throws Exception {
+        ChunkedWriteHandler handler = new ChunkedWriteHandler();
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        PendingInput input = new PendingInput();
+        Promise<Void> inputPromise = new CancellablePromise<>(ch.executor());
+        ch.writeAndFlush(input, inputPromise);
+        ByteBuf buffer = Unpooled.copiedBuffer("queued", CharsetUtil.US_ASCII);
+        Promise<Void> bufferPromise = new CancellablePromise<>(ch.executor());
+        ch.writeAndFlush(buffer, bufferPromise);
+
+        assertTrue(inputPromise.cancel(false));
+        assertTrue(bufferPromise.cancel(false));
+        handler.resumeTransfer();
+
+        assertTrue(input.closed);
+        assertEquals(0, buffer.refCnt());
+        assertFalse(ch.finish());
+    }
+
+    private static final class CancellablePromise<T>  implements Promise<T> {
+
+        private final EventExecutor executor;
+        private boolean cancelled;
+
+        CancellablePromise(EventExecutor executor) {
+            this.executor = executor;
+        }
+
+        @Override
+        public Promise<T> setSuccess(T result) {
+            return this;
+        }
+
+        @Override
+        public boolean trySuccess(T result) {
+            return true;
+        }
+
+        @Override
+        public Promise<T> setFailure(Throwable cause) {
+            return this;
+        }
+
+        @Override
+        public boolean tryFailure(Throwable cause) {
+            return true;
+        }
+
+        @Override
+        public Promise<T> addListener(FutureListener<? super T> listener) {
+            return this;
+        }
+
+        @Override
+        public Promise<T> addHandler(CompletionHandler<? super T> handler) {
+            return this;
+        }
+
+        @Override
+        public Promise<T> await() throws InterruptedException {
+            return this;
+        }
+
+        @Override
+        public Promise<T> awaitUninterruptibly() {
+            return this;
+        }
+
+        @Override
+        public Promise<T> sync() throws InterruptedException {
+            return this;
+        }
+
+        @Override
+        public Promise<T> syncUninterruptibly() {
+            return this;
+        }
+
+        @Override
+        public boolean isSuccess() {
+            return false;
+        }
+
+        @Override
+        public boolean isCancellable() {
+            return true;
+        }
+
+        @Override
+        public Throwable cause() {
+            return null;
+        }
+
+        @Override
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            return true;
+        }
+
+        @Override
+        public boolean await(long timeoutMillis) throws InterruptedException {
+            return true;
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
+            return true;
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeoutMillis) {
+            return true;
+        }
+
+        @Override
+        public T getNow() {
+            return null;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            cancelled = true;
+            return true;
+        }
+
+        @Override
+        public EventExecutor executor() {
+            return executor;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelled;
+        }
+
+        @Override
+        public boolean isDone() {
+            return cancelled;
+        }
+
+        @Override
+        public T get() throws InterruptedException, ExecutionException {
+            return null;
+        }
+
+        @Override
+        public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            return null;
         }
     }
 }
