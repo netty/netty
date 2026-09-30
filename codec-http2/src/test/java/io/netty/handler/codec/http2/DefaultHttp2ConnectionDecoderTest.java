@@ -759,6 +759,51 @@ public class DefaultHttp2ConnectionDecoderTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamShouldThrow(final String status) throws Exception {
+        assertInfoHeadersWithEndStreamRejected(status);
+    }
+
+    private void assertInfoHeadersWithEndStreamRejected(final String status) throws Exception {
+        final Http2Headers headers = new DefaultHttp2Headers().status(status);
+        Http2Exception.StreamException exception = assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        assertEquals(STREAM_ID, exception.streamId());
+        verify(stream, never()).headersReceived(anyBoolean());
+        verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        verify(lifecycleManager, never()).closeStreamRemote(any(Http2Stream.class), any(ChannelFuture.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamOnPromisedStreamShouldThrow(final String status) throws Exception {
+        when(stream.state()).thenReturn(RESERVED_REMOTE);
+        assertInfoHeadersWithEndStreamRejected(status);
+        verify(stream, never()).open(anyBoolean());
+    }
+
+    @Test
+    public void infoHeadersFollowedByFinalResponseWithEndStreamShouldSucceed() throws Exception {
+        Http2Headers continueHeaders = new DefaultHttp2Headers().status("100");
+        Http2Headers earlyHintsHeaders = new DefaultHttp2Headers().status("103");
+        Http2Headers finalHeaders = new DefaultHttp2Headers().status("200");
+        decode().onHeadersRead(ctx, STREAM_ID, continueHeaders, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, earlyHintsHeaders, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, finalHeaders, 0, true);
+
+        verify(listener).onHeadersRead(ctx, STREAM_ID, continueHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, false);
+        verify(listener).onHeadersRead(ctx, STREAM_ID, earlyHintsHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, false);
+        verify(listener).onHeadersRead(ctx, STREAM_ID, finalHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, true);
+        verify(lifecycleManager).closeStreamRemote(stream, future);
+    }
+
     private static Http2Headers informationalHeaders() {
         Http2Headers headers = new DefaultHttp2Headers();
         headers.status(HttpResponseStatus.CONTINUE.codeAsText());
