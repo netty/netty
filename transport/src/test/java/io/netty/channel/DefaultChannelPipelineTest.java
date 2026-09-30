@@ -41,6 +41,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -68,6 +69,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -2131,6 +2134,268 @@ public class DefaultChannelPipelineTest {
         }
 
         doneLatch.await();
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testHandlerAddedReplacesItselfAndThrows() {
+        final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
+        final AtomicInteger removed = new AtomicInteger();
+        final IllegalStateException error = new IllegalStateException();
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast("first", new ChannelInboundHandlerAdapter());
+        channel.pipeline().addLast("boot", new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                ctx.pipeline().replace(this, "real", replacement);
+                throw error;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                removed.incrementAndGet();
+            }
+        });
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.checkException();
+            }
+        })
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
+
+        assertPipelineLinked(channel.pipeline(), "first", "real");
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
+
+        Object msg = new Object();
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(replacement.read).as("channelRead(...) calls of the replacement").hasValue(1);
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
+
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testHandlerAddedRemovesItselfAndThrows() {
+        final AtomicInteger removed = new AtomicInteger();
+        final IllegalStateException error = new IllegalStateException();
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast("first", new ChannelInboundHandlerAdapter());
+        channel.pipeline().addLast("boot", new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                ctx.pipeline().remove(this);
+                throw error;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                removed.incrementAndGet();
+            }
+        });
+        channel.pipeline().addLast("last", new ChannelInboundHandlerAdapter());
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.checkException();
+            }
+        })
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
+
+        assertPipelineLinked(channel.pipeline(), "first", "last");
+        assertThat(removed).as("handlerRemoved(...) calls of the removed handler").hasValue(1);
+
+        Object msg = new Object();
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the removed handler").hasValue(1);
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testHandlerReplacedBeforeRegistrationAndHandlerAddedThrows() throws Exception {
+        final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
+        final AtomicInteger removed = new AtomicInteger();
+        final IllegalStateException error = new IllegalStateException();
+        final EmbeddedChannel channel = new EmbeddedChannel(false, false);
+        channel.pipeline().addLast("handler", new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                throw error;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                removed.incrementAndGet();
+            }
+        });
+        channel.pipeline().replace("handler", "replacement", replacement);
+        // The deferred handlerAdded(...) of the replaced handler throws once the channel is registered.
+        channel.register();
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() {
+                channel.checkException();
+            }
+        })
+                .isInstanceOf(ChannelPipelineException.class)
+                .cause().isSameAs(error);
+
+        assertPipelineLinked(channel.pipeline(), "replacement");
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+
+        Object msg = new Object();
+        assertThat(channel.writeInbound(msg)).isTrue();
+        assertThat(replacement.read).as("channelRead(...) calls of the replacement").hasValue(1);
+        assertThat(channel.<Object>readInbound()).isSameAs(msg);
+
+        assertThat(channel.finish()).isFalse();
+        assertThat(removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testCloseWhenHandlerRemovedReplacesOtherHandler() {
+        final LifecycleCountingHandler handler = new LifecycleCountingHandler();
+        final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast("handler", handler);
+        channel.pipeline().addLast("replacing", new ChannelInboundHandlerAdapter() {
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                ctx.pipeline().replace("handler", "replacement", replacement);
+            }
+        });
+
+        assertThat(channel.close().isSuccess()).as("close() succeeded").isTrue();
+
+        assertPipelineLinked(channel.pipeline());
+        assertThat(handler.added).as("handlerAdded(...) calls of the replaced handler").hasValue(1);
+        assertThat(handler.removed).as("handlerRemoved(...) calls of the replaced handler").hasValue(1);
+        assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+        assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(1);
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testRemoveOfHandlerReplacedConcurrently() throws Exception {
+        // remove(...) and replace(...) look up the context before they take the pipeline lock, so run them
+        // concurrently many times to hit the window in which one of them works on a context that the other one has
+        // already unlinked.
+        for (int i = 0; i < 2000; i++) {
+            final LifecycleCountingHandler handler = new LifecycleCountingHandler();
+            final LifecycleCountingHandler replacement = new LifecycleCountingHandler();
+            EmbeddedChannel channel = new EmbeddedChannel();
+            final ChannelPipeline pipeline = channel.pipeline();
+            pipeline.addLast("before", new ChannelInboundHandlerAdapter());
+            pipeline.addLast("handler", handler);
+            pipeline.addLast("after", new ChannelInboundHandlerAdapter());
+
+            final AtomicInteger ready = new AtomicInteger();
+            final AtomicReference<Throwable> removeResult = new AtomicReference<Throwable>();
+            final AtomicBoolean removed = new AtomicBoolean();
+            Thread remover = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    awaitOtherThread(ready);
+                    try {
+                        pipeline.remove(handler);
+                        removed.set(true);
+                    } catch (Throwable cause) {
+                        removeResult.set(cause);
+                    }
+                }
+            });
+            remover.start();
+            awaitOtherThread(ready);
+            Throwable replaceResult = null;
+            try {
+                pipeline.replace(handler, "replacement", replacement);
+            } catch (Throwable cause) {
+                replaceResult = cause;
+            }
+            remover.join();
+
+            // Exactly one of remove(...) and replace(...) wins, the other one fails as if the handler was never
+            // part of the pipeline.
+            if (removed.get()) {
+                assertThat(replaceResult).as("result of replace(...) after remove(...) won (iteration %d)", i)
+                        .isInstanceOf(NoSuchElementException.class);
+                assertPipelineLinked(pipeline, "before", "after");
+                assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(0);
+            } else {
+                assertThat(removeResult.get()).as("result of remove(...) after replace(...) won (iteration %d)", i)
+                        .isInstanceOf(NoSuchElementException.class);
+                assertThat(replaceResult).as("result of replace(...) (iteration %d)", i).isNull();
+                assertPipelineLinked(pipeline, "before", "replacement", "after");
+                assertThat(replacement.added).as("handlerAdded(...) calls of the replacement").hasValue(1);
+            }
+            assertThat(handler.removed).as("handlerRemoved(...) calls of the handler (iteration %d)", i).hasValue(1);
+            assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement").hasValue(0);
+
+            assertThat(channel.finish()).isFalse();
+            assertThat(handler.removed).as("handlerRemoved(...) calls of the handler (iteration %d)", i).hasValue(1);
+            assertThat(replacement.removed).as("handlerRemoved(...) calls of the replacement")
+                    .hasValue(removed.get() ? 0 : 1);
+        }
+    }
+
+    private static void awaitOtherThread(AtomicInteger ready) {
+        // Spin instead of blocking so both threads start at (nearly) the same time.
+        ready.incrementAndGet();
+        while (ready.get() < 2) {
+            Thread.yield();
+        }
+    }
+
+    private static void assertPipelineLinked(ChannelPipeline pipeline, String... expectedNames) {
+        DefaultChannelPipeline p = (DefaultChannelPipeline) pipeline;
+        List<String> names = new ArrayList<String>();
+        AbstractChannelHandlerContext ctx = p.head;
+        while (ctx != p.tail) {
+            AbstractChannelHandlerContext next = ctx.next;
+            assertThat(next).as("next of %s (self-loop)", ctx.name()).isNotSameAs(ctx);
+            assertThat(next.prev).as("prev of %s", next.name()).isSameAs(ctx);
+            if (next != p.tail) {
+                names.add(next.name());
+                // Stop early if the list contains a cycle.
+                assertThat(names).as("handlers in the pipeline").hasSizeLessThanOrEqualTo(expectedNames.length);
+            }
+            ctx = next;
+        }
+        assertThat(names).as("handlers in the pipeline").containsExactly(expectedNames);
+    }
+
+    private static final class LifecycleCountingHandler extends ChannelInboundHandlerAdapter {
+        final AtomicInteger added = new AtomicInteger();
+        final AtomicInteger removed = new AtomicInteger();
+        final AtomicInteger read = new AtomicInteger();
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) {
+            added.incrementAndGet();
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            removed.incrementAndGet();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            read.incrementAndGet();
+            ctx.fireChannelRead(msg);
+        }
     }
 
     private static final class TestTask implements Runnable {
