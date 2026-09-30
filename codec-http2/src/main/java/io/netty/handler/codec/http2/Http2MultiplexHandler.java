@@ -34,7 +34,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import javax.net.ssl.SSLException;
@@ -113,8 +113,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     // Outbound child channels opened via Http2StreamChannelBootstrap that were not closed yet. Until their first
     // HEADERS frame is written their stream is unknown to the connection, so closing the connection doesn't close them.
-    private final Set<AbstractHttp2StreamChannel> outboundStreamChannels =
-            new LinkedHashSet<AbstractHttp2StreamChannel>();
+    private final Set<AbstractHttp2StreamChannel> outboundStreamChannels = new HashSet<AbstractHttp2StreamChannel>();
+    // Shared by all outbound child channels: removes a child channel from outboundStreamChannels once it is closed.
+    private final ChannelFutureListener outboundStreamChannelCloseListener =
+            future -> outboundStreamChannels.remove(future.channel());
     private boolean parentReadInProgress;
     private int idCount;
 
@@ -176,6 +178,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         if (!outboundStreamChannels.isEmpty()) {
             // The streams known to the connection were closed already. Close the outbound child channels whose
             // stream was never created as well, so they see channelInactive() and their closeFuture() completes.
+            // Iterate over a copy, as closing a child channel removes it from outboundStreamChannels (see
+            // outboundStreamChannelCloseListener).
             for (AbstractHttp2StreamChannel childChannel :
                     new ArrayList<AbstractHttp2StreamChannel>(outboundStreamChannels)) {
                 if (childChannel.stream().state() == Http2Stream.State.IDLE) {
@@ -301,7 +305,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         final Http2MultiplexHandlerStreamChannel childChannel =
                 new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
         outboundStreamChannels.add(childChannel);
-        childChannel.closeFuture().addListener(future -> outboundStreamChannels.remove(childChannel));
+        childChannel.closeFuture().addListener(outboundStreamChannelCloseListener);
         return childChannel;
     }
 
