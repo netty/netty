@@ -23,6 +23,8 @@ import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static io.netty.util.CharsetUtil.*;
@@ -591,26 +593,22 @@ public class StompSubframeDecoderTest {
         assertTrue(channel.finishAndReleaseAll());
     }
 
-    @Test
-    void testMaxNumHeadersNotExceededWhenHeadersSplitAcrossReads() {
+    // Read sizes: byte by byte, a few bytes, about half of the frame, and the whole frame in one read.
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersNotExceededWhenHeadersSplitAcrossReads(int readSize) {
         // 10 headers and a limit of 10: the frame must be accepted however it is split into reads.
-        byte[] frame = frameWithHeaders(10);
-        for (int readSize : new int[] { 1, 7, frame.length / 2 + 1, frame.length }) {
-            StompHeadersSubframe headersSubFrame = decodeHeaders(frame, readSize, 10);
-            assertTrue(headersSubFrame.decoderResult().isSuccess(),
-                    "read size " + readSize + ": " + headersSubFrame.decoderResult());
-            assertEquals(10, headersSubFrame.headers().size());
-        }
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(10), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isSuccess(), String.valueOf(headersSubFrame.decoderResult()));
+        assertEquals(10, headersSubFrame.headers().size());
     }
 
-    @Test
-    void testMaxNumHeadersEnforcedWhenHeadersSplitAcrossReads() {
-        byte[] frame = frameWithHeaders(11);
-        for (int readSize : new int[] { 1, 7, frame.length / 2 + 1, frame.length }) {
-            StompHeadersSubframe headersSubFrame = decodeHeaders(frame, readSize, 10);
-            assertTrue(headersSubFrame.decoderResult().isFailure(), "read size " + readSize);
-            assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
-        }
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersEnforcedWhenHeadersSplitAcrossReads(int readSize) {
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(11), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+        assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
     }
 
     private static byte[] frameWithHeaders(int numHeaders) {
@@ -623,7 +621,7 @@ public class StompSubframeDecoderTest {
 
     private static StompHeadersSubframe decodeHeaders(byte[] frame, int readSize, int maxNumHeaders) {
         EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, maxNumHeaders, true));
-        for (int i = 0; i < frame.length; i += readSize) {
+        for (int i = 0; i < frame.length; i += Math.min(readSize, frame.length - i)) {
             channel.writeInbound(Unpooled.wrappedBuffer(frame, i, Math.min(readSize, frame.length - i)));
         }
         StompHeadersSubframe headersSubFrame = channel.readInbound();
