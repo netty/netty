@@ -146,16 +146,14 @@ public class PkiTestingTlsTest {
         testTlsConnection(serverContext, clientContext, null);
     }
 
-    static boolean isOpenSslWithKeyManagerFactoryAvailable() {
-        return OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported();
-    }
-
     /**
      * The OPENSSL provider should report Ed25519 in the peer's supported signature algorithms when the client
      * offers it, so key managers can see what the client actually supports.
+     * <p>
+     * This is currently limited to BoringSSL, because stock OpenSSL has no combined signature-and-hash NID for them.
      */
     @EnabledForJreRange(min = JRE.JAVA_15)
-    @EnabledIf("isOpenSslWithKeyManagerFactoryAvailable")
+    @EnabledIf("isBoringSSLAvailable")
     @Test
     public void peerSupportedSignatureAlgorithmsContainEd25519() throws Exception {
         X509Bundle cert = new CertificateBuilder()
