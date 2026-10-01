@@ -460,16 +460,16 @@ public class ProxyHandlerTest {
     }
 
     private static ProxyHandler newProxyHandler(String type, SocketAddress proxyAddress) {
-        switch (type) {
-            case "http":
-                return new HttpProxyHandler(proxyAddress);
-            case "socks4":
-                return new Socks4ProxyHandler(proxyAddress);
-            case "socks5":
-                return new Socks5ProxyHandler(proxyAddress);
-            default:
-                throw new IllegalArgumentException(type);
+        if ("http".equals(type)) {
+            return new HttpProxyHandler(proxyAddress);
         }
+        if ("socks4".equals(type)) {
+            return new Socks4ProxyHandler(proxyAddress);
+        }
+        if ("socks5".equals(type)) {
+            return new Socks5ProxyHandler(proxyAddress);
+        }
+        throw new IllegalArgumentException(type);
     }
 
     @ParameterizedTest(name = "{index}: {0}")
