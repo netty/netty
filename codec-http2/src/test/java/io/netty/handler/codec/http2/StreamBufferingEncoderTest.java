@@ -26,6 +26,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
+import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2ChannelClosedException;
 import io.netty.handler.codec.http2.StreamBufferingEncoder.Http2GoAwayException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
@@ -482,6 +483,92 @@ public class StreamBufferingEncoderTest {
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
         verify(data).release();
+    }
+
+    @Test
+    public void rstStreamShouldCleanupBufferedStreamWhenPromiseIsCancelled() {
+        setMaxConcurrentStreams(0);
+
+        ChannelPromise headersPromise = newPromise();
+        encoderWriteHeaders(3, headersPromise);
+        ByteBuf data = data();
+        ChannelPromise dataPromise = newPromise();
+        encoder.writeData(ctx, 3, data, 0, false, dataPromise);
+        assertTrue(dataPromise.cancel(false));
+
+        ChannelPromise rstPromise = newPromise();
+        encoder.writeRstStream(ctx, 3, CANCEL.code(), rstPromise);
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertEquals(0, data.refCnt());
+        assertTrue(headersPromise.isSuccess());
+        assertTrue(dataPromise.isCancelled());
+        assertTrue(rstPromise.isSuccess());
+    }
+
+    @Test
+    public void closeShouldCleanupAllBufferedStreamsWhenPromisesAreCancelled() {
+        setMaxConcurrentStreams(0);
+
+        ChannelPromise headersPromise3 = newPromise();
+        encoderWriteHeaders(3, headersPromise3);
+        ByteBuf data3 = data();
+        ChannelPromise dataPromise3 = newPromise();
+        encoder.writeData(ctx, 3, data3, 0, false, dataPromise3);
+        assertTrue(dataPromise3.cancel(false));
+
+        ChannelPromise headersPromise5 = newPromise();
+        encoderWriteHeaders(5, headersPromise5);
+        assertTrue(headersPromise5.cancel(false));
+        ByteBuf data5 = data();
+        ChannelPromise dataPromise5 = newPromise();
+        encoder.writeData(ctx, 5, data5, 0, false, dataPromise5);
+
+        assertEquals(2, encoder.numBufferedStreams());
+
+        encoder.close();
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertEquals(0, data3.refCnt());
+        assertEquals(0, data5.refCnt());
+        assertInstanceOf(Http2ChannelClosedException.class, headersPromise3.cause());
+        assertTrue(dataPromise3.isCancelled());
+        assertTrue(headersPromise5.isCancelled());
+        assertInstanceOf(Http2ChannelClosedException.class, dataPromise5.cause());
+
+        // Cleanup remains idempotent after all pending streams have been removed.
+        encoder.close();
+    }
+
+    @Test
+    public void receivingGoAwayShouldCleanupAllBufferedStreamsWhenPromisesAreCancelled() throws Http2Exception {
+        setMaxConcurrentStreams(0);
+
+        ChannelPromise headersPromise3 = newPromise();
+        encoderWriteHeaders(3, headersPromise3);
+        ByteBuf data3 = data();
+        ChannelPromise dataPromise3 = newPromise();
+        encoder.writeData(ctx, 3, data3, 0, false, dataPromise3);
+        assertTrue(dataPromise3.cancel(false));
+
+        ChannelPromise headersPromise5 = newPromise();
+        encoderWriteHeaders(5, headersPromise5);
+        assertTrue(headersPromise5.cancel(false));
+        ByteBuf data5 = data();
+        ChannelPromise dataPromise5 = newPromise();
+        encoder.writeData(ctx, 5, data5, 0, false, dataPromise5);
+
+        assertEquals(2, encoder.numBufferedStreams());
+
+        connection.goAwayReceived(1, 8, EMPTY_BUFFER);
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertEquals(0, data3.refCnt());
+        assertEquals(0, data5.refCnt());
+        assertInstanceOf(Http2GoAwayException.class, headersPromise3.cause());
+        assertTrue(dataPromise3.isCancelled());
+        assertTrue(headersPromise5.isCancelled());
+        assertInstanceOf(Http2GoAwayException.class, dataPromise5.cause());
     }
 
     @Test

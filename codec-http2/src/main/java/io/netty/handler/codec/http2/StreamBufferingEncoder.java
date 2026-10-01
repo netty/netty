@@ -341,10 +341,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
          * Release any resources (features, buffers, ...) associated with the frame.
          */
         void release(Throwable t) {
+            // A write may be cancelled while it is buffered, so notification must not abort cleanup.
             if (t == null) {
-                promise.setSuccess();
+                promise.trySuccess();
             } else {
-                promise.setFailure(t);
+                promise.tryFailure(t);
             }
         }
 
@@ -394,8 +395,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void release(Throwable t) {
-            super.release(t);
-            ReferenceCountUtil.safeRelease(data);
+            try {
+                super.release(t);
+            } finally {
+                ReferenceCountUtil.safeRelease(data);
+            }
         }
 
         @Override
