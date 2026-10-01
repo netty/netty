@@ -1511,6 +1511,14 @@
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.http2.Http2MultiplexHandler</old>
+                  <new>method void io.netty.handler.codec.http2.Http2MultiplexHandler::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed to close outbound child channels whose stream was never created when the parent channel becomes inactive.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
