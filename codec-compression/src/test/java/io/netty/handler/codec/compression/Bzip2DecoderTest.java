@@ -53,7 +53,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         try {
             channel.writeInbound(in);
         } finally {
-            assertThrows(DecompressionException.class, () -> destroyChannel());
+            assertThrows(DecompressionException.class, this::destroyChannel);
         }
     }
 
@@ -142,13 +142,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect huffman groups number");
-        try {
-            // Leftover cumulation bytes get reprocessed from stale decoder state when the
-            // channel is torn down, which can legitimately raise a second, unrelated exception.
-            destroyChannel();
-        } catch (DecompressionException ignored) {
-            // expected
-        }
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Test
@@ -163,13 +159,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect selectors number");
-        try {
-            // Leftover cumulation bytes get reprocessed from stale decoder state when the
-            // channel is torn down, which can legitimately raise a second, unrelated exception.
-            destroyChannel();
-        } catch (DecompressionException ignored) {
-            // expected
-        }
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Test
@@ -299,13 +291,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
                 channel.writeInbound(in);
             }
         }, "incorrect selector index");
-        try {
-            // Leftover cumulation bytes get reprocessed from stale decoder state when the
-            // channel is torn down, which can legitimately raise a second, unrelated exception.
-            destroyChannel();
-        } catch (DecompressionException ignored) {
-            // expected
-        }
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Override
