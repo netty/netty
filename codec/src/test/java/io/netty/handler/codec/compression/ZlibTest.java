@@ -25,6 +25,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -467,10 +468,15 @@ public abstract class ZlibTest {
     @CsvSource({ "ZLIB, 64", "GZIP, 64", "NONE, 64", "ZLIB, 512" })
     public void testMaxAllocationStillLimitsOutputOfOneRead(ZlibWrapper wrapper, int maxAllocation) {
         // A small input whose output is far larger than maxAllocation is still rejected.
-        byte[] compressed = compress(wrapper, new byte[65536]);
-        EmbeddedChannel channel = new EmbeddedChannel(createDecoder(wrapper, maxAllocation));
+        final byte[] compressed = compress(wrapper, new byte[65536]);
+        final EmbeddedChannel channel = new EmbeddedChannel(createDecoder(wrapper, maxAllocation));
 
-        assertThatThrownBy(() -> channel.writeInbound(Unpooled.wrappedBuffer(compressed)))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeInbound(Unpooled.wrappedBuffer(compressed));
+            }
+        })
                 .isInstanceOf(DecompressionException.class)
                 .hasMessageStartingWith("Decompression buffer has reached maximum size");
         channel.finishAndReleaseAll();
