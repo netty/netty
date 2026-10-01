@@ -330,10 +330,10 @@ public class HttpProxyHandlerTest {
     }
 
     @Test
-    public void testRemoveOnProxyConnectionEventWritesPendingWrites() {
+    public void testRemoveOnProxyConnectionEventWritesPendingWrites() throws Exception {
         HttpProxyHandler handler = new HttpProxyHandler(new InetSocketAddress(NetUtil.LOCALHOST, 8080));
         final AtomicBoolean active = new AtomicBoolean();
-        EmbeddedChannel channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(handler, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof ProxyConnectionEvent) {
@@ -350,7 +350,7 @@ public class HttpProxyHandlerTest {
         };
         channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 443));
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
-        ChannelFuture writeFuture = channel.writeAndFlush(msg);
+        Future<Void> writeFuture = channel.writeAndFlush(msg);
         assertThat(writeFuture.isDone()).isFalse();
 
         active.set(true);
