@@ -413,9 +413,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                     headersFrame.isEndStream(), promise);
 
             if (!promise.isDone()) {
-                numBufferedStreams++;
-                promise.addListener((ChannelFutureListener) channelFuture ->
-                        handleBufferedHeaderFuture(channelFuture, streamId));
+                trackBufferedHeaders(promise, streamId);
             } else {
                 handleHeaderFuture(promise, streamId);
             }
@@ -435,9 +433,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             if (promise.isDone()) {
                 handleHeaderFuture(promise, streamId);
             } else {
-                numBufferedStreams++;
-                promise.addListener((ChannelFutureListener) channelFuture ->
-                        handleBufferedHeaderFuture(channelFuture, streamId));
+                trackBufferedHeaders(promise, streamId);
             }
         }
     }
@@ -477,15 +473,19 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    private void handleBufferedHeaderFuture(ChannelFuture channelFuture, int streamId) {
-        // Clean up the stream being initialized if writing the headers fails and also
-        // decrement the number of buffered streams.
-        numBufferedStreams--;
-        handleHeaderFuture(channelFuture, streamId);
-        // A graceful shutdown also waits for buffered streams, see isGracefulShutdownComplete(). The stream may have
-        // been failed (for example because a GOAWAY was received or the channel was closed) without ever becoming
-        // active, so no stream close will check again whether the shutdown can complete.
-        checkCloseConnection(channelFuture);
+    private void trackBufferedHeaders(ChannelPromise promise, final int streamId) {
+        numBufferedStreams++;
+        promise.addListener((ChannelFutureListener) channelFuture -> {
+            // Clean up the stream being initialized if writing the headers fails and also
+            // decrement the number of buffered streams.
+            numBufferedStreams--;
+            handleHeaderFuture(channelFuture, streamId);
+            // A graceful shutdown also waits for buffered streams, see isGracefulShutdownComplete(). The stream may
+            // have been failed (for example because a GOAWAY was received or the channel was closed) without ever
+            // becoming active, so no stream close will check again whether the shutdown can complete. The outcome
+            // of the headers write is unrelated to the shutdown, so don't pass it on to the close listener.
+            checkCloseConnection(ctx.newSucceededFuture());
+        });
     }
 
     private void onStreamActive0(Http2Stream stream) {

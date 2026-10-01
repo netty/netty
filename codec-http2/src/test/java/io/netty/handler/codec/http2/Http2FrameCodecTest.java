@@ -58,6 +58,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -80,6 +81,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link Http2FrameCodec}.
@@ -864,6 +866,43 @@ public class Http2FrameCodecTest {
         assertInstanceOf(StreamBufferingEncoder.Http2ChannelClosedException.class, headersFuture.cause());
         assertFalse(channel.isOpen());
         assertTrue(closeFuture.isSuccess(), "close() must complete once the channel is closed");
+    }
+
+    @Test
+    public void gracefulShutdownCompletesWhenPendingPushPromiseIsWritten() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().gracefulShutdownTimeoutMillis(30000), new Http2Settings());
+        channel.freezeTime();
+
+        // Keep the PUSH_PROMISE write pending, so the new stream is counted as buffered.
+        final AtomicReference<ChannelPromise> pushPromisePromise = new AtomicReference<>();
+        when(frameWriter.writePushPromise(any(ChannelHandlerContext.class), anyInt(), anyInt(), any(Http2Headers.class),
+                anyInt(), anyChannelPromise())).thenAnswer(invocation -> {
+            ChannelPromise promise = invocation.getArgument(5);
+            pushPromisePromise.set(promise);
+            return promise;
+        });
+
+        frameInboundWriter.writeInboundHeaders(1, request, 0, true);
+        Http2HeadersFrame requestFrame = inboundHandler.readInbound();
+        assertNotNull(requestFrame);
+
+        ChannelFuture pushFuture = channel.writeAndFlush(new DefaultHttp2PushPromiseFrame(response)
+                .pushStream(frameCodec.newStream()).stream(requestFrame.stream()));
+        assertFalse(pushFuture.isDone());
+        assertNotNull(pushPromisePromise.get());
+
+        // Complete the request, so that only the pending PUSH_PROMISE keeps the graceful shutdown from completing.
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(response, true).stream(requestFrame.stream()));
+        assertEquals(0, frameCodec.connection().numActiveStreams());
+        ChannelFuture closeFuture = startGracefulShutdown();
+
+        // The reserved push stream is not active, so nothing but the completed write can finish the graceful shutdown.
+        pushPromisePromise.get().setSuccess();
+        channel.runPendingTasks();
+
+        assertTrue(pushFuture.isSuccess());
+        assertTrue(closeFuture.isSuccess(), "close() must complete once no stream is buffered anymore");
+        assertFalse(channel.isOpen());
     }
 
     private void setUpWithBufferedStreams(long gracefulShutdownTimeoutMillis) throws Exception {
