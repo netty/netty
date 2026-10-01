@@ -34,7 +34,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
@@ -155,10 +157,16 @@ public final class ChannelOutboundBuffer {
                 flushedEntry = entry;
             }
             long cancelledBytes = 0;
+            List<Object> cancelledMsgs = null;
             do {
                 flushed ++;
                 if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory
+                    // Was cancelled so make sure we free up memory. The message is released only once this buffer is
+                    // consistent again, as releasing it may run arbitrary user code.
+                    if (cancelledMsgs == null) {
+                        cancelledMsgs = new ArrayList<Object>(2);
+                    }
+                    cancelledMsgs.add(entry.msg);
                     cancelledBytes += entry.cancel();
                 }
                 entry = entry.next;
@@ -167,9 +175,15 @@ public final class ChannelOutboundBuffer {
             // All flushed so reset unflushedEntry
             unflushedEntry = null;
 
-            // Notify about the freed bytes only now. This may fire channelWritabilityChanged(...) synchronously, and
-            // a handler may write, flush or close the channel from there, so this buffer must be consistent first.
-            decrementPendingOutboundBytes(cancelledBytes, false, true);
+            if (cancelledMsgs != null) {
+                for (int i = 0; i < cancelledMsgs.size(); i++) {
+                    ReferenceCountUtil.safeRelease(cancelledMsgs.get(i));
+                }
+                // Notify about the freed bytes only now. This may fire channelWritabilityChanged(...) synchronously,
+                // and a handler may write, flush or close the channel from there, so this buffer must be consistent
+                // first.
+                decrementPendingOutboundBytes(cancelledBytes, false, true);
+            }
         }
     }
 
@@ -865,8 +879,7 @@ public final class ChannelOutboundBuffer {
                 cancelled = true;
                 int pSize = pendingSize;
 
-                // release message and replace with an empty buffer
-                ReferenceCountUtil.safeRelease(msg);
+                // replace the message with an empty buffer, the caller is responsible for releasing it
                 msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;

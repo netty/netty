@@ -18,7 +18,9 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -35,6 +37,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -43,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ChannelOutboundBufferTest {
@@ -447,7 +452,8 @@ public class ChannelOutboundBufferTest {
         });
         ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
 
-        ChannelFuture cancelled = ch.write(buffer().writeZero(512));
+        ByteBuf cancelledBuf = buffer().writeZero(512);
+        ChannelFuture cancelled = ch.write(cancelledBuf);
         ChannelFuture second = ch.write(wrappedBuffer(new byte[] { 1 }));
         assertFalse(ch.isWritable());
         assertTrue(cancelled.cancel(false));
@@ -457,12 +463,15 @@ public class ChannelOutboundBufferTest {
 
         assertTrue(ch.isWritable());
         assertEquals(1, reentrantWrites.size());
+        assertEquals(0, cancelledBuf.refCnt());
         assertTrue(second.isSuccess());
         assertTrue(reentrantWrites.get(0).isSuccess());
         ChannelOutboundBuffer buffer = ch.unsafe().outboundBuffer();
         assertTrue(buffer.isEmpty());
         assertEquals(0, buffer.size());
         assertEquals(0, buffer.totalPendingWriteBytes());
+        // The cancelled write is replaced by an empty buffer.
+        assertOutbound(ch, 0);
         assertOutbound(ch, 1);
         assertOutbound(ch, 2);
         assertNull(ch.readOutbound());
@@ -491,7 +500,8 @@ public class ChannelOutboundBufferTest {
         });
         ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
 
-        ChannelFuture cancelled = ch.write(buffer().writeZero(512));
+        ByteBuf cancelledBuf = buffer().writeZero(512);
+        ChannelFuture cancelled = ch.write(cancelledBuf);
         ByteBuf second = wrappedBuffer(new byte[] { 1 });
         ChannelFuture secondFuture = ch.write(second);
         ByteBuf third = wrappedBuffer(new byte[] { 2 });
@@ -505,6 +515,7 @@ public class ChannelOutboundBufferTest {
 
         assertFalse(ch.isOpen());
         assertEquals(1, inactive.get());
+        assertEquals(0, cancelledBuf.refCnt());
         assertInstanceOf(ClosedChannelException.class, secondFuture.cause());
         assertInstanceOf(ClosedChannelException.class, thirdFuture.cause());
         assertEquals(0, second.refCnt());
@@ -514,20 +525,131 @@ public class ChannelOutboundBufferTest {
     }
 
     private static void assertOutbound(EmbeddedChannel ch, int expected) {
-        for (;;) {
-            ByteBuf buf = ch.readOutbound();
-            assertNotNull(buf);
-            try {
-                if (buf.isReadable()) {
-                    // The cancelled write is replaced by an empty buffer, skip it.
-                    assertEquals(1, buf.readableBytes());
-                    assertEquals(expected, buf.readByte());
-                    return;
+        ByteBuf buf = ch.readOutbound();
+        assertNotNull(buf);
+        try {
+            if (expected == 0) {
+                assertEquals(0, buf.readableBytes());
+            } else {
+                assertEquals(1, buf.readableBytes());
+                assertEquals(expected, buf.readByte());
+            }
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testMultipleCancelledWritesWithEarlierFlush() {
+        final AtomicInteger writable = new AtomicInteger();
+        final AtomicInteger sizeAtEvent = new AtomicInteger(-1);
+        final AtomicLong pendingAtEvent = new AtomicLong(-1);
+        final AtomicReference<Object> currentAtEvent = new AtomicReference<Object>();
+        EmbeddedChannel ch = new EmbeddedChannel();
+        final ChannelOutboundBuffer buffer = ch.unsafe().outboundBuffer();
+        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                if (ctx.channel().isWritable()) {
+                    writable.incrementAndGet();
+                    sizeAtEvent.set(buffer.size());
+                    pendingAtEvent.set(buffer.totalPendingWriteBytes());
+                    currentAtEvent.set(buffer.current());
                 }
-            } finally {
-                buf.release();
+                ctx.fireChannelWritabilityChanged();
+            }
+        });
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(400, 800));
+
+        // Use the ChannelOutboundBuffer directly so nothing is written and flushedEntry stays set after the flush.
+        ByteBuf live0 = wrappedBuffer(new byte[] { 0 });
+        buffer.addMessage(live0, 1, ch.newPromise());
+        buffer.addFlush();
+        assertEquals(1, buffer.size());
+        assertSame(live0, buffer.current());
+
+        // Cancelled writes at the head, in the middle and at the tail of the second batch.
+        ByteBuf[] cancelledBufs = new ByteBuf[3];
+        ByteBuf[] liveBufs = new ByteBuf[2];
+        ChannelPromise[] cancelledPromises = new ChannelPromise[3];
+        for (int i = 0; i < 3; i++) {
+            cancelledBufs[i] = buffer().writeZero(300);
+            cancelledPromises[i] = ch.newPromise();
+            buffer.addMessage(cancelledBufs[i], 300, cancelledPromises[i]);
+            if (i < 2) {
+                liveBufs[i] = wrappedBuffer(new byte[] { (byte) (i + 1) });
+                buffer.addMessage(liveBufs[i], 1, ch.newPromise());
             }
         }
+        assertFalse(ch.isWritable());
+        for (ChannelPromise promise : cancelledPromises) {
+            assertTrue(promise.cancel(false));
+        }
+
+        buffer.addFlush();
+
+        assertEquals(1, writable.get());
+        // The buffer must already be consistent when the event is fired.
+        assertEquals(6, sizeAtEvent.get());
+        assertEquals(buffer.totalPendingWriteBytes(), pendingAtEvent.get());
+        assertSame(live0, currentAtEvent.get());
+        assertEquals(6, buffer.size());
+        assertTrue(ch.isWritable());
+        for (ByteBuf cancelledBuf : cancelledBufs) {
+            assertEquals(0, cancelledBuf.refCnt());
+        }
+        assertEquals(1, live0.refCnt());
+        for (ByteBuf liveBuf : liveBufs) {
+            assertEquals(1, liveBuf.refCnt());
+        }
+
+        ch.close();
+        assertEquals(0, live0.refCnt());
+        for (ByteBuf liveBuf : liveBufs) {
+            assertEquals(0, liveBuf.refCnt());
+        }
+        assertEquals(0, buffer.totalPendingWriteBytes());
+    }
+
+    @Test
+    public void testWriteAndFlushFromReleaseOfCancelledWrite() {
+        final EmbeddedChannel ch = new EmbeddedChannel();
+        final List<ChannelFuture> reentrantWrites = new ArrayList<ChannelFuture>();
+        ReferenceCounted cancelledMsg = new AbstractReferenceCounted() {
+            @Override
+            protected void deallocate() {
+                // Release of a cancelled write runs user code which writes and flushes on the same channel.
+                reentrantWrites.add(ch.writeAndFlush(wrappedBuffer(new byte[] { 2 })));
+            }
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
+        };
+
+        ChannelFuture cancelled = ch.write(cancelledMsg);
+        ChannelFuture second = ch.write(wrappedBuffer(new byte[] { 1 }));
+        assertTrue(cancelled.cancel(false));
+
+        ch.flush();
+
+        assertEquals(1, reentrantWrites.size());
+        assertEquals(0, cancelledMsg.refCnt());
+        assertTrue(second.isSuccess());
+        assertTrue(reentrantWrites.get(0).isSuccess());
+        ChannelOutboundBuffer buffer = ch.unsafe().outboundBuffer();
+        assertTrue(buffer.isEmpty());
+        assertEquals(0, buffer.size());
+        assertEquals(0, buffer.totalPendingWriteBytes());
+        // The cancelled write is replaced by an empty buffer.
+        assertOutbound(ch, 0);
+        assertOutbound(ch, 1);
+        assertOutbound(ch, 2);
+        assertNull(ch.readOutbound());
+
+        assertFalse(ch.finish());
+        assertFalse(ch.isOpen());
     }
 
     @Test
