@@ -532,13 +532,13 @@ public class ProxyHandlerTest {
             // closed without ever becoming active.
             ProxyHandler handler = newProxyHandler(type, new LocalAddress("unbound-proxy-" + type));
             Channel ch = new Bootstrap().group(localGroup).channel(LocalChannel.class).handler(handler)
-                    .register().sync().channel();
+                    .register().get();
 
             // Written before the connection is established, so the handler queues it until the proxy handshake
             // is done.
             ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
-            ChannelFuture writeFuture = ch.writeAndFlush(msg);
-            ChannelFuture connectFuture = ch.connect(DESTINATION);
+            Future<Void> writeFuture = ch.writeAndFlush(msg);
+            Future<Void> connectFuture = ch.connect(DESTINATION);
 
             assertThat(connectFuture.await(5, TimeUnit.SECONDS)).isTrue();
             assertThat(connectFuture.cause()).isInstanceOf(ConnectException.class);
@@ -554,7 +554,7 @@ public class ProxyHandlerTest {
 
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("proxyTypes")
-    public void testPendingWritesFailedWhenHandlerRemoved(String type) {
+    public void testPendingWritesFailedWhenHandlerRemoved(String type) throws Exception {
         ProxyHandler handler = newProxyHandler(type, new InetSocketAddress(NetUtil.LOCALHOST, 8080));
         EmbeddedChannel ch = new EmbeddedChannel(handler) {
             @Override
@@ -564,7 +564,7 @@ public class ProxyHandlerTest {
             }
         };
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
-        ChannelFuture writeFuture = ch.writeAndFlush(msg);
+        Future<Void> writeFuture = ch.writeAndFlush(msg);
         assertThat(writeFuture.isDone()).isFalse();
 
         ch.pipeline().remove(handler);
