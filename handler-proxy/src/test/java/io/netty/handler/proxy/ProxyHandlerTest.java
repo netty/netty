@@ -30,7 +30,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -40,6 +44,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
@@ -53,7 +58,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -446,6 +453,77 @@ public class ProxyHandlerTest {
     @MethodSource("testItems")
     public void test(TestItem testItem) throws Exception {
         testItem.test();
+    }
+
+    static Collection<String> proxyTypes() {
+        return Arrays.asList("http", "socks4", "socks5");
+    }
+
+    private static ProxyHandler newProxyHandler(String type, SocketAddress proxyAddress) {
+        switch (type) {
+            case "http":
+                return new HttpProxyHandler(proxyAddress);
+            case "socks4":
+                return new Socks4ProxyHandler(proxyAddress);
+            case "socks5":
+                return new Socks5ProxyHandler(proxyAddress);
+            default:
+                throw new IllegalArgumentException(type);
+        }
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("proxyTypes")
+    public void testPendingWritesFailedWhenConnectionToProxyFails(String type) throws Exception {
+        EventLoopGroup localGroup = new LocalEventLoopGroup(1);
+        try {
+            // Nothing is bound to this address, so the connection to the proxy server fails and the channel is
+            // closed without ever becoming active.
+            ProxyHandler handler = newProxyHandler(type, new LocalAddress("unbound-proxy-" + type));
+            Channel ch = new Bootstrap().group(localGroup).channel(LocalChannel.class).handler(handler)
+                    .register().sync().channel();
+
+            // Written before the connection is established, so the handler queues it until the proxy handshake
+            // is done.
+            ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
+            ChannelFuture writeFuture = ch.writeAndFlush(msg);
+            ChannelFuture connectFuture = ch.connect(DESTINATION);
+
+            assertThat(connectFuture.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(connectFuture.cause()).isInstanceOf(ConnectException.class);
+            assertThat(writeFuture.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(writeFuture.cause()).isInstanceOf(ProxyConnectException.class);
+            assertThat(msg.refCnt()).isZero();
+            assertThat(handler.connectFuture().await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class);
+        } finally {
+            localGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+        }
+    }
+
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("proxyTypes")
+    public void testPendingWritesFailedWhenHandlerRemoved(String type) {
+        ProxyHandler handler = newProxyHandler(type, new InetSocketAddress(NetUtil.LOCALHOST, 8080));
+        EmbeddedChannel ch = new EmbeddedChannel(handler) {
+            @Override
+            public boolean isActive() {
+                // Simulate that the connection to the proxy server is not established yet.
+                return false;
+            }
+        };
+        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
+        ChannelFuture writeFuture = ch.writeAndFlush(msg);
+        assertThat(writeFuture.isDone()).isFalse();
+
+        ch.pipeline().remove(handler);
+
+        assertThat(writeFuture.isDone()).isTrue();
+        assertThat(writeFuture.cause()).isInstanceOf(ProxyConnectException.class);
+        assertThat(msg.refCnt()).isZero();
+        assertThat(handler.connectFuture().isDone()).isTrue();
+        assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class);
+        assertThat(ch.finishAndReleaseAll()).isFalse();
     }
 
     @AfterEach
