@@ -73,7 +73,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
      * @param method The value for {@link PseudoHeaderName#METHOD}.
      * @param path The value for {@link PseudoHeaderName#PATH}.
      * @param scheme The value for {@link PseudoHeaderName#SCHEME}.
-     * @param authority The value for {@link PseudoHeaderName#AUTHORITY}.
+     * @param authority The value for {@link PseudoHeaderName#AUTHORITY}. If empty, the pseudo-header is omitted.
      * @param otherHeaders An array of key:value pairs. Must not contain any
      *                     <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.1">pseudo headers</a>
      *                     or {@code null} names/values.
@@ -85,12 +85,19 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
                                                      AsciiString method, AsciiString path,
                                                      AsciiString scheme, AsciiString authority,
                                                      AsciiString... otherHeaders) {
-        return new ReadOnlyHttp2Headers(validateHeaders,
-                new AsciiString[] {
-                  PseudoHeaderName.METHOD.value(), method, PseudoHeaderName.PATH.value(), path,
-                  PseudoHeaderName.SCHEME.value(), scheme, PseudoHeaderName.AUTHORITY.value(), authority
-                },
-                otherHeaders);
+        AsciiString[] pseudoHeaders;
+        if (authority != null && authority.isEmpty()) {
+            pseudoHeaders = new AsciiString[] {
+                    PseudoHeaderName.METHOD.value(), method, PseudoHeaderName.PATH.value(), path,
+                    PseudoHeaderName.SCHEME.value(), scheme
+            };
+        } else {
+            pseudoHeaders = new AsciiString[] {
+                    PseudoHeaderName.METHOD.value(), method, PseudoHeaderName.PATH.value(), path,
+                    PseudoHeaderName.SCHEME.value(), scheme, PseudoHeaderName.AUTHORITY.value(), authority
+            };
+        }
+        return new ReadOnlyHttp2Headers(validateHeaders, pseudoHeaders, otherHeaders);
     }
 
     /**

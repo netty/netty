@@ -215,6 +215,15 @@ public class ReadOnlyHttp2HeadersTest {
     }
 
     @Test
+    public void emptyAuthorityIsOmittedFromClientHeaders() {
+        Http2Headers headers = ReadOnlyHttp2Headers.clientHeaders(true, new AsciiString("OPTIONS"),
+                new AsciiString("*"), new AsciiString("https"), AsciiString.EMPTY_STRING);
+
+        assertNull(headers.authority());
+        assertFalse(headers.contains(Http2Headers.PseudoHeaderName.AUTHORITY.value()));
+    }
+
+    @Test
     public void testGet() {
         Http2Headers headers = newClientHeaders();
         assertTrue(AsciiString.contentEqualsIgnoreCase("value1", headers.get("Name1")));
