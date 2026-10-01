@@ -48,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -655,6 +656,76 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
+    public void writeFrameOnReservedLocalStreamRejectsForbiddenFrameTypes() throws Exception {
+        Http2Stream parent = createStream(STREAM_ID, false);
+        reservePushStream(PUSH_STREAM_ID, parent);
+        ChannelPromise promise = newPromise();
+
+        encoder.writeFrame(ctx, Http2FrameTypes.DATA, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER, promise);
+
+        assertFalse(promise.isSuccess());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) promise.cause()).error());
+        verify(writer, never()).writeFrame(eq(ctx), eq(Http2FrameTypes.DATA), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeFrameOnReservedLocalStreamAllowsHeadersRstStreamAndPriority() throws Exception {
+        Http2Stream parent = createStream(STREAM_ID, false);
+        reservePushStream(PUSH_STREAM_ID, parent);
+
+        encoder.writeFrame(ctx, Http2FrameTypes.HEADERS, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER, newPromise());
+        encoder.writeFrame(ctx, Http2FrameTypes.RST_STREAM, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER,
+                newPromise());
+        encoder.writeFrame(ctx, Http2FrameTypes.PRIORITY, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER,
+                newPromise());
+
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.HEADERS), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.RST_STREAM), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.PRIORITY), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeFrameOnReservedRemoteStreamRejectsForbiddenFrameTypes() throws Exception {
+        createClientConnection();
+        Http2Stream parent = connection.local().createStream(1, true);
+        Http2Stream stream = connection.remote().reservePushStream(PUSH_STREAM_ID, parent);
+        assertEquals(RESERVED_REMOTE, stream.state());
+        ChannelPromise promise = newPromise();
+
+        encoder.writeFrame(ctx, Http2FrameTypes.DATA, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER, promise);
+
+        assertFalse(promise.isSuccess());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) promise.cause()).error());
+        verify(writer, never()).writeFrame(eq(ctx), eq(Http2FrameTypes.DATA), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeFrameOnReservedRemoteStreamAllowsRstStreamWindowUpdateAndPriority() throws Exception {
+        createClientConnection();
+        Http2Stream parent = connection.local().createStream(1, true);
+        connection.remote().reservePushStream(PUSH_STREAM_ID, parent);
+
+        encoder.writeFrame(ctx, Http2FrameTypes.RST_STREAM, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER,
+                newPromise());
+        encoder.writeFrame(ctx, Http2FrameTypes.WINDOW_UPDATE, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER,
+                newPromise());
+        encoder.writeFrame(ctx, Http2FrameTypes.PRIORITY, PUSH_STREAM_ID, new Http2Flags(), EMPTY_BUFFER,
+                newPromise());
+
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.RST_STREAM), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.WINDOW_UPDATE), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+        verify(writer).writeFrame(eq(ctx), eq(Http2FrameTypes.PRIORITY), eq(PUSH_STREAM_ID),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
+    }
+
+    @Test
     public void priorityWriteAfterGoAwayShouldSucceed() throws Exception {
         createStream(STREAM_ID, false);
         goAwayReceived(Integer.MAX_VALUE);
@@ -1044,6 +1115,14 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     private Http2Stream reservePushStream(int pushStreamId, Http2Stream parent) throws Http2Exception {
         return connection.local().reservePushStream(pushStreamId, parent);
+    }
+
+    private void createClientConnection() {
+        connection = new DefaultHttp2Connection(false);
+        connection.local().allowPushTo(true);
+        connection.remote().flowController(remoteFlow);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
     }
 
     private Http2Stream stream(int streamId) {
