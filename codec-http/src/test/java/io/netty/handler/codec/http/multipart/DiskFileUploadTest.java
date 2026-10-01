@@ -308,4 +308,64 @@ public class DiskFileUploadTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Illegal filename character");
     }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {
+        0x00,
+        HttpConstants.CR,
+        HttpConstants.LF,
+        0x19,
+        HttpConstants.DEL})
+    void contentTypeCannotContainIllegalCharacters(byte illegal) {
+        assertIllegalContentType(((char) illegal) + "text/plain");
+        assertIllegalContentType("text/plain" + ((char) illegal) + " charset=\"us-ascii\"");
+        assertIllegalContentType("text/plain" + ((char) illegal));
+    }
+
+    @Test
+    void contentTypeCannotStartWithSpaceOrTabCharacter() {
+        assertIllegalContentType(" text/plain");
+        assertIllegalContentType("\ttext/plain");
+    }
+
+    private static void assertIllegalContentType(String contentType) {
+        assertThatThrownBy(() -> new DiskFileUpload("f", "f.txt", contentType, null, null, 0))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Illegal Content-Type character");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "",
+        "text",
+        "text;plain",
+        "text;plain/octet-stream",
+        "text; charset=\"utf/8\"; charset=us-ascii",
+        "text/",
+        "text/;",
+        "/plain",
+    })
+    void contentTypeCannotHaveMalformedGrammar(String contentType) {
+        assertMalformedContentType(contentType);
+    }
+
+    private static void assertMalformedContentType(String contentType) {
+        assertThatThrownBy(() -> new DiskFileUpload("f", "f.txt", contentType, null, null, 0))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Malformed content type value");
+    }
+
+    @Test
+    void contentTypeAllowsWhitespaceQuotesAndObsText() {
+        assertValidContentType("text/plain; charset=\"us-ascii\"");
+        assertValidContentType("text/plain;\tcharset=us-ascii");
+        assertValidContentType("text/plain; name=\"\u00e9\"");
+        assertValidContentType("t/p;");
+        assertValidContentType("t/p; ");
+        assertValidContentType("t/p");
+    }
+
+    private static void assertValidContentType(String contentType) {
+        assertEquals(contentType, new DiskFileUpload("f", "f.txt", contentType, null, null, 0).getContentType());
+    }
 }
