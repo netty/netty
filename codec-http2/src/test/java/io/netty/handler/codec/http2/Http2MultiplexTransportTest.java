@@ -771,7 +771,7 @@ public class Http2MultiplexTransportTest {
         try {
             final CountDownLatch clientReceivedResponseLatch = new CountDownLatch(1);
             final CountDownLatch resetFrameLatch = new CountDownLatch(1);
-            group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+            group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)
@@ -890,8 +890,8 @@ public class Http2MultiplexTransportTest {
         Http2StreamChannel outStream = null;
         final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
         try {
-            inGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
-            outGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+            inGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+            outGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
             LocalAddress inAddress = new LocalAddress(getClass().getName() + ".in");
             LocalAddress outAddress = new LocalAddress(getClass().getName() + ".out");
@@ -1086,8 +1086,8 @@ public class Http2MultiplexTransportTest {
         Thread hammer = null;
         final AtomicReference<ByteBuf> receivedHolder = new AtomicReference<ByteBuf>();
         try {
-            serverGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
-            clientGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+            serverGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+            clientGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName() + ".torture");
 
             ServerBootstrap sb = new ServerBootstrap();
