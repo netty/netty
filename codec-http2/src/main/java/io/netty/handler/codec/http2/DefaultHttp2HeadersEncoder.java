@@ -30,6 +30,8 @@ public class DefaultHttp2HeadersEncoder implements
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
     private ByteBuf tableSizeChangeOutput;
+    // The smallest maximum table size set since the last header block, or -1 if the size did not change.
+    private long smallestTableSize = -1;
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -69,11 +71,18 @@ public class DefaultHttp2HeadersEncoder implements
             // If there was a change in the table size, serialize the output from the hpackEncoder
             // resulting from that change.
             if (tableSizeChangeOutput != null && tableSizeChangeOutput.isReadable()) {
-                buffer.writeBytes(tableSizeChangeOutput);
-                tableSizeChangeOutput.clear();
+                buffer.writeBytes(tableSizeChangeOutput, tableSizeChangeOutput.readerIndex(),
+                        tableSizeChangeOutput.readableBytes());
             }
 
             hpackEncoder.encodeHeaders(streamId, buffer, headers, sensitivityDetector);
+
+            // Only forget the table size change once a header block was encoded, the caller discards the
+            // buffer if encoding fails (for example because the header list is too large).
+            if (tableSizeChangeOutput != null) {
+                tableSizeChangeOutput.clear();
+                smallestTableSize = -1;
+            }
         } catch (Http2Exception e) {
             throw e;
         } catch (Throwable t) {
@@ -86,7 +95,23 @@ public class DefaultHttp2HeadersEncoder implements
         if (tableSizeChangeOutput == null) {
             tableSizeChangeOutput = Unpooled.buffer();
         }
+        long previous = hpackEncoder.getMaxHeaderTableSize();
         hpackEncoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
+        long size = hpackEncoder.getMaxHeaderTableSize();
+        if (size == previous) {
+            return;
+        }
+        // If the size changes more than once between two header blocks, the smallest size followed by the final
+        // size must be signalled, as the decoder only accepts sizes up to the last one it acknowledged.
+        // See https://www.rfc-editor.org/rfc/rfc7541#section-4.2
+        if (smallestTableSize == -1 || size < smallestTableSize) {
+            smallestTableSize = size;
+        }
+        tableSizeChangeOutput.clear();
+        HpackEncoder.encodeDynamicTableSizeUpdate(tableSizeChangeOutput, smallestTableSize);
+        if (size != smallestTableSize) {
+            HpackEncoder.encodeDynamicTableSizeUpdate(tableSizeChangeOutput, size);
+        }
     }
 
     @Override
