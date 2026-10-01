@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -35,12 +36,15 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -444,7 +448,14 @@ public class HttpPostRequestDecoderTest {
         }
         // Create decoder instance to test without any exception.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
-        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        assertThat(decoder.getBodyHttpDatas()).hasSize(1);
+        while (decoder.hasNext()) {
+            InterfaceHttpData data = decoder.next();
+            assertThat(data).isInstanceOf(FileUpload.class);
+            FileUpload upload = (FileUpload) data;
+            assertThat(upload.getFilename()).isEqualTo("tmp-0.txt");
+            assertThat(upload.getContentType()).isEqualTo(HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE);
+        }
         decoder.destroy();
         assertTrue(req.release());
     }
@@ -697,8 +708,13 @@ public class HttpPostRequestDecoderTest {
     }
 
     // https://github.com/netty/netty/issues/7620
-    @Test
-    public void testDecodeMalformedEmptyContentTypeFieldParameters() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "",
+        "foo",
+        "mal;form=\"e/d\"",
+    })
+    public void testDecodeMalformedContentTypeFieldParameters(String contentType) throws Exception {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
@@ -710,7 +726,7 @@ public class HttpPostRequestDecoderTest {
         final String body =
                 "--" + boundary + "\r\n" +
                         "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n" +
-                        "Content-Type: \r\n" +
+                        "Content-Type: " + contentType + "\r\n" +
                         "\r\n" +
                         data + "\r\n" +
                         "--" + boundary + "--\r\n";
@@ -723,6 +739,7 @@ public class HttpPostRequestDecoderTest {
         assertTrue(part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp-0.txt", fileUpload.getFilename());
+        assertEquals(HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE, fileUpload.getContentType());
         decoder.destroy();
         assertTrue(req.release());
     }
@@ -1141,5 +1158,35 @@ public class HttpPostRequestDecoderTest {
 
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyBytes)));
         decoder.destroy();
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {0x00, HttpConstants.CR, 0x19, HttpConstants.DEL})
+    void multipartContentTypeMustBeSanitizedIfItContainsIllegalCharacters(byte illegal) {
+        // NOTE: We cannot test with HttpConstants.LF because it's structural and
+        // simply breaks the header line into two.
+        String boundary = "861fbeab-cd20-470c-9609-d40a0f704466";
+        String content = "--" + boundary + "\r\n" +
+            "Content-Disposition: form-data; name=\"file\"; filename=\"x.txt\"\r\n" +
+            "Content-Type: text/pl" + ((char) illegal) + "ain\r\n" +
+            "\r\n" +
+            "x\r\n" +
+            "--" + boundary + "--\r\n";
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+            Unpooled.copiedBuffer(content, CharsetUtil.ISO_8859_1));
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+
+        HttpPostMultipartRequestDecoder decoder = new HttpPostMultipartRequestDecoder(req);
+        try {
+            assertTrue(decoder.hasNext());
+            InterfaceHttpData data = decoder.next();
+            assertEquals(InterfaceHttpData.HttpDataType.FileUpload, data.getHttpDataType());
+            FileUpload upload = (FileUpload) data;
+            assertEquals(HttpPostBodyUtil.DEFAULT_BINARY_CONTENT_TYPE, upload.getContentType());
+        } finally {
+            decoder.destroy();
+            assertTrue(req.release());
+        }
     }
 }
