@@ -157,11 +157,11 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         // If the handshake already finished (the handler may be removed from a ProxyConnectionEvent listener while
         // setConnectSuccess() runs), setConnectSuccess() or setConnectFailure() completes everything.
         if (!finished) {
-            cancelConnectTimeoutFuture();
             Exception cause = new ProxyConnectException(
                     exceptionMessage("handler removed before the connection was established"));
             failPendingWrites(cause);
             connectPromise.tryFailure(cause);
+            cancelConnectTimeoutFuture();
         }
     }
 

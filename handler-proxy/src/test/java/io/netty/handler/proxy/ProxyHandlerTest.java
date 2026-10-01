@@ -549,7 +549,7 @@ public class ProxyHandlerTest {
             assertThat(handler.connectFuture().await(5, TimeUnit.SECONDS)).isTrue();
             assertThat(handler.connectFuture().cause()).isInstanceOf(ProxyConnectException.class);
         } finally {
-            localGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
+            localGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS);
         }
     }
 
