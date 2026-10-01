@@ -17,6 +17,7 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import jdk.jfr.FlightRecorder;
 import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
@@ -269,9 +270,9 @@ public final class PlatformDependent {
         Throwable jfrFailure = null;
         if (jfr) {
             try {
-                JfrRecorderListener.register();
+                //noinspection Since15
+                jfr = FlightRecorder.isAvailable();
             } catch (Throwable t) {
-                // jdk.jfr is not available.
                 jfrFailure = t;
                 jfr = false;
             }
@@ -1913,14 +1914,10 @@ public final class PlatformDependent {
     }
 
     /**
-     * Check if JFR events should be emitted: JFR support is enabled ({@code io.netty.jfr.enabled}) and available on
-     * this platform, and a Flight Recorder has been initialized, for example because a recording was started.
-     * <p>
-     * Until a recorder exists this returns {@code false}, so that processes that never record do not pay for
-     * registering event classes with JFR.
+     * Check if JFR events are supported on this platform.
      */
     public static boolean isJfrEnabled() {
-        return JFR && JfrRecorderListener.recorderInitialized;
+        return JFR;
     }
 
     private PlatformDependent() {
