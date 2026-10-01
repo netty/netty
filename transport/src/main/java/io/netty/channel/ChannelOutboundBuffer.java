@@ -154,18 +154,22 @@ public final class ChannelOutboundBuffer {
                 // there is no flushedEntry yet, so start with the entry
                 flushedEntry = entry;
             }
+            long cancelledBytes = 0;
             do {
                 flushed ++;
                 if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory and notify about the freed bytes
-                    int pending = entry.cancel();
-                    decrementPendingOutboundBytes(pending, false, true);
+                    // Was cancelled so make sure we free up memory
+                    cancelledBytes += entry.cancel();
                 }
                 entry = entry.next;
             } while (entry != null);
 
             // All flushed so reset unflushedEntry
             unflushedEntry = null;
+
+            // Notify about the freed bytes only now. This may fire channelWritabilityChanged(...) synchronously, and
+            // a handler may write, flush or close the channel from there, so this buffer must be consistent first.
+            decrementPendingOutboundBytes(cancelledBytes, false, true);
         }
     }
 

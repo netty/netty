@@ -27,14 +27,19 @@ import org.junit.jupiter.api.Timeout;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.buffer.Unpooled.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -426,6 +431,103 @@ public class ChannelOutboundBufferTest {
         assertEquals("false true ", buf.toString());
 
         safeClose(ch);
+    }
+
+    @Test
+    public void testWriteAndFlushFromWritabilityChangedCausedByCancelledWrite() {
+        final List<ChannelFuture> reentrantWrites = new ArrayList<ChannelFuture>();
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                if (ctx.channel().isWritable() && reentrantWrites.isEmpty()) {
+                    reentrantWrites.add(ctx.writeAndFlush(wrappedBuffer(new byte[] { 2 })));
+                }
+                ctx.fireChannelWritabilityChanged();
+            }
+        });
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
+
+        ChannelFuture cancelled = ch.write(buffer().writeZero(512));
+        ChannelFuture second = ch.write(wrappedBuffer(new byte[] { 1 }));
+        assertFalse(ch.isWritable());
+        assertTrue(cancelled.cancel(false));
+
+        // Releasing the cancelled write makes the channel writable while addFlush() runs.
+        ch.flush();
+
+        assertTrue(ch.isWritable());
+        assertEquals(1, reentrantWrites.size());
+        assertTrue(second.isSuccess());
+        assertTrue(reentrantWrites.get(0).isSuccess());
+        ChannelOutboundBuffer buffer = ch.unsafe().outboundBuffer();
+        assertTrue(buffer.isEmpty());
+        assertEquals(0, buffer.size());
+        assertEquals(0, buffer.totalPendingWriteBytes());
+        assertOutbound(ch, 1);
+        assertOutbound(ch, 2);
+        assertNull(ch.readOutbound());
+
+        assertFalse(ch.finish());
+        assertFalse(ch.isOpen());
+    }
+
+    @Test
+    public void testCloseFromWritabilityChangedCausedByCancelledWrite() {
+        final AtomicInteger inactive = new AtomicInteger();
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                if (ctx.channel().isWritable()) {
+                    ctx.close();
+                }
+                ctx.fireChannelWritabilityChanged();
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) {
+                inactive.incrementAndGet();
+                ctx.fireChannelInactive();
+            }
+        });
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
+
+        ChannelFuture cancelled = ch.write(buffer().writeZero(512));
+        ByteBuf second = wrappedBuffer(new byte[] { 1 });
+        ChannelFuture secondFuture = ch.write(second);
+        ByteBuf third = wrappedBuffer(new byte[] { 2 });
+        ChannelFuture thirdFuture = ch.write(third);
+        assertFalse(ch.isWritable());
+        assertTrue(cancelled.cancel(false));
+
+        // Releasing the cancelled write makes the channel writable while addFlush() runs.
+        ch.flush();
+        ch.runPendingTasks();
+
+        assertFalse(ch.isOpen());
+        assertEquals(1, inactive.get());
+        assertInstanceOf(ClosedChannelException.class, secondFuture.cause());
+        assertInstanceOf(ClosedChannelException.class, thirdFuture.cause());
+        assertEquals(0, second.refCnt());
+        assertEquals(0, third.refCnt());
+        assertNull(ch.readOutbound());
+        assertFalse(ch.finish());
+    }
+
+    private static void assertOutbound(EmbeddedChannel ch, int expected) {
+        for (;;) {
+            ByteBuf buf = ch.readOutbound();
+            assertNotNull(buf);
+            try {
+                if (buf.isReadable()) {
+                    // The cancelled write is replaced by an empty buffer, skip it.
+                    assertEquals(1, buf.readableBytes());
+                    assertEquals(expected, buf.readByte());
+                    return;
+                }
+            } finally {
+                buf.release();
+            }
+        }
     }
 
     @Test
