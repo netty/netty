@@ -122,7 +122,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     // Shared by all outbound child channels: removes a child channel from outboundStreamChannels once it is closed.
     private final ChannelFutureListener outboundStreamChannelCloseListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future){
+        public void operationComplete(ChannelFuture future) {
             outboundStreamChannels.remove(future.channel());
         }
     };
