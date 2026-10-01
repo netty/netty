@@ -147,7 +147,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         closeSent = promise;
     }
 
-    void applyCloseSentTimeout(ChannelHandlerContext ctx) {
+    void applyCloseSentTimeout(final ChannelHandlerContext ctx) {
         if (forceCloseTimeoutTask != null || closeSent.isDone() || forceCloseTimeoutMillis < 0) {
             return;
         }
