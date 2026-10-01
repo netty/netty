@@ -223,7 +223,6 @@ public class PkiTestingTlsTest {
         assertThat(peerAlgorithms.get()).contains("Ed25519");
     }
 
-
     static boolean isBoringSSLAvailable() {
         return OpenSsl.isBoringSSL() && OpenSsl.isTlsv13Supported();
     }
