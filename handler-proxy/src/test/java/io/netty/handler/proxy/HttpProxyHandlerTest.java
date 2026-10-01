@@ -17,6 +17,8 @@ package io.netty.handler.proxy;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -38,8 +40,10 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
+import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.util.concurrent.CompletionHandler;
@@ -51,6 +55,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -322,5 +327,44 @@ public class HttpProxyHandlerTest {
         };
         assertNotNull(channel.pipeline().get(HttpProxyHandler.class));
         assertNull(channel.pipeline().get(HttpClientCodec.class));
+    }
+
+    @Test
+    public void testRemoveOnProxyConnectionEventWritesPendingWrites() {
+        HttpProxyHandler handler = new HttpProxyHandler(new InetSocketAddress(NetUtil.LOCALHOST, 8080));
+        final AtomicBoolean active = new AtomicBoolean();
+        EmbeddedChannel channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof ProxyConnectionEvent) {
+                    // The handshake is done, so the proxy handler is not needed anymore.
+                    ctx.pipeline().remove(HttpProxyHandler.class);
+                }
+                ctx.fireUserEventTriggered(evt);
+            }
+        }) {
+            @Override
+            public boolean isActive() {
+                return active.get();
+            }
+        };
+        channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 443));
+        ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII);
+        ChannelFuture writeFuture = channel.writeAndFlush(msg);
+        assertThat(writeFuture.isDone()).isFalse();
+
+        active.set(true);
+        channel.pipeline().fireChannelActive();
+        ByteBuf connectRequest = channel.readOutbound();
+        assertThat(connectRequest.toString(CharsetUtil.US_ASCII)).startsWith("CONNECT ");
+        connectRequest.release();
+        channel.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
+
+        assertThat(handler.connectFuture().isSuccess()).isTrue();
+        assertThat(writeFuture.isSuccess()).isTrue();
+        assertThat(channel.pipeline().get(HttpProxyHandler.class)).isNull();
+        assertThat((Object) channel.readOutbound()).isSameAs(msg);
+        msg.release();
+        assertThat(channel.finishAndReleaseAll()).isFalse();
     }
 }
