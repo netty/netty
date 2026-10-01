@@ -597,6 +597,34 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void addHttp2ToHttpHeadersDeduplicatesHttpsDefaultPortAuthorityAndHost() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers();
+        inHeaders.scheme("https");
+        inHeaders.authority("example.com:443");
+        inHeaders.add(HOST, "EXAMPLE.com");
+
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertEquals(1, outHeaders.getAll(HOST).size());
+        assertEquals("example.com:443", outHeaders.get(HOST));
+    }
+
+    @Test
+    public void addHttp2ToHttpHeadersDeduplicatesHttpDefaultPortAuthorityAndHost() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers();
+        inHeaders.scheme("http");
+        inHeaders.authority("example.com:80");
+        inHeaders.add(HOST, "EXAMPLE.com");
+
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, true);
+        assertEquals(1, outHeaders.getAll(HOST).size());
+        assertEquals("example.com:80", outHeaders.get(HOST));
+    }
+
+    @Test
     public void addHttp2ToHttpHeadersRejectsConflictingAuthorityAndHost() {
         final Http2Headers inHeaders = new DefaultHttp2Headers();
         inHeaders.authority("public.example.com");
