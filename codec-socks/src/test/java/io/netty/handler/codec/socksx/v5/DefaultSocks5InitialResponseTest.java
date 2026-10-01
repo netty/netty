@@ -16,7 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class DefaultSocks5InitialResponseTest {
     @Test
@@ -24,7 +24,7 @@ public class DefaultSocks5InitialResponseTest {
         try {
             new DefaultSocks5InitialResponse(null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 }

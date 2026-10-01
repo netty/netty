@@ -329,7 +329,7 @@ public class FixedChannelPoolTest {
         Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, 1);
-        final ChannelPool pool2 = new FixedChannelPool(t.cb, handler, 1, 1);
+        final FixedChannelPool pool2 = new FixedChannelPool(t.cb, handler, 1, 1);
 
         final Channel channel = pool.acquire().syncUninterruptibly().getNow();
 
@@ -339,6 +339,8 @@ public class FixedChannelPoolTest {
                 pool2.release(channel).syncUninterruptibly();
             }
         });
+        // Nothing was acquired from pool2, so the failed release must not give back a slot there.
+        assertEquals(0, pool2.acquiredChannelCount());
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
         pool.close();
@@ -388,6 +390,43 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
 
         sc.close().syncUninterruptibly();
+        pool.close();
+    }
+
+    @Test
+    public void testReleaseFailsWithIllegalArgumentExceptionFromHandler() throws Exception {
+        Tuple t = bootstrap();
+
+        // Start server
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        final IllegalArgumentException exception = new IllegalArgumentException();
+        FixedChannelPool pool = new FixedChannelPool(t.cb, new AbstractChannelPoolHandler() {
+            @Override
+            public void channelCreated(Channel ch) {
+                // NOOP
+            }
+
+            @Override
+            public void channelReleased(Channel ch) {
+                throw exception;
+            }
+        }, 1);
+
+        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        assertEquals(1, pool.acquiredChannelCount());
+
+        Future<Void> releaseFuture = pool.release(channel).awaitUninterruptibly();
+        assertSame(exception, releaseFuture.cause());
+        // The exception was not caused by releasing the Channel to the wrong pool, so the slot must be given back.
+        assertEquals(0, pool.acquiredChannelCount());
+
+        Future<Channel> acquireFuture = pool.acquire();
+        assertTrue(acquireFuture.await(1, TimeUnit.SECONDS));
+        assertTrue(acquireFuture.isSuccess());
+        assertEquals(1, pool.acquiredChannelCount());
+
+        sc.close().syncUninterruptibly();
+        acquireFuture.getNow().close().syncUninterruptibly();
         pool.close();
     }
 

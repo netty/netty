@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static java.util.concurrent.TimeUnit.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -334,7 +336,7 @@ public class ChunkedWriteHandlerTest {
         assertTrue(ch.finish());
 
         assertFalse(r.isSuccess());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
 
         // 3 out of 4 chunks were already written
         int read = 0;
@@ -687,7 +689,7 @@ public class ChunkedWriteHandlerTest {
 
         // Should be `false` as we do not expect any messages to be written
         assertFalse(ch.finish());
-        assertTrue(r.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r.cause());
     }
 
     private static void checkSkipFailed(Object input1, Object input2) {
@@ -711,7 +713,7 @@ public class ChunkedWriteHandlerTest {
         ChannelFuture r2 = ch.writeAndFlush(input2).awaitUninterruptibly();
         assertTrue(ch.finish());
 
-        assertTrue(r1.cause() instanceof RuntimeException);
+        assertInstanceOf(RuntimeException.class, r1.cause());
         assertTrue(r2.isSuccess());
 
         // note, that after we've "skipped" the first write,
@@ -1000,5 +1002,85 @@ public class ChunkedWriteHandlerTest {
         public long progress() {
             return 0;
         }
+    }
+
+    /**
+     * A {@link ChunkedInput} that has no data available yet (the producer has not called resumeTransfer()).
+     */
+    private static final class PendingInput implements ChunkedInput<ByteBuf> {
+        boolean closed;
+
+        @Override
+        public boolean isEndOfInput() {
+            return false;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        @Deprecated
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) {
+            return null;
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) {
+            return null;
+        }
+
+        @Override
+        public long length() {
+            return -1;
+        }
+
+        @Override
+        public long progress() {
+            return 0;
+        }
+    }
+
+    @Test
+    public void testPendingWritesFailedWhenHandlerRemoved() {
+        ChunkedWriteHandler handler = new ChunkedWriteHandler();
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        PendingInput input = new PendingInput();
+        ChannelFuture inputFuture = ch.writeAndFlush(input);
+        ByteBuf buffer = Unpooled.copiedBuffer("queued", CharsetUtil.US_ASCII);
+        ChannelFuture bufferFuture = ch.writeAndFlush(buffer);
+        assertFalse(inputFuture.isDone());
+        assertFalse(bufferFuture.isDone());
+
+        ch.pipeline().remove(handler);
+
+        assertTrue(inputFuture.isDone());
+        assertInstanceOf(ChannelException.class, inputFuture.cause());
+        assertTrue(input.closed);
+        assertTrue(bufferFuture.isDone());
+        assertInstanceOf(ChannelException.class, bufferFuture.cause());
+        assertEquals(0, buffer.refCnt());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testCancelledWritesAreClosedAndReleased() {
+        ChunkedWriteHandler handler = new ChunkedWriteHandler();
+        EmbeddedChannel ch = new EmbeddedChannel(handler);
+        PendingInput input = new PendingInput();
+        ChannelPromise inputPromise = ch.newPromise();
+        ch.writeAndFlush(input, inputPromise);
+        ByteBuf buffer = Unpooled.copiedBuffer("queued", CharsetUtil.US_ASCII);
+        ChannelPromise bufferPromise = ch.newPromise();
+        ch.writeAndFlush(buffer, bufferPromise);
+
+        assertTrue(inputPromise.cancel(false));
+        assertTrue(bufferPromise.cancel(false));
+        handler.resumeTransfer();
+
+        assertTrue(input.closed);
+        assertEquals(0, buffer.refCnt());
+        assertFalse(ch.finish());
     }
 }

@@ -23,7 +23,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.TooLongFrameException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDecoderTest {
 
@@ -42,11 +42,7 @@ public class SerialMarshallingDecoderTest extends SerialCompatibleMarshallingDec
 
     @Override
     protected void onTooBigFrame(EmbeddedChannel ch, ByteBuf input) {
-        try {
-            ch.writeInbound(input);
-            fail();
-        } catch (CodecException e) {
-            assertEquals(TooLongFrameException.class, e.getClass());
-        }
+        CodecException e = assertThrows(CodecException.class, () -> ch.writeInbound(input));
+        assertEquals(TooLongFrameException.class, e.getClass());
     }
 }

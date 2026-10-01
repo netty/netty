@@ -27,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class EmptyByteBufTest {
 
@@ -50,10 +49,7 @@ public class EmptyByteBufTest {
         empty.writeBytes(Unpooled.EMPTY_BUFFER); // Ok
         ByteBuf nonEmpty = UnpooledByteBufAllocator.DEFAULT.buffer().writeBoolean(false);
         try {
-            empty.writeBytes(nonEmpty);
-            fail();
-        } catch (IndexOutOfBoundsException ignored) {
-            // Ignore.
+            assertThrows(IndexOutOfBoundsException.class, () -> empty.writeBytes(nonEmpty));
         } finally {
             nonEmpty.release();
         }

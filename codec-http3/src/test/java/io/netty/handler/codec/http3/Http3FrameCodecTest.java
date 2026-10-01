@@ -57,7 +57,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -453,16 +452,14 @@ public class Http3FrameCodecTest {
         ByteBuf buffer = Unpooled.buffer();
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertEquals(0, buffer.refCnt());
     }
@@ -504,16 +501,14 @@ public class Http3FrameCodecTest {
         when(frame.type()).thenReturn(type);
         when(frame.touch()).thenReturn(frame);
         when(frame.touch(any())).thenReturn(frame);
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         // should have released the frame as well
         verify(frame, times(1)).release();
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
@@ -581,16 +576,14 @@ public class Http3FrameCodecTest {
     }
 
     private void testDecodeInvalidSettings(boolean delayQpackStreams, ByteBuf buffer) {
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
         verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
         assertEquals(0, buffer.refCnt());
     }
@@ -626,16 +619,14 @@ public class Http3FrameCodecTest {
     private void testEncodeReservedSettingsKey(boolean delayQpackStreams, long key) {
         Http3SettingsFrame frame = mock(Http3SettingsFrame.class);
         when(frame.iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
         verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
     }
 
@@ -903,16 +894,14 @@ public class Http3FrameCodecTest {
         writeVariableLengthInteger(buffer, 1);
         buffer.writeByte(0xC0);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -954,16 +943,14 @@ public class Http3FrameCodecTest {
         // to treat these bytes as the start of the next frame.
         buffer.writeBytes(new byte[] { HTTP3_HEADERS_FRAME_TYPE, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 });
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
         // The connection is in an error state, so no frame should have been produced and the trailing bytes must
         // not have been decoded as a subsequent frame.
@@ -983,16 +970,14 @@ public class Http3FrameCodecTest {
         buffer.writeByte(0xC0);
         buffer.writeByte(0x01);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -1009,16 +994,14 @@ public class Http3FrameCodecTest {
         buffer.writeByte(0x01);
         buffer.writeByte(0xC0);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -1110,16 +1093,14 @@ public class Http3FrameCodecTest {
     }
 
     private void testInvalidHttp3Frame0(boolean delayQpackStreams, ByteBuf buffer, Http3ErrorCode code) {
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(code, e);
-        }
+        });
+        assertException(code, e);
         verifyClose(code, parent);
     }
 

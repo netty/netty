@@ -49,9 +49,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.chunkSize;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /** {@link HttpPostRequestEncoder} test case. */
 public class HttpPostRequestEncoderTest {
@@ -66,12 +67,7 @@ public class HttpPostRequestEncoderTest {
         shouldThrowExceptionIfNotAllowed(HttpMethod.GET);
         shouldThrowExceptionIfNotAllowed(HttpMethod.HEAD);
         shouldThrowExceptionIfNotAllowed(HttpMethod.OPTIONS);
-        try {
-            shouldThrowExceptionIfNotAllowed(HttpMethod.TRACE);
-            fail("Should raised an exception with TRACE method");
-        } catch (ErrorDataEncoderException e) {
-            // Exception is willing
-        }
+        assertThrows(ErrorDataEncoderException.class, () -> shouldThrowExceptionIfNotAllowed(HttpMethod.TRACE));
     }
 
     private void shouldThrowExceptionIfNotAllowed(HttpMethod method) throws Exception {
@@ -408,7 +404,7 @@ public class HttpPostRequestEncoderTest {
         checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-        assertTrue(httpContent instanceof LastHttpContent, "Expected LastHttpContent is not received");
+        assertInstanceOf(LastHttpContent.class, httpContent, "Expected LastHttpContent is not received");
         httpContent.release();
 
            assertTrue(encoder.isEndOfInput(), "Expected end of input is not receive");
@@ -430,7 +426,7 @@ public class HttpPostRequestEncoderTest {
         checkNextChunkSize(encoder, 8080);
 
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
-        assertTrue(httpContent instanceof LastHttpContent, "Expected LastHttpContent is not received");
+        assertInstanceOf(LastHttpContent.class, httpContent, "Expected LastHttpContent is not received");
         httpContent.release();
 
         assertTrue(encoder.isEndOfInput(), "Expected end of input is not receive");

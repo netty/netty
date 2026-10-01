@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KQueueChannelConfigTest {
     @BeforeEach
@@ -47,12 +47,7 @@ public class KQueueChannelConfigTest {
         KQueueSocketChannel channel = new KQueueSocketChannel();
         channel.config().getSoLinger();
         channel.fd().close();
-        try {
-            channel.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, () -> channel.config().getSoLinger());
     }
 
     @Test
@@ -60,12 +55,7 @@ public class KQueueChannelConfigTest {
         KQueueSocketChannel channel = new KQueueSocketChannel();
         channel.config().setKeepAlive(true);
         channel.fd().close();
-        try {
-            channel.config().setKeepAlive(true);
-            fail();
-        } catch (ChannelException e) {
-            // expected
-        }
+        assertThrows(ChannelException.class, () -> channel.config().setKeepAlive(true));
     }
 
     // See https://github.com/netty/netty/issues/7159

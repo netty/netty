@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class LengthFieldBasedFrameDecoderTest {
 
@@ -38,12 +38,7 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf);
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buf));
         assertTrue(channel.finish());
 
         ByteBuf b = channel.readInbound();
@@ -66,12 +61,7 @@ public class LengthFieldBasedFrameDecoderTest {
         buf.writeInt(1);
         buf.writeByte('a');
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4));
-        try {
-            channel.writeInbound(buf.readRetainedSlice(14));
-            fail();
-        } catch (TooLongFrameException e) {
-            // expected
-        }
+        assertThrows(TooLongFrameException.class, () -> channel.writeInbound(buf.readRetainedSlice(14)));
         assertTrue(channel.writeInbound(buf.readRetainedSlice(buf.readableBytes())));
 
         assertTrue(channel.finish());
@@ -93,12 +83,7 @@ public class LengthFieldBasedFrameDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new LengthFieldBasedFrameDecoder(16, 0, 4, 0, 6));
 
         // The adjusted frame length (4) is less than initialBytesToStrip (6).
-        try {
-            channel.writeInbound(Unpooled.buffer().writeInt(0));
-            fail();
-        } catch (CorruptedFrameException e) {
-            // expected
-        }
+        assertThrows(CorruptedFrameException.class, () -> channel.writeInbound(Unpooled.buffer().writeInt(0)));
 
         // The next frame must be decoded again.
         ByteBuf buf = Unpooled.buffer().writeInt(4).writeShort(1).writeShort(2);
@@ -119,12 +104,7 @@ public class LengthFieldBasedFrameDecoderTest {
         // The length field arrives first, and the rest of the malformed frame (adjusted length 8 is less than
         // initialBytesToStrip 10) arrives in a later read.
         assertFalse(channel.writeInbound(Unpooled.buffer().writeInt(4)));
-        try {
-            channel.writeInbound(Unpooled.buffer().writeInt(0));
-            fail();
-        } catch (CorruptedFrameException e) {
-            // expected
-        }
+        assertThrows(CorruptedFrameException.class, () -> channel.writeInbound(Unpooled.buffer().writeInt(0)));
 
         ByteBuf buf = Unpooled.buffer().writeInt(8).writeInt(1).writeShort(2).writeShort(3);
         assertTrue(channel.writeInbound(buf));

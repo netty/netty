@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class AttributeKeyTest {
 
@@ -53,11 +53,6 @@ public class AttributeKeyTest {
         assertTrue(AttributeKey.exists(name));
         assertNotNull(attr);
 
-        try {
-            AttributeKey.<String>newInstance(name);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThrows(IllegalArgumentException.class, () -> AttributeKey.<String>newInstance(name));
     }
 }
