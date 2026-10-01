@@ -761,6 +761,32 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(childChannel.isActive());
     }
 
+    @Test
+    public void allQueuedFramesDeliveredToOutboundStreamAfterParentIsClosed() throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newOutboundStream(inboundHandler);
+        assertTrue(childChannel.isActive());
+
+        Http2Headers headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
+        childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers, true));
+        childChannel.config().setAutoRead(false);
+
+        frameInboundWriter.writeInboundHeaders(childChannel.stream().id(), headers, 0, false);
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("baz"), 0, true);
+        assertNull(inboundHandler.readInbound());
+
+        parentChannel.close();
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        assertFalse(childChannel.isActive());
+    }
+
     private Http2StreamChannel newOutboundStream(ChannelHandler handler) throws Exception {
         return new Http2StreamChannelBootstrap(parentChannel).handler(handler)
                 .open().get();
