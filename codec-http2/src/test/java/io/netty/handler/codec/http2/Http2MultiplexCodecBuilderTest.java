@@ -61,7 +61,7 @@ public class Http2MultiplexCodecBuilderTest {
 
     @BeforeAll
     public static void init() {
-        group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+        group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @BeforeEach
