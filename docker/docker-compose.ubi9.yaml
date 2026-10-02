@@ -14,7 +14,13 @@ services:
   build:
     image: netty:ubi9
 
+  build-affected-only:
+    image: netty:ubi9
+
   build-leak:
+    image: netty:ubi9
+
+  build-leak-affected-only:
     image: netty:ubi9
 
   deploy:
@@ -29,7 +35,13 @@ services:
   build-unsafe-buffer:
     image: netty:ubi9
 
+  build-unsafe-buffer-affected-only:
+    image: netty:ubi9
+
   build-leak-adaptive:
+    image: netty:ubi9
+
+  build-leak-adaptive-affected-only:
     image: netty:ubi9
 
   build-boringssl-snapshot:
