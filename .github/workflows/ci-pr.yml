@@ -35,6 +35,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Figures out which modules are touched by the PR so the (expensive) test legs below can be restricted
+  # to them. See .github/scripts/detect_affected_modules.sh for the rules, anything that can't be mapped to
+  # a module results in a full build.
+  detect-affected:
+    runs-on: ubuntu-24.04
+    outputs:
+      modules: ${{ steps.detect.outputs.modules }}
+    steps:
+      # Pinned to v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # For pull requests this is the merge commit, we need its first parent (the base branch) to diff against.
+          fetch-depth: 2
+
+      - name: Detect affected modules
+        id: detect
+        run: |
+          modules=ALL
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            modules=$(./.github/scripts/detect_affected_modules.sh HEAD^1) || {
+              echo "::warning::Could not detect the affected modules, falling back to a full build"
+              modules=ALL
+            }
+          fi
+          echo "modules=$modules" >> "$GITHUB_OUTPUT"
+          echo "Affected modules: $modules" | tee -a "$GITHUB_STEP_SUMMARY"
+
   verify-pr:
     runs-on: ubuntu-22.04
     steps:
@@ -72,7 +99,7 @@ jobs:
   build-pr-windows:
     runs-on: windows-2022
     name: windows-x86_64-java25-boringssl
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
       # failures sometimes due the fact that not enough memory could be reserved.
@@ -124,7 +151,14 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+        # Run through bash (git bash is part of the runner image) as mvn_affected.sh is a bash script.
+        # install (not package) as the modules that are not part of the affected set are resolved from the local repository.
+        shell: bash
+        env:
+          # ALL, NONE or the comma separated list of modules, see .github/scripts/mvn_affected.sh
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
+          NETTY_MVN: ./mvnw.cmd
+        run: ./.github/scripts/mvn_affected.sh -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
@@ -209,26 +243,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The one leg that always builds and tests everything (with leak detection), so leaks in modules
+          # depending on a changed one are still found. All the other legs only build the affected modules.
           - setup: linux-x86_64-java25
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
           - setup: linux-x86_64-java25-unsafe-buffer
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer-affected-only"
           - setup: linux-x86_64-java25-adaptive
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-adaptive"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-adaptive-affected-only"
           - setup: linux-x86_64-java25-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-graalce"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-affected-only"
           - setup: linux-x86_64-java25-awslc
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build --build-arg java_version=25-amzn"
             docker-compose-install-tcnative: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run install-tcnative"
             docker-compose-update-tcnative-version: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run update-tcnative-version"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build-affected-only"
 
     name: ${{ matrix.setup }} build
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
     permissions:
       contents: read
       packages: write  # to push the docker build cache to ghcr.io; no-op (ignored) for fork PRs
@@ -313,6 +349,10 @@ jobs:
         run: docker compose ${{ matrix.docker-compose-update-tcnative-version }}
 
       - name: Build project with leak detection
+        env:
+          # ALL, NONE or the comma separated list of modules, only used by the *-affected-only services
+          # (see .github/scripts/mvn_affected.sh), all other services always build everything.
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
         run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures
