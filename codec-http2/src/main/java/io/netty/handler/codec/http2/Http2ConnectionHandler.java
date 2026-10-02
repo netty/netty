@@ -148,6 +148,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * Closing a socket whose peer is still sending (for example a {@code WINDOW_UPDATE} or {@code PING} sent while it
      * reads the last response) makes the kernel answer with a TCP RST, which discards data that was written but not
      * yet transmitted, so the remote endpoint can lose the end of a response. A short drain avoids that.
+     * <p>
+     * The drain starts once all streams are closed, so the graceful shutdown process can take up to
+     * {@link #gracefulShutdownTimeoutMillis()} plus this time before the connection is closed.
      * @param gracefulShutdownDrainMillis the amount of time (in milliseconds), or 0 to close the connection as soon as
      * the graceful shutdown process completed.
      */
