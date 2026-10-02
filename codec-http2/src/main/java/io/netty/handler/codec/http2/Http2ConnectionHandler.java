@@ -471,7 +471,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         connection().addListener(new Http2ConnectionAdapter() {
             @Override
             public void onStreamClosed(Http2Stream stream) {
-                checkCloseConnection(ctx.newSucceededFuture());
+                checkCloseConnection(ctx.newSucceededFuture(null));
             }
         });
     }
