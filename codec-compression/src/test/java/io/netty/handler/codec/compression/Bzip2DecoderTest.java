@@ -24,15 +24,12 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class Bzip2DecoderTest extends AbstractDecoderTest {
 
@@ -55,12 +52,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         try {
             channel.writeInbound(in);
         } finally {
-            try {
-                destroyChannel();
-                fail();
-            } catch (CompletionException exception) {
-                assertThat(exception).hasCauseInstanceOf(DecompressionException.class);
-            }
+            assertThrows(DecompressionException.class, this::destroyChannel);
         }
     }
 
@@ -124,6 +116,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect huffman groups number");
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Test
@@ -134,6 +129,9 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         final ByteBuf in = Unpooled.wrappedBuffer(data);
         assertThrows(DecompressionException.class,
                 () -> channel.writeInbound(in), "incorrect selectors number");
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Test
@@ -237,6 +235,22 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         } finally {
             decoded.release();
         }
+    }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() {
+        final ByteBuf in = Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange());
+        assertThrows(DecompressionException.class, () -> channel.writeInbound(in), "incorrect selector index");
+        // Leftover cumulation bytes get reprocessed from stale decoder state when the
+        // channel is torn down, which can legitimately raise a second, unrelated exception.
+        assertThrows(DecompressionException.class, this::destroyChannel);
     }
 
     @Override
