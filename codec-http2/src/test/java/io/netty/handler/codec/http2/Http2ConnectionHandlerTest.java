@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.CompletionHandler;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
@@ -927,7 +928,8 @@ public class Http2ConnectionHandlerTest {
 
     @ParameterizedTest
     @ValueSource(longs = { 30000, -1 })
-    public void gracefulShutdownCompletesWhenGoAwayClosesLastStream(long gracefulShutdownTimeoutMillis) {
+    public void gracefulShutdownCompletesWhenGoAwayClosesLastStream(long gracefulShutdownTimeoutMillis)
+        throws Exception {
         Http2ConnectionHandler serverHandler = new Http2ConnectionHandlerBuilder()
                 .server(true).frameListener(new Http2FrameAdapter()).build();
         EmbeddedChannel server = new EmbeddedChannel(serverHandler);
@@ -938,7 +940,7 @@ public class Http2ConnectionHandlerTest {
             writeHeadersOnStream3(clientHandler, client);
 
             // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
-            ChannelFuture closeFuture = client.pipeline().close();
+            Future<Void> closeFuture = client.pipeline().close();
             assertFalse(closeFuture.isDone());
 
             // The server shuts down before it has seen stream 3 and answers with a GOAWAY that does not include it.
@@ -960,7 +962,8 @@ public class Http2ConnectionHandlerTest {
 
     @ParameterizedTest
     @ValueSource(longs = { 30000, -1 })
-    public void gracefulShutdownCompletesWhenChannelBecomesInactive(long gracefulShutdownTimeoutMillis) {
+    public void gracefulShutdownCompletesWhenChannelBecomesInactive(long gracefulShutdownTimeoutMillis)
+        throws Exception {
         Http2ConnectionHandler serverHandler = new Http2ConnectionHandlerBuilder()
                 .server(true).frameListener(new Http2FrameAdapter()).build();
         EmbeddedChannel server = new EmbeddedChannel(serverHandler);
@@ -971,11 +974,11 @@ public class Http2ConnectionHandlerTest {
             writeHeadersOnStream3(clientHandler, client);
 
             // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
-            ChannelFuture closeFuture = client.pipeline().close();
+            Future<Void> closeFuture = client.pipeline().close();
             assertFalse(closeFuture.isDone());
 
             // The connection is lost while the graceful shutdown waits for stream 3.
-            client.unsafe().close(client.voidPromise());
+            client.pipeline().firstContext().close();
             client.runPendingTasks();
 
             assertFalse(client.isOpen());
@@ -1005,14 +1008,14 @@ public class Http2ConnectionHandlerTest {
         assertEquals(1, clientHandler.connection().numActiveStreams());
     }
 
-    private static void exchangeFrames(EmbeddedChannel from, EmbeddedChannel to) {
+    private static void exchangeFrames(EmbeddedChannel from, EmbeddedChannel to) throws Exception {
         for (int i = 0; i < 5; i++) {
             transferFrames(from, to);
             transferFrames(to, from);
         }
     }
 
-    private static void transferFrames(EmbeddedChannel from, EmbeddedChannel to) {
+    private static void transferFrames(EmbeddedChannel from, EmbeddedChannel to) throws Exception {
         for (Object msg; (msg = from.readOutbound()) != null;) {
             if (to.isOpen()) {
                 to.writeInbound(msg);
