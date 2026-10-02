@@ -327,7 +327,9 @@ public class ParameterizedSslHandlerTest {
                 received.writeBytes(buf);
                 buf.release();
             }
-            assertEquals(Unpooled.wrappedBuffer(bytes), received);
+            ByteBuf expected = Unpooled.wrappedBuffer(bytes);
+            assertEquals(expected, received);
+            expected.release();
             received.release();
         } finally {
             if (client != null) {
