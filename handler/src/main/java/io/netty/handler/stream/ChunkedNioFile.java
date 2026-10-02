@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.util.internal.ObjectUtil;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -152,7 +153,11 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
             for (;;) {
                 int localReadBytes = buffer.writeBytes(in, offset + readBytes, chunkSize - readBytes);
                 if (localReadBytes < 0) {
-                    break;
+                    // The file is shorter than the region we were asked to transfer (for example it was truncated
+                    // after this ChunkedNioFile was created). Fail like ChunkedFile instead of returning empty
+                    // chunks forever, as isEndOfInput() would never return true.
+                    throw new EOFException("Underlying file size " + in.size() + " smaller than requested end " +
+                            "offset " + endOffset);
                 }
                 readBytes += localReadBytes;
                 if (readBytes == chunkSize) {

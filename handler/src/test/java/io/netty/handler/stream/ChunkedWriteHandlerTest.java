@@ -33,8 +33,11 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -149,6 +152,52 @@ public class ChunkedWriteHandlerTest {
                 });
             }
         });
+    }
+
+    @ParameterizedTest(name = "nio = {0}")
+    @ValueSource(booleans = { false, true })
+    public void testChunkedFileFailsWhenFileWasTruncated(boolean nio) throws IOException {
+        File file = PlatformDependent.createTempFile("netty-chunk-truncated-", ".tmp", null);
+        file.deleteOnExit();
+        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+            raf.write(BYTES, 0, 1024);
+            ChunkedInput<ByteBuf> input = nio ? new ChunkedNioFile(raf.getChannel(), 0, 1024, 100) :
+                    new ChunkedFile(raf, 0, 1024, 100);
+            // The file is truncated after the input was created, for example by another process.
+            raf.setLength(512);
+
+            final AtomicInteger writes = new AtomicInteger();
+            EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    if (writes.incrementAndGet() > 100) {
+                        // Stop ChunkedWriteHandler if it keeps writing empty chunks.
+                        ReferenceCountUtil.release(msg);
+                        promise.setFailure(new IllegalStateException("too many writes"));
+                        ctx.close();
+                        return;
+                    }
+                    ctx.write(msg, promise);
+                }
+            }, new ChunkedWriteHandler());
+
+            ChannelFuture future = ch.writeAndFlush(input);
+            assertTrue(future.isDone());
+            assertInstanceOf(EOFException.class, future.cause());
+            assertEquals(5, writes.get());
+
+            int read = 0;
+            for (;;) {
+                ByteBuf buffer = ch.readOutbound();
+                if (buffer == null) {
+                    break;
+                }
+                read += buffer.readableBytes();
+                buffer.release();
+            }
+            assertEquals(500, read);
+            assertFalse(ch.finish());
+        }
     }
 
     @Test
