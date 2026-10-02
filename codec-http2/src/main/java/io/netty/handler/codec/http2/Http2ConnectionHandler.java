@@ -51,6 +51,7 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -81,6 +82,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
+    private long gracefulShutdownDrainMillis;
     private boolean inFlush;
     private boolean flushAgain;
 
@@ -128,6 +130,33 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                                " (expected: -1 for indefinite or >= 0)");
         }
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
+    }
+
+    /**
+     * Get the amount of time (in milliseconds) this endpoint keeps the connection open and reading after the graceful
+     * shutdown process completed, before closing it. Returns 0 if the connection is closed right away.
+     */
+    public long gracefulShutdownDrainMillis() {
+        return gracefulShutdownDrainMillis;
+    }
+
+    /**
+     * Set the amount of time (in milliseconds) this endpoint keeps the connection open and reading after all streams
+     * were closed during the graceful shutdown process. The connection is closed when the remote endpoint closes it
+     * or this time has elapsed, whichever happens first.
+     * <p>
+     * Closing a socket whose peer is still sending (for example a {@code WINDOW_UPDATE} or {@code PING} sent while it
+     * reads the last response) makes the kernel answer with a TCP RST, which discards data that was written but not
+     * yet transmitted, so the remote endpoint can lose the end of a response. A short drain avoids that.
+     * <p>
+     * The drain starts once all streams are closed, so the graceful shutdown process can take up to
+     * {@link #gracefulShutdownTimeoutMillis()} plus this time before the connection is closed.
+     * @param gracefulShutdownDrainMillis the amount of time (in milliseconds), or 0 to close the connection as soon as
+     * the graceful shutdown process completed.
+     */
+    public void gracefulShutdownDrainMillis(long gracefulShutdownDrainMillis) {
+        this.gracefulShutdownDrainMillis = checkPositiveOrZero(gracefulShutdownDrainMillis,
+                "gracefulShutdownDrainMillis");
     }
 
     public Http2Connection connection() {
@@ -559,15 +588,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private ChannelFutureListener newClosingChannelFutureListener(
-            ChannelHandlerContext ctx, ChannelPromise promise) {
+            ChannelHandlerContext ctx, ChannelPromise promise, long drainMillis) {
         long gracefulShutdownTimeoutMillis = this.gracefulShutdownTimeoutMillis;
         return gracefulShutdownTimeoutMillis < 0 ?
-                new ClosingChannelFutureListener(ctx, promise) :
-                new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS);
+                new ClosingChannelFutureListener(ctx, promise, drainMillis) :
+                new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS,
+                        drainMillis);
     }
 
     private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, final ChannelPromise promise) {
-        final ChannelFutureListener listener = newClosingChannelFutureListener(ctx, promise);
+        final ChannelFutureListener listener =
+                newClosingChannelFutureListener(ctx, promise, gracefulShutdownDrainMillis);
         if (isGracefulShutdownComplete()) {
             // If there are no active streams, close immediately after the GO_AWAY write completes or the timeout
             // elapsed.
@@ -753,7 +784,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (http2Ex.shutdownHint() == Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN) {
             doGracefulShutdown(ctx, future, promise);
         } else {
-            future.addListener(newClosingChannelFutureListener(ctx, promise));
+            future.addListener(newClosingChannelFutureListener(ctx, promise, 0));
         }
     }
 
@@ -1015,18 +1046,22 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private final ChannelHandlerContext ctx;
         private final ChannelPromise promise;
         private final Future<?> timeoutTask;
+        private final long drainMillis;
+        private Future<?> drainTask;
         private boolean closed;
 
-        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise) {
+        ClosingChannelFutureListener(ChannelHandlerContext ctx, ChannelPromise promise, long drainMillis) {
             this.ctx = ctx;
             this.promise = promise;
+            this.drainMillis = drainMillis;
             timeoutTask = null;
         }
 
         ClosingChannelFutureListener(final ChannelHandlerContext ctx, final ChannelPromise promise,
-                                     long timeout, TimeUnit unit) {
+                                     long timeout, TimeUnit unit, long drainMillis) {
             this.ctx = ctx;
             this.promise = promise;
+            this.drainMillis = drainMillis;
             timeoutTask = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -1040,18 +1075,34 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             if (timeoutTask != null) {
                 timeoutTask.cancel(false);
             }
-            doClose();
+            if (drainMillis > 0 && ctx.channel().isActive()) {
+                drain();
+            } else {
+                doClose();
+            }
+        }
+
+        // Keep reading until the remote endpoint closes the connection or drainMillis elapsed, so that frames it
+        // sends in the meantime do not reach a closed socket, which the kernel would answer with RST.
+        private void drain() {
+            if (closed || drainTask != null) {
+                return;
+            }
+            ctx.channel().closeFuture().addListener(f -> doClose());
+            drainTask = ctx.executor().schedule(this::doClose, drainMillis, MILLISECONDS);
         }
 
         private void doClose() {
-            // We need to guard against multiple calls as the timeout may trigger close() first and then it will be
-            // triggered again because of operationComplete(...) is called.
+            // We need to guard against multiple calls as the timeout or the end of the drain may trigger close()
+            // first and then it will be triggered again because of operationComplete(...) is called or the channel
+            // closed.
             if (closed) {
-                // This only happens if we also scheduled a timeout task.
-                assert timeoutTask != null;
                 return;
             }
             closed = true;
+            if (drainTask != null) {
+                drainTask.cancel(false);
+            }
             if (promise == null) {
                 ctx.close();
             } else {
