@@ -213,6 +213,40 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, encoder.numBufferedStreams());
     }
 
+    @Test
+    public void cancelledHeadersShouldNotCreateBufferedStreamWhenStreamBecomesAvailable() {
+        setMaxConcurrentStreams(1);
+
+        encoderWriteHeaders(3, newPromise());
+
+        ChannelPromise headersPromise5 = newPromise();
+        encoderWriteHeaders(5, headersPromise5);
+        ByteBuf data5 = data();
+        ChannelPromise dataPromise5 = newPromise();
+        encoder.writeData(ctx, 5, data5, 0, false, dataPromise5);
+        assertTrue(headersPromise5.cancel(false));
+
+        encoderWriteHeaders(7, newPromise());
+        assertEquals(2, encoder.numBufferedStreams());
+
+        connection.stream(3).close();
+
+        assertEquals(0, encoder.numBufferedStreams());
+        assertEquals(1, connection.local().numActiveStreams());
+        assertNull(connection.stream(5));
+        assertNotNull(connection.stream(7));
+        assertTrue(headersPromise5.isCancelled());
+        Http2Exception.StreamException cause =
+                assertInstanceOf(Http2Exception.StreamException.class, dataPromise5.cause());
+        assertEquals(5, cause.streamId());
+        assertEquals(CANCEL, cause.error());
+        assertEquals(0, data5.refCnt());
+        writeVerifyWriteHeaders(never(), 5);
+        writeVerifyWriteHeaders(times(1), 7);
+        verify(writer, never()).writeGoAway(eq(ctx), anyInt(), anyLong(), any(ByteBuf.class),
+                any(ChannelPromise.class));
+    }
+
     @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
     @ValueSource(booleans = {true, false})
     public void alternatingWritesToActiveAndBufferedStreams(boolean autoAckSettings) {

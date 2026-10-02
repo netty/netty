@@ -276,6 +276,12 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         while (!pendingStreams.isEmpty() && canCreateStream()) {
             Map.Entry<Integer, PendingStream> entry = pendingStreams.pollFirstEntry();
             PendingStream pendingStream = entry.getValue();
+            if (pendingStream.isHeadersCancelled()) {
+                // The stream was never created and the caller gave up on it, so don't open it now.
+                pendingStream.close(Http2Exception.streamError(pendingStream.streamId, Http2Error.CANCEL,
+                        "HEADERS write cancelled before the stream could be created"));
+                continue;
+            }
             try {
                 pendingStream.sendFrames();
             } catch (Throwable t) {
@@ -321,6 +327,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             for (Frame frame : frames) {
                 frame.send(ctx, streamId);
             }
+        }
+
+        boolean isHeadersCancelled() {
+            Frame first = frames.peek();
+            return first instanceof HeadersFrame && first.promise.isCancelled();
         }
 
         void close(Throwable t) {
