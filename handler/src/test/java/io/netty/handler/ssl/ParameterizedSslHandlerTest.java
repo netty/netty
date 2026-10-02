@@ -19,7 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -28,6 +31,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
@@ -271,6 +275,81 @@ public class ParameterizedSslHandlerTest {
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("data")
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    public void testWriteBiggerThanPacketLengthBeforeHandshakeWithLargeWrapDataSize(
+            SslProvider clientProvider, SslProvider serverProvider) throws Exception {
+        // -1 disables the wrap data size limit and any value > 16384 means SslHandler will use wrapMultiple(...).
+        writeBiggerThanPacketLengthBeforeHandshake(clientProvider, serverProvider, -1);
+        writeBiggerThanPacketLengthBeforeHandshake(clientProvider, serverProvider, 64 * 1024);
+    }
+
+    private static void writeBiggerThanPacketLengthBeforeHandshake(
+            SslProvider clientProvider, SslProvider serverProvider, int wrapDataSize) throws Exception {
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(serverProvider)
+                .build();
+        SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(clientProvider)
+                .build();
+        EmbeddedChannel client = null;
+        EmbeddedChannel server = null;
+        try {
+            SslHandler clientHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+            clientHandler.setWrapDataSize(wrapDataSize);
+            client = new EmbeddedChannel(clientHandler);
+            server = new EmbeddedChannel(sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT));
+
+            byte[] bytes = new byte[40000];
+            ThreadLocalRandom.current().nextBytes(bytes);
+            // The handshake is not done yet, so the SSLEngine can not consume any of the data.
+            ChannelFuture writeFuture = client.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+            assertFalse(writeFuture.isDone());
+
+            while (forward(client, server) | forward(server, client)) {
+                // Exchange data until there is nothing left to forward.
+            }
+            assertTrue(clientHandler.handshakeFuture().isSuccess());
+            assertTrue(writeFuture.isSuccess());
+
+            ByteBuf received = Unpooled.buffer(bytes.length);
+            for (;;) {
+                ByteBuf buf = server.readInbound();
+                if (buf == null) {
+                    break;
+                }
+                received.writeBytes(buf);
+                buf.release();
+            }
+            assertEquals(Unpooled.wrappedBuffer(bytes), received);
+            received.release();
+        } finally {
+            if (client != null) {
+                client.finishAndReleaseAll();
+            }
+            if (server != null) {
+                server.finishAndReleaseAll();
+            }
+            ReferenceCountUtil.release(sslServerCtx);
+            ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    private static boolean forward(EmbeddedChannel from, EmbeddedChannel to) {
+        boolean forwarded = false;
+        for (;;) {
+            Object msg = from.readOutbound();
+            if (msg == null) {
+                return forwarded;
+            }
+            forwarded = true;
+            to.writeInbound(msg);
         }
     }
 
