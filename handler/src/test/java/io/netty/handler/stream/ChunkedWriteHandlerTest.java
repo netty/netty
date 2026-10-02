@@ -162,7 +162,8 @@ public class ChunkedWriteHandlerTest {
     public void testChunkedFileFailsWhenFileWasTruncated(boolean nio) throws IOException {
         File file = PlatformDependent.createTempFile("netty-chunk-truncated-", ".tmp", null);
         file.deleteOnExit();
-        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        try {
             raf.write(BYTES, 0, 1024);
             ChunkedInput<ByteBuf> input = nio ? new ChunkedNioFile(raf.getChannel(), 0, 1024, 100) :
                     new ChunkedFile(raf, 0, 1024, 100);
@@ -200,6 +201,8 @@ public class ChunkedWriteHandlerTest {
             }
             assertEquals(500, read);
             assertFalse(ch.finish());
+        } finally {
+            raf.close();
         }
     }
 
