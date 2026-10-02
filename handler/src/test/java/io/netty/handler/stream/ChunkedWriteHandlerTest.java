@@ -156,7 +156,7 @@ public class ChunkedWriteHandlerTest {
 
     @ParameterizedTest(name = "nio = {0}")
     @ValueSource(booleans = { false, true })
-    public void testChunkedFileFailsWhenFileWasTruncated(boolean nio) throws IOException {
+    public void testChunkedFileFailsWhenFileWasTruncated(boolean nio) throws Exception {
         File file = PlatformDependent.createTempFile("netty-chunk-truncated-", ".tmp", null);
         file.deleteOnExit();
         try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
@@ -167,21 +167,21 @@ public class ChunkedWriteHandlerTest {
             raf.setLength(512);
 
             final AtomicInteger writes = new AtomicInteger();
-            EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+            EmbeddedChannel ch = new EmbeddedChannel(new ChannelOutboundHandler() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, CompletionHandler<Void> handler) {
                     if (writes.incrementAndGet() > 100) {
                         // Stop ChunkedWriteHandler if it keeps writing empty chunks.
                         ReferenceCountUtil.release(msg);
-                        promise.setFailure(new IllegalStateException("too many writes"));
+                        handler.failure(new IllegalStateException("too many writes"));
                         ctx.close();
                         return;
                     }
-                    ctx.write(msg, promise);
+                    ctx.write(msg, handler);
                 }
             }, new ChunkedWriteHandler());
 
-            ChannelFuture future = ch.writeAndFlush(input);
+            Future<Void> future = ch.writeAndFlush(input);
             assertTrue(future.isDone());
             assertInstanceOf(EOFException.class, future.cause());
             assertEquals(5, writes.get());
