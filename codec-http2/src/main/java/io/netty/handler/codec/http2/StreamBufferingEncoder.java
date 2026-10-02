@@ -276,6 +276,12 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
         while (!pendingStreams.isEmpty() && canCreateStream()) {
             Map.Entry<Integer, PendingStream> entry = pendingStreams.pollFirstEntry();
             PendingStream pendingStream = entry.getValue();
+            if (pendingStream.isHeadersCancelled()) {
+                // The stream was never created and the caller gave up on it, so don't open it now.
+                pendingStream.close(Http2Exception.streamError(pendingStream.streamId, Http2Error.CANCEL,
+                        "HEADERS write cancelled before the stream could be created"));
+                continue;
+            }
             try {
                 pendingStream.sendFrames();
             } catch (Throwable t) {
@@ -323,6 +329,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             }
         }
 
+        boolean isHeadersCancelled() {
+            Frame first = frames.peek();
+            return first instanceof HeadersFrame && first.promise.isCancelled();
+        }
+
         void close(Throwable t) {
             for (Frame frame : frames) {
                 frame.release(t);
@@ -341,10 +352,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
          * Release any resources (features, buffers, ...) associated with the frame.
          */
         void release(Throwable t) {
+            // A write may be cancelled while it is buffered, so notification must not abort cleanup.
             if (t == null) {
-                promise.setSuccess();
+                promise.trySuccess();
             } else {
-                promise.setFailure(t);
+                promise.tryFailure(t);
             }
         }
 
@@ -394,8 +406,11 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void release(Throwable t) {
-            super.release(t);
-            ReferenceCountUtil.safeRelease(data);
+            try {
+                super.release(t);
+            } finally {
+                ReferenceCountUtil.safeRelease(data);
+            }
         }
 
         @Override
