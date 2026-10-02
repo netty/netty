@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -53,6 +55,8 @@ import static io.netty.util.CharsetUtil.UTF_8;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -757,6 +761,110 @@ public class DefaultHttp2ConnectionDecoderTest {
                 decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, eos);
             }
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamShouldThrow(final String status) throws Exception {
+        assertInfoHeadersWithEndStreamRejected(status);
+    }
+
+    private void assertInfoHeadersWithEndStreamRejected(final String status) throws Exception {
+        final Http2Headers headers = new DefaultHttp2Headers().status(status);
+        Http2Exception.StreamException exception = assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, exception.error());
+        assertEquals(STREAM_ID, exception.streamId());
+        verify(stream, never()).headersReceived(anyBoolean());
+        verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        verify(lifecycleManager, never()).closeStreamRemote(any(Http2Stream.class), any(ChannelFuture.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamOnPromisedStreamShouldThrow(final String status) throws Exception {
+        when(stream.state()).thenReturn(RESERVED_REMOTE);
+        assertInfoHeadersWithEndStreamRejected(status);
+        verify(stream, never()).open(anyBoolean());
+    }
+
+    @Test
+    public void infoHeadersFollowedByFinalResponseWithEndStreamShouldSucceed() throws Exception {
+        Http2Headers continueHeaders = new DefaultHttp2Headers().status("100");
+        Http2Headers earlyHintsHeaders = new DefaultHttp2Headers().status("103");
+        Http2Headers finalHeaders = new DefaultHttp2Headers().status("200");
+        decode().onHeadersRead(ctx, STREAM_ID, continueHeaders, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, earlyHintsHeaders, 0, false);
+        decode().onHeadersRead(ctx, STREAM_ID, finalHeaders, 0, true);
+
+        verify(listener).onHeadersRead(ctx, STREAM_ID, continueHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, false);
+        verify(listener).onHeadersRead(ctx, STREAM_ID, earlyHintsHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, false);
+        verify(listener).onHeadersRead(ctx, STREAM_ID, finalHeaders, 0, DEFAULT_PRIORITY_WEIGHT, false, 0, true);
+        verify(lifecycleManager).closeStreamRemote(stream, future);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamOnNewStreamShouldResetAndCloseStream(String status) throws Exception {
+        final int streamId = 2;
+        final AtomicReference<Http2Stream> createdStream = new AtomicReference<Http2Stream>();
+        Http2Connection realConnection = new DefaultHttp2Connection(false);
+        realConnection.addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamAdded(Http2Stream stream) {
+                createdStream.set(stream);
+            }
+        });
+        Http2FrameWriter frameWriter = Http2TestUtil.mockedFrameWriter();
+        Http2ConnectionEncoder realEncoder = new DefaultHttp2ConnectionEncoder(realConnection, frameWriter);
+        Http2ConnectionDecoder realDecoder = new DefaultHttp2ConnectionDecoder(
+                realConnection, realEncoder, new DefaultHttp2FrameReader());
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(realDecoder, realEncoder)
+                .frameListener(listener).build();
+        EmbeddedChannel channel = new EmbeddedChannel(handler);
+        try {
+            Http2FrameInboundWriter inboundWriter = new Http2FrameInboundWriter(channel);
+            inboundWriter.writeInboundSettings(new Http2Settings());
+            inboundWriter.writeInboundHeaders(streamId, new DefaultHttp2Headers().status(status), 0, true);
+
+            assertNotNull(createdStream.get());
+            assertEquals(Http2Stream.State.CLOSED, createdStream.get().state());
+            assertNull(realConnection.stream(streamId));
+            assertEquals(0, realConnection.numActiveStreams());
+            assertTrue(realConnection.streamMayHaveExisted(streamId));
+            assertTrue(channel.isActive());
+            verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(streamId),
+                    eq(PROTOCOL_ERROR.code()), any(ChannelPromise.class));
+            verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                    anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamAfterResetShouldBeIgnored(String status) throws Exception {
+        when(stream.isResetSent()).thenReturn(true);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers().status(status), 0, true);
+        verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "100", "103" })
+    public void infoHeadersWithEndStreamAfterGoAwayShouldBeIgnored(String status) throws Exception {
+        mockGoAwaySent();
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        decode().onHeadersRead(ctx, STREAM_ID, new DefaultHttp2Headers().status(status), 0, true);
+        verify(remote, never()).createStream(anyInt(), anyBoolean());
+        verify(listener, never()).onHeadersRead(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
+                anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean());
     }
 
     private static Http2Headers informationalHeaders() {
