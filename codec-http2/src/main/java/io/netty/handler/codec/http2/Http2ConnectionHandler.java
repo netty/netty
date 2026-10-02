@@ -453,7 +453,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         // Initialize the encoder, decoder, flow controllers, and internal state.
         encoder.lifecycleManager(this);
         decoder.lifecycleManager(this);
