@@ -247,7 +247,14 @@ final class HpackEncoder {
         }
         this.maxHeaderTableSize = maxHeaderTableSize;
         ensureCapacity(0);
-        // Casting to integer is safe as we verified the maxHeaderTableSize is a valid unsigned int.
+        encodeDynamicTableSizeUpdate(out, maxHeaderTableSize);
+    }
+
+    /**
+     * Encode a Dynamic Table Size Update according to
+     * <a href="https://tools.ietf.org/html/rfc7541#section-6.3">Section 6.3</a>.
+     */
+    static void encodeDynamicTableSizeUpdate(ByteBuf out, long maxHeaderTableSize) {
         encodeInteger(out, 0x20, 5, maxHeaderTableSize);
     }
 
