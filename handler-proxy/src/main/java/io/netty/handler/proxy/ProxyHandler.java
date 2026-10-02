@@ -152,6 +152,23 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // The handler can be removed before the connection to the destination was established, for example because
+        // the connection to the proxy server failed. The channel never became active in that case, so
+        // channelInactive(...) is not called. Fail what is still pending, as otherwise the queued writes and
+        // connectFuture() would never be completed and the queued messages would leak.
+        // If the handshake already finished (the handler may be removed from a ProxyConnectionEvent listener while
+        // setConnectSuccess() runs), setConnectSuccess() or setConnectFailure() completes everything.
+        if (!finished) {
+            Exception cause = new ProxyConnectException(
+                    exceptionMessage("handler removed before the connection was established"));
+            failPendingWrites(cause);
+            connectPromise.tryFailure(cause);
+            cancelConnectTimeoutFuture();
+        }
+    }
+
     /**
      * Adds the codec handlers required to communicate with the proxy server.
      */
