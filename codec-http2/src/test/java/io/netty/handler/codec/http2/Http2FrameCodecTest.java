@@ -48,6 +48,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Constructor;
@@ -56,6 +58,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -78,6 +81,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link Http2FrameCodec}.
@@ -795,6 +799,134 @@ public class Http2FrameCodecTest {
 
         assertEquals(0, frameCodec.numInitializingStreams());
         assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownCompletesWhenBufferedStreamIsWrittenAndClosed(long gracefulShutdownTimeoutMillis)
+            throws Exception {
+        setUpWithBufferedStreams(gracefulShutdownTimeoutMillis);
+        Http2FrameStream stream = frameCodec.newStream();
+        ChannelFuture headersFuture = writeBufferedHeaders(stream);
+        ChannelFuture closeFuture = startGracefulShutdown();
+
+        // The remote peer now allows one stream, so the buffered stream is created and its HEADERS are written.
+        frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(1));
+        channel.runPendingTasks();
+
+        assertTrue(headersFuture.isSuccess());
+        assertEquals(1, frameCodec.connection().numActiveStreams());
+        assertFalse(closeFuture.isDone(), "close() must wait for the stream that is now active");
+
+        frameInboundWriter.writeInboundRstStream(stream.id(), Http2Error.CANCEL.code());
+        channel.runPendingTasks();
+
+        assertEquals(0, frameCodec.connection().numActiveStreams());
+        assertTrue(closeFuture.isSuccess(), "close() must complete once the last stream is closed");
+        assertFalse(channel.isOpen());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownCompletesWhenGoAwayFailsBufferedStream(long gracefulShutdownTimeoutMillis)
+            throws Exception {
+        setUpWithBufferedStreams(gracefulShutdownTimeoutMillis);
+        ChannelFuture headersFuture = writeBufferedHeaders(frameCodec.newStream());
+        ChannelFuture closeFuture = startGracefulShutdown();
+
+        // The remote peer shuts down without having seen the buffered stream, so the stream is never created.
+        // The GOAWAY is written as a single buffer, as the channel is closed while it is read.
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {
+                0, 0, 8, // length
+                7, // type: GOAWAY
+                0, // flags
+                0, 0, 0, 0, // stream id
+                0, 0, 0, 0, // last stream id
+                0, 0, 0, 0 // error code: NO_ERROR
+        }));
+        channel.runPendingTasks();
+
+        assertInstanceOf(StreamBufferingEncoder.Http2GoAwayException.class, headersFuture.cause());
+        assertTrue(closeFuture.isSuccess(), "close() must complete once no stream is buffered anymore");
+        assertFalse(channel.isOpen());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownCompletesWhenChannelCloseFailsBufferedStream(long gracefulShutdownTimeoutMillis)
+            throws Exception {
+        setUpWithBufferedStreams(gracefulShutdownTimeoutMillis);
+        ChannelFuture headersFuture = writeBufferedHeaders(frameCodec.newStream());
+        ChannelFuture closeFuture = startGracefulShutdown();
+
+        // The connection is lost while the graceful shutdown waits for the buffered stream.
+        channel.unsafe().close(channel.voidPromise());
+        channel.runPendingTasks();
+
+        assertInstanceOf(StreamBufferingEncoder.Http2ChannelClosedException.class, headersFuture.cause());
+        assertFalse(channel.isOpen());
+        assertTrue(closeFuture.isSuccess(), "close() must complete once the channel is closed");
+    }
+
+    @Test
+    public void gracefulShutdownCompletesWhenPendingPushPromiseIsWritten() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().gracefulShutdownTimeoutMillis(30000), new Http2Settings());
+        channel.freezeTime();
+
+        // Keep the PUSH_PROMISE write pending, so the new stream is counted as buffered.
+        final AtomicReference<ChannelPromise> pushPromisePromise = new AtomicReference<>();
+        when(frameWriter.writePushPromise(any(ChannelHandlerContext.class), anyInt(), anyInt(), any(Http2Headers.class),
+                anyInt(), anyChannelPromise())).thenAnswer(invocation -> {
+            ChannelPromise promise = invocation.getArgument(5);
+            pushPromisePromise.set(promise);
+            return promise;
+        });
+
+        frameInboundWriter.writeInboundHeaders(1, request, 0, true);
+        Http2HeadersFrame requestFrame = inboundHandler.readInbound();
+        assertNotNull(requestFrame);
+
+        ChannelFuture pushFuture = channel.writeAndFlush(new DefaultHttp2PushPromiseFrame(response)
+                .pushStream(frameCodec.newStream()).stream(requestFrame.stream()));
+        assertFalse(pushFuture.isDone());
+        assertNotNull(pushPromisePromise.get());
+
+        // Complete the request, so that only the pending PUSH_PROMISE keeps the graceful shutdown from completing.
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(response, true).stream(requestFrame.stream()));
+        assertEquals(0, frameCodec.connection().numActiveStreams());
+        ChannelFuture closeFuture = startGracefulShutdown();
+
+        // The reserved push stream is not active, so nothing but the completed write can finish the graceful shutdown.
+        pushPromisePromise.get().setSuccess();
+        channel.runPendingTasks();
+
+        assertTrue(pushFuture.isSuccess());
+        assertTrue(closeFuture.isSuccess(), "close() must complete once no stream is buffered anymore");
+        assertFalse(channel.isOpen());
+    }
+
+    private void setUpWithBufferedStreams(long gracefulShutdownTimeoutMillis) throws Exception {
+        // The remote peer does not allow any stream yet, so new outbound streams are buffered.
+        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true)
+                        .gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis),
+                new Http2Settings().maxConcurrentStreams(0));
+        // The graceful shutdown timeout must not elapse during the test.
+        channel.freezeTime();
+    }
+
+    private ChannelFuture writeBufferedHeaders(Http2FrameStream stream) {
+        ChannelFuture headersFuture = channel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream));
+        assertFalse(headersFuture.isDone());
+        assertEquals(0, frameCodec.connection().numActiveStreams());
+        return headersFuture;
+    }
+
+    private ChannelFuture startGracefulShutdown() {
+        // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
+        ChannelFuture closeFuture = channel.pipeline().close();
+        assertFalse(closeFuture.isDone(), "close() must wait for the buffered stream");
+        return closeFuture;
     }
 
     @Test
