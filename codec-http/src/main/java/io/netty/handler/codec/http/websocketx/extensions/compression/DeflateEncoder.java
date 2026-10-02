@@ -108,6 +108,11 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             // Set empty DEFLATE block manually for unknown buffer size
             // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
             compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
+            if (noContext) {
+                // The message ends here, so the next one must start with an empty sliding window,
+                // as when the final fragment has content (see compressContent(...)).
+                cleanup();
+            }
         } else {
             throw new CodecException("cannot compress content buffer");
         }
