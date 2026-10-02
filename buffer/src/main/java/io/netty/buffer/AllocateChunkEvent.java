@@ -22,7 +22,7 @@ import jdk.jfr.Name;
 @SuppressWarnings("Since15")
 @Name(AllocateChunkEvent.NAME)
 @Label("Chunk Allocation")
-@Description("Triggered when a new memory chunk is allocated for an allocator")
+@Description("Triggered when an allocator takes a memory chunk from the memory it is built on")
 final class AllocateChunkEvent extends AbstractChunkEvent {
     static final String NAME = "io.netty.AllocateChunk";
     private static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();

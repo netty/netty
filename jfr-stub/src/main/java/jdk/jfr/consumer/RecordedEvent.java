@@ -41,4 +41,8 @@ public final class RecordedEvent {
     public boolean hasField(String fieldName) {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
+
+    public RecordedThread getThread() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
 }
