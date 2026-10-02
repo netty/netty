@@ -35,6 +35,10 @@ import jdk.jfr.FlightRecorderListener;
  * under the same lock, and the event classes are loaded by this class's initializer and have trivial initializers,
  * so registering from the callback does not wait for anything that may in turn wait for that lock.
  * <p>
+ * A Flight Recorder is initialized at most once per JVM, so the listener removes itself after registering the events.
+ * Otherwise JFR's static listener list would keep this class, and with it the class loader that loaded Netty,
+ * reachable for the lifetime of the JVM. JFR iterates over a copy of the list, so this is safe from the callback.
+ * <p>
  * This must not be initialized from an event class initializer: registration initializes the event classes.
  */
 @SuppressWarnings("Since15")
@@ -78,6 +82,12 @@ final class JfrEventRegistration implements FlightRecorderListener {
         } catch (Throwable t) {
             // Don't break the recording that is being started.
             logger.debug("Failed to register the allocator JFR events", t);
+        } finally {
+            try {
+                FlightRecorder.removeListener(this);
+            } catch (Throwable t) {
+                logger.debug("Failed to remove the JFR recorder listener", t);
+            }
         }
     }
 }
