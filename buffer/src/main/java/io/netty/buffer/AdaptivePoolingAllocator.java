@@ -221,6 +221,9 @@ final class AdaptivePoolingAllocator {
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
+        if (PlatformDependent.isJfrEnabled()) {
+            JfrEventRegistration.init();
+        }
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);

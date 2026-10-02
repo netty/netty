@@ -265,16 +265,19 @@ public final class PlatformDependent {
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
 
-        boolean jfrAvailable;
+        // Read the property first, so that disabling JFR support keeps Netty away from jdk.jfr entirely.
+        boolean jfr = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", true);
         Throwable jfrFailure = null;
-        try {
-            //noinspection Since15
-            jfrAvailable = FlightRecorder.isAvailable();
-        } catch (Throwable t) {
-            jfrFailure = t;
-            jfrAvailable = false;
+        if (jfr) {
+            try {
+                //noinspection Since15
+                jfr = FlightRecorder.isAvailable();
+            } catch (Throwable t) {
+                jfrFailure = t;
+                jfr = false;
+            }
         }
-        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
+        JFR = jfr;
         if (logger.isTraceEnabled() && jfrFailure != null) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
         } else if (logger.isDebugEnabled()) {
