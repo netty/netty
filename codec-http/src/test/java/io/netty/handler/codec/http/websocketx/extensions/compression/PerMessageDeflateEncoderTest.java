@@ -30,14 +30,12 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.SplittableRandom;
-import java.util.concurrent.CompletionException;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.ALWAYS_SKIP;
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.NEVER_SKIP;
@@ -47,7 +45,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -322,7 +319,7 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testNoContextNextMessageAfterEmptyFinalFragmentIsSelfContained() {
+    public void testNoContextNextMessageAfterEmptyFinalFragmentIsSelfContained() throws Exception {
         String text = "Hello world, hello world, hello world!";
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, true));
         WebSocketFrame[] frames = encodeMessageWithEmptyFinalFragmentThenMessage(encoderChannel, text);
@@ -345,7 +342,7 @@ public class PerMessageDeflateEncoderTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    public void testRoundTripWithEmptyFinalFragment(boolean noContext) {
+    public void testRoundTripWithEmptyFinalFragment(boolean noContext) throws Exception {
         String text = "Hello world, hello world, hello world!";
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, noContext));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(noContext, 0));
@@ -377,7 +374,7 @@ public class PerMessageDeflateEncoderTest {
      * second message with the same content.
      */
     private static WebSocketFrame[] encodeMessageWithEmptyFinalFragmentThenMessage(
-            EmbeddedChannel encoderChannel, String text) {
+            EmbeddedChannel encoderChannel, String text) throws Exception {
         assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(false, 0, text)));
         assertTrue(encoderChannel.writeOutbound(new ContinuationWebSocketFrame(true, 0, Unpooled.EMPTY_BUFFER)));
         assertTrue(encoderChannel.writeOutbound(new TextWebSocketFrame(true, 0, text)));
