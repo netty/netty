@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -37,6 +38,11 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
         //  - https://lore.kernel.org/netdev/20240509180627.204155-1-axboe@kernel.dk/
         //  - https://lore.kernel.org/io-uring/20240508142725.91273-1-axboe@kernel.dk/
         super(LinuxSocket.newSocketStream(), false);
+        this.config = new IoUringServerSocketChannelConfig(this);
+    }
+
+    public IoUringServerSocketChannel(SocketProtocolFamily family, boolean mptcp) {
+        super(LinuxSocket.newSocketStream(family, mptcp), false);
         this.config = new IoUringServerSocketChannelConfig(this);
     }
 
