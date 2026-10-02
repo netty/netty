@@ -91,7 +91,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -786,18 +785,20 @@ public class DnsNameResolverTest {
 
         TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
                 (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
-        TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
-        if (observer != null) {
-            Object o = observer.events.poll();
-            if (o instanceof QueryCancelledEvent) {
-                assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
-                    "unexpected type: " + observer.question);
-            } else if (o instanceof QueryWrittenEvent) {
-                QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
-            } else if (!(o instanceof QueryFailedEvent)) {
-                fail("unexpected event type: " + o);
+        // Queries which are not answered from the cache (e.g. the AAAA query until its negative answer is cached)
+        // complete asynchronously on the EventLoop, so the observer may only have seen some of its events yet.
+        // Only verify that no unexpected event was recorded.
+        TestDnsQueryLifecycleObserver observer;
+        while ((observer = lifecycleObserverFactory.observers.poll()) != null) {
+            Object o;
+            while ((o = observer.events.poll()) != null) {
+                if (o instanceof QueryCancelledEvent) {
+                    assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
+                            "unexpected type: " + observer.question);
+                } else if (!(o instanceof QueryWrittenEvent) && !(o instanceof QueryFailedEvent)) {
+                    fail("unexpected event type: " + o);
+                }
             }
-            assertTrue(observer.events.isEmpty());
         }
         return (UnknownHostException) e;
     }
@@ -2240,7 +2241,7 @@ public class DnsNameResolverTest {
     }
 
     private static final class TestDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
-        final Queue<Object> events = new ArrayDeque<Object>();
+        final Queue<Object> events = new ConcurrentLinkedQueue<Object>();
         final DnsQuestion question;
 
         TestDnsQueryLifecycleObserver(DnsQuestion question) {
