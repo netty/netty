@@ -28,8 +28,8 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -39,13 +39,21 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.net.Socket;
+import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.X509ExtendedKeyManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -136,6 +144,81 @@ public class PkiTestingTlsTest {
                 .build();
 
         testTlsConnection(serverContext, clientContext, null);
+    }
+
+    /**
+     * The OPENSSL provider should report Ed25519 in the peer's supported signature algorithms when the client
+     * offers it, so key managers can see what the client actually supports.
+     * <p>
+     * This is currently limited to BoringSSL, because stock OpenSSL has no combined signature-and-hash NID for them.
+     */
+    @EnabledForJreRange(min = JRE.JAVA_15)
+    @EnabledIf("isBoringSSLAvailable")
+    @Test
+    public void peerSupportedSignatureAlgorithmsContainEd25519() throws Exception {
+        X509Bundle cert = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.ecp256)
+            .setIsCertificateAuthority(true)
+            .subject("CN=localhost")
+            .buildSelfSigned();
+
+        final X509ExtendedKeyManager delegate =
+            (X509ExtendedKeyManager) cert.toKeyManagerFactory().getKeyManagers()[0];
+        final AtomicReference<String[]> peerAlgorithms = new AtomicReference<>();
+        X509ExtendedKeyManager keyManager = new X509ExtendedKeyManager() {
+            @Override
+            public String[] getClientAliases(String keyType, Principal[] issuers) {
+                return delegate.getClientAliases(keyType, issuers);
+            }
+
+            @Override
+            public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+                return delegate.chooseClientAlias(keyType, issuers, socket);
+            }
+
+            @Override
+            public String[] getServerAliases(String keyType, Principal[] issuers) {
+                return delegate.getServerAliases(keyType, issuers);
+            }
+
+            @Override
+            public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+                return delegate.chooseServerAlias(keyType, issuers, socket);
+            }
+
+            @Override
+            public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+                peerAlgorithms.set(((ExtendedSSLSession) engine.getHandshakeSession())
+                    .getPeerSupportedSignatureAlgorithms());
+                return delegate.chooseEngineServerAlias(keyType, issuers, engine);
+            }
+
+            @Override
+            public X509Certificate[] getCertificateChain(String alias) {
+                return delegate.getCertificateChain(alias);
+            }
+
+            @Override
+            public PrivateKey getPrivateKey(String alias) {
+                return delegate.getPrivateKey(alias);
+            }
+        };
+
+        final SslContext serverContext = SslContextBuilder.forServer(keyManager)
+            .sslProvider(SslProvider.OPENSSL)
+            .protocols("TLSv1.3")
+            .build();
+
+        // The JDK client offers ed25519 in its signature_algorithms extension by default.
+        final SslContext clientContext = SslContextBuilder.forClient()
+            .trustManager(cert.toTrustManagerFactory())
+            .sslProvider(SslProvider.JDK)
+            .serverName(new SNIHostName("localhost"))
+            .protocols("TLSv1.3")
+            .build();
+
+        testTlsConnection(serverContext, clientContext, null);
+        assertThat(peerAlgorithms.get()).contains("Ed25519");
     }
 
     static boolean isBoringSSLAvailable() {
