@@ -231,6 +231,18 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         } while (!confirmShutdown() && !canSuspend());
     }
 
+    @Override
+    protected boolean confirmShutdown() {
+        if (!super.confirmShutdown()) {
+            return false;
+        }
+        // Shutdown can start while tasks run, after run() checked isShuttingDown().
+        // Close remaining registrations on this thread before it stops accepting work,
+        // then allow their queued channel cleanup and notifications to run as well.
+        ioHandler.prepareToDestroy();
+        return !hasTasks();
+    }
+
     protected final IoHandler ioHandler() {
         return ioHandler;
     }

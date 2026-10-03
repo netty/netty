@@ -131,6 +131,39 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
+    @Timeout(10)
+    public void testShutdownCloseListenerRegistersAnotherChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel firstSocket = SocketChannel.open();
+        SocketChannel secondSocket = SocketChannel.open();
+        Channel first = new NioSocketChannel(firstSocket);
+        Channel second = new NioSocketChannel(secondSocket);
+        AtomicBoolean registeredDuringClose = new AtomicBoolean();
+        try {
+            group.register(first).sync();
+            first.closeFuture().addListener(future -> {
+                registeredDuringClose.set(group.register(second).isSuccess());
+            });
+            first.eventLoop().submit(() -> group.shutdownGracefully(0, 5, TimeUnit.SECONDS)).sync();
+            group.terminationFuture().sync();
+
+            assertTrue(registeredDuringClose.get());
+            assertFalse(first.isOpen());
+            assertFalse(second.isOpen());
+            assertFalse(firstSocket.isOpen());
+            assertFalse(secondSocket.isOpen());
+            assertTrue(first.closeFuture().isDone());
+            assertTrue(second.closeFuture().isDone());
+            assertFalse(first.isRegistered());
+            assertFalse(second.isRegistered());
+        } finally {
+            firstSocket.close();
+            secondSocket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
     public void testRebuildSelector() {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
