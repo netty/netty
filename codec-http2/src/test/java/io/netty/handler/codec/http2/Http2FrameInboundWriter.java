@@ -122,8 +122,7 @@ final class Http2FrameInboundWriter {
         promise.syncUninterruptibly();
     }
 
-    void writeInboundFrame(byte frameType, int streamId,
-                             Http2Flags flags, ByteBuf payload) {
+    void writeInboundFrame(short frameType, int streamId, Http2Flags flags, ByteBuf payload) {
         Promise<Void> promise = ctx.newPromise();
         writer.writeFrame(ctx, frameType, streamId, flags, payload, promise);
         promise.syncUninterruptibly();

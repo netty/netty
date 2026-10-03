@@ -154,7 +154,7 @@ public class Http2FrameLogger implements ChannelInboundHandler, ChannelOutboundH
         }
     }
 
-    public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, byte frameType, int streamId,
+    public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, short frameType, int streamId,
             Http2Flags flags, ByteBuf data) {
         if (isEnabled()) {
             logger.log(level, "{} {} UNKNOWN: frameType={} streamId={} flags={} length={} bytes={}", ctx.channel(),
