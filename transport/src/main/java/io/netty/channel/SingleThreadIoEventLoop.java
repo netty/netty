@@ -25,6 +25,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,6 +83,9 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     private final IoHandler ioHandler;
 
     private final AtomicInteger numRegistrations = new AtomicInteger();
+
+    // Only accessed on the event-loop thread; counts successful registrations, not currently active ones.
+    private long registrationCounter;
 
     /**
      *  Creates a new instance
@@ -239,7 +243,13 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         // Shutdown can start while tasks run, after run() checked isShuttingDown().
         // Close remaining registrations on this thread before it stops accepting work,
         // then allow their queued channel cleanup and notifications to run as well.
-        ioHandler.prepareToDestroy();
+        // A close callback can register another handle directly, without queuing any tasks.
+        // Such a handle may be outside the batch that prepareToDestroy() just closed.
+        long previousRegistrationCounter;
+        do {
+            previousRegistrationCounter = registrationCounter;
+            ioHandler.prepareToDestroy();
+        } while (previousRegistrationCounter != registrationCounter);
         return !hasTasks();
     }
 
@@ -310,6 +320,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
+        if (isShutdown()) {
+            promise.setFailure(new RejectedExecutionException("event executor terminated"));
+            return;
+        }
         final IoRegistration registration;
         try {
             registration = ioHandler.register(handle);
@@ -318,6 +332,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             return;
         }
         numRegistrations.incrementAndGet();
+        registrationCounter++;
         promise.setSuccess(new IoRegistrationWrapper(registration));
     }
 

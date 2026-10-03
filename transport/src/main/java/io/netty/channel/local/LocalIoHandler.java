@@ -82,10 +82,12 @@ public final class LocalIoHandler implements IoHandler {
 
     @Override
     public void prepareToDestroy() {
-        for (LocalIoHandle handle : registeredChannels) {
+        LocalIoHandle[] handles = registeredChannels.toArray(new LocalIoHandle[0]);
+        // Detach this batch before closing it so callbacks can register handles for the next preparation.
+        registeredChannels.clear();
+        for (LocalIoHandle handle : handles) {
             handle.closeNow();
         }
-        registeredChannels.clear();
     }
 
     @Override

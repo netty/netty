@@ -30,6 +30,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -169,6 +170,7 @@ public class IoEventLoopShutdownTest {
             assertNotNull(registration.get());
             assertFalse(registration.get().isSuccess());
             assertInstanceOf(java.util.concurrent.RejectedExecutionException.class, registration.get().cause());
+            assertEquals("event executor terminated", registration.get().cause().getMessage());
             assertTrue(socket.isOpen(), "A rejected handle remains owned by its caller");
         } finally {
             socket.close();
