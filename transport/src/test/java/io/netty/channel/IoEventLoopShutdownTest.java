@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandle;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.nio.NioIoHandler;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IoEventLoopShutdownTest {
@@ -129,6 +132,62 @@ public class IoEventLoopShutdownTest {
             for (Channel channel : channels) {
                 if (channel != null) {
                     channel.close().awaitUninterruptibly();
+                }
+            }
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    public void testLocalCloseFailureRetainsRemainingHandles() throws Exception {
+        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        IoEventLoop loop = group.next();
+        SocketChannel[] sockets = new SocketChannel[2];
+        int[] closeCalls = new int[sockets.length];
+        IllegalStateException closeFailure = new IllegalStateException("First close attempt failed");
+        try {
+            for (int i = 0; i < sockets.length; ++i) {
+                final int index = i;
+                sockets[i] = SocketChannel.open();
+                // A real resource-owning handle with one explicitly injected close failure.
+                LocalIoHandle handle = new LocalIoHandle() {
+                    @Override
+                    public void handle(IoRegistration registration, IoEvent event) {
+                        // LocalIoHandler does not dispatch socket I/O.
+                    }
+
+                    @Override
+                    public void close() throws Exception {
+                        sockets[index].close();
+                    }
+
+                    @Override
+                    public void closeNow() {
+                        if (index == 0 && closeCalls[index]++ == 0) {
+                            throw closeFailure;
+                        }
+                        try {
+                            sockets[index].close();
+                        } catch (IOException e) {
+                            throw new IllegalStateException("Failed to close test socket " + index, e);
+                        }
+                    }
+                };
+                loop.register(handle).sync();
+            }
+            loop.submit(() -> group.shutdownGracefully(0, 5, TimeUnit.SECONDS)).sync();
+            loop.terminationFuture().await();
+
+            assertSame(closeFailure, loop.terminationFuture().cause());
+            for (int i = 0; i < sockets.length; ++i) {
+                assertFalse(sockets[i].isOpen(),
+                        "Accepted socket " + i + " must close despite the first close failure");
+            }
+        } finally {
+            for (SocketChannel socket : sockets) {
+                if (socket != null) {
+                    socket.close();
                 }
             }
             group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
