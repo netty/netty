@@ -34,8 +34,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -61,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class FlowControlHandlerTest {
+
     private static EventLoopGroup GROUP;
 
     @BeforeAll
@@ -797,6 +800,53 @@ public class FlowControlHandlerTest {
     }
 
     @Test
+    public void testReadSurvivesUpstreamCycleWithoutMessage() throws Exception {
+        final List<String> received = new ArrayList<String>();
+        EmbeddedChannel channel = new EmbeddedChannel(false, false, new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        received.add((String) msg);
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        channel.read();
+        channel.flushInbound();
+        channel.writeInbound("msg");
+
+        assertEquals(Arrays.asList("msg"), received);
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testReadInChannelReadSurvivesFrameSplitAcrossReads() throws Exception {
+        final List<String> received = new ArrayList<String>();
+        EmbeddedChannel channel = new EmbeddedChannel(false, false, new FixedLengthFrameDecoder(4),
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        ByteBuf buffer = (ByteBuf) msg;
+                        received.add(buffer.toString(CharsetUtil.US_ASCII));
+                        ReferenceCountUtil.release(msg);
+                        ctx.read();
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        channel.read();
+        channel.writeInbound(Unpooled.copiedBuffer("m1..", CharsetUtil.US_ASCII));
+        channel.writeInbound(Unpooled.copiedBuffer("m2", CharsetUtil.US_ASCII));
+        channel.writeInbound(Unpooled.copiedBuffer("..", CharsetUtil.US_ASCII));
+
+        assertEquals(Arrays.asList("m1..", "m2.."), received);
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testMultipleReadsOnEmptyQueue() throws Exception {
         final AtomicInteger reads = new AtomicInteger();
         final AtomicInteger readCompletes = new AtomicInteger();
@@ -845,8 +895,8 @@ public class FlowControlHandlerTest {
         channel.writeOneInbound("msg2");
         channel.flushInbound();
 
-        assertEquals(1, reads.get());
-        assertEquals(2, readCompletes.get());
+        assertEquals(2, reads.get());
+        assertEquals(3, readCompletes.get());
 
         channel.read();
 
@@ -1057,6 +1107,36 @@ public class FlowControlHandlerTest {
         assertEquals(0, upstream.reads.get());
         assertEquals(1, readCompletes.get());
 
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testReadIssuedAfterMessageSurvivesSameReadComplete() throws Exception {
+        final AtomicInteger reads = new AtomicInteger();
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                false, false,
+                new FlowControlHandler(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (reads.incrementAndGet() == 1) {
+                            ctx.read();
+                        }
+                    }
+                });
+        channel.config().setAutoRead(false);
+        channel.register();
+
+        channel.read();
+        channel.writeOneInbound("first");
+        assertEquals(1, reads.get());
+
+        // This completes the upstream read which delivered "first". It must not cancel the new read requested
+        // by the downstream handler while processing that message.
+        channel.flushInbound();
+        channel.writeOneInbound("second");
+
+        assertEquals(2, reads.get());
         assertFalse(channel.finishAndReleaseAll());
     }
 
