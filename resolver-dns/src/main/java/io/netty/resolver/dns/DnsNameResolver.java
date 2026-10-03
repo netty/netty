@@ -1422,7 +1422,7 @@ public class DnsNameResolver extends InetNameResolver {
                     Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
                             f1.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                             additionalsArray, true, promise);
-                    PromiseNotifier.cascade(qf, p);
+                    cascadeQueryResponse(qf, p);
                 } else {
                     UnknownHostException e = toException(f1, question.name(), question, additionalsArray);
                     promise.setFailure(e);
@@ -1431,6 +1431,44 @@ public class DnsNameResolver extends InetNameResolver {
             });
             return p;
         }
+    }
+
+    /**
+     * Bridges the inner query {@link Future} to the {@link Promise} returned by the asynchronous-channel branch of
+     * {@link #query(InetSocketAddress, DnsQuestion, Iterable, Promise)}.
+     *
+     * <p>This behaves like {@link PromiseNotifier#cascade(Future, Promise)} (propagating success, failure and
+     * cancellation both ways) but with one crucial difference: if the successfully-resolved, reference-counted
+     * response cannot be handed to {@code aggregatePromise} (because it was cancelled or failed - e.g. by a
+     * concurrent timeout - in the race window after {@code queryFuture} already succeeded), this releases the
+     * response instead of dropping it. {@code PromiseNotifier} would only log the failed hand-off, leaving the
+     * fully-decoded {@link DnsResponse} referenced solely by {@code queryFuture}'s result and thus leaked once
+     * garbage-collected.</p>
+     */
+    @VisibleForTesting
+    static void cascadeQueryResponse(
+            final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> queryFuture,
+            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> aggregatePromise) {
+        aggregatePromise.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) f -> {
+            if (f.isCancelled()) {
+                queryFuture.cancel(false);
+            }
+        });
+        queryFuture.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) f -> {
+            if (f.isSuccess()) {
+                AddressedEnvelope<DnsResponse, InetSocketAddress> response = f.getNow();
+                if (!aggregatePromise.trySuccess(response)) {
+                    // The returned promise was already cancelled or failed in the window after queryFuture
+                    // succeeded, so no listener on it will observe (and release) the response. We own it here
+                    // and must release it to avoid leaking the reference-counted message.
+                    ReferenceCountUtil.release(response);
+                }
+            } else if (f.isCancelled()) {
+                aggregatePromise.cancel(false);
+            } else {
+                aggregatePromise.tryFailure(f.cause());
+            }
+        });
     }
 
     /**
