@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Collections;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -1096,5 +1097,102 @@ public class SingleThreadEventExecutorTest {
         task.await();
         assertTrue(threadsCreated.get() >= 1);
         assertTrue(executor.isTerminated());
+    }
+
+    /**
+     * execute() during never-started termination must run or be rejected.
+     * It must not be accepted and then dropped, and it must not start a worker after cleanup().
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testExecuteDuringNeverStartedTerminationIsNotDropped() throws Exception {
+        final AtomicInteger threadsCreated = new AtomicInteger();
+        final AtomicInteger cleanups = new AtomicInteger();
+        final AtomicBoolean runAfterCleanup = new AtomicBoolean();
+        final AtomicBoolean taskRan = new AtomicBoolean();
+        final AtomicBoolean rejected = new AtomicBoolean();
+        final AtomicInteger shutdownEmptyChecks = new AtomicInteger();
+        final CountDownLatch inWindow = new CountDownLatch(1);
+        final CountDownLatch release = new CountDownLatch(1);
+        ThreadFactory threadFactory = new ThreadFactory() {
+            private final AtomicInteger idx = new AtomicInteger();
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                threadsCreated.incrementAndGet();
+                return new Thread(r, "never-started-race-" + idx.getAndIncrement());
+            }
+        };
+
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(null, threadFactory, true) {
+                    @Override
+                    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+                        return new LinkedBlockingQueue<Runnable>() {
+                            @Override
+                            public boolean isEmpty() {
+                                if (isShutdown() && shutdownEmptyChecks.getAndIncrement() == 0) {
+                                    inWindow.countDown();
+                                    try {
+                                        if (!release.await(5, TimeUnit.SECONDS)) {
+                                            Thread.currentThread().interrupt();
+                                        }
+                                    } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
+                                    }
+                                }
+                                return super.isEmpty();
+                            }
+                        };
+                    }
+
+                    @Override
+                    protected void run() {
+                        if (cleanups.get() > 0) {
+                            runAfterCleanup.set(true);
+                        }
+                        while (!confirmShutdown()) {
+                            Runnable task = takeTask();
+                            if (task != null) {
+                                task.run();
+                            }
+                        }
+                    }
+
+                    @Override
+                    protected void cleanup() {
+                        cleanups.incrementAndGet();
+                        super.cleanup();
+                    }
+                };
+
+        Thread shutdownThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
+            }
+        }, "never-started-shutdown");
+        shutdownThread.start();
+        assertTrue(inWindow.await(5, TimeUnit.SECONDS),
+                "termination must publish SHUTDOWN before the last empty check");
+        try {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    taskRan.set(true);
+                }
+            });
+        } catch (RejectedExecutionException expected) {
+            rejected.set(true);
+        }
+        release.countDown();
+        shutdownThread.join(5_000);
+        assertFalse(shutdownThread.isAlive());
+        assertTrue(executor.terminationFuture().await(5, TimeUnit.SECONDS));
+        assertTrue(executor.isTerminated());
+        assertTrue(taskRan.get() || rejected.get(), "task must run or be rejected");
+        assertFalse(taskRan.get() && rejected.get());
+        assertFalse(runAfterCleanup.get(), "worker must not enter run() after cleanup()");
+        assertEquals(1, cleanups.get());
+        assertEquals(0, threadsCreated.get(), "rejected execute during termination must not start a worker");
     }
 }

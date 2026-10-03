@@ -1232,7 +1232,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
         if (oldState == ST_NOT_STARTED || oldState == ST_SUSPENDED) {
             try {
-                issueDoStartThread();
+                // Not gated by threadStartIssued. A worker that is still winding down may hold
+                // that flag; skipping here would leave shutdown waiting for a thread that never
+                // starts. processingLock serializes the two runnables.
+                doStartThread();
             } catch (Throwable cause) {
                 STATE_UPDATER.set(this, ST_TERMINATED);
                 terminationFuture.tryFailure(cause);
@@ -1304,8 +1307,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * If this executor was never started and has no pending work, transition straight to
      * {@link #ST_TERMINATED} without creating a thread.
      *
-     * @return {@code true} if termination completed (or was already complete) without starting
-     * a thread; {@code false} if a thread still needs to be started to drain work / run shutdown.
+     * @return {@code true} if the caller must not start a thread: termination completed
+     * without a worker, or this method already issued one for work that was queued before
+     * {@link #ST_SHUTDOWN}. {@code false} if the caller should start a thread.
      */
     private boolean tryTerminateIfNeverStarted() {
         // Try to take the processing lock so we do not race with a just-started worker thread.
@@ -1313,30 +1317,52 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (!processingLock.tryLock()) {
             return false;
         }
+        boolean claimedStart = false;
+        boolean keepClaim = false;
         try {
-            if (thread != null) {
+            if (thread != null || hasPendingWork()) {
                 return false;
             }
-            // Re-check work under the lock. taskQueue / scheduled queue may have received a task
-            // after shutdown0 observed ST_NOT_STARTED (execute accepts tasks while SHUTTING_DOWN).
-            if (!taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty()) {
+            // issueDoStartThread() and this termination must exclude each other. A worker that
+            // already passed the gate is waiting on processingLock; do not terminate under it.
+            if (!threadStartIssued.compareAndSet(false, true)) {
                 return false;
             }
+            claimedStart = true;
 
             for (;;) {
                 int currentState = state;
                 if (currentState >= ST_TERMINATED) {
+                    keepClaim = true;
                     return true;
                 }
                 if (currentState < ST_SHUTTING_DOWN) {
                     // Unexpected: state moved backwards from shutting down. Fall back.
                     return false;
                 }
-                // Work may have appeared after the empty check above.
-                if (!taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty()) {
+                if (hasPendingWork()) {
                     return false;
                 }
+                // SHUTTING_DOWN still accepts tasks. Publish SHUTDOWN before the last emptiness
+                // check so an execute() in that window is rejected instead of queued and then
+                // discarded by drainTasks(), which also used to let a worker run after cleanup().
+                if (currentState == ST_SHUTTING_DOWN) {
+                    if (!STATE_UPDATER.compareAndSet(this, ST_SHUTTING_DOWN, ST_SHUTDOWN)) {
+                        continue;
+                    }
+                    currentState = ST_SHUTDOWN;
+                }
+                if (hasPendingWork()) {
+                    // Accepted before ST_SHUTDOWN. startThread() will not start a worker once the
+                    // state has left SHUTTING_DOWN, so issue one here.
+                    threadStartIssued.set(false);
+                    claimedStart = false;
+                    issueDoStartThread();
+                    keepClaim = true;
+                    return true;
+                }
                 if (STATE_UPDATER.compareAndSet(this, currentState, ST_TERMINATED)) {
+                    keepClaim = true;
                     try {
                         // Subclass cleanup (e.g. SingleThreadIoEventLoop) may assert
                         // inEventLoop() and must still destroy constructor-created
@@ -1363,8 +1389,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         } finally {
+            if (claimedStart && !keepClaim) {
+                threadStartIssued.set(false);
+            }
             processingLock.unlock();
         }
+    }
+
+    private boolean hasPendingWork() {
+        return !taskQueue.isEmpty() || nextScheduledTaskDeadlineNanos() != -1 || !shutdownHooks.isEmpty();
     }
 
     private void doStartThread() {
@@ -1442,10 +1475,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
 
                     try {
-                        if (shutdown) {
+                        if (shutdown && state != ST_TERMINATED) {
                             // Run all remaining tasks and shutdown hooks. At this point the event loop
                             // is in ST_SHUTTING_DOWN state still accepting tasks which is needed for
                             // graceful shutdown with quietPeriod.
+                            // A second worker can be inside doStartThread() after the first already
+                            // published ST_TERMINATED; it must not complete the future again.
                             for (;;) {
                                 if (confirmShutdown()) {
                                     break;
@@ -1468,7 +1503,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         }
                     } finally {
                         try {
-                            if (shutdown) {
+                            if (shutdown && state != ST_TERMINATED) {
                                 try {
                                     cleanup();
                                 } finally {
@@ -1510,7 +1545,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             int currentState = state;
                             if (currentState == ST_STARTED
                                     || (currentState >= ST_SHUTTING_DOWN && currentState < ST_TERMINATED)) {
-                                issueDoStartThread();
+                                // Direct start: issueDoStartThread() would no-op if this winding-down
+                                // worker had not cleared the gate yet, or if a racer still holds it.
+                                doStartThread();
                             }
                         }
                     }
