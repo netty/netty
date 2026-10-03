@@ -347,6 +347,10 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
             boolean received = false;
             for (int attempt = 1; attempt <= SEND_ATTEMPTS && !received; attempt++) {
+                // NETTY-DIAG: temporary logging to root-cause KQueueDatagramUnicastIPv6MappedTest CI flakiness.
+                System.err.println("NETTY-DIAG testSimpleSend0 attempt=" + attempt + " sending count=" + count
+                        + " wrapType=" + wrapType + " to addr=" + addr + " from cc.localAddress()="
+                        + cc.localAddress() + " sc.localAddress()=" + sc.localAddress());
                 List<ChannelFuture> futures = new ArrayList<ChannelFuture>(count);
                 for (int i = 0; i < count; i++) {
                     futures.add(write(cc, buf, addr, wrapType));
@@ -359,6 +363,8 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
                 }
                 // UDP datagrams can be lost even on loopback, so retry a few times before giving up.
                 received = latch.await(10, TimeUnit.SECONDS);
+                System.err.println("NETTY-DIAG testSimpleSend0 attempt=" + attempt + " received=" + received
+                        + " latchCount=" + latch.getCount());
             }
             if (!received) {
                 Throwable error = errorRef.get();
