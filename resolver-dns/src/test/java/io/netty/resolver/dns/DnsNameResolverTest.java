@@ -2969,6 +2969,25 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowUncachedOne() {
+        // If a positively cached permutation expired and only a negative entry remains, the remaining search
+        // domains and the bare hostname must still be queried.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertFalse(isCached);
+        assertFalse(promise.isDone());
+    }
+
+    @Test
     public void testNegativelyCachedBareHostnameStillShortCircuits() throws Exception {
         // A negative entry for the hostname that is actually being resolved must keep failing fast.
         String[] searchDomains = { "ns1.svc.cluster.local" };

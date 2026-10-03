@@ -1259,11 +1259,9 @@ public class DnsNameResolver extends InetNameResolver {
                 // Only a positive cache entry lets us draw a conclusion about the bare hostname. A negative entry
                 // just means that this specific search domain permutation does not exist, which must neither
                 // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
-                if (hasEntries(entries)) {
-                    cachedEntries = entries; // Returns the last cached entry if none of the resolution was successful
-                    if (entries.get(0).cause() == null) {
-                        break;
-                    }
+                if (hasEntries(entries) && entries.get(0).cause() == null) {
+                    cachedEntries = entries;
+                    break;
                 }
             }
         }
