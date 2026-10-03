@@ -16,6 +16,7 @@
 package io.netty.resolver.dns;
 
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.List;
 
 import io.netty.channel.Channel;
@@ -74,7 +75,7 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     }
 
     @Override
-    boolean isDuplicateAllowed() {
+    boolean shouldAddToResult(DnsRecord value, Collection<DnsRecord> entries) {
         return true;
     }
 
@@ -94,5 +95,10 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     DnsCnameCache cnameCache() {
         // We don't use a cache here at all as we also don't cache if we end up using the DnsRecordResolverContext.
         return NoopDnsCnameCache.INSTANCE;
+    }
+
+    @Override
+    protected void addCnameToChain(String cname) {
+        // DnsRecordResolveContext does not track CNAME chains
     }
 }
