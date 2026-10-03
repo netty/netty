@@ -122,9 +122,31 @@ public class TrafficCounter {
     private final AtomicLong realWrittenBytes = new AtomicLong();
 
     /**
+     * Current delayed read bytes during current check interval.
+     * Bytes that were received but whose processing was deferred due to read throttling.
+     */
+    private final AtomicLong currentDelayedReadBytes = new AtomicLong();
+
+    /**
+     * Current delayed write bytes during current check interval.
+     * Bytes that were submitted for writing but whose transmission was deferred due to write throttling.
+     */
+    private final AtomicLong currentDelayedWriteBytes = new AtomicLong();
+
+    /**
      * Real writing bandwidth
      */
     private long realWriteThroughput;
+
+    /**
+     * Last delayed read bytes number during last check interval.
+     */
+    private volatile long lastDelayedReadBytes;
+
+    /**
+     * Last delayed write bytes number during last check interval.
+     */
+    private volatile long lastDelayedWriteBytes;
 
     /**
      * Delay between two captures
@@ -237,6 +259,8 @@ public class TrafficCounter {
         realWriteThroughput = realWrittenBytes.getAndSet(0) * 1000 / interval;
         lastWritingTime = Math.max(lastWritingTime, writingTime);
         lastReadingTime = Math.max(lastReadingTime, readingTime);
+        lastDelayedReadBytes = currentDelayedReadBytes.getAndSet(0);
+        lastDelayedWriteBytes = currentDelayedWriteBytes.getAndSet(0);
     }
 
     /**
@@ -347,6 +371,26 @@ public class TrafficCounter {
     }
 
     /**
+     * Records bytes whose read processing was delayed due to read throttling.
+     *
+     * @param bytes
+     *            the size in bytes that was delayed
+     */
+    void addDelayedReadBytes(long bytes) {
+        currentDelayedReadBytes.addAndGet(bytes);
+    }
+
+    /**
+     * Records bytes whose write transmission was delayed due to write throttling.
+     *
+     * @param bytes
+     *            the size in bytes that was delayed
+     */
+    void addDelayedWriteBytes(long bytes) {
+        currentDelayedWriteBytes.addAndGet(bytes);
+    }
+
+    /**
      * @return the current checkInterval between two computations of traffic counter
      *         in millisecond.
      */
@@ -380,6 +424,24 @@ public class TrafficCounter {
      */
     public long lastWrittenBytes() {
         return lastWrittenBytes;
+    }
+
+    /**
+     * @return the number of bytes whose read processing was delayed due to read throttling
+     *         during the last check interval. A non-zero value indicates that read traffic
+     *         shaping was active during that interval.
+     */
+    public long lastDelayedReadBytes() {
+        return lastDelayedReadBytes;
+    }
+
+    /**
+     * @return the number of bytes whose write transmission was delayed due to write throttling
+     *         during the last check interval. A non-zero value indicates that write traffic
+     *         shaping was active during that interval.
+     */
+    public long lastDelayedWriteBytes() {
+        return lastDelayedWriteBytes;
     }
 
     /**
