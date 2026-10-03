@@ -18,6 +18,9 @@ services:
   build:
     image: netty:centos-7-1.11
 
+  build-affected-only:
+    image: netty:centos-7-1.11
+
   build-native-quic:
     image: netty:centos-7-1.11
 
@@ -25,6 +28,9 @@ services:
     image: netty:centos-7-1.11
 
   build-with-oio-testsuite:
+    image: netty:centos-7-1.11
+
+  build-with-oio-testsuite-affected-only:
     image: netty:centos-7-1.11
 
   build-boringssl-static:
@@ -36,10 +42,16 @@ services:
   build-leak-pooled:
     image: netty:centos-7-1.11
 
+  build-leak-pooled-affected-only:
+    image: netty:centos-7-1.11
+
   build-boringssl-snapshot:
     image: netty:centos-7-1.11
 
   build-boringssl-static-jdk8-tests:
+    image: netty:centos-7-1.11
+
+  build-boringssl-static-jdk8-tests-affected-only:
     image: netty:centos-7-1.11
 
   shell:
