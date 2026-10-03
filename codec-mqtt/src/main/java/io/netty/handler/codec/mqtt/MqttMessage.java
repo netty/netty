@@ -31,14 +31,14 @@ public class MqttMessage {
 
     // Constants for fixed-header only message types with all flags set to 0 (see
     // https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Table_2.2_-)
-    public static final MqttMessage PINGREQ = new MqttMessage(new MqttFixedHeader(MqttMessageType.PINGREQ, false,
-            MqttQoS.AT_MOST_ONCE, false, 0));
+    public static final MqttMessage PINGREQ = new MqttPingReqMessage(
+            new MqttFixedHeader(MqttMessageType.PINGREQ, false, MqttQoS.AT_MOST_ONCE, false, 0));
 
-    public static final MqttMessage PINGRESP = new MqttMessage(new MqttFixedHeader(MqttMessageType.PINGRESP, false,
-            MqttQoS.AT_MOST_ONCE, false, 0));
+    public static final MqttMessage PINGRESP = new MqttPingRespMessage(
+            new MqttFixedHeader(MqttMessageType.PINGRESP, false, MqttQoS.AT_MOST_ONCE, false, 0));
 
-    public static final MqttMessage DISCONNECT = new MqttMessage(new MqttFixedHeader(MqttMessageType.DISCONNECT, false,
-            MqttQoS.AT_MOST_ONCE, false, 0));
+    public static final MqttMessage DISCONNECT = new MqttDisconnectMessage(
+            new MqttFixedHeader(MqttMessageType.DISCONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0));
 
     public MqttMessage(MqttFixedHeader mqttFixedHeader) {
         this(mqttFixedHeader, null, null);
