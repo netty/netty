@@ -75,6 +75,62 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
+    @Timeout(10)
+    public void testShutdownFromTaskClosesRegisteredChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel socket = SocketChannel.open();
+        Channel channel = new NioSocketChannel(socket);
+        try {
+            group.register(channel).sync();
+            channel.eventLoop().submit(() -> group.shutdownGracefully(0, 5, TimeUnit.SECONDS)).sync();
+            group.terminationFuture().sync();
+
+            assertFalse(channel.isOpen());
+            assertFalse(socket.isOpen());
+            assertTrue(channel.closeFuture().isDone());
+            assertFalse(channel.isRegistered());
+        } finally {
+            socket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    public void testShutdownDuringRunningTaskClosesRegisteredChannel() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        SocketChannel socket = SocketChannel.open();
+        Channel channel = new NioSocketChannel(socket);
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            group.register(channel).sync();
+            channel.eventLoop().execute(() -> {
+                entered.countDown();
+                try {
+                    assertTrue(release.await(5, TimeUnit.SECONDS));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+            });
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            Future<?> termination = group.shutdownGracefully(0, 5, TimeUnit.SECONDS);
+            release.countDown();
+            termination.sync();
+
+            assertFalse(channel.isOpen());
+            assertFalse(socket.isOpen());
+            assertTrue(channel.closeFuture().isDone());
+            assertFalse(channel.isRegistered());
+        } finally {
+            release.countDown();
+            socket.close();
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
     public void testRebuildSelector() {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
