@@ -105,7 +105,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         CountDownLatch release = new CountDownLatch(1);
         try {
             group.register(channel).sync();
-            channel.eventLoop().execute(() -> {
+            Future<?> heldTask = channel.eventLoop().submit(() -> {
                 entered.countDown();
                 try {
                     assertTrue(release.await(5, TimeUnit.SECONDS));
@@ -117,6 +117,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             assertTrue(entered.await(5, TimeUnit.SECONDS));
             Future<?> termination = group.shutdownGracefully(0, 5, TimeUnit.SECONDS);
             release.countDown();
+            heldTask.sync();
             termination.sync();
 
             assertFalse(channel.isOpen());
