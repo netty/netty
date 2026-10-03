@@ -95,7 +95,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                   new ThreadPerTaskExecutor(Executors.defaultThreadFactory()),
                   new AutoScalingEventExecutorChooserFactory(
                           minThreads, maxThreads, checkPeriod, unit, 0.4, 0.6,
-                          maxThreads, maxThreads, 2),
+                          maxThreads, maxThreads, 2, 1024),
                   ARGS);
         }
 
