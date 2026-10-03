@@ -281,6 +281,53 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
+    public void testDowngradeExtendedConnectHeaders() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        Http3Headers headers = new DefaultHttp3Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority("ws.example:443");
+        headers.scheme("https");
+        headers.path("/admin/ws");
+        headers.protocol("websocket");
+
+        assertTrue(ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
+
+        HttpRequest request = ch.readInbound();
+        // The request-target/URI stays the authority, matching regular CONNECT: this fix does not
+        // change wire-level CONNECT behavior for downstream code that only understands regular CONNECT.
+        assertThat(request.uri(), is("ws.example:443"));
+        assertThat(request.method(), is(HttpMethod.CONNECT));
+        assertThat(request.headers().get("host"), is("ws.example:443"));
+
+        // But the Extended CONNECT (RFC 9220) state is preserved via extension headers, so a
+        // protocol-aware policy can distinguish this from a regular CONNECT tunnel request.
+        assertThat(request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()), is("websocket"));
+        assertThat(request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PATH.text()), is("/admin/ws"));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDowngradeRegularConnectHeadersHaveNoExtendedConnectState() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        Http3Headers headers = new DefaultHttp3Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority("ws.example:443");
+
+        assertTrue(ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
+
+        HttpRequest request = ch.readInbound();
+        assertThat(request.uri(), is("ws.example:443"));
+        assertThat(request.method(), is(HttpMethod.CONNECT));
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+        assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testDowngradeHeaders() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
@@ -295,6 +342,24 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
         assertFalse(request instanceof FullHttpRequest);
         assertTrue(HttpUtil.isTransferEncodingChunked(request));
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDowngradeHeadersRejectsConflictingAuthorityAndHost() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
+        Http3Headers headers = new DefaultHttp3Headers();
+        headers.path("/");
+        headers.method("GET");
+        headers.scheme("https");
+        headers.authority("public.example.com");
+        headers.add(HttpHeaderNames.HOST, "internal-admin.local");
+
+        // Http3RequestStreamInboundHandler#exceptionCaught consumes the Http3Exception, so the frame is
+        // dropped rather than rethrown here.
+        assertFalse(ch.writeInbound(new DefaultHttp3HeadersFrame(headers)));
 
         assertThat(ch.readInbound(), is(nullValue()));
         assertFalse(ch.finish());

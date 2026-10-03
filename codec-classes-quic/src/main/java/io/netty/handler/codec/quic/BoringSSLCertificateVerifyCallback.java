@@ -28,18 +28,6 @@ import java.security.cert.X509Certificate;
 
 final class BoringSSLCertificateVerifyCallback {
 
-    private static final boolean TRY_USING_EXTENDED_TRUST_MANAGER;
-    static {
-        boolean tryUsingExtendedTrustManager;
-        try {
-            Class.forName(X509ExtendedTrustManager.class.getName());
-            tryUsingExtendedTrustManager = true;
-        } catch (Throwable cause) {
-            tryUsingExtendedTrustManager = false;
-        }
-        TRY_USING_EXTENDED_TRUST_MANAGER = tryUsingExtendedTrustManager;
-    }
-
     private final QuicheQuicSslEngineMap engineMap;
     private final X509TrustManager manager;
 
@@ -64,13 +52,13 @@ final class BoringSSLCertificateVerifyCallback {
         X509Certificate[] peerCerts = BoringSSL.certificates(x509);
         try {
             if (engine.getUseClientMode()) {
-                if (TRY_USING_EXTENDED_TRUST_MANAGER && manager instanceof X509ExtendedTrustManager) {
+                if (manager instanceof X509ExtendedTrustManager) {
                     ((X509ExtendedTrustManager) manager).checkServerTrusted(peerCerts, authAlgorithm, engine);
                 } else {
                     manager.checkServerTrusted(peerCerts, authAlgorithm);
                 }
             } else {
-                if (TRY_USING_EXTENDED_TRUST_MANAGER && manager instanceof X509ExtendedTrustManager) {
+                if (manager instanceof X509ExtendedTrustManager) {
                     ((X509ExtendedTrustManager) manager).checkClientTrusted(peerCerts, authAlgorithm, engine);
                 } else {
                     manager.checkClientTrusted(peerCerts, authAlgorithm);

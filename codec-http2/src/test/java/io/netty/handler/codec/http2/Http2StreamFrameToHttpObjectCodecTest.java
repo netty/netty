@@ -287,6 +287,63 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
+    public void testDowngradeExtendedConnectHeaders() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority("ws.example:443");
+        headers.scheme("https");
+        headers.path("/admin/ws");
+        headers.add(Http2Headers.PseudoHeaderName.PROTOCOL.value(), "websocket");
+
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
+
+        FullHttpRequest request = ch.readInbound();
+        try {
+            // The request-target/URI stays the authority, matching regular CONNECT: this fix does not
+            // change wire-level CONNECT behavior for downstream code that only understands regular CONNECT.
+            assertEquals("ws.example:443", request.uri());
+            assertEquals(HttpMethod.CONNECT, request.method());
+            assertEquals("ws.example:443", request.headers().get("host"));
+
+            // But the Extended CONNECT (RFC 8441) state is preserved via extension headers, so a
+            // protocol-aware policy can distinguish this from a regular CONNECT tunnel request.
+            assertEquals("websocket",
+                    request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+            assertEquals("/admin/ws",
+                    request.headers().get(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        } finally {
+            request.release();
+        }
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testDowngradeRegularConnectHeadersHaveNoExtendedConnectState() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.method(HttpMethod.CONNECT.asciiName());
+        headers.authority("ws.example:443");
+
+        assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers, true)));
+
+        FullHttpRequest request = ch.readInbound();
+        try {
+            assertEquals("ws.example:443", request.uri());
+            assertEquals(HttpMethod.CONNECT, request.method());
+            assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PROTOCOL.text()));
+            assertFalse(request.headers().contains(HttpConversionUtil.ExtensionHeaderNames.PATH.text()));
+        } finally {
+            request.release();
+        }
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testDowngradeHeaders() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2Headers headers = new DefaultHttp2Headers();

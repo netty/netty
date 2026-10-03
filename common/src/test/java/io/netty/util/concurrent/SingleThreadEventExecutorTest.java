@@ -169,6 +169,54 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void testExecuteRacingTrySuspendWhenExecutorIsNotStarted() throws Exception {
+        // execute() on a never started executor races with trySuspend(), which moves the executor from
+        // ST_NOT_STARTED to ST_SUSPENDED. Whatever the interleaving, execute() must request a thread, otherwise the
+        // task it just added is stranded. The race is timing dependent, so repeat it many times.
+        final AtomicReference<SingleThreadEventExecutor> executorRef = new AtomicReference<>();
+        final AtomicInteger suspended = new AtomicInteger();
+        final AtomicBoolean done = new AtomicBoolean();
+        Thread suspender = new Thread(() -> {
+            while (!done.get()) {
+                SingleThreadEventExecutor executor = executorRef.getAndSet(null);
+                if (executor == null) {
+                    Thread.yield();
+                } else {
+                    executor.trySuspend();
+                    suspended.incrementAndGet();
+                }
+            }
+        });
+        suspender.start();
+        try {
+            for (int i = 1; i <= 10000; i++) {
+                final AtomicInteger threadStarts = new AtomicInteger();
+                // Only count the requests to start a thread, no thread is ever started.
+                final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                        null, (Executor) command -> threadStarts.incrementAndGet(), false, true,
+                        Integer.MAX_VALUE, RejectedExecutionHandlers.reject()) {
+                    @Override
+                    protected void run() {
+                        throw new AssertionError();
+                    }
+                };
+                executorRef.set(executor);
+                executor.execute(() -> { });
+                while (suspended.get() != i) {
+                    Thread.yield();
+                }
+                final int iteration = i;
+                assertEquals(1, threadStarts.get(), () -> "iteration " + iteration + " (isSuspended="
+                        + executor.isSuspended() + ')');
+            }
+        } finally {
+            done.set(true);
+            suspender.join();
+        }
+    }
+
+    @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     void testNotSuspendedUntilScheduledTaskIsCancelled() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
@@ -204,6 +252,54 @@ public class SingleThreadEventExecutorTest {
         // Guarantee that al tasks were able to die...
         while ((currentThread = threadFactory.threads.poll()) != null) {
             currentThread.join();
+        }
+    }
+
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void testSuspendDoesNotRaceWithCancelledScheduledTask() throws Exception {
+        // Regression test: cancelling a scheduled task right as the executor is about to suspend used to
+        // be able to race with the suspend confirmation in doStartThread(). The cancelled task schedules
+        // its own removal via scheduleRemoveScheduled(), which can land in the task queue in the tiny
+        // window between run() deciding it can suspend and doStartThread() re-checking canSuspend().
+        // That caused the executor to treat the situation as if run() returned without confirming
+        // shutdown, spuriously shutting itself down instead of suspending (or continuing to run).
+        // The race is timing dependent, so we repeat the scenario many times to make a regression likely
+        // to be caught.
+        for (int i = 0; i < 2000; i++) {
+            TestThreadFactory threadFactory = new TestThreadFactory();
+            final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
+
+            Future<?> future = executor.schedule(() -> { }, 1, TimeUnit.DAYS);
+            TestThread currentThread = threadFactory.threads.take();
+            currentThread.awaitStarted();
+            currentThread.awaitRunnableExecution();
+            assertTrue(executor.trySuspend(), "iteration " + i);
+
+            assertTrue(future.cancel(false), "iteration " + i);
+            future.await();
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+            while (!executor.trySuspend()) {
+                if (System.nanoTime() > deadline) {
+                    fail("executor got stuck instead of suspending at iteration " + i
+                            + " (isShutdown=" + executor.isShutdown() + ')');
+                }
+                Thread.sleep(1);
+            }
+
+            currentThread.join(TimeUnit.SECONDS.toMillis(2));
+            assertFalse(currentThread.isAlive(), "worker thread did not terminate at iteration " + i);
+
+            assertTrue(executor.trySuspend(), "iteration " + i + " (isShutdown=" + executor.isShutdown() + ')');
+            assertTrue(executor.isSuspended(), "iteration " + i);
+
+            executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+
+            TestThread t;
+            while ((t = threadFactory.threads.poll()) != null) {
+                t.join();
+            }
         }
     }
 

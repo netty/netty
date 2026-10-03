@@ -27,9 +27,9 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.condition.OS.LINUX;
 
 class NativeLibraryLoaderTest {
@@ -41,24 +41,18 @@ class NativeLibraryLoaderTest {
 
     @Test
     void testFileNotFound() {
-        try {
-            NativeLibraryLoader.load(UUID.randomUUID().toString(), NativeLibraryLoaderTest.class.getClassLoader());
-            fail();
-        } catch (UnsatisfiedLinkError error) {
-            assertTrue(error.getCause() instanceof FileNotFoundException);
-            verifySuppressedException(error, UnsatisfiedLinkError.class);
-        }
+        UnsatisfiedLinkError error = assertThrows(UnsatisfiedLinkError.class, () ->
+                NativeLibraryLoader.load(UUID.randomUUID().toString(), NativeLibraryLoaderTest.class.getClassLoader()));
+        assertInstanceOf(FileNotFoundException.class, error.getCause());
+        verifySuppressedException(error, UnsatisfiedLinkError.class);
     }
 
     @Test
     void testFileNotFoundWithNullClassLoader() {
-        try {
-            NativeLibraryLoader.load(UUID.randomUUID().toString(), null);
-            fail();
-        } catch (UnsatisfiedLinkError error) {
-            assertTrue(error.getCause() instanceof FileNotFoundException);
-            verifySuppressedException(error, ClassNotFoundException.class);
-        }
+        UnsatisfiedLinkError error = assertThrows(UnsatisfiedLinkError.class, () ->
+                NativeLibraryLoader.load(UUID.randomUUID().toString(), null));
+        assertInstanceOf(FileNotFoundException.class, error.getCause());
+        verifySuppressedException(error, ClassNotFoundException.class);
     }
 
     @Test
@@ -111,7 +105,7 @@ class NativeLibraryLoaderTest {
         try {
             Throwable[] suppressed = error.getCause().getSuppressed();
             assertTrue(suppressed.length == 1);
-            assertTrue(suppressed[0] instanceof UnsatisfiedLinkError);
+            assertInstanceOf(UnsatisfiedLinkError.class, suppressed[0]);
             suppressed = (suppressed[0]).getSuppressed();
             assertTrue(suppressed.length == 1);
             assertTrue(expectedSuppressedExceptionClass.isInstance(suppressed[0]));

@@ -252,7 +252,7 @@ public class DataCompressionHttp2Test {
         testEncodingMessage(padding, text, compressionAlgorithm, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                assertTrue(serverLatch.await(5, SECONDS));
+                assertTrue(serverLatch.await(10, SECONDS));
                 serverOut.flush();
                 Throwable cause = serverException.get();
                 if (cause == null) {

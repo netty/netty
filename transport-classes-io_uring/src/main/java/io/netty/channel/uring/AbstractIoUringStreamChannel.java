@@ -30,6 +30,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -109,7 +110,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void doShutdownOutput() throws Exception {
+    protected final void doShutdownOutput0() throws Exception {
         socket.shutdown(false, true);
     }
 
@@ -270,28 +271,39 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
 
+            IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
             try {
-                in.forEachFlushedMessage(filterWriteMultiple(iovArray));
-            } catch (Exception e) {
-                // This should never happen, anyway fallback to single write.
-                return scheduleWriteSingle(in.current());
-            }
-            long iovArrayAddress = iovArray.memoryAddress(offset);
-            int iovArrayLength = iovArray.count() - offset;
-            // Should not use sendmsg_zc, just use normal writev.
-            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+                try {
+                    in.forEachFlushedMessage(filterWriteMultiple(collector));
+                } catch (Exception e) {
+                    // This should never happen, anyway fallback to single write.
+                    return scheduleWriteSingle(in.current());
+                }
+                long iovArrayAddress = iovArray.memoryAddress(offset);
+                int iovArrayLength = iovArray.count() - offset;
+                // Should not use sendmsg_zc, just use normal writev.
+                IoUringIoOps ops = IoUringIoOps.newWritev(
+                        fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
 
-            byte opCode = ops.opcode();
-            writeId = registration.submit(ops);
-            writeOpCode = opCode;
-            if (writeId == 0) {
-                return 0;
+                byte opCode = ops.opcode();
+                // record(...) copies the collector's references into the slot, so the collector stays reusable.
+                writeTracker.recordStream(opCode, collector.referencesArray(), collector.referencesCount());
+                writeId = registration.submit(ops);
+                writeOpCode = opCode;
+                if (writeId == 0) {
+                    writeTracker.abandonStream();
+                    return 0;
+                }
+                return 1;
+            } finally {
+                // The slot copied the references it needs, and an exception must not leave the event loop's
+                // shared collector holding this write's buffers.
+                collector.reset();
             }
-            return 1;
         }
 
-        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArray iovArray) {
-           return iovArray;
+        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArrayReferenceCollector collector) {
+           return collector;
         }
 
         @Override
@@ -316,14 +328,18 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ByteBuf buf = (ByteBuf) msg;
                 long address = IoUring.memoryAddress(buf) + buf.readerIndex();
                 int length = buf.readableBytes();
-                short opsid = nextOpsId();
-
-                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
+                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             }
             byte opCode = ops.opcode();
+            // A splice picks its own data to tell its two stages apart, so it never enters the channel-level
+            // slot array used for zero-copy writes. It still has to occupy this single slot though: the file and
+            // pipe descriptors it splices between have to outlive the SQE, and writeTracker.retainAll()
+            // only retains what was recorded here.
+            writeTracker.recordStream(opCode, (ReferenceCounted) msg);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                writeTracker.abandonStream();
                 return 0;
             }
             return 1;
@@ -374,13 +390,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             int length = buf.readableBytes();
             IoUringIoOps ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, nextOpsId());
             byte opCode = ops.opcode();
+            writeTracker.recordStream(opCode, buf);
             writeId = registration.submit(ops);
             writeOpCode = opCode;
             if (writeId == 0) {
+                writeTracker.abandonStream();
                 // Submission only fails when the registration is no longer valid (channel is
-                // being deregistered). unregistered() will release fileRegionChunkBuf and the
-                // outbound buffer will release the FileRegion, so nothing to clean up here --
-                // mirroring the plain ByteBuf path above.
+                // being deregistered). Ending the slot above is the only cleanup needed here:
+                // unregistered() will release fileRegionChunkBuf and the outbound buffer will
+                // release the FileRegion -- mirroring the plain ByteBuf path above.
                 return 0;
             }
             return 1;
@@ -429,9 +447,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 IoRegistration registration = registration();
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
+                short opsId = nextOpsId();
 
                 IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
-                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
+                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), opsId);
                 readId = registration.submit(ops);
                 readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
@@ -470,9 +489,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 IoRegistration registration = registration();
                 int fd = fd().intValue();
+                short opsId = nextOpsId();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
                         fd, flags, ioPrio, recvFlags, 0,
-                        0, nextOpsId(), bgId
+                        0, opsId, bgId
                 );
                 readId = registration.submit(ops);
                 readOpCode = Native.IORING_OP_RECV;
@@ -667,7 +687,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
                 // We only want to reset these if IORING_CQE_F_NOTIF is not set.
                 // If it's set we know this is only an extra notification for a write but we already handled
@@ -675,12 +695,20 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
                 writeId = 0;
                 writeOpCode = 0;
+                // A completion that never went through the slot finds it inactive, which makes this a no-op.
+                writeTracker.completeStream(flags);
             }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            if (channelOutboundBuffer == null) {
+                // The completion may arrive after close() or shutdownOutput() already dropped the buffer.
+                releaseFileRegionChunkBuf();
+                return true;
+            }
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
+                // A splice picks its own data to tell its two stages apart, so narrowing here can not drop bits.
+                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, (short) data);
             }
 
             if (current instanceof FileRegion) {
@@ -755,6 +783,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         public void unregistered() {
+            // Abandons the single slot through writeTracker.releaseAll() before the chunk buffer is
+            // dropped below, so a reference a shutdown retained on that buffer is released first.
             super.unregistered();
             assert readBuffer == null;
             releaseFileRegionChunkBuf();

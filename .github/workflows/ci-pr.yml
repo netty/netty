@@ -35,19 +35,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Figures out which modules are touched by the PR so the (expensive) test legs below can be restricted
+  # to them. See .github/scripts/detect_affected_modules.sh for the rules, anything that can't be mapped to
+  # a module results in a full build.
+  detect-affected:
+    runs-on: ubuntu-24.04
+    outputs:
+      modules: ${{ steps.detect.outputs.modules }}
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          # For pull requests this is the merge commit, we need its first parent (the base branch) to diff against.
+          fetch-depth: 2
+
+      - name: Detect affected modules
+        id: detect
+        run: |
+          modules=ALL
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            modules=$(./.github/scripts/detect_affected_modules.sh HEAD^1) || {
+              echo "::warning::Could not detect the affected modules, falling back to a full build"
+              modules=ALL
+            }
+          fi
+          echo "modules=$modules" >> "$GITHUB_OUTPUT"
+          echo "Affected modules: $modules" | tee -a "$GITHUB_STEP_SUMMARY"
+
   verify-pr:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      # Pinned to v5.7.0
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: 'zulu'
           java-version: '11'
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -66,16 +96,18 @@ jobs:
   build-pr-windows:
     runs-on: windows-2022
     name: windows-x86_64-java11-boringssl
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
       # failures sometimes due the fact that not enough memory could be reserved.
       RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
+      # Pinned to v5.7.0
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: 'zulu'
           java-version: '11'
@@ -85,22 +117,26 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      # Pinned to v3.0.0
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
 
+      # Pinned to v1.13.0
       - name: Configuring Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
         with:
           arch: x86_amd64
 
+      # Pinned to v4.1.0
       - name: Install tools
-        uses: crazy-max/ghaction-chocolatey@v3
+        uses: crazy-max/ghaction-chocolatey@dfdcf5bba9c0a16358a21c13a06ec5c89024b3ac
         with:
           args: install ninja nasm
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -113,20 +149,29 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+        # Run through bash (git bash is part of the runner image) as mvn_affected.sh is a bash script.
+        # install (not package) as the modules that are not part of the affected set are resolved from the local repository.
+        shell: bash
+        env:
+          # ALL, NONE or the comma separated list of modules, see .github/scripts/mvn_affected.sh
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
+          NETTY_MVN: ./mvnw.cmd
+        run: ./.github/scripts/mvn_affected.sh -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
         if: ${{ cancelled() }}
 
+      # Pinned to v6.0.0
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: test-results-windows-x86_64-java11-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v6.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-windows-target
@@ -150,11 +195,13 @@ jobs:
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -191,58 +238,69 @@ jobs:
             JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
           - setup: linux-x86_64-java11
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-affected-only"
           - setup: linux-x86_64-java21-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build-affected-only"
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-affected-only"
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite-affected-only"
           - setup: linux-x86_64-java24
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build-affected-only"
           - setup: linux-x86_64-java25
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml run build-affected-only"
           - setup: linux-x86_64-java26
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml run build-affected-only"
+          # The one leg that always builds and tests everything (with leak detection), so leaks in modules
+          # depending on a changed one are still found. All the other legs only build the affected modules.
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-boringssl-static"
           - setup: linux-x86_64-java11-pooled
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled-affected-only"
           - setup: linux-x86_64-java11-boringssl-jdk8-tests
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-static-jdk8-tests"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-static-jdk8-tests-affected-only"
           - setup: linux-x86_64-java11-awslc
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build"
             docker-compose-install-tcnative: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run install-tcnative"
             docker-compose-update-tcnative-version: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run update-tcnative-version"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build-affected-only"
 
     name: ${{ matrix.setup }} build
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
+    permissions:
+      contents: read
+      packages: write  # to push the docker build cache to ghcr.io; no-op (ignored) for fork PRs
+    env:
+      # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
+      # entries in docker/docker-compose.centos-7.*.yaml are actually honored.
+      COMPOSE_BAKE: "true"
     defaults:
       run:
         working-directory: netty
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           path: netty
 
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         if: ${{ endsWith(matrix.setup, '-awslc') }}
         with:
           repository: netty/netty-tcnative
@@ -251,8 +309,9 @@ jobs:
           fetch-depth: 0
 
       # Cache .m2/repository
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         if: ${{ !endsWith(matrix.setup, '-awslc') }}
         with:
@@ -262,8 +321,9 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
+      # Pinned to v5.1.0
       - name: Cache local Maven repository
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         if: ${{ endsWith(matrix.setup, '-awslc') }}
         with:
@@ -278,6 +338,23 @@ jobs:
         with:
           working-directory: netty
 
+      # The default "docker" buildx driver can't export cache to a registry; switch to the
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
+      # Pinned to v4.4.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+      # Only succeeds for same-repo runs; fork PRs get a read-only GITHUB_TOKEN and simply won't
+      # get cache hits/pushes, which is fine since it only means a slower, non-cached build.
+      # Pinned to v4.6.0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 
@@ -290,6 +367,10 @@ jobs:
         run: docker compose ${{ matrix.docker-compose-update-tcnative-version }}
 
       - name: Build project with leak detection
+        env:
+          # ALL, NONE or the comma separated list of modules, only used by the build-affected-only service
+          # (see .github/scripts/mvn_affected.sh), all other services always build everything.
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
         run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures
@@ -302,14 +383,16 @@ jobs:
         uses: ./netty/.github/actions/thread-dump-jvms
         if: ${{ cancelled() }}
 
+      # Pinned to v6.0.0
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: test-results-${{ matrix.setup }}
           path: 'netty/**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v6.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
@@ -334,17 +417,20 @@ jobs:
     needs: verify-pr
 
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
+      # Pinned to v5.7.0
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: 'zulu'
           java-version: '11'
 
       # Cache .m2/repository
       # Caching of maven dependencies
-      - uses: actions/cache@v4
+      # Pinned to v5.1.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -366,14 +452,16 @@ jobs:
         uses: ./.github/actions/thread-dump-jvms
         if: ${{ cancelled() }}
 
+      # Pinned to v6.0.0
       - name: Upload Test Results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
-      - uses: actions/upload-artifact@v4
+      # Pinned to v6.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-${{ matrix.setup }}-target

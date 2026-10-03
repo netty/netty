@@ -64,6 +64,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertPathBuilder;
 import java.security.cert.CertPathBuilderException;
+import java.security.cert.CertPathBuilderResult;
 import java.security.cert.CertStore;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -72,7 +73,7 @@ import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -92,6 +93,7 @@ final class OcspClient {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int OCSP_RESPONSE_MAX_SIZE = SystemPropertyUtil.getInt(
             "io.netty.ocsp.responseSize", 1024 * 10);
+    public static final String OID_OCSP_SIGNING = "1.3.6.1.5.5.7.3.9";
 
     static {
         logger.debug("-Dio.netty.ocsp.responseSize: {} bytes", OCSP_RESPONSE_MAX_SIZE);
@@ -308,19 +310,38 @@ final class OcspClient {
 
             // If responder certificate is included, validate the chain
             if (certs != null && certs.length > 0) {
+                X509Certificate[] certificates = new X509Certificate[certs.length];
+                JcaX509CertificateConverter toCertificateConverter = new JcaX509CertificateConverter();
+                for (int i = 0; i < certs.length; i++) {
+                    certificates[i] = toCertificateConverter.getCertificate(certs[i]);
+                }
 
                 // Use the first included certificate to verify the OCSP response signature.
-                X509CertificateHolder responderCert = certs[0];
+                X509Certificate responderCertificate = certificates[0];
+
+                if (!isIssuingCa(responderCertificate, issuerCertificate)) {
+                    // Original certificate issuer has delegated OCSP signing.
+                    // Responder cert must be authorized to sign OCSP responses.
+                    try {
+                        List<String> extendedKeyUsage = responderCertificate.getExtendedKeyUsage();
+                        if (extendedKeyUsage == null ||
+                            !extendedKeyUsage.contains(OID_OCSP_SIGNING)) {
+                            throw new OCSPException("OCSP Responder is not authorized to sign OCSP responses");
+                        }
+                    } catch (ClassCastException | IllegalArgumentException e) {
+                        throw new OCSPException("Responder has invalid or malformed ExtendedKeyUsage extension", e);
+                    }
+
+                    // Build chain from responder certificate to issuer using CertPathBuilder
+                    validateCertificateChain(responderCertificate, certificates, issuerCertificate);
+                }
 
                 // Verify OCSP response signature using responder cert
-                ContentVerifierProvider responderVerifier = providerBuilder.build(responderCert);
+                ContentVerifierProvider responderVerifier = providerBuilder.build(certs[0]);
 
                 if (!resp.isSignatureValid(responderVerifier)) {
                     throw new OCSPException("OCSP response signature is not valid");
                 }
-
-                // Build chain from responder certificate to issuer using CertPathBuilder
-                validateCertificateChain(responderCert, certs, issuerCertificate);
             } else {
                 // Validate signature using issuer certificate
                 ContentVerifierProvider issuerVerifier = providerBuilder.build(issuerCertificate);
@@ -337,26 +358,31 @@ final class OcspClient {
     }
 
     /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.2.2">RFC 6960 4.2.2.2</a>:
+     * <blockquote>Is the certificate of the CA that issued the certificate in question</blockquote>
+     * The name and the key are compared instead of the encoding, so that a CA certificate that was re-issued or
+     * cross-signed with the same name and key still matches.
+     */
+    private static boolean isIssuingCa(X509Certificate responderCertificate, X509Certificate issuerCertificate) {
+        return responderCertificate.getSubjectX500Principal().equals(issuerCertificate.getSubjectX500Principal())
+            && responderCertificate.getPublicKey().equals(issuerCertificate.getPublicKey());
+    }
+
+    /**
      * Validates that a certificate chain can be built from the responder certificate to the issuer.
      * Uses Java's CertPathBuilder to construct and validate the chain.
      */
-    private static void validateCertificateChain(X509CertificateHolder responderCert,
-                                                   X509CertificateHolder[] allCerts,
-                                                   X509Certificate issuerCertificate) throws OCSPException {
+    private static void validateCertificateChain(X509Certificate responderCertificate,
+                                                 X509Certificate[] allCerts,
+                                                 X509Certificate issuerCertificate) throws OCSPException {
         try {
-            // Convert BouncyCastle certificate holders to Java X509Certificates
-            List<X509Certificate> certList = new ArrayList<>(allCerts.length);
-            for (X509CertificateHolder certHolder : allCerts) {
-                certList.add(new JcaX509CertificateConverter().getCertificate(certHolder));
-            }
-
             // Create a CertStore with all the certificates from the OCSP response
             CertStore certStore = CertStore.getInstance("Collection",
-                    new CollectionCertStoreParameters(certList));
+                    new CollectionCertStoreParameters(Arrays.asList(allCerts)));
 
             // Set up the target certificate selector for the responder certificate
             X509CertSelector targetConstraints = new X509CertSelector();
-            targetConstraints.setCertificate(new JcaX509CertificateConverter().getCertificate(responderCert));
+            targetConstraints.setCertificate(responderCertificate);
 
             // Set up trust anchor with the issuer certificate
             TrustAnchor trustAnchor = new TrustAnchor(issuerCertificate, null);
@@ -369,15 +395,19 @@ final class OcspClient {
 
             // Build and validate the certificate path
             CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
-            builder.build(pkixParams);
+            CertPathBuilderResult result = builder.build(pkixParams);
 
-            // If we reach here, the chain is valid
+            // RFC 6960 https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.2.2
+            // "Includes a value of id-kp-OCSPSigning in an extended key usage extension
+            // and is issued by the CA that issued the certificate in question as stated above."
+            if (result.getCertPath().getCertificates().size() > 1) {
+                throw new OCSPException("OCSP responder certificate was not issued by the certificate issuer: "
+                        + issuerCertificate.getSubjectX500Principal());
+            }
         } catch (CertPathBuilderException e) {
             throw new OCSPException("OCSP responder certificate is not trusted by issuer: " + e.getMessage(), e);
         } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException e) {
             throw new OCSPException("Error setting up certificate path validation", e);
-        } catch (CertificateException e) {
-            throw new OCSPException("Error converting certificates for path validation", e);
         }
     }
 

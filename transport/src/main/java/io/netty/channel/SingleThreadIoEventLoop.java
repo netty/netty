@@ -39,7 +39,13 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     private static final long DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS = TimeUnit.MILLISECONDS.toNanos(Math.max(100,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
+    // 100 preserves the pre-existing behaviour of always using maxTaskProcessingQuantumNs as the task budget.
+    static final int DEFAULT_IO_RATIO = Math.max(1, Math.min(100,
+        SystemPropertyUtil.getInt("io.netty.eventLoop.ioRatio", 100)));
+
     private final long maxTaskProcessingQuantumNs;
+    private volatile int ioRatio = DEFAULT_IO_RATIO;
+    private long activeIoTimeNanos = -1;
     private final IoHandlerContext context = new IoHandlerContext() {
         @Override
         public boolean canBlock() {
@@ -61,12 +67,15 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
         @Override
         public void reportActiveIoTime(long activeNanos) {
+            if (activeNanos >= 0) {
+                activeIoTimeNanos = activeNanos;
+            }
             SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
         }
 
         @Override
         public boolean shouldReportActiveIoTime() {
-            return isSuspensionSupported();
+            return isSuspensionSupported() || ioRatio != 100;
         }
     };
 
@@ -193,12 +202,30 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         assert inEventLoop();
         ioHandler.initialize();
         do {
+            final int ioRatio = this.ioRatio;
+            final long taskQuantumNs;
+
+            // reset before calling runIo() which is responsible for calling reportActiveIoTime(...).
+            activeIoTimeNanos = -1;
             runIo();
+            if (ioRatio == 100 || activeIoTimeNanos == -1) {
+                taskQuantumNs = maxTaskProcessingQuantumNs;
+            } else {
+                // Give tasks a budget proportional to the time just spent on IO, still bounded by the
+                // configured maximum so a burst of IO activity cannot starve the task queue indefinitely.
+                long quantum = Math.min(maxTaskProcessingQuantumNs, activeIoTimeNanos * (100 - ioRatio) / ioRatio);
+                if (quantum == 0) {
+                    // Ensure we always use a "deadline"
+                    taskQuantumNs = maxTaskProcessingQuantumNs;
+                } else {
+                    taskQuantumNs = quantum;
+                }
+            }
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();
             }
-            // Now run all tasks for the maximum configured amount of time before trying to run IO again.
-            runAllTasks(maxTaskProcessingQuantumNs);
+            // Now run tasks for the computed amount of time before trying to run IO again.
+            runAllTasks(taskQuantumNs);
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
@@ -206,6 +233,28 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     protected final IoHandler ioHandler() {
         return ioHandler;
+    }
+
+    /**
+     * Returns the current IO ratio. This value only affects scheduling behaviour when it's not the default
+     * value of {@code 100}, in which case each iteration's task-processing budget will be capped to the
+     * proportion of time just spent handling IO, in addition to the cap already imposed by
+     * {@code io.netty.eventLoop.maxTaskProcessingQuantumMs}.
+     */
+    public int getIoRatio() {
+        return ioRatio;
+    }
+
+    /**
+     * Sets the percentage of the desired amount of time spent for I/O in the event loop relative to tasks.
+     * The default value is {@code 100}, which means the event loop will not attempt to balance I/O and tasks,
+     * relying purely on {@code io.netty.eventLoop.maxTaskProcessingQuantumMs} to bound the time spent running
+     * tasks. Setting a value below {@code 100}, e.g. {@code 50}, restores the pre-4.2 behaviour of giving tasks
+     * a per-iteration budget proportional to the time just spent on IO, which helps ensure that a busy task
+     * queue does not delay IO processing (and so response handling) for extended stretches of time.
+     */
+    public void setIoRatio(int ioRatio) {
+        this.ioRatio = ObjectUtil.checkInRange(ioRatio, 1, 100, "ioRatio");
     }
 
     @Override

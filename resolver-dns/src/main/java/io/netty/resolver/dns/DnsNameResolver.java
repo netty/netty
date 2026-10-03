@@ -772,7 +772,7 @@ public class DnsNameResolver extends InetNameResolver {
      * system property.
      *
      * @param hostname the hostname that's being looked up
-     * @return true if the hostname should point to the loopback adress. False otherwise.
+     * @return true if the hostname should point to the loopback address. False otherwise.
      * @see <a href="https://github.com/netty/netty/issues/5386">Issue 5386</a>
      * @see <a href="https://github.com/netty/netty/issues/11142">Issue 11142</a>
      * @see <a href="https://github.com/netty/netty/issues/16744">Issue 16744</a>

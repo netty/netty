@@ -78,6 +78,7 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
@@ -367,6 +368,37 @@ public class Http2ConnectionHandlerTest {
     }
 
     /**
+     * See <a href="https://github.com/netty/netty/issues/17276">#17276</a>: {@code close()}'s own cascade
+     * (e.g. {@code SslHandler.closeOutboundAndChannel()} flushing a close_notify) can synchronously trigger
+     * {@code channelWritabilityChanged()} -&gt; {@code flush()} from outside any active {@code flush()} frame, so a
+     * reentrancy guard scoped only to {@code flush()} itself (as added for #17256) would never see it.
+     */
+    @Test
+    public void closeShouldNotAllowChannelWritabilityChangedToReenterFlush() throws Exception {
+        when(channel.isWritable()).thenReturn(true);
+        handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .decoupleCloseAndGoAway(true).build();
+        handler.handlerAdded(ctx);
+        clearInvocations(ctx);
+
+        doAnswer(new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+                // Simulate close()'s own cascade (e.g. SslHandler flushing a close_notify) completing a write and
+                // firing channelWritabilityChanged synchronously, from outside any Http2ConnectionHandler.flush()
+                // frame - exactly what AbstractKQueueStreamChannel's write-drain loop does when a write it just
+                // performed flips writability.
+                handler.channelWritabilityChanged(ctx);
+                return future;
+            }
+        }).when(ctx).close(any(ChannelPromise.class));
+
+        handler.close(ctx, promise);
+
+        verify(ctx, never()).flush();
+    }
+
+    /**
      * A large body must fully drain even when the channel briefly becomes unwritable while it is being written
      * and then flips back to writable synchronously during {@code flush()}. That writable transition re-enters
      * {@link Http2ConnectionHandler#channelWritabilityChanged(ChannelHandlerContext)} while the flush is still in
@@ -512,6 +544,55 @@ public class Http2ConnectionHandlerTest {
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         captor.getValue().release();
+    }
+
+    @Test
+    public void compositeStreamExceptionReportsEachAffectedStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "stream 1 error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR, "stream 2 error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+        when(encoder.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenReturn(future);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // Each StreamException in the composite represents an independent error for a distinct stream
+        // (e.g. one per active stream whose flow-control window overflowed when the initial window size
+        // setting changed). Every affected stream must be reset individually, otherwise it would be left
+        // open with a corrupted flow-control window.
+        verify(encoder, times(2)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, NON_EXISTANT_STREAM_ID, PROTOCOL_ERROR.code(), promise);
+    }
+
+    @Test
+    public void compositeStreamExceptionOnlyReportsFirstErrorForSameStream() throws Exception {
+        handler = newHandler();
+        Http2Exception.StreamException streamException1 =
+                new Http2Exception.StreamException(STREAM_ID, PROTOCOL_ERROR, "first error");
+        Http2Exception.StreamException streamException2 =
+                new Http2Exception.StreamException(STREAM_ID, CANCEL, "second error");
+        Http2Exception.CompositeStreamException compositeException =
+                new Http2Exception.CompositeStreamException(PROTOCOL_ERROR, 2);
+        compositeException.add(streamException1);
+        compositeException.add(streamException2);
+
+        when(stream.id()).thenReturn(STREAM_ID);
+        when(encoder.writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise))).thenReturn(future);
+
+        handler.exceptionCaught(ctx, compositeException);
+
+        // RFC 9113, Section 5.4: implementations SHOULD report at most one stream error per stream. Only the
+        // first StreamException seen for a given stream id should result in a RST_STREAM.
+        verify(encoder, times(1)).writeRstStream(eq(ctx), anyInt(), anyLong(), eq(promise));
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -909,6 +990,103 @@ public class Http2ConnectionHandlerTest {
         handler.gracefulShutdownTimeoutMillis(-1);
         handler.close(ctx, promise);
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownCompletesWhenGoAwayClosesLastStream(long gracefulShutdownTimeoutMillis) {
+        Http2ConnectionHandler serverHandler = new Http2ConnectionHandlerBuilder()
+                .server(true).frameListener(new Http2FrameAdapter()).build();
+        EmbeddedChannel server = new EmbeddedChannel(serverHandler);
+        EmbeddedChannel client = newClientChannel(gracefulShutdownTimeoutMillis);
+        Http2ConnectionHandler clientHandler = client.pipeline().get(Http2ConnectionHandler.class);
+        try {
+            exchangeFrames(client, server);
+            writeHeadersOnStream3(clientHandler, client);
+
+            // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
+            ChannelFuture closeFuture = client.pipeline().close();
+            assertFalse(closeFuture.isDone());
+
+            // The server shuts down before it has seen stream 3 and answers with a GOAWAY that does not include it.
+            client.releaseOutbound();
+            serverHandler.goAway(server.pipeline().firstContext(), 0, Http2Error.NO_ERROR.code(),
+                    Unpooled.EMPTY_BUFFER, server.newPromise());
+            server.flush();
+            exchangeFrames(server, client);
+            client.runPendingTasks();
+
+            assertEquals(0, clientHandler.connection().numActiveStreams());
+            assertTrue(closeFuture.isSuccess(), "close() must complete once the GOAWAY closed the last stream");
+            assertFalse(client.isOpen());
+        } finally {
+            client.finishAndReleaseAll();
+            server.finishAndReleaseAll();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = { 30000, -1 })
+    public void gracefulShutdownCompletesWhenChannelBecomesInactive(long gracefulShutdownTimeoutMillis) {
+        Http2ConnectionHandler serverHandler = new Http2ConnectionHandlerBuilder()
+                .server(true).frameListener(new Http2FrameAdapter()).build();
+        EmbeddedChannel server = new EmbeddedChannel(serverHandler);
+        EmbeddedChannel client = newClientChannel(gracefulShutdownTimeoutMillis);
+        Http2ConnectionHandler clientHandler = client.pipeline().get(Http2ConnectionHandler.class);
+        try {
+            exchangeFrames(client, server);
+            writeHeadersOnStream3(clientHandler, client);
+
+            // Close via the pipeline: EmbeddedChannel.close() would cancel the graceful shutdown timeout task.
+            ChannelFuture closeFuture = client.pipeline().close();
+            assertFalse(closeFuture.isDone());
+
+            // The connection is lost while the graceful shutdown waits for stream 3.
+            client.unsafe().close(client.voidPromise());
+            client.runPendingTasks();
+
+            assertFalse(client.isOpen());
+            assertEquals(0, clientHandler.connection().numActiveStreams());
+            assertTrue(closeFuture.isSuccess(), "close() must complete once the channel is closed");
+        } finally {
+            client.finishAndReleaseAll();
+            server.finishAndReleaseAll();
+        }
+    }
+
+    private static EmbeddedChannel newClientChannel(long gracefulShutdownTimeoutMillis) {
+        EmbeddedChannel client = new EmbeddedChannel(new Http2ConnectionHandlerBuilder()
+                .server(false).frameListener(new Http2FrameAdapter())
+                .gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis).build());
+        // The graceful shutdown timeout must not elapse during the test.
+        client.freezeTime();
+        return client;
+    }
+
+    private static void writeHeadersOnStream3(Http2ConnectionHandler clientHandler, EmbeddedChannel client) {
+        ChannelHandlerContext ctx = client.pipeline().context(clientHandler);
+        clientHandler.encoder().writeHeaders(ctx, 3,
+                new DefaultHttp2Headers().method("GET").path("/").scheme("http").authority("netty.io"),
+                0, false, ctx.newPromise());
+        client.flush();
+        assertEquals(1, clientHandler.connection().numActiveStreams());
+    }
+
+    private static void exchangeFrames(EmbeddedChannel from, EmbeddedChannel to) {
+        for (int i = 0; i < 5; i++) {
+            transferFrames(from, to);
+            transferFrames(to, from);
+        }
+    }
+
+    private static void transferFrames(EmbeddedChannel from, EmbeddedChannel to) {
+        for (Object msg; (msg = from.readOutbound()) != null;) {
+            if (to.isOpen()) {
+                to.writeInbound(msg);
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
+        }
     }
 
     @Test

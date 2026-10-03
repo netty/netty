@@ -27,6 +27,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
 
 import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.connectDataIdempotent;
@@ -55,9 +57,10 @@ import static io.netty.channel.unix.Errors.newIOException;
  */
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+    static final InetAddress INET6_ANY;
 
     static {
-        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possibility of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
@@ -66,6 +69,12 @@ final class Native {
                 // netty_kqueue_bsdsocket
                 PeerCredentials.class, DefaultFileRegion.class, FileChannel.class, java.io.FileDescriptor.class
         );
+
+        try {
+            INET6_ANY = InetAddress.getByName("::");
+        } catch (UnknownHostException e) {
+            throw new ExceptionInInitializerError(e);
+        }
 
         try {
             // First, try calling a side-effect free JNI method to see if the library was already

@@ -69,9 +69,9 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
         }
 
         // this always expands the buffer if possible, even if the expansion is less than preferredSize
-        // we throw the exception only if the buffer could not be expanded at all
+        // we throw the exception only if the buffer could not be expanded at all and has no space left
         // this means that one final attempt to deserialize will always be made with the buffer at maxAllocation
-        if (buffer.ensureWritable(preferredSize, true) == 1) {
+        if (buffer.ensureWritable(preferredSize, true) == 1 && !buffer.isWritable()) {
             // buffer must be consumed so subclasses don't add it to output
             // we therefore duplicate it when calling decompressionBufferExhausted() to guarantee non-interference
             // but wait until after to consume it so the subclass can tell how much output is really in the buffer

@@ -39,7 +39,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     @Test
@@ -57,19 +57,11 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
         SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
-            try {
-                ch.shutdownInput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            Throwable cause = assertThrows(Throwable.class, () -> ch.shutdownInput().syncUninterruptibly());
+            checkThrowable(cause);
 
-            try {
-                ch.shutdownOutput().syncUninterruptibly();
-                fail();
-            } catch (Throwable cause) {
-                checkThrowable(cause);
-            }
+            cause = assertThrows(Throwable.class, () -> ch.shutdownOutput().syncUninterruptibly());
+            checkThrowable(cause);
         } finally {
             ch.close().syncUninterruptibly();
         }

@@ -25,6 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Map.Entry;
 import java.util.stream.Stream;
@@ -56,6 +57,17 @@ public class DefaultHttp2HeadersTest {
             @Override
             public void execute() throws Throwable {
                 new DefaultHttp2Headers().add(StringUtil.EMPTY_STRING, "foo");
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {'\0', '\n', '\r'})
+    public void headerValueValidationIsEnabledByDefault(char illegalChar) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new DefaultHttp2Headers().add("headername", "fo" + illegalChar + "o");
             }
         });
     }

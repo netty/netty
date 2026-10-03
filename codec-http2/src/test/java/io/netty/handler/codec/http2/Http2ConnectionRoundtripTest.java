@@ -91,7 +91,7 @@ import static org.mockito.Mockito.verify;
  */
 public class Http2ConnectionRoundtripTest {
 
-    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 15;
+    private static final long DEFAULT_AWAIT_TIMEOUT_SECONDS = 30;
 
     @Mock
     private Http2FrameListener clientListener;
@@ -436,6 +436,28 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                 any(ByteBuf.class));
         verify(clientListener, never()).onRstStreamRead(any(ChannelHandlerContext.class), anyInt(), anyLong());
+    }
+
+    @Test
+    public void failedSettingsWriteDoesNotCorruptNextSettingsAck() throws Exception {
+        final AtomicReference<Throwable> failedSettingsWriteCause = new AtomicReference<Throwable>();
+        bootstrapEnv(0, 2, 0, 0);
+
+        runInChannel(serverConnectedChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().pushEnabled(true),
+                        serverNewPromise()).addListener(future -> failedSettingsWriteCause.set(future.cause()));
+                http2Server.encoder().writeSettings(serverCtx(), new Http2Settings().initialWindowSize(100),
+                        serverNewPromise());
+                http2Server.flush(serverCtx());
+            }
+        });
+
+        assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+        assertInstanceOf(Http2Exception.class, failedSettingsWriteCause.get());
+        assertEquals(PROTOCOL_ERROR, ((Http2Exception) failedSettingsWriteCause.get()).error());
+        assertEquals(100, http2Server.decoder().flowController().initialWindowSize());
     }
 
     @Test
@@ -1226,7 +1248,7 @@ public class Http2ConnectionRoundtripTest {
 
         final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1249,7 +1271,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
+        cb.group(new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

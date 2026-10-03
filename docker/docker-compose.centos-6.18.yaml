@@ -9,6 +9,10 @@ services:
       dockerfile: docker/Dockerfile.centos6
       args:
         java_version : "8.0.482-zulu"
+      cache_from:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos6
+      cache_to:
+        - type=registry,ref=ghcr.io/netty/netty-build-cache:centos6,mode=max,ignore-error=true
 
   build:
     image: netty:centos-6-1.8

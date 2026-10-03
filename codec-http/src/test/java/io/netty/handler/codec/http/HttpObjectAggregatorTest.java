@@ -655,7 +655,7 @@ public class HttpObjectAggregatorTest {
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
             try {
-                assertTrue(msg1 instanceof FullHttpRequest);
+                assertInstanceOf(FullHttpRequest.class, msg1);
             } finally {
                 ReferenceCountUtil.release(msg1);
             }
@@ -715,7 +715,7 @@ public class HttpObjectAggregatorTest {
             // Getting an aggregated response out
             Object msg1 = channel.readInbound();
             try {
-                assertTrue(msg1 instanceof FullHttpResponse);
+                assertInstanceOf(FullHttpResponse.class, msg1);
             } finally {
                 ReferenceCountUtil.release(msg1);
             }

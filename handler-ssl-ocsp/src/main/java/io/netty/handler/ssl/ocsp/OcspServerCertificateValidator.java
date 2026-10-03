@@ -37,7 +37,6 @@ import org.bouncycastle.cert.ocsp.SingleResp;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -186,16 +185,17 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                         if (future.isSuccess()) {
                             SingleResp response = future.getNow().getResponses()[0];
 
-                            Date thisUpdateDate = response.getThisUpdate();
-                            Date nextUpdateDate = response.getNextUpdate();
-                            Instant thisUpdate = thisUpdateDate == null ? null :
-                                thisUpdateDate.toInstant().minusMillis(CLOCK_SKEW_TOLERANCE_MILLIS);
-                            Instant nextUpdate = nextUpdateDate == null ? null :
-                                nextUpdateDate.toInstant().plusMillis(CLOCK_SKEW_TOLERANCE_MILLIS);
-                            Instant now = Instant.now();
-                            if (thisUpdate == null || !now.isAfter(thisUpdate) ||
-                                (nextUpdate != null && !now.isBefore(nextUpdate))) {
+                            Date thisUpdate = response.getThisUpdate();
+                            Date nextUpdate = response.getNextUpdate();
+                            long now = System.currentTimeMillis();
+                            Date nowLower = new Date(now - CLOCK_SKEW_TOLERANCE_MILLIS);
+                            Date nowUpper = new Date(now + CLOCK_SKEW_TOLERANCE_MILLIS);
+                            if (thisUpdate == null || nowUpper.before(thisUpdate) ||
+                                nowLower.after(nextUpdate == null ? thisUpdate : nextUpdate)) {
                                 ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
+                                if (closeAndThrowIfNotValid) {
+                                    ctx.close();
+                                }
                                 return;
                             }
 
@@ -210,14 +210,14 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             }
 
                             ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                    new OcspResponse(status, thisUpdateDate, nextUpdateDate)));
+                                new OcspResponse(status, thisUpdate, nextUpdate)));
 
                             // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
                             // to 'true' then close the channel and throw an exception.
                             if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
                                 // Certificate is not valid. Throw
                                 ctx.fireExceptionCaught(new OCSPException(
-                                        "Certificate not valid. Status: " + status));
+                                    "Certificate not valid. Status: " + status));
                                 ctx.close();
                             }
                         } else {
@@ -225,6 +225,11 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             if (closeAndThrowIfNotValid) {
                                 ctx.close();
                             }
+                        }
+                    } catch (Throwable th) {
+                        ctx.fireExceptionCaught(th);
+                        if (closeAndThrowIfNotValid) {
+                            ctx.close();
                         }
                     } finally {
                         ctx.fireUserEventTriggered(evt);

@@ -1024,10 +1024,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     void scheduleRemoveScheduled(final ScheduledFutureTask<?> task) {
         ObjectUtil.checkNotNull(task, "task");
         int currentState = state;
-        if (supportSuspension && currentState == ST_SUSPENDED) {
+        if (supportSuspension && (currentState == ST_SUSPENDED || currentState == ST_SUSPENDING)) {
             // In the case of scheduling for removal we need to also ensure we will recover the "suspend" state
             // after it if it was set before. Otherwise we will always end up "unsuspending" things on cancellation
-            // which is not optimal.
+            // which is not optimal. This also covers the case where the executor is still ST_SUSPENDING (suspend
+            // was requested but not confirmed yet): if the removal task races with doStartThread() re-engaging
+            // the thread as ST_STARTED (see the ST_SUSPENDED/ST_STARTED CAS dance below), nobody would otherwise
+            // ever re-request suspension and the thread would keep running forever waiting for new tasks.
             execute(new Runnable() {
                 @Override
                 public void run() {
@@ -1163,7 +1166,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void startThread() {
         int currentState = state;
-        if (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
+        while (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
             if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
                 resetIdleCycles();
                 resetBusyCycles();
@@ -1182,11 +1185,22 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         threadStartIssued.set(false);
                     }
                 }
+                break;
             }
-        } else if (currentState == ST_SHUTTING_DOWN && thread == null) {
+            // The state changed after we read it. If trySuspend() moved it from ST_NOT_STARTED to
+            // ST_SUSPENDED no thread was started, so we need to try again. Otherwise the task that
+            // was just added might never run. This may deliberately un-suspend an executor that
+            // trySuspend() has just suspended, which is the same thing execute() does for an
+            // executor that is already suspended. We only loop again if another thread changed the
+            // state in between, so this can't spin.
+            currentState = state;
+        }
+        if (currentState == ST_SHUTTING_DOWN && thread == null) {
             // Never-started executor already in graceful shutdown: a task arrived during the
             // quiet period. Start a worker without changing state away from SHUTTING_DOWN so
             // confirmShutdown still honors quietPeriod/timeout (#17135 + quiet-period accept).
+            // A successful start above breaks with currentState still NOT_STARTED or SUSPENDED,
+            // so this branch does not also run.
             try {
                 issueDoStartThread();
             } catch (Throwable cause) {
@@ -1375,8 +1389,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
                         int currentState = state;
                         if (canSuspend(currentState)) {
+                            // currentState might already be ST_SUSPENDED here (we can loop back around with the
+                            // state still ST_SUSPENDED via the ST_SUSPENDING/ST_SUSPENDED branch below), so we must
+                            // CAS from currentState and not hardcode ST_SUSPENDING as the expected value, or the CAS
+                            // would spuriously "fail" forever and livelock this thread instead of finishing suspend.
                             if (!STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
-                                    ST_SUSPENDING, ST_SUSPENDED)) {
+                                    currentState, ST_SUSPENDED)) {
                                 // Try again as the CAS failed.
                                 continue;
                             }
@@ -1389,6 +1407,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
+                        } else if (currentState == ST_SUSPENDING || currentState == ST_SUSPENDED) {
+                            // We were trying to suspend (or just did) but something raced in - e.g. a scheduled
+                            // task being cancelled and re-submitted itself for removal via scheduleRemoveScheduled()
+                            // - so we can no longer suspend right now. No shutdown was requested, so this must not
+                            // be treated as if run() returned without confirming shutdown; just go around the loop
+                            // again so run() can pick up whatever raced in.
+                            continue;
                         }
                         break;
                     }

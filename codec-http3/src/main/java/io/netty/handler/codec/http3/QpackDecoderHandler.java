@@ -54,12 +54,12 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         // | 1 |      Stream ID (7+)       |
         // +---+---------------------------+
         if ((b & 0b1000_0000) == 0b1000_0000) {
-            long streamId = QpackUtil.decodePrefixedInteger(in, 7);
-            if (streamId < 0) {
-                // Not enough readable bytes
-                return;
-            }
             try {
+                long streamId = QpackUtil.decodePrefixedInteger(in, 7);
+                if (streamId < 0) {
+                    // Not enough readable bytes
+                    return;
+                }
                 qpackEncoder.sectionAcknowledgment(streamId);
             } catch (QpackException e) {
                 connectionError(ctx, new Http3Exception(QPACK_DECODER_STREAM_ERROR,
@@ -75,12 +75,12 @@ final class QpackDecoderHandler extends ByteToMessageDecoder {
         // | 0 | 1 |     Stream ID (6+)    |
         // +---+---+-----------------------+
         if ((b & 0b1100_0000) == 0b0100_0000) {
-            long streamId = QpackUtil.decodePrefixedInteger(in, 6);
-            if (streamId < 0) {
-                // Not enough readable bytes
-                return;
-            }
             try {
+                long streamId = QpackUtil.decodePrefixedInteger(in, 6);
+                if (streamId < 0) {
+                    // Not enough readable bytes
+                    return;
+                }
                 qpackEncoder.streamCancellation(streamId);
             } catch (QpackException e) {
                 connectionError(ctx, new Http3Exception(QPACK_DECODER_STREAM_ERROR,

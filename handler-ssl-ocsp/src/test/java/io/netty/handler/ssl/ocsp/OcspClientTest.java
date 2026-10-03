@@ -65,6 +65,8 @@ import java.util.Date;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -118,6 +120,7 @@ class OcspClientTest extends AbstractOcspTest {
         X509Bundle ocspResponder = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.rsa2048)
                 .subject("CN=SomeOCSPResponder")
+                .addExtendedKeyUsageOcspSigning()
                 .buildIssuedBy(intermediateIssuer);
 
         // Create actual OCSP response with the responder's certificate
@@ -130,7 +133,7 @@ class OcspClientTest extends AbstractOcspTest {
                 new X509CertificateHolder[]{responderHolder, intermediateHolder}
         );
 
-        assertDoesNotThrow(() -> OcspClient.validateSignature(resp, rootIssuer.getCertificate()));
+        assertDoesNotThrow(() -> OcspClient.validateSignature(resp, intermediateIssuer.getCertificate()));
     }
 
     @Test
@@ -172,6 +175,101 @@ class OcspClientTest extends AbstractOcspTest {
         assertThrows(OCSPException.class, () ->
                 OcspClient.validateSignature(resp, issuerBundle.getCertificate())
         );
+    }
+
+    @Test
+    void validateDelegateResponderWithoutEkuMustThrow() throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=TrustedRootCA")
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+
+        X509Bundle badActorCert = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=BadActorServer")
+            .buildIssuedBy(caRoot);
+
+        X509CertificateHolder badActorHolder = new JcaX509CertificateHolder(badActorCert.getCertificate());
+
+        BasicOCSPResp forgedResponse = createBasicOcspResponse(
+            badActorCert,
+            new X509CertificateHolder[]{badActorHolder}
+        );
+
+        assertThatThrownBy(() -> OcspClient.validateSignature(forgedResponse, caRoot.getCertificate()))
+            .isInstanceOf(OCSPException.class)
+            .hasMessageContaining("OCSP Responder is not authorized to sign OCSP responses");
+    }
+
+    @Test
+    void validateDirectResponderWithoutEkuMustNotThrow() throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=TrustedRootCA")
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+
+        BasicOCSPResp response = createBasicOcspResponse(
+            caRoot,
+            new X509CertificateHolder[]{new JcaX509CertificateHolder(caRoot.getCertificate())}
+        );
+
+        assertDoesNotThrow(() -> OcspClient.validateSignature(response, caRoot.getCertificate()));
+    }
+
+    @Test
+    void validateSignatureWithReissuedIssuerCertificateSucceeds() throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=TrustedRootCA")
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+
+        X509Bundle reissuedCaRoot = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=TrustedRootCA")
+            .setIsCertificateAuthority(true)
+            .keyPair(caRoot.getKeyPair())
+            .buildIssuedBy(caRoot);
+
+        assertThat(caRoot.getCertificate()).isNotEqualTo(reissuedCaRoot.getCertificate());
+
+        X509CertificateHolder reissuedHolder = new JcaX509CertificateHolder(reissuedCaRoot.getCertificate());
+        BasicOCSPResp resp = createBasicOcspResponse(reissuedCaRoot, new X509CertificateHolder[]{reissuedHolder});
+
+        assertDoesNotThrow(() -> OcspClient.validateSignature(resp, caRoot.getCertificate()));
+    }
+
+    @Test
+    void validateSignatureWithIndirectlyIssuedResponderThrows() throws Exception {
+        X509Bundle caRoot = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=TrustedRootCA")
+            .setIsCertificateAuthority(true)
+            .buildSelfSigned();
+
+        // Chains up to caRoot, but did not issue the certificate in question.
+        X509Bundle intermediateCa = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=SomeIntermediateCA")
+            .setIsCertificateAuthority(true)
+            .buildIssuedBy(caRoot);
+
+        X509Bundle indirectResponder = new CertificateBuilder()
+            .algorithm(CertificateBuilder.Algorithm.rsa2048)
+            .subject("CN=IndirectOCSPResponder")
+            .addExtendedKeyUsageOcspSigning()
+            .buildIssuedBy(intermediateCa);
+
+        X509CertificateHolder responderHolder = new JcaX509CertificateHolder(indirectResponder.getCertificate());
+        X509CertificateHolder intermediateHolder = new JcaX509CertificateHolder(intermediateCa.getCertificate());
+
+        BasicOCSPResp forgedResponse = createBasicOcspResponse(indirectResponder,
+            new X509CertificateHolder[]{responderHolder, intermediateHolder});
+
+        assertThrows(OCSPException.class,
+            () -> OcspClient.validateSignature(forgedResponse, caRoot.getCertificate()));
     }
 
     @ParameterizedTest

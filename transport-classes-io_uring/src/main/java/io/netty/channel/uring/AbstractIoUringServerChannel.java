@@ -147,7 +147,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, long data, int outstanding) {
             throw new UnsupportedOperationException();
         }
 

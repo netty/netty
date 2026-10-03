@@ -18,10 +18,13 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static io.netty.util.CharsetUtil.*;
@@ -76,7 +79,7 @@ public class StompSubframeDecoderTest {
         assertEquals(StompCommand.SEND, frame.command());
 
         StompContentSubframe content = channel.readInbound();
-        assertTrue(content instanceof LastStompContentSubframe);
+        assertInstanceOf(LastStompContentSubframe.class, content);
         String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!!!", s);
         content.release();
@@ -95,7 +98,7 @@ public class StompSubframeDecoderTest {
         assertEquals(StompCommand.SEND, frame.command());
 
         StompContentSubframe content = channel.readInbound();
-        assertTrue(content instanceof LastStompContentSubframe);
+        assertInstanceOf(LastStompContentSubframe.class, content);
         String s = content.content().toString(UTF_8);
         assertEquals("hello, queue a!", s);
         content.release();
@@ -136,6 +139,25 @@ public class StompSubframeDecoderTest {
         content.release();
 
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    public void testFrameChunkedIncomplete() {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(10000, 100));
+
+        ByteBuf incoming = Unpooled.buffer();
+        incoming.writeBytes(StompTestConstants.SEND_FRAME_2.getBytes());
+        // Let's truncate the buffer so we don't have anything complete after the header.
+        incoming.writerIndex(incoming.writerIndex() - 2);
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe frame = channel.readInbound();
+        assertNotNull(frame);
+        assertEquals(StompCommand.SEND, frame.command());
+
+        // There is nothing complete to read.
+        assertNull(channel.readInbound());
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
@@ -529,5 +551,82 @@ public class StompSubframeDecoderTest {
 
         assertInstanceOf(TooLongFrameException.class,
                 headersSubFrame.decoderResult().cause());
+    }
+
+    @Test
+    void testContentLengthExceedingIntegerMaxValueIsRejected() {
+        // content-length larger than Integer.MAX_VALUE must be rejected, otherwise the truncating
+        // cast to int when computing the remaining chunk length can wrap around and cause the
+        // decoder to loop indefinitely instead of terminating the frame.
+        String frame = "SEND\n"
+                + "destination:/queue/a\n"
+                + "content-length:2147483648\n"
+                + "\n" + '\0';
+        ByteBuf incoming = Unpooled.wrappedBuffer(frame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+        assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
+
+        assertNull(channel.readInbound());
+    }
+
+    @Test
+    void testContentLengthEqualToIntegerMaxValueIsAccepted() {
+        channel = new EmbeddedChannel(new StompSubframeDecoder());
+        String frame = "SEND\n"
+                + "destination:/queue/a\n"
+                + "content-length:2147483647\n"
+                + "\n" + '\0';
+        ByteBuf incoming = Unpooled.wrappedBuffer(frame.getBytes(UTF_8));
+        assertTrue(channel.writeInbound(incoming));
+
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        assertFalse(headersSubFrame.decoderResult().isFailure());
+
+        // No content was actually sent, so the decoder should simply wait for more bytes
+        // rather than producing any (partial) content subframes.
+        assertNull(channel.readInbound());
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    // Read sizes: byte by byte, a few bytes, about half of the frame, and the whole frame in one read.
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersNotExceededWhenHeadersSplitAcrossReads(int readSize) {
+        // 10 headers and a limit of 10: the frame must be accepted however it is split into reads.
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(10), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isSuccess(), String.valueOf(headersSubFrame.decoderResult()));
+        assertEquals(10, headersSubFrame.headers().size());
+    }
+
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersEnforcedWhenHeadersSplitAcrossReads(int readSize) {
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(11), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+        assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
+    }
+
+    private static byte[] frameWithHeaders(int numHeaders) {
+        StringBuilder frame = new StringBuilder("SEND\ndestination:/queue/a\n");
+        for (int i = 1; i < numHeaders; i++) {
+            frame.append("header").append(i).append(":value").append(i).append('\n');
+        }
+        return frame.append("\nbody\0").toString().getBytes(UTF_8);
+    }
+
+    private static StompHeadersSubframe decodeHeaders(byte[] frame, int readSize, int maxNumHeaders) {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, maxNumHeaders, true));
+        for (int i = 0; i < frame.length; i += Math.min(readSize, frame.length - i)) {
+            channel.writeInbound(Unpooled.wrappedBuffer(frame, i, Math.min(readSize, frame.length - i)));
+        }
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        channel.finishAndReleaseAll();
+        return headersSubFrame;
     }
 }

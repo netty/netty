@@ -851,7 +851,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            outer: while (!ctx.isRemoved()) {
+            outer: while (!ctx.isRemoved() && !pendingUnencryptedWrites.isEmpty()) {
                 ChannelPromise promise = ctx.newPromise();
                 ByteBuf buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
@@ -1175,7 +1175,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         StacklessClosedChannelException exception = StacklessClosedChannelException.newInstance(
                 SslHandler.class, "channelInactive(ChannelHandlerContext)");
 
-        // Add a supressed exception if the handshake was not completed yet.
+        // Add a suppressed exception if the handshake was not completed yet.
         if (isStateSet(STATE_HANDSHAKE_STARTED) && !handshakePromise.isDone()) {
             ThrowableUtil.addSuppressed(exception, StacklessSSLHandshakeException.newInstance(
                     "Connection closed while SSL/TLS handshake was in progress",

@@ -21,10 +21,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -62,7 +63,7 @@ public class Http2StreamChannelBootstrapTest {
         Channel clientChannel = null;
         try {
             final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-            group = new DefaultEventLoop();
+            group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)
