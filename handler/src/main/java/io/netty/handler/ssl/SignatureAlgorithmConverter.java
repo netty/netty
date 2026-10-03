@@ -49,11 +49,18 @@ final class SignatureAlgorithmConverter {
 
     /**
      * Converts an OpenSSL algorithm name to a Java algorithm name and return it,
-     * or return {@code null} if the conversation failed because the format is not known.
+     * or return {@code null} if the conversion failed because the format is not known.
      */
     static String toJavaName(String opensslName) {
         if (opensslName == null) {
             return null;
+        }
+        // EdDSA names carry no hash, so the pattern can't match them
+        if ("ed25519".equalsIgnoreCase(opensslName)) {
+            return "Ed25519";
+        }
+        if ("ed448".equalsIgnoreCase(opensslName)) {
+            return "Ed448";
         }
         Matcher matcher = PATTERN.matcher(opensslName);
         if (matcher.matches()) {
