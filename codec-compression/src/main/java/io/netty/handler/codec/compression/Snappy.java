@@ -19,8 +19,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
+
+import java.util.function.Supplier;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -36,6 +39,22 @@ public final class Snappy {
     // used as a return value to indicate that we haven't yet read our full preamble
     private static final int PREAMBLE_NOT_FULL = -1;
     private static final int NOT_ENOUGH_INPUT = -1;
+
+    private static final Supplier<ByteBufChecksum> CRC32C_SUPPLIER;
+
+    static {
+        Supplier<ByteBufChecksum> supplier;
+        if (PlatformDependent.javaVersion() >= 9) {
+            if (PlatformDependent.javaVersion() >= 22 && PlatformDependent.javaVersion() < 25) {
+                supplier = JdkCrc32cByteBufChecksumWithWorkaround::new;
+            } else {
+                supplier = JdkCrc32cByteBufChecksum::new;
+            }
+        } else {
+            supplier = Crc32c::new;
+        }
+        CRC32C_SUPPLIER = supplier;
+    }
 
     // constants for the tag types
     private static final int LITERAL = 0;
@@ -666,7 +685,7 @@ public final class Snappy {
      * @param data The input data to calculate the CRC32C checksum of
      */
     static int calculateChecksum(ByteBuf data, int offset, int length) {
-        Crc32c crc32 = new Crc32c();
+        ByteBufChecksum crc32 = CRC32C_SUPPLIER.get();
         try {
             crc32.update(data, offset, length);
             return maskChecksum(crc32.getValue());
