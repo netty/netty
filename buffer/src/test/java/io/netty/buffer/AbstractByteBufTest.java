@@ -2159,30 +2159,42 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testRetainedSliceOfNonRetainedDerivedBufferCoversTheReadableBytes() {
-        // a writer index below the capacity and a reader index above zero
-        buffer.writerIndex(buffer.capacity() - 2);
-        buffer.readerIndex(1);
-
-        ByteBuf retainedDuplicate = buffer.retainedDuplicate();
-        ByteBuf retainedSlice = buffer.retainedSlice();
-        try {
-            for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
-                assertRetainedSliceCoversTheReadableBytes(derived.duplicate());
-                assertRetainedSliceCoversTheReadableBytes(derived.slice());
+        for (int i = 0; i < buffer.capacity(); i++) {
+            buffer.setByte(i, i);
+        }
+        // a writer index below the capacity, and a reader index at zero or above
+        for (int readerIndex = 0; readerIndex <= 1; readerIndex++) {
+            buffer.setIndex(readerIndex, buffer.capacity() - 2);
+            ByteBuf retainedDuplicate = null;
+            ByteBuf retainedSlice = null;
+            try {
+                retainedDuplicate = buffer.retainedDuplicate();
+                retainedSlice = buffer.retainedSlice();
+                for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice());
+                    assertRetainedSliceBeforeAndAfterRead(derived.duplicate().duplicate());
+                    assertRetainedSliceBeforeAndAfterRead(derived.slice().slice());
+                }
+            } finally {
+                if (retainedDuplicate != null) {
+                    retainedDuplicate.release();
+                }
+                if (retainedSlice != null) {
+                    retainedSlice.release();
+                }
             }
-        } finally {
-            retainedDuplicate.release();
-            retainedSlice.release();
+            assertEquals(1, buffer.refCnt());
         }
     }
 
-    private static void assertRetainedSliceCoversTheReadableBytes(ByteBuf buf) {
-        assertRetainedSliceEqualsTheReadableBytes(buf);
+    private static void assertRetainedSliceBeforeAndAfterRead(ByteBuf buf) {
+        assertRetainedSliceMatchesTheReadableBytes(buf);
         buf.readByte();
-        assertRetainedSliceEqualsTheReadableBytes(buf);
+        assertRetainedSliceMatchesTheReadableBytes(buf);
     }
 
-    private static void assertRetainedSliceEqualsTheReadableBytes(ByteBuf buf) {
+    private static void assertRetainedSliceMatchesTheReadableBytes(ByteBuf buf) {
         ByteBuf retainedSlice = buf.retainedSlice();
         try {
             assertEquals(buf.readableBytes(), retainedSlice.readableBytes());
