@@ -280,7 +280,9 @@ final class QpackEncoder {
                 return dynamicTblIdx;
             }
             final int nameIdx = index ^ QpackStaticTable.MASK_NAME_REF;
-            dynamicTblIdx = tryAddToDynamicTable(qpackAttributes, true, nameIdx, name, value);
+            if (dynamicTblIdx == DYNAMIC_TABLE_ENCODE_NOT_DONE) {
+                dynamicTblIdx = tryAddToDynamicTable(qpackAttributes, true, nameIdx, name, value);
+            }
             if (dynamicTblIdx >= 0) {
                 if (dynamicTblIdx >= base) {
                     encodePostBaseIndexed(out, base, dynamicTblIdx);
@@ -371,6 +373,14 @@ final class QpackEncoder {
                     // Add to the table but do not use the entry in the header block to avoid blocking.
                     return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
                 }
+                blockedStreams++;
+            } else if (!dynamicTable.isKnownReceived(idx)) {
+                // The decoder may not have received this entry yet, so referencing it may block the stream.
+                // See https://www.rfc-editor.org/rfc/rfc9204.html#section-2.1.2
+                if (mayNotBlockStream()) {
+                    return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
+                }
+                blockedStreams++;
             }
             if (idx >= base) {
                 encodePostBaseIndexed(out, base, idx);
