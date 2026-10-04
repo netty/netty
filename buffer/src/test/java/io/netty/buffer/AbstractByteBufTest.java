@@ -2158,6 +2158,41 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testRetainedSliceOfNonRetainedDerivedBufferCoversTheReadableBytes() {
+        // a writer index below the capacity and a reader index above zero
+        buffer.writerIndex(buffer.capacity() - 2);
+        buffer.readerIndex(1);
+
+        ByteBuf retainedDuplicate = buffer.retainedDuplicate();
+        ByteBuf retainedSlice = buffer.retainedSlice();
+        try {
+            for (ByteBuf derived : new ByteBuf[] { retainedDuplicate, retainedSlice }) {
+                assertRetainedSliceCoversTheReadableBytes(derived.duplicate());
+                assertRetainedSliceCoversTheReadableBytes(derived.slice());
+            }
+        } finally {
+            retainedDuplicate.release();
+            retainedSlice.release();
+        }
+    }
+
+    private static void assertRetainedSliceCoversTheReadableBytes(ByteBuf buf) {
+        assertRetainedSliceEqualsTheReadableBytes(buf);
+        buf.readByte();
+        assertRetainedSliceEqualsTheReadableBytes(buf);
+    }
+
+    private static void assertRetainedSliceEqualsTheReadableBytes(ByteBuf buf) {
+        ByteBuf retainedSlice = buf.retainedSlice();
+        try {
+            assertEquals(buf.readableBytes(), retainedSlice.readableBytes());
+            assertEquals(buf.slice(), retainedSlice);
+        } finally {
+            retainedSlice.release();
+        }
+    }
+
+    @Test
     public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
         ByteBuf slice = buffer.retainedSlice();
         ByteBuf duplicate = slice.duplicate();
