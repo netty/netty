@@ -30,6 +30,7 @@ import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -40,6 +41,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.Socket;
+import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -49,27 +51,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PkiTestingTlsTest {
 
     static List<Arguments> classicalAlgorithms() {
-        List<SslProvider> providers = new ArrayList<>();
-        if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
-            providers.add(SslProvider.JDK);
-        }
-        if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported()) {
-            providers.add(SslProvider.OPENSSL);
-        }
-
         List<Arguments> args = new ArrayList<>();
-        for (SslProvider provider : providers) {
+        for (SslProvider provider : tlsv13Providers()) {
             List<CertificateBuilder.Algorithm> algs =  new ArrayList<>();
             algs.add(CertificateBuilder.Algorithm.rsa2048);
             algs.add(CertificateBuilder.Algorithm.ecp256);
@@ -79,6 +76,17 @@ public class PkiTestingTlsTest {
             }
         }
         return args;
+    }
+
+    static List<SslProvider> tlsv13Providers() {
+        List<SslProvider> providers = new ArrayList<>();
+        if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
+            providers.add(SslProvider.JDK);
+        }
+        if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported()) {
+            providers.add(SslProvider.OPENSSL);
+        }
+        return providers;
     }
 
     static Stream<Arguments> interoperabilityParams() {
@@ -118,9 +126,30 @@ public class PkiTestingTlsTest {
         testTlsConnection(serverContext, clientContext, null);
     }
 
+    static List<SslProvider> ed25519Providers() {
+        List<SslProvider> providers = tlsv13Providers();
+        if (!OpenSsl.isBoringSSL()) {
+            // The OPENSSL provider doesn't include `ed25519` in its peer signature algorithms
+            // https://github.com/netty/netty-tcnative/pull/1019
+            providers.remove(SslProvider.OPENSSL);
+        }
+        return providers;
+    }
+
+    static List<Arguments> ed25519Params() {
+        List<Arguments> args = new ArrayList<>();
+        for (SslProvider provider : ed25519Providers()) {
+            for (boolean useKeyManagerFactory : new boolean[] {true, false}) {
+                args.add(Arguments.of(provider, useKeyManagerFactory));
+            }
+        }
+        return args;
+    }
+
     @EnabledForJreRange(min = JRE.JAVA_15)
-    @Test
-    public void connectWithEd25519()
+    @ParameterizedTest
+    @MethodSource("ed25519Params")
+    public void connectWithEd25519(SslProvider provider, boolean useKeyManagerFactory)
             throws Exception {
         X509Bundle cert = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.ed25519)
@@ -128,9 +157,92 @@ public class PkiTestingTlsTest {
                 .subject("CN=localhost")
                 .buildSelfSigned();
 
-        // We currently don't support Ed25519 or Ed448 with the OPENSSL provider,
-        // so to use those algorithms we have to use the JDK provider.
-        SslProvider provider = SslProvider.JDK;
+        SslContextBuilder serverBuilder = useKeyManagerFactory ?
+                SslContextBuilder.forServer(cert.toKeyManagerFactory()) :
+                SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificate());
+        final SslContext serverContext = serverBuilder
+                .sslProvider(provider)
+                .build();
+
+        final SslContext clientContext = SslContextBuilder.forClient()
+                .trustManager(cert.toTrustManagerFactory())
+                .sslProvider(SslProvider.JDK)
+                .serverName(new SNIHostName("localhost"))
+                .protocols("TLSv1.3")
+                .build();
+
+        SSLSession session = testTlsConnection(serverContext, clientContext, null, null);
+        assertThat(session.getPeerCertificates()[0]).isEqualTo(cert.getCertificate());
+    }
+
+    static List<Arguments> ed25519AndRsaParams() {
+        List<Arguments> args = new ArrayList<>();
+        for (SslProvider provider : ed25519Providers()) {
+            // The JDK client's default signature schemes list ECDSA first, then Ed25519, then RSA.
+            args.add(Arguments.of(provider, null, "Ed25519"));
+            args.add(Arguments.of(provider, new String[] {"rsa_pss_rsae_sha256"}, "RSA"));
+            args.add(Arguments.of(provider, new String[] {"rsa_pss_rsae_sha256", "ed25519"}, "RSA"));
+            args.add(Arguments.of(provider, new String[] {"ed25519", "rsa_pss_rsae_sha256"}, "Ed25519"));
+        }
+        return args;
+    }
+
+    /**
+     * Requires Java 19 for {@code SSLParameters#setSignatureSchemes(String[])}.
+     */
+    @EnabledForJreRange(min = JRE.JAVA_19)
+    @ParameterizedTest
+    @MethodSource("ed25519AndRsaParams")
+    public void connectWithEd25519AndRsa(SslProvider provider, String[] clientSignatureSchemes,
+                                         String expectedAlgorithm) throws Exception {
+        X509Bundle ed25519 = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.ed25519)
+                .setIsCertificateAuthority(true)
+                .subject("CN=localhost")
+                .buildSelfSigned();
+        X509Bundle rsa = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.rsa2048)
+                .setIsCertificateAuthority(true)
+                .subject("CN=localhost")
+                .buildSelfSigned();
+
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(null, null);
+        keyStore.setKeyEntry("ed25519", ed25519.getKeyPair().getPrivate(), EmptyArrays.EMPTY_CHARS,
+                ed25519.getCertificatePath());
+        keyStore.setKeyEntry("rsa", rsa.getKeyPair().getPrivate(), EmptyArrays.EMPTY_CHARS,
+                rsa.getCertificatePath());
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, EmptyArrays.EMPTY_CHARS);
+
+        final SslContext serverContext = SslContextBuilder.forServer(kmf)
+                .sslProvider(provider)
+                .build();
+
+        final SslContext clientContext = SslContextBuilder.forClient()
+                .trustManager(ed25519.getCertificate(), rsa.getCertificate())
+                .sslProvider(SslProvider.JDK)
+                .serverName(new SNIHostName("localhost"))
+                .protocols("TLSv1.3")
+                .build();
+
+        SSLSession session = testTlsConnection(serverContext, clientContext, null, clientSignatureSchemes);
+        X509Bundle expected = "RSA".equals(expectedAlgorithm) ? rsa : ed25519;
+        assertThat(session.getPeerCertificates()[0]).isEqualTo(expected.getCertificate());
+    }
+
+    /**
+     * Requires Java 19 for {@code SSLParameters#setSignatureSchemes(String[])}.
+     */
+    @EnabledForJreRange(min = JRE.JAVA_19)
+    @ParameterizedTest
+    @MethodSource("tlsv13Providers")
+    public void connectWithEd25519FailsWithoutCommonSignatureAlgorithm(SslProvider provider) throws Exception {
+        X509Bundle cert = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.ed25519)
+                .setIsCertificateAuthority(true)
+                .subject("CN=localhost")
+                .buildSelfSigned();
 
         final SslContext serverContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(provider)
@@ -138,12 +250,13 @@ public class PkiTestingTlsTest {
 
         final SslContext clientContext = SslContextBuilder.forClient()
                 .trustManager(cert.toTrustManagerFactory())
-                .sslProvider(provider)
+                .sslProvider(SslProvider.JDK)
                 .serverName(new SNIHostName("localhost"))
                 .protocols("TLSv1.3")
                 .build();
 
-        testTlsConnection(serverContext, clientContext, null);
+        assertThrows(SSLException.class, () -> testTlsConnection(
+                serverContext, clientContext, null, new String[] {"ecdsa_secp256r1_sha256"}));
     }
 
     /**
@@ -321,7 +434,16 @@ public class PkiTestingTlsTest {
     }
 
     private void testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups)
-            throws InterruptedException {
+            throws Exception {
+        testTlsConnection(serverContext, clientContext, groups, null);
+    }
+
+    /**
+     * @param clientSignatureSchemes sets the preferred client signature schemes. Requires JRE 19+
+     * @return the client's session.
+     */
+    private SSLSession testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups,
+                                         String[] clientSignatureSchemes) throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress serverAddress = new LocalAddress(getClass());
 
@@ -345,7 +467,7 @@ public class PkiTestingTlsTest {
                     .group(group)
                     .bind(serverAddress).sync().channel();
 
-            Promise<SslHandshakeCompletionEvent> promise = group.next().newPromise();
+            Promise<SSLSession> promise = group.next().newPromise();
 
             clientChannel = new Bootstrap()
                     .channel(LocalChannel.class)
@@ -357,6 +479,11 @@ public class PkiTestingTlsTest {
                             if (groups != null) {
                                 SSLParameters parameters = handler.engine().getSSLParameters();
                                 OpenSslParametersUtil.setNamesGroups(parameters, groups);
+                                handler.engine().setSSLParameters(parameters);
+                            }
+                            if (clientSignatureSchemes != null) {
+                                SSLParameters parameters = handler.engine().getSSLParameters();
+                                setSignatureSchemes(parameters, clientSignatureSchemes);
                                 handler.engine().setSSLParameters(parameters);
                             }
                             ch.pipeline()
@@ -374,7 +501,7 @@ public class PkiTestingTlsTest {
                                                                 .getSession()).getNamedGroup();
                                                         assertThat(OpenSsl.NAMED_GROUPS).contains(namedGroup);
                                                     }
-                                                    promise.setSuccess(shce);
+                                                    promise.setSuccess(session);
                                                 } else {
                                                     promise.setFailure(shce.cause());
                                                 }
@@ -396,7 +523,7 @@ public class PkiTestingTlsTest {
                     .sync()
                     .channel();
 
-            promise.sync();
+            return promise.sync().getNow();
         } finally {
             if (clientChannel != null) {
                 clientChannel.close();
@@ -416,5 +543,13 @@ public class PkiTestingTlsTest {
             ReferenceCountUtil.release(clientContext);
             ReferenceCountUtil.release(serverContext);
         }
+    }
+
+    /**
+     * Uses reflection to invoke the Java 19+ {@code SSLParameters#setSignatureSchemes(String[])}
+     */
+    private static void setSignatureSchemes(SSLParameters parameters, String[] signatureSchemes) throws Exception {
+        SSLParameters.class.getMethod("setSignatureSchemes", String[].class)
+                .invoke(parameters, (Object) signatureSchemes);
     }
 }

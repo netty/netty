@@ -130,6 +130,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static final SSLEngineResult NEED_WRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_WRAP, 0, 0);
     private static final SSLEngineResult CLOSED_NOT_HANDSHAKING = new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
 
+    // See https://www.rfc-editor.org/rfc/rfc8446#section-4.2.1
+    private static final int TLS1_3_VERSION = 0x0304;
+
     // OpenSSL state
     private long ssl;
     private long networkBIO;
@@ -444,6 +447,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
+    }
+
+    final synchronized boolean isTLSv13() {
+        return !destroyed && SSL.getVersionInt(ssl) == TLS1_3_VERSION;
     }
 
     final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
