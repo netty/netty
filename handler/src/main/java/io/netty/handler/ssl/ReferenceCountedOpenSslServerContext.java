@@ -47,7 +47,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class ReferenceCountedOpenSslServerContext extends ReferenceCountedOpenSslContext {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslServerContext.class);
-    private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
+
     private final OpenSslServerSessionContext sessionContext;
 
     ReferenceCountedOpenSslServerContext(
@@ -107,6 +107,11 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                                          ResumptionController resumptionController,
                                                          boolean fallbackToJdkSignatureProviders)
             throws SSLException {
+        // The trust and key material can only be digested into the session_id_context if it was handed to us as
+        // plain certificates. Anything that is backed by a TrustManagerFactory / KeyManagerFactory we did not create
+        // ourselves is opaque to us, so we can not tell if two of them behave the same.
+        final boolean opaqueConfiguration = keyCertChain == null || keyManagerFactory != null ||
+                (trustCertCollection == null && trustManagerFactory != null);
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
             try {
@@ -196,7 +201,19 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             }
 
             OpenSslServerSessionContext sessionContext = new OpenSslServerSessionContext(thiz, keyMaterialProvider);
-            sessionContext.setSessionIdContext(ID);
+            // Derive the session_id_context from what distinguishes this context, so sessions can not be resumed
+            // across SslContext instances that differ in their ClientAuth mode or trust / key configuration, even if
+            // session-ticket keys or a session cache are shared between them.
+            if (!sessionContext.setSessionIdContext(deriveSessionIdContext(
+                    thiz.clientAuth, keyCertChain, trustCertCollection, opaqueConfiguration))) {
+                // Without a session_id_context we must not continue as resumption would not be scoped.
+                String msg = "failed to set session id context";
+                String lastError = SSL.getLastError();
+                if (lastError != null) {
+                    msg += ": " + lastError;
+                }
+                throw new SSLException(msg);
+            }
             // Enable session caching by default
             sessionContext.setSessionCacheEnabled(SERVER_ENABLE_SESSION_CACHE);
             if (sessionCacheSize > 0) {
