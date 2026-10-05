@@ -877,27 +877,6 @@
                           <equals arg1="${os.detected.name}" arg2="windows" />
                           <then>
                             <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="generate-lockfile" />
-                              <env key="DEBUG" value="true" />
-                              <env key="OPT_LEVEL" value="3" />
-                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
-                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
-                            </exec>
-                            <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="update -p cc --precise 1.5.1" />
-                              <env key="DEBUG" value="true" />
-                              <env key="OPT_LEVEL" value="3" />
-                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
-                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
-                            </exec>
-                            <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                              <arg line="update -p libc --precise 0.2.189" />
-                              <env key="DEBUG" value="true" />
-                              <env key="OPT_LEVEL" value="3" />
-                              <env key="BORING_BSSL_PATH" value="${boringsslHomeBuildDir}" />
-                              <env key="BORING_BSSL_INCLUDE_PATH" value="${boringsslHomeIncludeDir}" />
-                            </exec>
-                            <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
                               <arg line="build -p quiche --features &quot;ffi qlog custom-client-dcid&quot; --release" />
                               <arg value="${cargoTarget}" />
                               <!-- See https://github.com/cloudflare/quiche/blob/0.7.0/src/build.rs#L73 -->
