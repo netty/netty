@@ -148,6 +148,13 @@ jobs:
       - name: Set up TestLens
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
+      # Git bash puts /usr/bin first on PATH, so rustc would pick GNU coreutils' link.exe over the MSVC linker.
+      - name: Remove GNU link.exe shadowing the MSVC linker
+        shell: bash
+        run: |
+          which -a link || true
+          rm -f "/usr/bin/link.exe"
+
       - name: Build project
         # Run through bash (git bash is part of the runner image) as mvn_affected.sh is a bash script.
         # install (not package) as the modules that are not part of the affected set are resolved from the local repository.
