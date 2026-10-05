@@ -2809,35 +2809,38 @@ public abstract class AbstractByteBufTest {
         final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
-            new Thread(() -> {
-                try {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                           buf = buffer.slice();
-                        } else {
-                           buf = buffer.duplicate();
-                        }
-                        TestGatheringByteChannel channel = new TestGatheringByteChannel();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(channel, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, channel.writtenBytes());
-                        latch.countDown();
-                    }
-                } catch (Throwable e) {
-                    innerThrowable.compareAndSet(null, e);
-                } finally {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                                buf = buffer.slice();
+                            } else {
+                                buf = buffer.duplicate();
+                            }
+                            TestGatheringByteChannel channel = new TestGatheringByteChannel();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(channel, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, channel.writtenBytes());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
