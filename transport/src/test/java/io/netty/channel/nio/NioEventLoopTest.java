@@ -200,7 +200,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
-        final AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         final AtomicBoolean loopStarted = new AtomicBoolean();
         final Runnable task = new Runnable() {
             @Override
