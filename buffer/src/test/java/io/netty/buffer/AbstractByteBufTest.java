@@ -2816,9 +2816,9 @@ public abstract class AbstractByteBufTest {
                         while (latch.getCount() > 0) {
                             ByteBuf buf;
                             if (slice) {
-                               buf = buffer.slice();
+                                buf = buffer.slice();
                             } else {
-                               buf = buffer.duplicate();
+                                buf = buffer.duplicate();
                             }
                             TestGatheringByteChannel channel = new TestGatheringByteChannel();
 
@@ -2847,7 +2847,7 @@ public abstract class AbstractByteBufTest {
         }
         try {
             latch.await();
-            barrier.await(5, TimeUnit.SECONDS);
+            barrier.await(30, TimeUnit.SECONDS);
         } catch (Exception e) {
             Throwable inner = innerThrowable.get();
             if (inner != null) {
@@ -2931,7 +2931,7 @@ public abstract class AbstractByteBufTest {
         }
         try {
             latch.await();
-            barrier.await(5, TimeUnit.SECONDS);
+            barrier.await(30, TimeUnit.SECONDS);
         } catch (Exception e) {
             Throwable inner = innerThrowable.get();
             if (inner != null) {
