@@ -30,6 +30,7 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -37,6 +38,8 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -44,11 +47,13 @@ import java.security.KeyException;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -113,6 +118,12 @@ public abstract class SslContext {
      * </ul>
      */
     protected static final String defaultEndpointVerificationAlgorithm;
+
+    // Used to derive the session_id_context of server contexts, see deriveSessionIdContext(...).
+    private static final SecureRandom SESSION_ID_CONTEXT_SALT_GENERATOR = new SecureRandom();
+    private static final String SESSION_ID_CONTEXT_DOMAIN_SEPARATOR = "netty-server-session-id-context-v1";
+    // Needs to be at most SSL_MAX_SID_CTX_LENGTH (32) bytes, which is exactly the size of a SHA-256 digest.
+    private static final int SESSION_ID_CONTEXT_SALT_LENGTH = 32;
     static final String ALIAS = "key";
 
     static final CertificateFactory X509_CERT_FACTORY;
@@ -1443,5 +1454,75 @@ public abstract class SslContext {
 
     static char[] keyStorePassword(String keyPassword) {
         return keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
+    }
+
+    /**
+     * Derives the {@code session_id_context} for a server context from the material that determines which clients
+     * it accepts: the {@link ClientAuth} mode, the certificate chain it presents and the certificates it trusts.
+     * <p>
+     * The {@code session_id_context} scopes session resumption: a session (and therefore its client-authentication
+     * state) can only be resumed by a context that uses the same {@code session_id_context}. It must hence differ
+     * between contexts which, when sharing a session cache or session-ticket keys, must not accept each others
+     * sessions (for example because they use a different {@link ClientAuth} mode or trust configuration), but it
+     * should be the same for contexts that are configured identically (for example on different nodes of a cluster
+     * that share session-ticket keys), so resumption keeps working between them.
+     * See <a href="https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_session_id_context.html">
+     * SSL_CTX_set_session_id_context</a> and
+     * <a href="https://github.com/netty/netty/security/advisories/GHSA-6xv6-9mgg-mfvc">GHSA-6xv6-9mgg-mfvc</a>.
+     *
+     * @param clientAuth         the {@link ClientAuth} mode of the context.
+     * @param keyCertChain       the certificate chain the context presents, or {@code null} if unknown.
+     * @param trustCertCollection the certificates the context trusts, or {@code null} if it uses the default.
+     * @param opaque             {@code true} if parts of the configuration (like a custom
+     *                           {@link TrustManagerFactory}) can not be digested. As we then can not tell if two
+     *                           contexts behave the same, a random salt is mixed in so the result is unique to the
+     *                           context.
+     * @return                   at most 32 bytes that are suitable to be used as {@code session_id_context}.
+     */
+    @UnstableApi
+    protected static byte[] deriveSessionIdContext(ClientAuth clientAuth, X509Certificate[] keyCertChain,
+                                                   X509Certificate[] trustCertCollection, boolean opaque) {
+        final MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            // Every Java implementation is required to support SHA-256.
+            throw new IllegalStateException(e);
+        }
+        updateDigest(digest, SESSION_ID_CONTEXT_DOMAIN_SEPARATOR.getBytes(StandardCharsets.US_ASCII));
+        updateDigest(digest, clientAuth.name().getBytes(StandardCharsets.US_ASCII));
+        boolean salted = opaque;
+        try {
+            updateDigest(digest, keyCertChain);
+            updateDigest(digest, trustCertCollection);
+        } catch (CertificateEncodingException e) {
+            salted = true;
+        }
+        if (salted) {
+            byte[] salt = new byte[SESSION_ID_CONTEXT_SALT_LENGTH];
+            SESSION_ID_CONTEXT_SALT_GENERATOR.nextBytes(salt);
+            updateDigest(digest, salt);
+        } else {
+            updateDigest(digest, EmptyArrays.EMPTY_BYTES);
+        }
+        return digest.digest();
+    }
+
+    private static void updateDigest(MessageDigest digest, X509Certificate[] certificates)
+            throws CertificateEncodingException {
+        if (certificates == null) {
+            digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(-1).array());
+            return;
+        }
+        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(certificates.length).array());
+        for (X509Certificate certificate : certificates) {
+            updateDigest(digest, certificate.getEncoded());
+        }
+    }
+
+    // Every field is prefixed with its length so different inputs can never produce the same byte sequence.
+    private static void updateDigest(MessageDigest digest, byte[] bytes) {
+        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array());
+        digest.update(bytes);
     }
 }
