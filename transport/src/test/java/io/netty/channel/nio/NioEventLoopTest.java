@@ -223,7 +223,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                         }
                     } catch (Throwable cause) {
                         error.set(cause);
-                    };
+                    }
                 }
             });
             t.start();
