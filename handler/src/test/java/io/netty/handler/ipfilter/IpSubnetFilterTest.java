@@ -221,6 +221,31 @@ public class IpSubnetFilterTest {
     }
 
     @Test
+    public void testWiderRuleIsKeptForSameNetworkAddress() {
+        // Both rules share the same network address and the narrower one is added first.
+        IpSubnetFilter ipv4Filter = new IpSubnetFilter(buildRejectIP("10.0.0.0", 24), buildRejectIP("10.0.0.0", 8));
+        assertFalse(ipv4Filter.accept(null, newSockAddress("10.0.0.1")));
+        assertFalse(ipv4Filter.accept(null, newSockAddress("10.1.1.2")));
+        assertTrue(ipv4Filter.accept(null, newSockAddress("11.0.0.1")));
+
+        IpSubnetFilter ipv6Filter = new IpSubnetFilter(
+                buildRejectIP("2001:db8::", 64), buildRejectIP("2001:db8::", 32));
+        assertFalse(ipv6Filter.accept(null, newSockAddress("2001:db8::1")));
+        assertFalse(ipv6Filter.accept(null, newSockAddress("2001:db8:1::1")));
+        assertTrue(ipv6Filter.accept(null, newSockAddress("2001:db9::1")));
+    }
+
+    @Test
+    public void testIpv4DefaultRouteIsKeptWithRuleAboveSignBit() {
+        // 192.168.0.0 is negative when stored as an int, 0.0.0.0/0 still has to be ordered before it.
+        IpSubnetFilter filter = new IpSubnetFilter(buildRejectIP("0.0.0.0", 0), buildRejectIP("192.168.0.0", 16));
+        assertFalse(filter.accept(null, newSockAddress("10.1.1.2")));
+        assertFalse(filter.accept(null, newSockAddress("150.1.1.1")));
+        assertFalse(filter.accept(null, newSockAddress("192.168.1.1")));
+        assertFalse(filter.accept(null, newSockAddress("250.1.1.1")));
+    }
+
+    @Test
     public void testIpv6MaskCorrectlyApplied() {
         IpSubnetFilterRule rule = new IpSubnetFilterRule("2001:db8:abcd:0000::", 52, IpFilterRuleType.ACCEPT);
 
