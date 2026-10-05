@@ -1588,6 +1588,8 @@ final class AdaptivePoolingAllocator {
 
     static class Chunk implements ChunkInfo {
         protected final AbstractByteBuf delegate;
+        // the delegate's memory address, or 0 when it has none: it doesn't change while the chunk is in use
+        final long delegateMemoryAddress;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
@@ -1600,6 +1602,7 @@ final class AdaptivePoolingAllocator {
         Chunk() {
             // Constructor only used by the MAGAZINE_FREED sentinel.
             delegate = null;
+            delegateMemoryAddress = 0L;
             magazine = null;
             allocator = null;
             capacity = 0;
@@ -1608,6 +1611,7 @@ final class AdaptivePoolingAllocator {
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
+            delegateMemoryAddress = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0L;
             this.pooled = pooled;
             capacity = delegate.capacity();
             attachToMagazine(magazine);
@@ -2149,6 +2153,9 @@ final class AdaptivePoolingAllocator {
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
         private AbstractByteBuf rootParent;
+        // this buffer's memory address, from the root buffer's address that its chunk computed, or 0 when the root
+        // buffer has none, see _memoryAddress()
+        private long memoryAddress;
         Chunk chunk;
         private int length;
         private int maxFastCapacity;
@@ -2171,6 +2178,8 @@ final class AdaptivePoolingAllocator {
             setIndex0(readerIndex, writerIndex);
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
+            // the chunk's delegate is the root buffer
+            memoryAddress = hasMemoryAddress ? wrapped.delegateMemoryAddress + startIndex : 0L;
             rootParent = unwrapped;
             tmpNioBuf = null;
 
@@ -2284,8 +2293,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         long _memoryAddress() {
-            AbstractByteBuf root = rootParent;
-            return root != null ? root._memoryAddress() + startIndex : 0L;
+            // Use the address kept at init() instead of asking the root buffer, which would check its accessibility
+            // on every call. The root stays accessible while this buffer holds a segment of its chunk.
+            return memoryAddress;
         }
 
         @Override
@@ -2670,6 +2680,7 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
+            memoryAddress = 0L;
             handle.unguardedRecycle(this);
         }
     }
