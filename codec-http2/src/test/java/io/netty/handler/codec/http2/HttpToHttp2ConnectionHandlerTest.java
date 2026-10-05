@@ -413,7 +413,7 @@ public class HttpToHttp2ConnectionHandlerTest {
 
     @Test
     public void testInformationalResponseDoesNotEndStream() throws Exception {
-        bootstrapEnv(1, 1, 0);
+        bootstrapEnv(2, 1, 0);
         final HttpRequest request = new DefaultHttpRequest(HTTP_1_1, POST, "/example");
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 3);
