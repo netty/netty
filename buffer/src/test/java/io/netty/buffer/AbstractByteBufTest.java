@@ -2893,35 +2893,38 @@ public abstract class AbstractByteBufTest {
         final AtomicReference<Throwable> innerThrowable = new AtomicReference<Throwable>();
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
-            new Thread(() -> {
-                try {
-                    while (latch.getCount() > 0) {
-                        ByteBuf buf;
-                        if (slice) {
-                            buf = buffer.slice();
-                        } else {
-                            buf = buffer.duplicate();
-                        }
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-                        while (buf.isReadable()) {
-                            try {
-                                buf.readBytes(out, buf.readableBytes());
-                            } catch (IOException e) {
-                                // Never happens
-                                return;
-                            }
-                        }
-                        assertArrayEquals(expectedBytes, out.toByteArray());
-                        latch.countDown();
-                    }
-                } catch (Throwable e) {
-                    innerThrowable.compareAndSet(null, e);
-                } finally {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
                     try {
-                        barrier.await();
-                    } catch (Exception e) {
-                        // ignore
+                        while (latch.getCount() > 0) {
+                            ByteBuf buf;
+                            if (slice) {
+                                buf = buffer.slice();
+                            } else {
+                                buf = buffer.duplicate();
+                            }
+                            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                            while (buf.isReadable()) {
+                                try {
+                                    buf.readBytes(out, buf.readableBytes());
+                                } catch (IOException e) {
+                                    // Never happens
+                                    return;
+                                }
+                            }
+                            assertArrayEquals(expectedBytes, out.toByteArray());
+                            latch.countDown();
+                        }
+                    } catch (Throwable e) {
+                        innerThrowable.compareAndSet(null, e);
+                    } finally {
+                        try {
+                            barrier.await();
+                        } catch (Exception e) {
+                            // ignore
+                        }
                     }
                 }
             }).start();
@@ -2970,30 +2973,33 @@ public abstract class AbstractByteBufTest {
             final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final CyclicBarrier startBarrier = new CyclicBarrier(10);
         final CyclicBarrier endBarrier = new CyclicBarrier(11);
-        Callable<Void> callable = () -> {
-            startBarrier.await();
-            try {
-                for (int i = 0; i < 6000; i++) {
-                    ByteBuf buf;
-                    if (slice) {
-                        buf = buffer.slice();
-                    } else {
-                        buf = buffer.duplicate();
+        Callable<Void> callable = new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                startBarrier.await();
+                try {
+                    for (int i = 0; i < 6000; i++) {
+                        ByteBuf buf;
+                        if (slice) {
+                            buf = buffer.slice();
+                        } else {
+                            buf = buffer.duplicate();
+                        }
+
+                        byte[] array = new byte[8];
+                        buf.readBytes(array);
+
+                        assertArrayEquals(expectedBytes, array);
+
+                        Arrays.fill(array, (byte) 0);
+                        buf.getBytes(0, array);
+                        assertArrayEquals(expectedBytes, array);
                     }
-
-                    byte[] array = new byte[8];
-                    buf.readBytes(array);
-
-                    assertArrayEquals(expectedBytes, array);
-
-                    Arrays.fill(array, (byte) 0);
-                    buf.getBytes(0, array);
-                    assertArrayEquals(expectedBytes, array);
+                } finally {
+                    endBarrier.await();
                 }
-            } finally {
-                endBarrier.await();
+                return null;
             }
-            return null;
         };
         List<FutureTask<Void>> tasks = new ArrayList<FutureTask<Void>>();
         for (int i = 0; i < 10; i++) {
