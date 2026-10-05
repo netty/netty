@@ -202,22 +202,28 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
         final AtomicReference<Throwable> error = new AtomicReference<>();
         final AtomicBoolean loopStarted = new AtomicBoolean();
-        final Runnable task = () -> {
-            // NOOP
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                // NOOP
+            }
         };
         // Just run often enough to trigger it normally.
         for (int i = 0; i < 250; i++) {
             NioEventLoopGroup group = new NioEventLoopGroup(1);
             final NioEventLoop loop = (NioEventLoop) group.next();
 
-            Thread t = new Thread(() -> {
-                try {
-                    for (;;) {
-                        loop.execute(task);
-                        loopStarted.set(true);
-                    }
-                } catch (Throwable cause) {
-                    error.set(cause);
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (;;) {
+                            loop.execute(task);
+                            loopStarted.set(true);
+                        }
+                    } catch (Throwable cause) {
+                        error.set(cause);
+                    };
                 }
             });
             t.start();
