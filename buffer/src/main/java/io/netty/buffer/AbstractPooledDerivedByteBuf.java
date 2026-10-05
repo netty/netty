@@ -235,8 +235,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(readerIndex(), capacity());
+            return retainedSlice(readerIndex(), readableBytes());
         }
 
         @Override
@@ -318,8 +317,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
         @Override
         public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(0, capacity());
+            return retainedSlice(readerIndex(), readableBytes());
         }
 
         @Override
