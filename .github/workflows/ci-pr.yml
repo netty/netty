@@ -127,14 +127,12 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        # Run through bash (git bash is part of the runner image) as mvn_affected.sh is a bash script.
         # install (not package) as the modules that are not part of the affected set are resolved from the local repository.
-        shell: bash
         env:
           # ALL, NONE or the comma separated list of modules, see .github/scripts/mvn_affected.sh
           NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
           NETTY_MVN: ./mvnw.cmd
-        run: ./.github/scripts/mvn_affected.sh -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+        run: ./.github/scripts/mvn_affected.ps1 -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
