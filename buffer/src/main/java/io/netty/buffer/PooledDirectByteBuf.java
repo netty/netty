@@ -236,7 +236,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
         if (src.hasArray()) {
-            setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
+            _internalNioBuffer(index, length, false).put(src.array(), src.arrayOffset() + srcIndex, length);
         } else if (src.nioBufferCount() > 0) {
             for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
                 int bbLen = bb.remaining();
