@@ -477,6 +477,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
             verifyStreamOrConnectionId(streamId, STREAM_ID);
+            // RFC 9113 Section 4.2: SETTINGS_MAX_FRAME_SIZE applies to the payload of every frame. The semantics of
+            // a generic frame are unknown so it cannot be split, the write must fail instead.
+            verifyPayloadLength(payload.readableBytes());
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
             // in the catch block.
@@ -657,6 +660,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     private static void verifyErrorCode(long errorCode) {
         if (errorCode < 0 || errorCode > MAX_UNSIGNED_INT) {
             throw new IllegalArgumentException("Invalid errorCode: " + errorCode);
+        }
+    }
+
+    private void verifyPayloadLength(int payloadLength) {
+        if (payloadLength > maxFrameSize) {
+            throw new IllegalArgumentException("Frame payload length " + payloadLength +
+                    " exceeds the maximum frame size " + maxFrameSize + " advertised by the remote peer.");
         }
     }
 
