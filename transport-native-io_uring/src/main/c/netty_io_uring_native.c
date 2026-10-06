@@ -222,6 +222,14 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
+static jint netty_io_uring_duplicateFd(JNIEnv* env, jclass clazz, jint fd) {
+    int duplicate = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+    if (duplicate < 0) {
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "fcntl(F_DUPFD_CLOEXEC) failed: ", errno);
+    }
+    return duplicate;
+}
+
 static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
     if (fileChannel == NULL) {
@@ -886,6 +894,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
+    {"duplicateFd", "(I)I", (void *) netty_io_uring_duplicateFd },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
     {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
