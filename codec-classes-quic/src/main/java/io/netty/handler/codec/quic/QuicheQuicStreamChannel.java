@@ -454,9 +454,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
      */
     void readable() {
         assert eventLoop().inEventLoop();
-        // Mark as readable and if a read is pending execute it.
+        // Mark as readable and if a read is pending execute it. If the channel was closed already, what is left
+        // must be dropped, see QuicStreamChannelUnsafe.recv().
         readable = true;
-        if (readPending) {
+        if (readPending || !active) {
             unsafe().recv();
         }
     }
@@ -576,6 +577,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 invokeLater(() -> deregister(voidPromise(), true));
             } else {
                 deregister(voidPromise(), true);
+            }
+            if (readable) {
+                // Drop what is left to read, see recv().
+                recv();
             }
         }
 
@@ -1040,10 +1045,52 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         handleReadException(pipeline, byteBuf, cause, allocHandle, readFrames);
                     }
                 }
+                if (!active) {
+                    discardInput(allocator, allocHandle);
+                }
             } finally {
                 // About to leave the method lets reset so we can enter it again.
                 inRecv = false;
                 removeStreamFromParent();
+            }
+        }
+
+        /**
+         * The channel was closed before the end of the stream was read. Read and drop what is left: as long as quiche
+         * holds the data it keeps its connection flow control credit, and the stream is never completed and collected,
+         * so its stream credit is never returned to the remote peer either.
+         */
+        private void discardInput(DirectIoByteBufAllocator allocator,
+                                  @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle) {
+            QuicheQuicChannel parent = parent();
+            while (readable && !finReceived) {
+                allocHandle.reset(config());
+                ByteBuf byteBuf = allocHandle.allocate(allocator);
+                try {
+                    QuicheQuicChannel.StreamRecvResult result = parent.streamRecv(streamId(), byteBuf);
+                    switch (result) {
+                        case DONE:
+                            readable = false;
+                            break;
+                        case FIN:
+                            readable = false;
+                            finReceived = true;
+                            inputShutdown = true;
+                            break;
+                        case OK:
+                            break;
+                        default:
+                            throw new Error("Unexpected StreamRecvResult: " + result);
+                    }
+                } catch (Exception e) {
+                    // The stream was reset by the remote peer or the connection was closed, there is nothing left
+                    // to read.
+                    readable = false;
+                    finReceived = true;
+                    inputShutdown = true;
+                } finally {
+                    byteBuf.release();
+                }
             }
         }
 
