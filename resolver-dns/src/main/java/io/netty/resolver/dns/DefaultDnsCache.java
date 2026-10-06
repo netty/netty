@@ -27,6 +27,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -145,10 +146,16 @@ public class DefaultDnsCache implements DnsCache {
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals,
                                InetAddress address, long originalTtl, EventLoop loop) {
+        return cache(hostname, additionals, address, null, originalTtl, loop);
+    }
+
+    @Override
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additionals,
+                               InetAddress address, List<String> cnameChain, long originalTtl, EventLoop loop) {
         checkNotNull(hostname, "hostname");
         checkNotNull(address, "address");
         checkNotNull(loop, "loop");
-        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address);
+        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address, cnameChain);
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
@@ -158,11 +165,17 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+        return cache(hostname, additionals, cause, null, loop);
+    }
+
+    @Override
+    public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause,
+                               List<String> cnameChain, EventLoop loop) {
         checkNotNull(hostname, "hostname");
         checkNotNull(cause, "cause");
         checkNotNull(loop, "loop");
 
-        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause);
+        DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause, cnameChain);
         if (negativeTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
         }
@@ -186,24 +199,40 @@ public class DefaultDnsCache implements DnsCache {
         private final String hostname;
         private final InetAddress address;
         private final Throwable cause;
+        private final List<String> cnameChain;
         private final int hash;
 
         DefaultDnsCacheEntry(String hostname, InetAddress address) {
+            this(hostname, address, null);
+        }
+
+        DefaultDnsCacheEntry(String hostname, InetAddress address, List<String> cnameChain) {
             this.hostname = hostname;
             this.address = address;
-            cause = null;
+            this.cause = null;
+            this.cnameChain = cnameChain != null && !cnameChain.isEmpty()
+                ? Collections.unmodifiableList(new ArrayList<String>(cnameChain))
+                : Collections.<String>emptyList();
             hash = System.identityHashCode(this);
         }
 
         DefaultDnsCacheEntry(String hostname, Throwable cause) {
+            this(hostname, cause, null);
+        }
+
+        DefaultDnsCacheEntry(String hostname, Throwable cause, List<String> cnameChain) {
             this.hostname = hostname;
             this.cause = cause;
-            address = null;
+            this.address = null;
+            this.cnameChain = cnameChain != null && !cnameChain.isEmpty()
+                ? Collections.unmodifiableList(new ArrayList<String>(cnameChain))
+                : Collections.<String>emptyList();
             hash = System.identityHashCode(this);
         }
 
         private DefaultDnsCacheEntry(DefaultDnsCacheEntry entry) {
             this.hostname = entry.hostname;
+            this.cnameChain = entry.cnameChain; // Already immutable
             if (entry.cause == null) {
                 this.address = entry.address;
                 this.cause = null;
@@ -222,6 +251,11 @@ public class DefaultDnsCache implements DnsCache {
         @Override
         public Throwable cause() {
             return cause;
+        }
+
+        @Override
+        public List<String> cnameChain() {
+            return cnameChain;
         }
 
         String hostname() {
