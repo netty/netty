@@ -79,7 +79,7 @@ public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameLi
     }
 
     @Override
-    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
             ByteBuf payload) throws Http2Exception {
     }
 

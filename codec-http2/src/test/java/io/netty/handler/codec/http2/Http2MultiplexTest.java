@@ -162,7 +162,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
-                ctx.writeAndFlush(new DefaultHttp2UnknownFrame((byte) 99, new Http2Flags()));
+                ctx.writeAndFlush(new DefaultHttp2UnknownFrame((short) 99, new Http2Flags()));
                 ctx.fireChannelActive();
             }
         });
@@ -170,7 +170,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         parentChannel.runPendingTasks();
 
-        verify(frameWriter).writeFrame(eq(codec.ctx), eq((byte) 99), eqStreamId(childChannel), any(Http2Flags.class),
+        verify(frameWriter).writeFrame(eq(codec.ctx), eq((short) 99), eqStreamId(childChannel), any(Http2Flags.class),
                 any(ByteBuf.class), any(Promise.class));
     }
 
@@ -204,7 +204,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         LastInboundHandler handler = new LastInboundHandler();
 
         Http2StreamChannel channel = newInboundStream(3, true, handler);
-        frameInboundWriter.writeInboundFrame((byte) 99, channel.stream().id(), new Http2Flags(), Unpooled.EMPTY_BUFFER);
+        frameInboundWriter.writeInboundFrame((short) 99, channel.stream().id(), new Http2Flags(),
+            Unpooled.EMPTY_BUFFER);
 
         // header frame and unknown frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
