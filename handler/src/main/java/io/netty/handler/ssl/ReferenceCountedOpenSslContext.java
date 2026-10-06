@@ -35,6 +35,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -89,6 +90,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * {@link ReferenceCountedOpenSslEngine} is called which uses this class's JNI resources the JVM may crash.
  */
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
+
+    private static final OpenSslCertificateCompressionConfig DEFAULT_CERTIFICATE_COMPRESSION_CONFIG =
+            OpenSslCertificateCompressionConfig.newBuilder()
+                    .addAlgorithm(ZlibCertificateCompressionAlgorithm.INSTANCE,
+                            OpenSslCertificateCompressionConfig.AlgorithmMode.Both)
+                    .build();
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
@@ -286,6 +293,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             throw new IllegalArgumentException("You can either only use "
                     + OpenSslAsyncPrivateKeyMethod.class.getSimpleName() + " or "
                     + OpenSslPrivateKeyMethod.class.getSimpleName());
+        }
+        if (isCertificateCompressionDisabled(mode)) {
+            certCompressionConfig = null;
+        } else {
+            certCompressionConfig = resolveCertificateCompressionConfig(certCompressionConfig,
+                    PlatformDependent.javaVersion(), OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         }
 
         this.tlsFalseStart = tlsFalseStart;
@@ -493,6 +506,28 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 release();
             }
         }
+    }
+
+    private static boolean isCertificateCompressionDisabled(int mode) {
+        String property = mode == SSL.SSL_MODE_CLIENT ?
+                "jdk.tls.client.disableExtensions" : "jdk.tls.server.disableExtensions";
+        String disabledExtensions = SystemPropertyUtil.get(property);
+        if (disabledExtensions != null) {
+            for (String extension : disabledExtensions.split(",")) {
+                if ("compress_certificate".equals(extension.trim())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    static OpenSslCertificateCompressionConfig resolveCertificateCompressionConfig(
+            OpenSslCertificateCompressionConfig config, int javaVersion, boolean supportsCertificateCompression) {
+        if (config == null && javaVersion >= 27 && supportsCertificateCompression) {
+            return DEFAULT_CERTIFICATE_COMPRESSION_CONFIG;
+        }
+        return config;
     }
 
     private static int opensslSelectorFailureBehavior(ApplicationProtocolConfig.SelectorFailureBehavior behavior) {
