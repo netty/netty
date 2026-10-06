@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.X509ExtendedKeyManager;
@@ -42,12 +43,14 @@ final class OpenSslKeyMaterialManager {
     static final String KEY_TYPE_EC = "EC";
     static final String KEY_TYPE_EC_EC = "EC_EC";
     static final String KEY_TYPE_EC_RSA = "EC_RSA";
+    static final String KEY_TYPE_EDDSA = "EdDSA";
 
     private static final int TYPE_RSA     = 1;      // 00001
     private static final int TYPE_DH_RSA  = 1 << 1; // 00010
     private static final int TYPE_EC      = 1 << 2; // 00100
     private static final int TYPE_EC_EC   = 1 << 3; // 01000
     private static final int TYPE_EC_RSA  = 1 << 4; // 10000
+    private static final int TYPE_EDDSA   = 1 << 5; // 100000
 
     private final OpenSslKeyMaterialProvider provider;
     private final boolean hasTmpDhKeys;
@@ -58,6 +61,29 @@ final class OpenSslKeyMaterialManager {
     }
 
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
+        // TLS 1.3 cipher suites don't carry an authentication method, so choose the key type from the peer's
+        // signature algorithms instead. This is consistent with what OpenJDK does:
+        // https://github.com/openjdk/jdk/blob/jdk-26-ga/
+        // src/java.base/share/classes/sun/security/ssl/CertificateMessage.java#L995-L1029
+        if (engine.isTLSv13()) {
+            ExtendedSSLSession session = (ExtendedSSLSession) engine.getHandshakeSession();
+            int seenTypes = 0;
+            for (String algorithm : session.getPeerSupportedSignatureAlgorithms()) {
+                int typeBit = resolveSignatureAlgorithmKeyTypeBit(algorithm);
+                if (typeBit == 0 || (seenTypes & typeBit) != 0) {
+                    continue;
+                }
+
+                seenTypes |= typeBit; // mark as seen
+
+                String alias = chooseServerAlias(engine, keyTypeString(typeBit));
+                if (alias != null) {
+                    setKeyMaterial(engine, alias);
+                    return;
+                }
+            }
+        }
+
         String[] authMethods = engine.authMethods();
         if (authMethods.length == 0) {
             throw new SSLHandshakeException("Unable to find key material");
@@ -92,6 +118,19 @@ final class OpenSslKeyMaterialManager {
                 + Arrays.toString(authMethods));
     }
 
+    private static int resolveSignatureAlgorithmKeyTypeBit(String algorithm) {
+        if ("Ed25519".equals(algorithm) || "Ed448".equals(algorithm)) {
+            return TYPE_EDDSA;
+        }
+        if (algorithm.endsWith("withECDSA")) {
+            return TYPE_EC;
+        }
+        if (algorithm.endsWith("withRSA")) {
+            return TYPE_RSA;
+        }
+        return 0;
+    }
+
     private static int resolveKeyTypeBit(String authMethod) {
         switch (authMethod) {
             case "RSA":
@@ -118,6 +157,7 @@ final class OpenSslKeyMaterialManager {
             case TYPE_EC: return KEY_TYPE_EC;
             case TYPE_EC_EC: return KEY_TYPE_EC_EC;
             case TYPE_EC_RSA: return KEY_TYPE_EC_RSA;
+            case TYPE_EDDSA: return KEY_TYPE_EDDSA;
             default: return null;
         }
     }
