@@ -466,6 +466,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
      * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
+     * @throws IllegalArgumentException if the capacity of this {@link CompositeByteBuf} would overflow. The
+     * {@code buffer} is released in this case, like when it is not a {@link CompositeByteBuf} and can't be added.
      */
     public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
         checkNotNull(buffer, "buffer");
@@ -487,6 +489,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             from = (CompositeByteBuf) buffer;
         }
         from.checkIndex(ridx, widx - ridx);
+        // Check if we would overflow, like addComponent0 does.
+        // See https://github.com/netty/netty/issues/10194
+        try {
+            checkForOverflow(capacity(), widx - ridx);
+        } catch (IllegalArgumentException e) {
+            // ownership of buffer was transferred to us
+            buffer.release();
+            throw e;
+        }
         final Component[] fromComponents = from.components;
         final int compCountBefore = componentCount;
         final int writerIndexBefore = writerIndex;

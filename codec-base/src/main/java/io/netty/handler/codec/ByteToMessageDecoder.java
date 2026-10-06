@@ -133,28 +133,47 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 return in;
             }
             CompositeByteBuf composite = null;
+            boolean cumulationTransferred = false;
             try {
                 if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
                     composite = (CompositeByteBuf) cumulation;
+                    cumulationTransferred = true;
                     // Writer index must equal capacity if we are going to "write"
                     // new components to the end
                     if (composite.writerIndex() != composite.capacity()) {
                         composite.capacity(composite.writerIndex());
                     }
                 } else {
-                    composite = alloc.compositeBuffer(Integer.MAX_VALUE).addFlattenedComponents(true, cumulation);
+                    composite = alloc.compositeBuffer(Integer.MAX_VALUE);
+                    composite.addFlattenedComponents(true, cumulation);
+                    cumulationTransferred = true;
                 }
-                composite.addFlattenedComponents(true, in);
+                // The ownership of in is transferred to the composite buffer, which releases it if it can't be
+                // added because the capacity would overflow (and on any failure if in is not a composite buffer),
+                // so null it out to not release it twice. Like in AdaptiveCumulator, a composite in is not released
+                // if adding it fails for another reason.
+                ByteBuf b = in;
                 in = null;
-                return composite;
+                composite.addFlattenedComponents(true, b);
+
+                CompositeByteBuf result = composite;
+                composite = null;
+                return result;
+            } catch (Throwable t) {
+                // The cumulation is still owned by the caller if we fail, so keep it alive when the new composite
+                // buffer that holds its components is released in the finally block (like AdaptiveCumulator does).
+                if (cumulationTransferred && composite != null && composite != cumulation) {
+                    cumulation.retain();
+                }
+                throw t;
             } finally {
                 if (in != null) {
                     // We must release if the ownership was not transferred as otherwise it may produce a leak
                     in.release();
-                    // Also release any new buffer allocated if we're not returning it
-                    if (composite != null && composite != cumulation) {
-                        composite.release();
-                    }
+                }
+                // Also release any new buffer allocated if we're not returning it
+                if (composite != null && composite != cumulation) {
+                    composite.release();
                 }
             }
         }
