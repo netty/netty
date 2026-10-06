@@ -96,6 +96,16 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     private int unsatisfiedReads;
 
     /**
+     * {@code true} if a {@code read()} is currently in progress.
+     */
+    private boolean reading;
+
+    /**
+     * {@code true} if auto-read is "on" and downstream is awaiting for readComplete event.
+     */
+    private boolean autoReadComplete;
+
+    /**
      * {@code true} while a {@link #dequeue(ChannelHandlerContext)} loop is on the stack.
      */
     private boolean dequeuing;
@@ -104,6 +114,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
         this(true);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param releaseMessages
+     *        Release all queued messages when channel becomes inactive,
+     *        {@code true} by default.
+     */
     public FlowControlHandler(boolean releaseMessages) {
         this.releaseMessages = releaseMessages;
     }
@@ -164,23 +181,24 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     public void read(ChannelHandlerContext ctx) throws Exception {
         if (!config.isAutoRead()) {
             unsatisfiedReads++;
+            autoReadComplete = false;
         }
 
-        boolean didSatisfyARead = dequeue(ctx);
-        boolean isAutoRead = config.isAutoRead();
-        if (!didSatisfyARead || isAutoRead) {
-            assert unsatisfiedReads > 0 || isAutoRead;
-            // We either could not satisfy the read or auto-read is on.
-            // In both cases we need to delegate the read upstream.
+        boolean dequeued = dequeue(ctx);
+        if (dequeuing) {
+            // make sure we are invoking post-processors in the top-most read() call.
+            return;
+        }
+        if (dequeued && unsatisfiedReads == 0) {
+            if (config.isAutoRead()) {
+                autoReadComplete = true;
+            } else {
+                // We have satisfied all reads. As such, we can complete the current read cycle.
+                ctx.fireChannelReadComplete();
+            }
+        } else if (!reading) {
+            reading = true;
             ctx.read();
-        } else if (unsatisfiedReads == 0 && !dequeuing) {
-            // Auto-read is off, and we have satisfied all reads.
-            // As such, we can complete the current read cycle. && !dequeueing makes sure we are completing the
-            // read cycle only once in the top-most read() call.
-            ctx.fireChannelReadComplete();
-        } else {
-            // Auto-read is off, and either reads are still unsatisfied or we are nested in a dequeue.
-            // Wait for the outermost call, an upstream channelRead() or a channelReadComplete().
         }
     }
 
@@ -192,8 +210,11 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
         queue.offer(msg);
 
-        if (dequeue(ctx)) {
-            if (!config.isAutoRead() && unsatisfiedReads == 0 && !dequeuing) {
+        // If we are nested in a dequeue() call, delegating post-processing to the outermost call.
+        if (dequeue(ctx) && !dequeuing && unsatisfiedReads == 0) {
+            if (config.isAutoRead()) {
+                autoReadComplete = true;
+            } else {
                 ctx.fireChannelReadComplete();
             }
         }
@@ -201,11 +222,18 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Upstream closed the read cycle. Collapse every outstanding read() into a single downstream
-        // channelReadComplete; spurious upstream completions with no pending read are dropped.
-        if (config.isAutoRead() || unsatisfiedReads > 0) {
-            unsatisfiedReads = 0;
-            ctx.fireChannelReadComplete();
+        reading = false;
+        if (config.isAutoRead()) {
+            // When auto-read is enabled, all `read-complete` events are swallowed,
+            // except for the one followed immediately after all reads are satisfied.
+            if (autoReadComplete) {
+                autoReadComplete = false;
+                ctx.fireChannelReadComplete();
+            }
+        } else if (unsatisfiedReads > 0) {
+            // Upstream completed the read cycle, initiating the next one.
+            reading = true;
+            ctx.read();
         }
     }
 
