@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
@@ -30,6 +31,8 @@ import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
+import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
@@ -93,8 +96,22 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             @Override
             public void onStreamActive(Http2Stream stream) {
                 // If the object was previously created, but later activated then we have to ensure the proper
-                // initialWindowSize is used.
-                monitor.windowSize(state(stream), initialWindowSize);
+                // initialWindowSize is used. The peer might also have already granted credit for a reserved stream
+                // via WINDOW_UPDATE (RFC 9113, section 5.1), so add the initialWindowSize to it instead of replacing
+                // it. The window of a stream that was not reserved before is always 0 here. A WINDOW_UPDATE that would
+                // make the sum exceed MAX_INITIAL_WINDOW_SIZE is rejected (see FlowState.incrementStreamWindow), but a
+                // SETTINGS_INITIAL_WINDOW_SIZE increase after such credit was granted can still do so. Unlike for
+                // active streams this is not detected when the SETTINGS are applied, as only active streams are
+                // visited there, and we can't signal an error from here. It needs a misbehaving peer, so clamp the
+                // window and log it.
+                FlowState state = state(stream);
+                long window = (long) initialWindowSize + state.windowSize();
+                if (window > MAX_INITIAL_WINDOW_SIZE) {
+                    logger.warn("{} Window of stream {} would be {} when it becomes active, clamping it to {}",
+                            ctx != null ? ctx.channel() : null, stream.id(), window, MAX_INITIAL_WINDOW_SIZE);
+                    window = MAX_INITIAL_WINDOW_SIZE;
+                }
+                monitor.windowSize(state, (int) window);
             }
 
             @Override
@@ -291,6 +308,14 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         /**
+         * Determine if the stream associated with this object is reserved, so it is not active yet.
+         */
+        boolean isReserved() {
+            Http2Stream.State state = stream.state();
+            return state == RESERVED_LOCAL || state == RESERVED_REMOTE;
+        }
+
+        /**
          * Determine if the stream associated with this object is writable.
          * @return {@code true} if the stream associated with this object is writable.
          */
@@ -406,6 +431,12 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             if (delta > 0 && Integer.MAX_VALUE - delta < window) {
                 throw streamError(stream.id(), FLOW_CONTROL_ERROR,
                         "Window size overflow for stream: %d", stream.id());
+            }
+            if (delta > 0 && isReserved() && (long) window + delta + initialWindowSize > MAX_INITIAL_WINDOW_SIZE) {
+                // The initialWindowSize is added to the window of a reserved stream when it becomes active, and the
+                // window must not exceed 2^31-1 then either (RFC 9113, section 6.9.1).
+                throw streamError(stream.id(), FLOW_CONTROL_ERROR,
+                        "Window size overflow for reserved stream: %d", stream.id());
             }
             window += delta;
 
