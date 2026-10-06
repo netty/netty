@@ -1288,16 +1288,44 @@ public final class PlatformDependent {
             if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
                 return new MpscChunkedArrayQueue<T>(chunkSize, capacity);
             }
-            return hasJctoolsVarHandle() ? new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity)
-                    : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscChunkedQueue(chunkSize, capacity) :
+                    new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
             if (USE_MPSC_CHUNKED_ARRAY_QUEUE) {
                 return new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE);
             }
-            return hasJctoolsVarHandle() ? new MpscUnboundedVarHandleArrayQueue<T>(MPSC_CHUNK_SIZE)
-                    : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            return hasJctoolsVarHandle() ?
+                    VarHandleQueueHolder.newMpscUnboundedQueue(MPSC_CHUNK_SIZE) :
+                    new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+        }
+    }
+
+    private static final class VarHandleQueueHolder {
+        static <T> Queue<T> newMpscChunkedQueue(final int chunkSize, final int capacity) {
+            return new MpscChunkedVarHandleArrayQueue<T>(chunkSize, capacity);
+        }
+
+        static <T> Queue<T> newMpscUnboundedQueue(final int chunkSize) {
+            return new MpscUnboundedVarHandleArrayQueue<T>(chunkSize);
+        }
+
+        static <T> Queue<T> newSpscQueue() {
+            return new SpscLinkedVarHandleQueue<T>();
+        }
+
+        static <T> Queue<T> newFixedMpscQueue(final int capacity) {
+            return new MpscVarHandleArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpscUnpaddedQueue(final int capacity) {
+            return new MpscVarHandleUnpaddedArrayQueue<T>(capacity);
+        }
+
+        static <T> Queue<T> newFixedMpmcQueue(final int capacity) {
+            return new MpmcVarHandleArrayQueue<T>(capacity);
         }
     }
 
@@ -1335,7 +1363,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new SpscLinkedQueue<T>();
         }
-        return hasJctoolsVarHandle() ? new SpscLinkedVarHandleQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newSpscQueue() :
+                new SpscLinkedAtomicQueue<T>();
     }
 
     /**
@@ -1346,7 +1376,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpscArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpscVarHandleArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscQueue(capacity) :
+                new MpscAtomicArrayQueue<T>(capacity);
     }
 
     /**
@@ -1358,8 +1390,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpscUnpaddedArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpscVarHandleUnpaddedArrayQueue<T>(capacity)
-                : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpscUnpaddedQueue(capacity) :
+                new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**
@@ -1370,7 +1403,9 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             return new MpmcArrayQueue<T>(capacity);
         }
-        return hasJctoolsVarHandle() ? new MpmcVarHandleArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
+        return hasJctoolsVarHandle() ?
+                VarHandleQueueHolder.newFixedMpmcQueue(capacity) :
+                new MpmcAtomicArrayQueue<T>(capacity);
     }
 
     /**
