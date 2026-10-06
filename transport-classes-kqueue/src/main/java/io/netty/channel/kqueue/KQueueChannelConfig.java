@@ -104,7 +104,10 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     /**
      * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
+     *
+     * @deprecated will be removed and is ignored.
      */
+    @Deprecated
     public KQueueChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
         this.transportProvidesGuess = transportProvidesGuess;
         return this;
@@ -113,7 +116,10 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     /**
      * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
+     *
+     * @deprecated will be removed and is ignored.
      */
+    @Deprecated
     public boolean getRcvAllocTransportProvidesGuess() {
         return transportProvidesGuess;
     }
