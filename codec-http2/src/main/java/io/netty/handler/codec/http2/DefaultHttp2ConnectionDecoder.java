@@ -326,6 +326,37 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     /**
+     * Validates that request-only pseudo-headers do not appear in response contexts and
+     * response only pseudo-headers (:status) do not appear in request contexts (RFC 9113 Section 8.3).
+     *
+     * @param isServer
+     * @param streamId
+     * @param headers
+     * @throws Http2Exception
+     */
+    private static void validatePseudoHeadersDirection(boolean isServer, int streamId, Http2Headers headers)
+            throws Http2Exception {
+        for (Entry<CharSequence, CharSequence> entry : headers) {
+            CharSequence name = entry.getKey();
+            if (PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+                PseudoHeaderName pseudo = PseudoHeaderName.getPseudoHeader(name);
+                if (pseudo != null) {
+                    if (isServer && pseudo == PseudoHeaderName.STATUS) {
+                        throw streamError(streamId, PROTOCOL_ERROR,
+                                          "Response-only pseudo-header '%s' received in request.", name);
+                    } else if (!isServer && pseudo.isRequestOnly()) {
+                        throw streamError(streamId, PROTOCOL_ERROR,
+                                          "Request-only pseudo-header '%s' received in response.", name);
+                    }
+                }
+            } else {
+                //Pseudo-headers MUST precede regular headers, so we can stop checking
+                break;
+            }
+        }
+    }
+
+    /**
      * Handles all inbound frames from the network.
      */
     private final class FrameReadListener implements Http2FrameListener {
@@ -472,6 +503,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 if (validateRequiredPseudoHeaders && !isInformational) {
                     // Reject initial request/response HEADERS that omit a mandatory pseudo-header (RFC 9113, 8.3).
                     validateRequiredPseudoHeaders(connection.isServer(), stream.id(), headers);
+                }
+                if (validateHeaders) {
+                    //Enforce RFC 9113 section 8.3: Reject wrong direction pseudo-headers
+                    //https://github.com/netty/netty/issues/17449
+                    validatePseudoHeadersDirection(connection.isServer(), streamId, headers);
                 }
                 // extract the content-length header
                 List<? extends CharSequence> contentLength = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
