@@ -917,10 +917,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     /**
-     * Closes the connection if the graceful shutdown process has completed.
+     * Closes the connection if the graceful shutdown process has completed. Sub-classes in this package call it when
+     * {@link #isGracefulShutdownComplete()} may have changed for another reason than a stream being closed.
      * @param future Represents the status that will be passed to the {@link #closeListener}.
      */
-    private void checkCloseConnection(ChannelFuture future) {
+    void checkCloseConnection(ChannelFuture future) {
         // If this connection is closing and the graceful shutdown has completed, close the connection
         // once this operation completes.
         if (closeListener != null && isGracefulShutdownComplete()) {
