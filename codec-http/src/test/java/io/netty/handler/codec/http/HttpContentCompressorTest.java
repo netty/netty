@@ -62,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -739,13 +740,9 @@ public class HttpContentCompressorTest {
         ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
-        try {
-            ch.writeOutbound(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
-            fail();
-        } catch (EncoderException e) {
-            assertTrue(e.getCause() instanceof IllegalStateException);
-        }
+        EncoderException e = assertThrows(EncoderException.class, () -> ch.writeOutbound(new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER)));
+        assertInstanceOf(IllegalStateException.class, e.getCause());
         assertTrue(ch.finish());
         for (;;) {
             Object message = ch.readOutbound();

@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -98,8 +99,8 @@ public class SocketRstTest extends AbstractSocketTest {
 
         // Verify the client received a RST.
         Throwable cause = throwableRef.get();
-        assertTrue(cause instanceof IOException,
-            "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]");
+        assertInstanceOf(IOException.class, cause,
+                "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]");
 
         assertRstOnCloseException((IOException) cause, cc);
     }

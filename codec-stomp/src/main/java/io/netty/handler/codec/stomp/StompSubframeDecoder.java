@@ -225,6 +225,9 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private State readHeaders(ByteBuf buffer, StompHeadersSubframe headersSubframe) {
         StompHeaders headers = headersSubframe.headers();
+        // If the headers were not complete before, ReplayingDecoder parses all of them again,
+        // so count them from zero.
+        headerParser.resetNumHeaders();
         for (;;) {
             boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
             if (!headerRead) {
@@ -377,6 +380,10 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
             super(charSeq, maxLineLength);
             this.validateHeaders = validateHeaders;
             this.maxNumHeaders = maxNumHeaders;
+        }
+
+        void resetNumHeaders() {
+            numHeaders = 0;
         }
 
         boolean parseHeader(StompHeadersSubframe headersSubframe, ByteBuf buf) {

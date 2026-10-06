@@ -35,6 +35,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Figures out which modules are touched by the PR so the (expensive) test legs below can be restricted
+  # to them. See .github/scripts/detect_affected_modules.sh for the rules, anything that can't be mapped to
+  # a module results in a full build.
+  detect-affected:
+    runs-on: ubuntu-24.04
+    outputs:
+      modules: ${{ steps.detect.outputs.modules }}
+    steps:
+      # Pinned to v5.1.0
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          # For pull requests this is the merge commit, we need its first parent (the base branch) to diff against.
+          fetch-depth: 2
+
+      - name: Detect affected modules
+        id: detect
+        run: |
+          modules=ALL
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            modules=$(./.github/scripts/detect_affected_modules.sh HEAD^1) || {
+              echo "::warning::Could not detect the affected modules, falling back to a full build"
+              modules=ALL
+            }
+          fi
+          echo "modules=$modules" >> "$GITHUB_OUTPUT"
+          echo "Affected modules: $modules" | tee -a "$GITHUB_STEP_SUMMARY"
+
   verify-pr:
     runs-on: ubuntu-22.04
     steps:
@@ -69,7 +96,7 @@ jobs:
   build-pr-windows:
     runs-on: windows-2022
     name: windows-x86_64-java11-boringssl
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
       # failures sometimes due the fact that not enough memory could be reserved.
@@ -122,7 +149,12 @@ jobs:
         uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # Pin 1.9.4
 
       - name: Build project
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
+        # install (not package) as the modules that are not part of the affected set are resolved from the local repository.
+        env:
+          # ALL, NONE or the comma separated list of modules, see .github/scripts/mvn_affected.sh
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
+          NETTY_MVN: ./mvnw.cmd
+        run: ./.github/scripts/mvn_affected.ps1 -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
@@ -204,49 +236,51 @@ jobs:
             JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
           - setup: linux-x86_64-java11
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-affected-only"
           - setup: linux-x86_64-java21-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build-affected-only"
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-affected-only"
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite-affected-only"
           - setup: linux-x86_64-java24
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build-affected-only"
           - setup: linux-x86_64-java25
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.25.yaml run build-affected-only"
           - setup: linux-x86_64-java26
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.26.yaml run build-affected-only"
+          # The one leg that always builds and tests everything (with leak detection), so leaks in modules
+          # depending on a changed one are still found. All the other legs only build the affected modules.
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-boringssl-static"
           - setup: linux-x86_64-java11-pooled
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled-affected-only"
           - setup: linux-x86_64-java11-boringssl-jdk8-tests
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-static-jdk8-tests"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-static-jdk8-tests-affected-only"
           - setup: linux-x86_64-java11-awslc
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build"
             docker-compose-install-tcnative: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run install-tcnative"
             docker-compose-update-tcnative-version: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run update-tcnative-version"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build-affected-only"
 
     name: ${{ matrix.setup }} build
-    needs: verify-pr
+    needs: [verify-pr, detect-affected]
     permissions:
       contents: read
       packages: write  # to push the docker build cache to ghcr.io; no-op (ignored) for fork PRs
@@ -331,6 +365,10 @@ jobs:
         run: docker compose ${{ matrix.docker-compose-update-tcnative-version }}
 
       - name: Build project with leak detection
+        env:
+          # ALL, NONE or the comma separated list of modules, only used by the build-affected-only service
+          # (see .github/scripts/mvn_affected.sh), all other services always build everything.
+          NETTY_AFFECTED_MODULES: ${{ needs.detect-affected.outputs.modules }}
         run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures

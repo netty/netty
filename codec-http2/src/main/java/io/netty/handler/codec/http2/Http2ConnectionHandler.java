@@ -455,6 +455,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         encoder.flowController().channelHandlerContext(ctx);
         decoder.flowController().channelHandlerContext(ctx);
         byteDecoder = new PrefaceDecoder(ctx);
+        // Streams are not only closed via closeStream(...): the connection also closes them itself, for example
+        // when a GOAWAY is received or the channel becomes inactive. Check if a pending graceful shutdown can
+        // complete whenever a stream is closed, whatever the reason.
+        connection().addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamClosed(Http2Stream stream) {
+                checkCloseConnection(ctx.newSucceededFuture());
+            }
+        });
     }
 
     @Override
