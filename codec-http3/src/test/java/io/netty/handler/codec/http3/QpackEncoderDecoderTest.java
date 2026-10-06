@@ -303,7 +303,9 @@ public class QpackEncoderDecoderTest {
 
         ByteBuf spareEncode = Unpooled.buffer();
         try {
-            encode(spareEncode, encHeaders);
+            // This header block is never decoded and so never acknowledged. Use another stream, as the decoder
+            // acknowledges the header blocks of a stream in order.
+            encode(spareEncode, encHeaders, 3);
         } finally {
             spareEncode.release();
         }
@@ -528,7 +530,11 @@ public class QpackEncoderDecoderTest {
     }
 
     private void encode(ByteBuf buf, Http3Headers headers) {
-        encoder.encodeHeaders(attributes, buf, DEFAULT, 1, headers);
+        encode(buf, headers, 1);
+    }
+
+    private void encode(ByteBuf buf, Http3Headers headers, long streamId) {
+        encoder.encodeHeaders(attributes, buf, DEFAULT, streamId, headers);
         assertThat("Parent channel closed.", parent.isActive(), is(true));
     }
 

@@ -148,6 +148,12 @@ final class QpackDecoder {
             assert qpackAttributes.decoderStreamAvailable();
 
             stateSyncStrategy.sectionAcknowledged(requiredInsertCount);
+            // A Section Acknowledgment also acknowledges all insertions up to the Required Insert Count, so the next
+            // Insert Count Increment must not include them again.
+            // See https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1
+            if (requiredInsertCount > lastAckInsertCount) {
+                lastAckInsertCount = requiredInsertCount;
+            }
             final ByteBuf sectionAck = qpackAttributes.decoderStream().alloc().buffer(8);
             encodePrefixedInteger(sectionAck, (byte) 0b1000_0000, 7, streamId);
             closeOnFailure(qpackAttributes.decoderStream().writeAndFlush(sectionAck));
@@ -508,7 +514,9 @@ final class QpackDecoder {
                 throw BLOCKED_STREAM_RESUMPTION_FAILED;
             }
         }
-        if (stateSyncStrategy.entryAdded(insertCount)) {
+        if (stateSyncStrategy.entryAdded(insertCount) &&
+                // The insertions might have been acknowledged by a Section Acknowledgment already.
+                insertCount > lastAckInsertCount) {
             // https://www.rfc-editor.org/rfc/rfc9204.html#name-insert-count-increment
             //   0   1   2   3   4   5   6   7
             // +---+---+---+---+---+---+---+---+
