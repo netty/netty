@@ -23,4 +23,16 @@ public final class FlightRecorder {
     public static boolean isAvailable() {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
+
+    public static void addListener(FlightRecorderListener changeListener) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public static boolean removeListener(FlightRecorderListener changeListener) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public static void register(Class<? extends Event> eventClass) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
 }
