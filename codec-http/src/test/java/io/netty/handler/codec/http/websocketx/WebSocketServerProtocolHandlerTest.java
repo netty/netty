@@ -532,6 +532,33 @@ public class WebSocketServerProtocolHandlerTest {
         assertFalse(server.finishAndReleaseAll());
     }
 
+    @Test
+    public void testPeerCloseFrameAfterCloseFrameWasSentDoesNotFail() throws Exception {
+        EmbeddedChannel client = createClient();
+        EmbeddedChannel server = createServer();
+
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+        assertFalse(client.writeInbound(server.<ByteBuf>readOutbound()));
+
+        // The server initiates the close handshake and the write of its CLOSE frame completes.
+        assertTrue(server.writeOutbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE)));
+        assertTrue(client.writeInbound(server.<ByteBuf>readOutbound()));
+        assertTrue(server.isOpen());
+        ReferenceCountUtil.release(client.readInbound());
+
+        // The peer replies with its own CLOSE frame, which completes the handshake: it must neither fail with an
+        // exception nor be echoed a second time, but the channel must be closed.
+        assertTrue(client.writeOutbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE)));
+        assertFalse(server.writeInbound(client.<ByteBuf>readOutbound()));
+
+        assertFalse(server.isOpen());
+        assertNull(server.readOutbound());
+
+        client.close();
+        assertFalse(client.finishAndReleaseAll());
+        assertFalse(server.finishAndReleaseAll());
+    }
+
     private static EmbeddedChannel createStallingServer(
             long forceCloseTimeoutMillis, final Queue<ChannelPromise> stalledWrites) throws Exception {
         WebSocketServerProtocolConfig serverConfig = WebSocketServerProtocolConfig.newBuilder()
