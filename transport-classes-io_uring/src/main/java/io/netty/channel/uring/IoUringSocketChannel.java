@@ -125,9 +125,11 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             assert writeId == 0;
 
             IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
-            //at least one buffer in the batch exceeds `IO_URING_WRITE_ZERO_COPY_THRESHOLD`.
-            if (IoUring.isSendmsgZcSupported()
-                    && (ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) in.current()).readableBytes()))) {
+            // At least one buffer in the batch must exceed `IO_URING_WRITE_ZERO_COPY_THRESHOLD`. Looking at the
+            // whole batch instead of only `in.current()` matters: an HTTP response starts with a small header,
+            // so deciding on the first buffer alone would send that header with a writev and then the body with
+            // a sendmsg_zc in a following event loop iteration, splitting one flush into two submissions.
+            if (IoUring.isSendmsgZcSupported() && hasWriteZeroCopyMessage(in, ioUringSocketChannelConfig)) {
                 IoUringIoHandler handler = registration().attachment();
 
                 IovArray iovArray = handler.iovArray();
@@ -138,19 +140,10 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     // many buffers.
                     iovArray.maxCount(Native.MAX_SKB_FRAGS);
                     try {
-                        in.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
-                            @Override
-                            public boolean processMessage(Object msg) throws Exception {
-                                if (msg instanceof ByteBuf) {
-                                    ByteBuf buf = (ByteBuf) msg;
-                                    int length = buf.readableBytes();
-                                    if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
-                                        return collector.processMessage(msg);
-                                    }
-                                }
-                                return false;
-                            }
-                        });
+                        // Gather the whole batch, including the buffers below the threshold, so that a small
+                        // header and the buffers behind it go out in a single SQE. IovArray.processMessage(...)
+                        // stops at the first non-ByteBuf message and once the fragment limit is reached.
+                        in.forEachFlushedMessage(collector);
                     } catch (Exception e) {
                         // This should never happen, anyway fallback to single write.
                         return scheduleWriteSingle(in.current());
@@ -184,25 +177,46 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             return super.scheduleWriteMultiple(in);
         }
 
-        @Override
-        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArrayReferenceCollector collector) {
-            if (!IoUring.isSendmsgZcSupported()) {
-                return super.filterWriteMultiple(collector);
+        // Reused across writes: scheduleWriteMultiple(...) runs on the event loop and is never re-entered.
+        private final ZeroCopyScanner zeroCopyScanner = new ZeroCopyScanner();
+
+        /**
+         * Returns {@code true} if any of the flushed messages is a {@link ByteBuf} that reaches the configured
+         * zero-copy threshold.
+         */
+        private boolean hasWriteZeroCopyMessage(ChannelOutboundBuffer in,
+                                                IoUringSocketChannelConfig ioUringSocketChannelConfig) {
+            ZeroCopyScanner scanner = zeroCopyScanner;
+            scanner.ioUringSocketChannelConfig = ioUringSocketChannelConfig;
+            scanner.detected = false;
+            try {
+                in.forEachFlushedMessage(scanner);
+            } catch (Exception e) {
+                // The scanner itself never throws. Be conservative and let the writev path handle the batch.
+                return false;
             }
-            IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
-            return new ChannelOutboundBuffer.MessageProcessor() {
-                @Override
-                public boolean processMessage(Object msg) throws Exception {
-                    if (msg instanceof ByteBuf) {
-                        ByteBuf buf = (ByteBuf) msg;
-                        int length = buf.readableBytes();
-                        if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
-                            return false;
-                        }
-                    }
-                    return collector.processMessage(msg);
+            return scanner.detected;
+        }
+
+        private final class ZeroCopyScanner implements ChannelOutboundBuffer.MessageProcessor {
+            private IoUringSocketChannelConfig ioUringSocketChannelConfig;
+            private boolean detected;
+
+            @Override
+            public boolean processMessage(Object msg) {
+                if (!(msg instanceof ByteBuf)) {
+                    // The gather stops at the first non-ByteBuf message (for example a FileRegion), so the
+                    // decision must stop there too: scanning past it could select the zero-copy path for buffers
+                    // that are never gathered by the sendmsg_zc.
+                    return false;
                 }
-            };
+                if (ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) msg).readableBytes())) {
+                    detected = true;
+                    // Stop the scan: one qualifying buffer is enough to select the zero-copy path.
+                    return false;
+                }
+                return true;
+            }
         }
 
         @Override
