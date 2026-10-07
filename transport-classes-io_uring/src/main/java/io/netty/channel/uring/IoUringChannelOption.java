@@ -72,5 +72,17 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> IO_URING_WRITE_ZERO_COPY_THRESHOLD =
             ChannelOption.valueOf(IoUringChannelOption.class, "IO_URING_WRITE_ZERO_COPY_THRESHOLD");
 
+    /**
+     * The capacity in bytes of the pipe that is used to splice a file to a socket when a {@link io.netty.channel
+     * .FileRegion} is written. It is applied via {@code fcntl(F_SETPIPE_SZ)} when the pipe is created.
+     * <p>
+     * A value of {@code 0} (the default) leaves the kernel default capacity (usually 64 KiB) in place. Increasing
+     * it allows more data to be moved per splice when sending large files, at the cost of more memory per
+     * in-flight file transfer. Values exceeding {@code /proc/sys/fs/pipe-max-size} are rejected by the kernel for
+     * unprivileged processes; in that case the kernel default is used and a debug message is logged.
+     */
+    public static final ChannelOption<Integer> IO_URING_SENDFILE_PIPE_SIZE =
+            ChannelOption.valueOf(IoUringChannelOption.class, "IO_URING_SENDFILE_PIPE_SIZE");
+
     public static final ChannelOption<Boolean> IP_MULTICAST_ALL = valueOf("IP_MULTICAST_ALL");
 }

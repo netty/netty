@@ -27,16 +27,20 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 public class IoUringFileRegionTest {
@@ -89,6 +93,73 @@ public class IoUringFileRegionTest {
         clientChannel.writeAndFlush(new DefaultFileRegion(inFile, 0, Files.size(inFile.toPath()))).sync();
         ByteBuf result = sendFileResult.take();
         ByteBuf expected = Unpooled.copiedBuffer(sampleString, StandardCharsets.US_ASCII);
+        try {
+            assertEquals(expected, result);
+        } finally {
+            result.release();
+            expected.release();
+        }
+
+        serverChannel.close().syncUninterruptibly();
+        clientChannel.close().syncUninterruptibly();
+        group.shutdownGracefully();
+    }
+
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    public void testSendFileWithConfiguredPipeSize() throws IOException, InterruptedException {
+        assumeTrue(IoUring.isSpliceSupported());
+
+        byte[] content = new byte[512 * 1024];
+        new Random(42).nextBytes(content);
+
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        File inFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+        inFile.deleteOnExit();
+        Files.write(inFile.toPath(), content);
+        BlockingQueue<ByteBuf> sendFileResult = new LinkedBlockingQueue<>();
+
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
+        serverBootstrap.channel(IoUringServerSocketChannel.class);
+        Channel serverChannel = serverBootstrap.group(group)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    private CompositeByteBuf compositeByteBuf;
+
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) {
+                        compositeByteBuf = ctx.alloc().compositeBuffer();
+                    }
+
+                    @Override
+                    public void handlerRemoved(ChannelHandlerContext ctx) {
+                        if (compositeByteBuf != null) {
+                            compositeByteBuf.release();
+                        }
+                    }
+
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        ByteBuf buf = (ByteBuf) msg;
+                        compositeByteBuf.addComponent(true, buf);
+                        if (compositeByteBuf.readableBytes() == content.length) {
+                            sendFileResult.put(compositeByteBuf);
+                            compositeByteBuf = null;
+                        }
+                    }
+                })
+                .bind(NetUtil.LOCALHOST, 0)
+                .syncUninterruptibly().channel();
+
+        Bootstrap clientBootstrap = new Bootstrap();
+        clientBootstrap.group(group)
+                .channel(IoUringSocketChannel.class)
+                // Force a pipe size that is smaller than the file so multiple splice() pairs are needed.
+                .option(IoUringChannelOption.IO_URING_SENDFILE_PIPE_SIZE, 128 * 1024)
+                .handler(new ChannelInboundHandlerAdapter());
+        Channel clientChannel = clientBootstrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+        clientChannel.writeAndFlush(new DefaultFileRegion(inFile, 0, content.length)).sync();
+        ByteBuf result = sendFileResult.take();
+        ByteBuf expected = Unpooled.wrappedBuffer(content);
         try {
             assertEquals(expected, result);
         } finally {
