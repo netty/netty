@@ -58,7 +58,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -1416,59 +1415,18 @@ public class DnsNameResolver extends InetNameResolver {
                 return executor().newFailedFuture(e);
             }
         } else {
-            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> p = executor().newPromise();
             f.addListener((ChannelFutureListener) f1 -> {
                 if (f1.isSuccess()) {
-                    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
-                            f1.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                    // doQuery(...) completes and returns the caller's own promise, so just run the query
+                    // against it and return that same promise below; no separate promise to bridge is needed.
+                    doQuery(f1.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                             additionalsArray, true, promise);
-                    cascadeQueryResponse(qf, p);
                 } else {
-                    UnknownHostException e = toException(f1, question.name(), question, additionalsArray);
-                    promise.setFailure(e);
-                    p.setFailure(e);
+                    promise.tryFailure(toException(f1, question.name(), question, additionalsArray));
                 }
             });
-            return p;
+            return cast(promise);
         }
-    }
-
-    /**
-     * Bridges the inner query {@link Future} to the {@link Promise} returned by the asynchronous-channel branch of
-     * {@link #query(InetSocketAddress, DnsQuestion, Iterable, Promise)}.
-     *
-     * <p>This behaves like {@link PromiseNotifier#cascade(Future, Promise)} (propagating success, failure and
-     * cancellation both ways) but with one crucial difference: if the successfully-resolved, reference-counted
-     * response cannot be handed to {@code aggregatePromise} (because it was cancelled or failed - e.g. by a
-     * concurrent timeout - in the race window after {@code queryFuture} already succeeded), this releases the
-     * response instead of dropping it. {@code PromiseNotifier} would only log the failed hand-off, leaving the
-     * fully-decoded {@link DnsResponse} referenced solely by {@code queryFuture}'s result and thus leaked once
-     * garbage-collected.</p>
-     */
-    @VisibleForTesting
-    static void cascadeQueryResponse(
-            final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> queryFuture,
-            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> aggregatePromise) {
-        aggregatePromise.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) f -> {
-            if (f.isCancelled()) {
-                queryFuture.cancel(false);
-            }
-        });
-        queryFuture.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) f -> {
-            if (f.isSuccess()) {
-                AddressedEnvelope<DnsResponse, InetSocketAddress> response = f.getNow();
-                if (!aggregatePromise.trySuccess(response)) {
-                    // The returned promise was already cancelled or failed in the window after queryFuture
-                    // succeeded, so no listener on it will observe (and release) the response. We own it here
-                    // and must release it to avoid leaking the reference-counted message.
-                    ReferenceCountUtil.release(response);
-                }
-            } else if (f.isCancelled()) {
-                aggregatePromise.cancel(false);
-            } else {
-                aggregatePromise.tryFailure(f.cause());
-            }
-        });
     }
 
     /**
@@ -1514,7 +1472,11 @@ public class DnsNameResolver extends InetNameResolver {
 
                         // Retain the result as the listener on the promise is responsible to release it.
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed, so nobody will release the result;
+                            // release the reference we just retained to avoid leaking it.
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
                         Throwable cause = f.cause();
                         if (isTimeoutError(cause)) {
@@ -1523,7 +1485,7 @@ public class DnsNameResolver extends InetNameResolver {
                         } else {
                             // Notify the observer and after that the promise
                             queryLifecycleObserver.queryFailed(cause);
-                            promise.setFailure(cause);
+                            promise.tryFailure(cause);
                         }
                     }
                 });
@@ -1551,11 +1513,16 @@ public class DnsNameResolver extends InetNameResolver {
                         AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
                                 (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
                         ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
+                        if (!promise.trySuccess(result)) {
+                            // The promise was already cancelled or failed; release the reference we retained
+                            // (the one held by newPromise is released by RELEASE_LISTENER below).
+                            ReferenceCountUtil.release(result);
+                        }
                     } else {
-                        promise.setFailure(f.cause());
+                        promise.tryFailure(f.cause());
                     }
 
+                    // Always release newPromise's own reference, even if the hand-off above failed.
                     p.addListener(RELEASE_LISTENER);
                 });
 
