@@ -237,6 +237,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (serverConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
+                if (isCloseSentCompleted()) {
+                    // Our own CLOSE frame has already been written, so this one is the peer's reply that completes
+                    // the closing handshake. There is nothing left to echo (and the completed promise of the
+                    // earlier write must not be reused): just close the connection.
+                    ctx.close();
+                    return;
+                }
                 frame.retain();
                 ChannelPromise promise = ctx.newPromise();
                 closeSent(promise);

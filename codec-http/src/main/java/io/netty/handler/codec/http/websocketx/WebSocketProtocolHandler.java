@@ -142,6 +142,14 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         closeSent = promise;
     }
 
+    /**
+     * Returns {@code true} once the outgoing close frame has been written and that write has completed, which
+     * means the closing handshake was initiated by this side and a close frame received now is the peer's reply.
+     */
+    boolean isCloseSentCompleted() {
+        return closeSent != null && closeSent.isDone();
+    }
+
     void applyCloseSentTimeout(ChannelHandlerContext ctx) {
         if (forceCloseTimeoutTask != null || closeSent.isDone() || forceCloseTimeoutMillis < 0) {
             return;
