@@ -39,6 +39,11 @@ import jdk.jfr.FlightRecorderListener;
  * Otherwise JFR's static listener list would keep this class, and with it the class loader that loaded Netty,
  * reachable for the lifetime of the JVM. JFR iterates over a copy of the list, so this is safe from the callback.
  * <p>
+ * If no Flight Recorder is ever initialized, the listener stays in that list, so the class loader that loaded Netty
+ * can't be unloaded, for example on a webapp redeploy. Holding the listener weakly doesn't help: before JDK 25,
+ * {@code addListener} stores the caller's {@code AccessControlContext} with it, which references Netty's protection
+ * domain and so its class loader. Set {@code -Dio.netty.jfr.enabled=false} to avoid this.
+ * <p>
  * This must not be initialized from an event class initializer: registration initializes the event classes.
  */
 @SuppressWarnings("Since15")
