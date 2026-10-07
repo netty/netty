@@ -204,8 +204,13 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
             @Override
             public boolean processMessage(Object msg) {
-                if (msg instanceof ByteBuf
-                        && ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) msg).readableBytes())) {
+                if (!(msg instanceof ByteBuf)) {
+                    // The gather stops at the first non-ByteBuf message (for example a FileRegion), so the
+                    // decision must stop there too: scanning past it could select the zero-copy path for buffers
+                    // that are never gathered by the sendmsg_zc.
+                    return false;
+                }
+                if (ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) msg).readableBytes())) {
                     detected = true;
                     // Stop the scan: one qualifying buffer is enough to select the zero-copy path.
                     return false;

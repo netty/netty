@@ -17,11 +17,14 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,6 +69,29 @@ public class IoUringSocketZeroCopyWriteBatchTest {
             writeFlushed(channel,
                     channel.alloc().buffer(208).writeZero(208),
                     channel.alloc().buffer(208).writeZero(208));
+            assertEquals(Native.IORING_OP_WRITEV, channel.writeOpCode);
+        });
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void fileRegionStopsTheZeroCopyScan() throws Exception {
+        File file = File.createTempFile("netty-iouring", ".tmp");
+        file.deleteOnExit();
+        Files.write(file.toPath(), new byte[16]);
+        DefaultFileRegion region = new DefaultFileRegion(file, 0, 16);
+        runOnEventLoop(channel -> {
+            channel.config().setOption(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, THRESHOLD);
+            AbstractIoUringChannel.AbstractUringUnsafe unsafe =
+                    (AbstractIoUringChannel.AbstractUringUnsafe) channel.unsafe();
+            ChannelOutboundBuffer in = unsafe.outboundBuffer();
+            channel.write(channel.alloc().buffer(208).writeZero(208));
+            channel.write(region);
+            channel.write(channel.alloc().buffer(4096).writeZero(4096));
+            in.addFlush();
+            channel.doWrite(in);
+            // The gather stops at the FileRegion, so the qualifying buffer behind it must not select the
+            // zero-copy path: otherwise only the small buffer would actually be submitted through sendmsg_zc.
             assertEquals(Native.IORING_OP_WRITEV, channel.writeOpCode);
         });
     }
