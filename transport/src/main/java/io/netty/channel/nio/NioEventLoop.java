@@ -138,23 +138,6 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     }
 
     /**
-     * Always return 0.
-     */
-    public int getIoRatio() {
-        return 0;
-    }
-
-    /**
-     * This method is a no-op.
-     *
-     * @deprecated
-     */
-    @Deprecated
-    public void setIoRatio(int ioRatio) {
-        logger.debug("NioEventLoop.setIoRatio(int) logic was removed, this is a no-op");
-    }
-
-    /**
      * Replaces the current {@link Selector} of this event loop with newly created {@link Selector}s to work
      * around the infamous epoll 100% CPU bug.
      */

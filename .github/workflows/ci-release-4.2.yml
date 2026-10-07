@@ -106,6 +106,10 @@ jobs:
             docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.cross.yaml run cross-compile-riscv64-stage-release"
 
     name: stage-release-${{ matrix.setup }}
+    env:
+      # Route `docker compose build` through `docker buildx bake` so the cache_from/cache_to
+      # entries in the docker-compose*.yaml files are actually honored.
+      COMPOSE_BAKE: "true"
 
     steps:
       # Pinned to v7.0.0
@@ -161,6 +165,24 @@ jobs:
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
+
+      # The default "docker" buildx driver can't export cache to a registry; switch to the
+      # docker-container driver so cache_to: type=registry in the compose files actually works.
+      # Pinned to v4.4.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+      # This workflow's token only has read-all permissions, so the cache push below will fail;
+      # ignore-error=true on cache_to in the compose files absorbs that. Cache reads (populated by
+      # ci-build.yml/ci-pr.yml) still work since read-all grants packages: read.
+      # Pinned to v4.6.0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
         working-directory: ./prepare-release-workspace/

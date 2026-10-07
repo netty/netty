@@ -267,6 +267,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
         private final class UtilizationMonitor implements Runnable {
             private final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+            private final List<SingleThreadEventExecutor> consistentlyBusyChildren = new ArrayList<>(maxChildren);
             private long lastCheckTimeNanos;
 
             @Override
@@ -297,8 +298,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     return;
                 }
 
-                int consistentlyBusyChildren = 0;
                 consistentlyIdleChildren.clear();
+                consistentlyBusyChildren.clear();
 
                 final AutoScalingState currentState = state.get();
 
@@ -341,7 +342,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                             int busyCycles = eventExecutor.getAndIncrementBusyCycles();
                             eventExecutor.resetIdleCycles();
                             if (busyCycles >= scalingPatienceCycles) {
-                                consistentlyBusyChildren++;
+                                consistentlyBusyChildren.add(eventExecutor);
                             }
                         } else {
                             // Utilization is in the normal range, reset counters.
@@ -356,11 +357,17 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 int currentActive = currentState.activeChildrenCount;
 
                 // Make scaling decisions based on stable states.
-                if (consistentlyBusyChildren > 0 && currentActive < maxChildren) {
+                if (!consistentlyBusyChildren.isEmpty() && currentActive < maxChildren) {
                     // Scale Up, we have children that have been busy for multiple cycles.
-                    int threadsToAdd = Math.min(consistentlyBusyChildren, maxRampUpStep);
+                    int threadsToAdd = Math.min(consistentlyBusyChildren.size(), maxRampUpStep);
                     threadsToAdd = Math.min(threadsToAdd, maxChildren - currentActive);
                     if (threadsToAdd > 0) {
+                        // Reset the counters of the children that justified this decision so that they need
+                        // another full patience period of sustained load before triggering a further scale-up.
+                        for (SingleThreadEventExecutor busyChild : consistentlyBusyChildren) {
+                            busyChild.resetBusyCycles();
+                            busyChild.resetIdleCycles();
+                        }
                         tryScaleUpBy(threadsToAdd);
                         // State change is handled by tryScaleUpBy, no need for rebuild here.
                         return; // Exit to avoid conflicting scale down logic in the same cycle.

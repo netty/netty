@@ -18,14 +18,14 @@ package io.netty.util.internal.logging;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class CommonsLoggerFactoryTest {
 
     @Test
     public void testCreation() {
         InternalLogger logger = CommonsLoggerFactory.INSTANCE.newInstance("foo");
-        assertTrue(logger instanceof CommonsLogger);
+        assertInstanceOf(CommonsLogger.class, logger);
         assertEquals("foo", logger.name());
     }
 }

@@ -25,6 +25,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -78,6 +79,7 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
     private final DnsNameResolver dnsNameResolver;
     private boolean ocspQueryInProgress;
     private boolean readPending;
+    private boolean discardInbound;
 
     /**
      * Create a new {@link OcspServerCertificateValidator} instance without nonce validation
@@ -159,6 +161,15 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
     }
 
     @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (discardInbound) {
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+        super.channelRead(ctx, msg);
+    }
+
+    @Override
     public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent sslHandshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
@@ -179,6 +190,8 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                 ocspQueryInProgress = true;
                 ocspRespPromise.addListener((GenericFutureListener<Future<BasicOCSPResp>>) future -> {
                     ocspQueryInProgress = false;
+                    // Assume revoked as default.
+                    OcspResponse.Status status = OcspResponse.Status.REVOKED;
                     try {
                         // If Future is success then we have successfully received OCSP response
                         // from OCSP responder. We will validate it now and process.
@@ -199,7 +212,6 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                                 return;
                             }
 
-                            OcspResponse.Status status;
                             if (response.getCertStatus() == null) {
                                 // 'null' means certificate is valid
                                 status = OcspResponse.Status.VALID;
@@ -232,9 +244,20 @@ public class OcspServerCertificateValidator extends ByteToMessageDecoder impleme
                             ctx.close();
                         }
                     } finally {
-                        ctx.fireUserEventTriggered(evt);
-                        // Lets remove ourselves from the pipeline because we are done processing validation.
-                        ctx.pipeline().remove(this);
+                        if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
+                            // The peer can't be trusted, so drop all bytes on the floor and stay in the pipeline
+                            // until the channel is closed. This way neither the bytes we buffered nor anything that
+                            // arrives later (for example data still buffered in the SslHandler) is handed to the
+                            // following handlers.
+                            discardInbound = true;
+                            internalBuffer().clear();
+                            ctx.fireUserEventTriggered(evt);
+                        } else {
+                            ctx.fireUserEventTriggered(evt);
+                            // Lets remove ourselves from the pipeline because we are done processing validation.
+                            // This will also forward all the buffered bytes to the next handler.
+                            ctx.pipeline().remove(this);
+                        }
                         if (readPending) {
                             readPending = false;
                             ctx.read();

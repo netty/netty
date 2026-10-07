@@ -71,7 +71,7 @@ public class RedisDecoderTest {
         assertTrue(channel.writeInbound(byteBufOf("\n")));
 
         RedisMessage msg = channel.readInbound();
-        assertTrue(msg instanceof FullBulkStringRedisMessage);
+        assertInstanceOf(FullBulkStringRedisMessage.class, msg);
         ReferenceCountUtil.release(msg);
     }
 

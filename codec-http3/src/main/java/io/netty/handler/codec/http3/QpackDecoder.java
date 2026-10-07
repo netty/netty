@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap.PrimitiveEntry;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -67,9 +68,9 @@ final class QpackDecoder {
     private final QpackDecoderStateSyncStrategy stateSyncStrategy;
     /**
      * Hashmap with key as the required insert count to unblock the stream and the value a {@link List} of
-     * {@link Runnable} to invoke when the stream can be unblocked.
+     * {@link BlockedStream} to invoke when the stream can be unblocked.
      */
-    private final IntObjectHashMap<List<Runnable>> blockedStreams;
+    private final IntObjectHashMap<List<BlockedStream>> blockedStreams;
 
     private final long maxEntries;
     private final long fullRange;
@@ -119,7 +120,8 @@ final class QpackDecoder {
         final int requiredInsertCount = decodeRequiredInsertCount(qpackAttributes, in);
         if (shouldWaitForDynamicTableUpdates(requiredInsertCount)) {
             blockedStreamsCount++;
-            blockedStreams.computeIfAbsent(requiredInsertCount, __ -> new ArrayList<>(2)).add(whenDecoded);
+            blockedStreams.computeIfAbsent(requiredInsertCount, __ -> new ArrayList<>(2))
+                    .add(new BlockedStream(streamId, whenDecoded));
             in.readerIndex(initialReaderIdx);
             return false;
         }
@@ -236,6 +238,11 @@ final class QpackDecoder {
         if (maxTableCapacity == 0) {
             return;
         }
+        releaseBlockedStream(streamId);
+        sendStreamCancellation(qpackDecoderStream, streamId);
+    }
+
+    void sendStreamCancellation(QuicStreamChannel qpackDecoderStream, long streamId) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.2
         //   0   1   2   3   4   5   6   7
         // +---+---+---+---+---+---+---+---+
@@ -244,6 +251,26 @@ final class QpackDecoder {
         final ByteBuf cancel = qpackDecoderStream.alloc().buffer(8);
         encodePrefixedInteger(cancel, (byte) 0b0100_0000, 6, streamId);
         closeOnFailure(qpackDecoderStream.writeAndFlush(cancel));
+    }
+
+    boolean releaseBlockedStream(long streamId) {
+        if (blockedStreamsCount == 0) {
+            return false;
+        }
+        for (PrimitiveEntry<List<BlockedStream>> entry : blockedStreams.entries()) {
+            List<BlockedStream> list = entry.value();
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).streamId == streamId) {
+                    list.remove(i);
+                    blockedStreamsCount--;
+                    if (list.isEmpty()) {
+                        blockedStreams.remove(entry.key());
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean isIndexed(byte b) {
@@ -492,16 +519,16 @@ final class QpackDecoder {
 
     private void sendInsertCountIncrementIfRequired(QuicStreamChannel qpackDecoderStream) throws QpackException {
         final int insertCount = dynamicTable.insertCount();
-        final List<Runnable> runnables = this.blockedStreams.remove(insertCount);
-        if (runnables != null) {
-            blockedStreamsCount -= runnables.size();
+        final List<BlockedStream> streams = this.blockedStreams.remove(insertCount);
+        if (streams != null) {
+            blockedStreamsCount -= streams.size();
             boolean failed = false;
-            for (Runnable runnable : runnables) {
+            for (BlockedStream stream : streams) {
                 try {
-                    runnable.run();
+                    stream.whenDecoded.run();
                 } catch (Exception e) {
                     failed = true;
-                    logger.error("Failed to resume a blocked stream {}.", runnable, e);
+                    logger.error("Failed to resume a blocked stream {}.", stream.whenDecoded, e);
                 }
             }
             if (failed) {
@@ -518,6 +545,16 @@ final class QpackDecoder {
             encodePrefixedInteger(incr, (byte) 0b0, 6, insertCount - lastAckInsertCount);
             lastAckInsertCount = insertCount;
             closeOnFailure(qpackDecoderStream.writeAndFlush(incr));
+        }
+    }
+
+    private static final class BlockedStream {
+        final long streamId;
+        final Runnable whenDecoded;
+
+        BlockedStream(long streamId, Runnable whenDecoded) {
+            this.streamId = streamId;
+            this.whenDecoded = whenDecoded;
         }
     }
 }

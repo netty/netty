@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -38,6 +37,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     private final WebSocketCloseStatus closeStatus;
     private final long forceCloseTimeoutMillis;
     private ChannelPromise closeSent;
+    private Future<?> forceCloseTimeoutTask;
 
     /**
      * Creates a new {@link WebSocketProtocolHandler} that will <i>drop</i> {@link PongWebSocketFrame}s.
@@ -54,7 +54,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
      *            {@code true} if {@link PongWebSocketFrame}s should be dropped
      */
     WebSocketProtocolHandler(boolean dropPongFrames) {
-        this(dropPongFrames, null, 0L);
+        this(dropPongFrames, null, WebSocketServerProtocolConfig.DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
     }
 
     WebSocketProtocolHandler(boolean dropPongFrames,
@@ -97,7 +97,6 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
                 write(ctx, new CloseWebSocketFrame(closeStatus, ctx.alloc()), ctx.newPromise());
             }
             flush(ctx);
-            applyCloseSentTimeout(ctx);
             closeSent.addListener(future -> ctx.close(promise));
         }
     }
@@ -115,12 +114,36 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         }
     }
 
+    @Override
+    public void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+        // Give the flush a chance to complete synchronously before arming the deadline, so a write that
+        // finishes immediately (e.g. EmbeddedChannel, or a fast socket) never races the force-close timer.
+        if (closeSent != null) {
+            applyCloseSentTimeout(ctx);
+        }
+    }
+
+    /**
+     * Records the {@link ChannelPromise} used to write the outgoing close frame. Every code path that initiates
+     * the close handshake must call this, and must subsequently give
+     * {@link #applyCloseSentTimeout(ChannelHandlerContext)} a chance to run (directly, or indirectly via
+     * {@link #flush(ChannelHandlerContext)}) so the channel is guaranteed to close even if the outbound write
+     * never completes (e.g. the peer stops reading and the socket send buffer fills up).
+     */
     void closeSent(ChannelPromise promise) {
+        if (closeSent != null) {
+            // Already sending (or already sent) a close frame, e.g. a peer that sends more than one CLOSE
+            // frame. Keep the original promise (and the deadline already armed for it) authoritative, and
+            // just cascade its outcome onto the new one instead of losing track of the original.
+            closeSent.addListener(new PromiseNotifier<Void, ChannelFuture>(false, promise));
+            return;
+        }
         closeSent = promise;
     }
 
-    private void applyCloseSentTimeout(ChannelHandlerContext ctx) {
-        if (closeSent.isDone() || forceCloseTimeoutMillis < 0) {
+    void applyCloseSentTimeout(ChannelHandlerContext ctx) {
+        if (forceCloseTimeoutTask != null || closeSent.isDone() || forceCloseTimeoutMillis < 0) {
             return;
         }
 
@@ -129,9 +152,14 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             public void run() {
                 if (!closeSent.isDone()) {
                     closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
+                    // Do not rely on some other listener eventually closing the channel once closeSent
+                    // completes (e.g. write(CloseWebSocketFrame) without a subsequent close() call attaches
+                    // none): close it here so the deadline is enforced unconditionally.
+                    ctx.close();
                 }
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
+        forceCloseTimeoutTask = timeoutTask;
 
         closeSent.addListener(future -> timeoutTask.cancel(false));
     }
@@ -170,11 +198,6 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
     }
 
     @Override

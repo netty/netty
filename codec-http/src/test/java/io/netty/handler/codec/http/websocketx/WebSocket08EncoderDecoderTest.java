@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the WebSocket08FrameEncoder and Decoder implementation.<br>
@@ -183,7 +183,7 @@ public class WebSocket08EncoderDecoderTest {
 
         Object decoded = inChannel.readInbound();
         assertNotNull(decoded);
-        assertTrue(decoded instanceof TextWebSocketFrame);
+        assertInstanceOf(TextWebSocketFrame.class, decoded);
         TextWebSocketFrame txt = (TextWebSocketFrame) decoded;
         assertEquals(txt.text(), testStr);
         txt.release();
@@ -198,7 +198,7 @@ public class WebSocket08EncoderDecoderTest {
 
         Object decoded = inChannel.readInbound();
         assertNotNull(decoded);
-        assertTrue(decoded instanceof BinaryWebSocketFrame);
+        assertInstanceOf(BinaryWebSocketFrame.class, decoded);
         BinaryWebSocketFrame binFrame = (BinaryWebSocketFrame) decoded;
         int readable = binFrame.content().readableBytes();
         assertEquals(readable, testDataLength);
