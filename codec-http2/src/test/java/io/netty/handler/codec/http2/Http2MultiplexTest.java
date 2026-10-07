@@ -53,8 +53,10 @@ import org.mockito.stubbing.Answer;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -754,9 +756,14 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         parentChannel.close();
         assertTrue(childChannel.isActive());
+        // Each read() delivers one queued frame, also once the parent is closed.
         childChannel.read();
         inboundHandler.checkException();
-        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
         assertFalse(childChannel.isActive());
     }
 
@@ -780,9 +787,14 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         parentChannel.close();
         assertTrue(childChannel.isActive());
+        // Each read() delivers one queued frame, also once the parent is closed.
         childChannel.read();
         inboundHandler.checkException();
-        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
         assertFalse(childChannel.isActive());
     }
 
@@ -1312,15 +1324,22 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), NO_ERROR.code());
 
-        // Detecting EOS should flush all pending data regardless of read calls.
+        // Detecting EOS does not drop the queued data.
         assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2DataFrame>readInbound());
         assertNull(inboundHandler.readInbound());
 
-        // As we limited the number to 1 we also need to call read() again.
+        // As we limited the number to 1, each read() delivers one more frame, also after EOS.
         childChannel.read();
-
         assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2DataFrame>readInbound());
+        assertNull(inboundHandler.readInbound());
+
+        childChannel.read();
         assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2DataFrame>readInbound());
+        if (!useUserEventForResetFrame()) {
+            // The reset frame is queued behind the data, so it needs a read() of its own.
+            assertNull(inboundHandler.readInbound());
+            childChannel.read();
+        }
 
         Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.<Http2ResetFrame>readUserEvent() :
                 inboundHandler.<Http2ResetFrame>readInbound();
@@ -1825,6 +1844,140 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.read();
         assertDataFrame(inboundHandler, 4, true);
         assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void readsAfterEndOfStreamRespectReadLimits() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        final Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        endStreamWithQueuedFrames(childChannel, inboundHandler);
+
+        // Without auto-read, each read() delivers one frame, also after the stream has ended.
+        childChannel.read();
+        assertDataFrame(inboundHandler, 2, false);
+        assertNull(inboundHandler.readInbound());
+        assertTrue(childChannel.isActive());
+
+        childChannel.read();
+        assertDataFrame(inboundHandler, 3, false);
+        assertNull(inboundHandler.readInbound());
+        assertTrue(childChannel.isActive());
+
+        // Reading the last queued frame closes the channel.
+        childChannel.read();
+        assertDataFrame(inboundHandler, 4, true);
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void autoReadDeliversEveryFrameQueuedAtEndOfStream() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        // One frame per read loop, so that draining the queue takes several of them.
+        final Http2StreamChannel childChannel = newInboundStream(3, false, new AtomicInteger(1), inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        endStreamWithQueuedFrames(childChannel, inboundHandler);
+
+        // Count the frames that each read loop delivers.
+        final List<Integer> framesPerReadLoop = new ArrayList<Integer>();
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            private int frames;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                frames++;
+                ctx.fireChannelRead(msg);
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                if (frames > 0) {
+                    framesPerReadLoop.add(frames);
+                    frames = 0;
+                }
+                ctx.fireChannelReadComplete();
+            }
+        });
+
+        childChannel.config().setAutoRead(true);
+        assertDataFrame(inboundHandler, 2, false);
+        assertDataFrame(inboundHandler, 3, false);
+        assertDataFrame(inboundHandler, 4, true);
+        assertNull(inboundHandler.readInbound());
+        assertFalse(childChannel.isActive());
+        assertEquals(Arrays.asList(1, 1, 1), framesPerReadLoop, "the read limit applies after the end of the stream");
+    }
+
+    @Test
+    public void readRequestedFromReadCompleteAfterEndOfStreamDeliversEveryFrame() {
+        final AtomicBoolean shouldRead = new AtomicBoolean();
+        LastInboundHandler inboundHandler = new LastInboundHandler(new Consumer<ChannelHandlerContext>() {
+            @Override
+            public void accept(ChannelHandlerContext ctx) {
+                if (shouldRead.get()) {
+                    ctx.read();
+                }
+            }
+        });
+        Http2StreamChannel childChannel = newInboundStream(3, false, new AtomicInteger(1), inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        int streamId = childChannel.stream().id();
+        // Half-close our side so that receiving END_STREAM fully closes the stream.
+        assertTrue(childChannel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).isSuccess());
+
+        childChannel.config().setAutoRead(false);
+        final int frames = 10000; // enough frames to overflow the stack if each read recursed.
+        for (int i = 0; i < frames; ++i) {
+            frameInboundWriter.writeInboundData(streamId, bb(String.valueOf(i)), 0, false);
+        }
+        frameInboundWriter.writeInboundData(streamId, bb(String.valueOf(frames)), 0, true);
+        shouldRead.set(true);
+        childChannel.read();
+
+        for (int i = 0; i < frames; ++i) {
+            Http2DataFrame dataFrame = inboundHandler.readInbound();
+            assertNotNull(dataFrame);
+            assertFalse(dataFrame.isEndStream());
+            release(dataFrame);
+        }
+        Http2DataFrame last = inboundHandler.readInbound();
+        assertTrue(last.isEndStream());
+        release(last);
+        assertNull(inboundHandler.readInbound());
+        assertFalse(childChannel.isActive());
+    }
+
+    @Test
+    public void closingTheChannelReleasesFramesQueuedAtEndOfStream() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        final Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertNotNull(inboundHandler.readInbound());
+        endStreamWithQueuedFrames(childChannel, inboundHandler);
+
+        // The leak detection of the test run fails the test if the queued frames are not released.
+        childChannel.close().syncUninterruptibly();
+        assertFalse(childChannel.isActive());
+        assertNull(inboundHandler.readInbound());
+    }
+
+    /**
+     * Half-closes our side and turns auto-read off, then lets frames 2, 3 and 4, the last with END_STREAM, arrive.
+     * They are queued in the child channel, and the stream is closed at the HTTP/2 level.
+     */
+    private void endStreamWithQueuedFrames(Http2StreamChannel childChannel, LastInboundHandler inboundHandler) {
+        int streamId = childChannel.stream().id();
+        assertTrue(childChannel.writeAndFlush(
+                new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)).isSuccess());
+        childChannel.config().setAutoRead(false);
+        // The read that auto-read had already requested still delivers this frame.
+        frameInboundWriter.writeInboundData(streamId, bb(1), 0, false);
+        assertDataFrame(inboundHandler, 1, false);
+        frameInboundWriter.writeInboundData(streamId, bb(2), 0, false);
+        frameInboundWriter.writeInboundData(streamId, bb(3), 0, false);
+        frameInboundWriter.writeInboundData(streamId, bb(4), 0, true);
+        assertNull(inboundHandler.readInbound());
+        assertTrue(childChannel.isActive(), "the channel stays open while frames are queued for it");
     }
 
     private static void assertDataFrame(LastInboundHandler inboundHandler, int expectedBytes, boolean endStream) {
