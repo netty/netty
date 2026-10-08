@@ -60,6 +60,9 @@ final class QpackDecoder {
 
     private static final QpackException UNKNOWN_TYPE =
             QpackException.newStatic(QpackDecoder.class, "decode(...)", "QPACK - unknown type");
+    private static final QpackException TRUNCATED_PREFIXED_INTEGER =
+            QpackException.newStatic(QpackDecoder.class, "decode(...)",
+                    "QPACK - truncated prefixed integer in field section");
 
     private final QpackHuffmanDecoder huffmanDecoder;
     private final QpackDecoderDynamicTable dynamicTable;
@@ -318,6 +321,27 @@ final class QpackDecoder {
         return (b & 0b1111_0000) == 0b0000_0000;
     }
 
+    // decode() and its helpers always operate on a slice that holds the complete field section, so a prefixed
+    // integer can never be legitimately truncated here. decodePrefixedInteger returns -1 when it would need more
+    // bytes, which can only happen for a malformed encoding in this context. Turn that into a decompression error
+    // instead of relying on an assert (disabled in production) and then advancing with a negative value, which
+    // would index the dynamic table out of range or spin in the decode loop without consuming any bytes.
+    private int decodePrefixedIntOrThrow(ByteBuf in, int prefixLength) throws QpackException {
+        final int i = decodePrefixedIntegerAsInt(in, prefixLength);
+        if (i < 0) {
+            throw TRUNCATED_PREFIXED_INTEGER;
+        }
+        return i;
+    }
+
+    private static long decodePrefixedLongOrThrow(ByteBuf in, int prefixLength) throws QpackException {
+        final long i = QpackUtil.decodePrefixedInteger(in, prefixLength);
+        if (i < 0) {
+            throw TRUNCATED_PREFIXED_INTEGER;
+        }
+        return i;
+    }
+
     private void decodeIndexed(ByteBuf in, BiConsumer<CharSequence, CharSequence> sink, int base)
             throws QpackException {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-indexed-field-line
@@ -329,15 +353,13 @@ final class QpackDecoder {
         // T == 1 implies static table
         final QpackHeaderField field;
         if (firstByteEquals(in, (byte) 0b1100_0000)) {
-            final int idx = decodePrefixedIntegerAsInt(in, 6);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 6);
             if (idx >= QpackStaticTable.length) {
                 throw HEADER_ILLEGAL_INDEX_VALUE;
             }
             field = QpackStaticTable.getField(idx);
         } else {
-            final int idx = decodePrefixedIntegerAsInt(in, 6);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 6);
             field = dynamicTable.getEntryRelativeEncodedField(base - idx - 1);
         }
         sink.accept(field.name, field.value);
@@ -350,8 +372,7 @@ final class QpackDecoder {
         // +---+---+---+---+---+---+---+---+
         // | 0 | 0 | 0 | 1 |  Index (4+)   |
         // +---+---+---+---+---------------+
-        final int idx = decodePrefixedIntegerAsInt(in, 4);
-        assert idx >= 0;
+        final int idx = decodePrefixedIntOrThrow(in, 4);
         QpackHeaderField field = dynamicTable.getEntryRelativeEncodedField(base + idx);
         sink.accept(field.name, field.value);
     }
@@ -371,15 +392,13 @@ final class QpackDecoder {
         //
         // T == 1 implies static table
         if (firstByteEquals(in, (byte) 0b0001_0000)) {
-            final int idx = decodePrefixedIntegerAsInt(in, 4);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 4);
             if (idx >= QpackStaticTable.length) {
                 throw NAME_ILLEGAL_INDEX_VALUE;
             }
             name = QpackStaticTable.getField(idx).name;
         } else {
-            final int idx = decodePrefixedIntegerAsInt(in, 4);
-            assert idx >= 0;
+            final int idx = decodePrefixedIntOrThrow(in, 4);
             name = dynamicTable.getEntryRelativeEncodedField(base - idx - 1).name;
         }
         final CharSequence value = decodeHuffmanEncodedLiteral(in, 7);
@@ -397,8 +416,7 @@ final class QpackDecoder {
         // +---+---------------------------+
         // |  Value String (Length bytes)  |
         // +-------------------------------+
-        final int idx = decodePrefixedIntegerAsInt(in, 3);
-        assert idx >= 0;
+        final int idx = decodePrefixedIntOrThrow(in, 3);
         CharSequence name = dynamicTable.getEntryRelativeEncodedField(base + idx).name;
         final CharSequence value = decodeHuffmanEncodedLiteral(in, 7);
         sink.accept(name, value);
@@ -424,8 +442,7 @@ final class QpackDecoder {
     private CharSequence decodeHuffmanEncodedLiteral(ByteBuf in, int prefix) throws QpackException {
         assert prefix < 8;
         final boolean huffmanEncoded = firstByteEquals(in, (byte) (1 << prefix));
-        final int length = decodePrefixedIntegerAsInt(in, prefix);
-        assert length >= 0;
+        final int length = decodePrefixedIntOrThrow(in, prefix);
         if (huffmanEncoded) {
             return huffmanDecoder.decode(in, length);
         }
@@ -439,8 +456,7 @@ final class QpackDecoder {
 
     // Visible for testing
     int decodeRequiredInsertCount(QpackAttributes qpackAttributes, ByteBuf buf) throws QpackException {
-        final long encodedInsertCount = QpackUtil.decodePrefixedInteger(buf, 8);
-        assert encodedInsertCount >= 0;
+        final long encodedInsertCount = decodePrefixedLongOrThrow(buf, 8);
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count
         // FullRange = 2 * MaxEntries
         //   if EncodedInsertCount == 0:
@@ -497,8 +513,7 @@ final class QpackDecoder {
         // | S |      Delta Base (7+)      |
         // +---+---------------------------+
         final boolean s = (buf.getByte(buf.readerIndex()) & 0b1000_0000) == 0b1000_0000;
-        final int deltaBase = decodePrefixedIntegerAsInt(buf, 7);
-        assert deltaBase >= 0;
+        final int deltaBase = decodePrefixedIntOrThrow(buf, 7);
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-base
         //    if S == 0:
         //      Base = ReqInsertCount + DeltaBase

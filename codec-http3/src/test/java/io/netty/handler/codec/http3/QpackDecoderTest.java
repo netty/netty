@@ -120,6 +120,26 @@ public class QpackDecoderTest {
     }
 
     @Test
+    public void truncatedPostBaseIndexIsRejected() throws Exception {
+        setup(128);
+        insertLiterals(3);
+
+        // A field section whose last line is an "Indexed Field Line With Post-Base Index" whose prefixed
+        // integer is cut off (the continuation byte never arrives). decodePrefixedInteger returns -1, which used
+        // to flow into the dynamic table lookup with assertions disabled and spin in the decode loop forever.
+        ByteBuf in = Unpooled.buffer();
+        QpackUtil.encodePrefixedInteger(in, (byte) 0b0, 8, 3 % (2L * maxEntries) + 1); // Required Insert Count
+        QpackUtil.encodePrefixedInteger(in, (byte) 0b0, 7, 0);                         // Base (post-base, delta 0)
+        in.writeByte(0x1f); // post-base index, 4-bit prefix all ones, continuation byte missing
+        try {
+            assertThrows(QpackException.class, () ->
+                    decoder.decode(attributes, 0L, in, in.readableBytes(), (n, v) -> { }, () -> { }));
+        } finally {
+            in.release();
+        }
+    }
+
+    @Test
     public void zeroMaxBlockedStreamsThrowsOnBlockedStream() throws Exception {
         setup(128);
         ByteBuf in = encodeBlockingFrame(1);
