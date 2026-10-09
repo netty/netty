@@ -43,7 +43,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /**
@@ -331,6 +333,37 @@ public class DefaultHttp2FrameWriterTest {
         };
         expectedOutbound = Unpooled.copiedBuffer(expectedFrameHeaderBytes, payload);
         assertEquals(expectedOutbound, outbound);
+    }
+
+    @Test
+    public void writeFrameExceedingMaxFrameSizeFailsPromiseAndReleasesPayload() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND + 1);
+
+        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+
+        assertTrue(future.isDone());
+        assertFalse(future.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, future.cause());
+        // Nothing must have been written and the payload must have been released
+        assertEquals(0, outbound.readableBytes());
+        assertEquals(0, payload.refCnt());
+        verify(ctx, never()).write(any(), any(ChannelPromise.class));
+    }
+
+    @Test
+    public void writeFrameAtMaxFrameSizeSucceeds() throws Exception {
+        frameWriter.maxFrameSize(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+        ByteBuf payload = Unpooled.buffer().writeZero(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND);
+
+        ChannelFuture future = frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payload, promise);
+
+        // The mocked context never completes the writes, so only verify that the write was not rejected
+        assertFalse(future.isDone() && !future.isSuccess());
+        assertEquals(Http2CodecUtil.FRAME_HEADER_LENGTH + Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                outbound.readableBytes());
+        // 24 bit payload length field must hold exactly the payload size
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND, outbound.getUnsignedMedium(0));
     }
 
     @Test
