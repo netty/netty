@@ -32,6 +32,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.PlatformDependent.newFixedMpmcQueue;
+import static io.netty.util.internal.PlatformDependent.newFixedMpscQueue;
 import static io.netty.util.internal.PlatformDependent.newMpscQueue;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -134,6 +135,21 @@ public abstract class Recycler<T> {
      * (similar to what {@link EnhancedHandle#unguardedRecycle(Object)} does).<br>
      */
     protected Recycler(int maxCapacity, boolean unguarded) {
+        this(maxCapacity, unguarded, false);
+    }
+
+    /**
+     * As {@link #Recycler(int, boolean)}, for a pool whose {@link #get()} is only ever called by one thread at a time
+     * (for example under a lock the caller holds), while any thread may recycle into it: the pool can then take
+     * instances without contending with other takers. Only supported with {@code unguarded}.
+     *
+     * @throws IllegalArgumentException if {@code exclusiveGet} is set without {@code unguarded}
+     */
+    @SuppressWarnings("unchecked")
+    protected Recycler(int maxCapacity, boolean unguarded, boolean exclusiveGet) {
+        if (exclusiveGet && !unguarded) {
+            throw new IllegalArgumentException("exclusiveGet requires unguarded");
+        }
         if (maxCapacity <= 0) {
             maxCapacity = 0;
         } else {
@@ -142,8 +158,10 @@ public abstract class Recycler<T> {
         threadLocalPool = null;
         if (maxCapacity == 0) {
             localPool = (LocalPool<?, T>) NOOP_LOCAL_POOL;
+        } else if (exclusiveGet && unguarded) {
+            localPool = new UnguardedLocalPool<>(maxCapacity, true);
         } else {
-            localPool = unguarded? new UnguardedLocalPool<>(maxCapacity) : new GuardedLocalPool<>(maxCapacity);
+            localPool = unguarded ? new UnguardedLocalPool<>(maxCapacity) : new GuardedLocalPool<>(maxCapacity);
         }
     }
 
@@ -156,6 +174,19 @@ public abstract class Recycler<T> {
      */
     protected Recycler(boolean unguarded) {
         this(DEFAULT_MAX_CAPACITY_PER_THREAD, RATIO, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD, unguarded);
+    }
+
+    /**
+     * As {@link #Recycler(boolean)}, but with an explicit recycling {@code interval} instead of the
+     * global default.
+     *
+     * <p>An interval of {@code 0} pools every recycled instance. A non-zero interval admits one
+     * instance in {@code interval} and costs a stateful counter and a data-dependent branch in
+     * {@code canAllocatePooled()} on the allocation path, which is why a caller whose objects are
+     * already bounded by {@code maxCapacity} may prefer {@code 0}.
+     */
+    protected Recycler(boolean unguarded, int interval) {
+        this(DEFAULT_MAX_CAPACITY_PER_THREAD, interval, DEFAULT_QUEUE_CHUNK_SIZE_PER_THREAD, unguarded);
     }
 
     /**
@@ -479,6 +510,11 @@ public abstract class Recycler<T> {
             handle = maxCapacity == 0? null : new LocalPoolHandle<>(this);
         }
 
+        UnguardedLocalPool(int maxCapacity, boolean exclusiveGet) {
+            super(maxCapacity, exclusiveGet);
+            handle = maxCapacity == 0? null : new LocalPoolHandle<>(this);
+        }
+
         UnguardedLocalPool(Thread owner, int maxCapacity, int ratioInterval, int chunkSize) {
             super(owner, maxCapacity, ratioInterval, chunkSize);
             handle = new LocalPoolHandle<>(this);
@@ -508,6 +544,11 @@ public abstract class Recycler<T> {
         private int ratioCounter;
 
         LocalPool(int maxCapacity) {
+            this(maxCapacity, false);
+        }
+
+        @SuppressWarnings("unchecked")
+        LocalPool(int maxCapacity, boolean exclusiveGet) {
             // if there's no capacity, we need to never allocate pooled objects.
             // if there's capacity, because there is a shared pool, we always pool them, since we cannot trust the
             // thread unsafe ratio counter.
@@ -515,7 +556,8 @@ public abstract class Recycler<T> {
             this.owner = null;
             batch = null;
             batchSize = 0;
-            pooledHandles = createExternalMcPool(maxCapacity);
+            pooledHandles = exclusiveGet ? (MessagePassingQueue<H>) newFixedMpscQueue(maxCapacity)
+                    : createExternalMcPool(maxCapacity);
             ratioCounter = 0;
         }
 
