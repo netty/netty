@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_
 import static io.netty.handler.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertException;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
+import static io.netty.handler.codec.http3.QpackUtil.encodePrefixedInteger;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -453,16 +453,14 @@ public class Http3FrameCodecTest {
         ByteBuf buffer = Unpooled.buffer();
         Http3CodecUtils.writeVariableLengthInteger(buffer, type);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertEquals(0, buffer.refCnt());
     }
@@ -504,16 +502,14 @@ public class Http3FrameCodecTest {
         when(frame.type()).thenReturn(type);
         when(frame.touch()).thenReturn(frame);
         when(frame.touch(any())).thenReturn(frame);
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_UNEXPECTED, e);
         // should have released the frame as well
         verify(frame, times(1)).release();
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
@@ -581,16 +577,14 @@ public class Http3FrameCodecTest {
     }
 
     private void testDecodeInvalidSettings(boolean delayQpackStreams, ByteBuf buffer) {
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
         verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
         assertEquals(0, buffer.refCnt());
     }
@@ -626,16 +620,14 @@ public class Http3FrameCodecTest {
     private void testEncodeReservedSettingsKey(boolean delayQpackStreams, long key) {
         Http3SettingsFrame frame = mock(Http3SettingsFrame.class);
         when(frame.iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_SETTINGS_ERROR, e);
         verifyClose(Http3ErrorCode.H3_SETTINGS_ERROR, parent);
     }
 
@@ -903,16 +895,14 @@ public class Http3FrameCodecTest {
         writeVariableLengthInteger(buffer, 1);
         buffer.writeByte(0xC0);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -954,16 +944,14 @@ public class Http3FrameCodecTest {
         // to treat these bytes as the start of the next frame.
         buffer.writeBytes(new byte[] { HTTP3_HEADERS_FRAME_TYPE, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 });
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
         // The connection is in an error state, so no frame should have been produced and the trailing bytes must
         // not have been decoded as a subsequent frame.
@@ -983,16 +971,14 @@ public class Http3FrameCodecTest {
         buffer.writeByte(0xC0);
         buffer.writeByte(0x01);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -1009,16 +995,14 @@ public class Http3FrameCodecTest {
         buffer.writeByte(0x01);
         buffer.writeByte(0xC0);
 
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
-        }
+        });
+        assertException(Http3ErrorCode.H3_FRAME_ERROR, e);
         verifyClose(Http3ErrorCode.H3_FRAME_ERROR, parent);
     }
 
@@ -1102,6 +1086,68 @@ public class Http3FrameCodecTest {
             Http3ErrorCode.H3_FRAME_ERROR);
     }
 
+    @Test
+    public void testClosingBlockedStreamReleasesBlockedStream() throws Exception {
+        setUp(1, false);
+        assertFalse(codecChannel.writeInbound(blockingHeadersFrame()));
+        codecChannel.close().syncUninterruptibly();
+        ByteBuf expected = Unpooled.buffer();
+        encodePrefixedInteger(expected, (byte) 0b0100_0000, 6, codecChannel.streamId());
+        ByteBuf canceled = decoderStream.readOutbound();
+        try {
+            assertEquals(expected, canceled);
+        } finally {
+            canceled.release();
+            expected.release();
+        }
+    }
+
+    @Test
+    public void testFinOnBlockedStreamReleasesBlockedStream() throws Exception {
+        setUp(1, false);
+        EmbeddedQuicStreamChannel first = newValidatedRequestStream();
+        EmbeddedQuicStreamChannel second = newValidatedRequestStream();
+        try {
+            assertFalse(first.writeInboundWithFin(blockingHeadersFrame()));
+            assertTrue(first.isActive());
+            assertFalse(second.writeInbound(blockingHeadersFrame()));
+        } finally {
+            first.finishAndReleaseAll();
+            second.finishAndReleaseAll();
+            decoderStream.releaseOutbound();
+        }
+    }
+
+    private static ByteBuf blockingHeadersFrame() {
+        ByteBuf buffer = Unpooled.buffer();
+        writeVariableLengthInteger(buffer, HTTP3_HEADERS_FRAME_TYPE);
+        writeVariableLengthInteger(buffer, 3);
+        buffer.writeByte(0x02);
+        buffer.writeByte(0x00);
+        buffer.writeByte(0x80);
+        return buffer;
+    }
+
+    private EmbeddedQuicStreamChannel newValidatedRequestStream() throws Exception {
+        return (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.BIDIRECTIONAL,
+            new ChannelInitializer<QuicStreamChannel>() {
+                @Override
+                protected void initChannel(QuicStreamChannel ch) {
+                    Http3RequestStreamEncodeStateValidator encStateValidator =
+                        new Http3RequestStreamEncodeStateValidator();
+                    Http3RequestStreamDecodeStateValidator decStateValidator =
+                        new Http3RequestStreamDecodeStateValidator();
+                    ch.pipeline().addLast(new Http3FrameCodec(Http3FrameTypeValidator.NO_VALIDATION,
+                        decoder, MAX_HEADER_SIZE, Integer.MAX_VALUE, encoder,
+                        encStateValidator, decStateValidator, (id, v) -> false));
+                    ch.pipeline().addLast(encStateValidator);
+                    ch.pipeline().addLast(decStateValidator);
+                    ch.pipeline().addLast(Http3RequestStreamValidationHandler.newServerValidator(
+                        qpackAttributes, decoder, encStateValidator, decStateValidator));
+                }
+            }).get();
+    }
+
     private void testInvalidHttp3Frame0(boolean delayQpackStreams, int type, int length, Http3ErrorCode code) {
         ByteBuf buffer = Unpooled.buffer();
         writeVariableLengthInteger(buffer, type);
@@ -1110,16 +1156,14 @@ public class Http3FrameCodecTest {
     }
 
     private void testInvalidHttp3Frame0(boolean delayQpackStreams, ByteBuf buffer, Http3ErrorCode code) {
-        try {
+        Exception e = assertThrows(Exception.class, () -> {
             assertFalse(codecChannel.writeInbound(buffer));
             if (delayQpackStreams) {
                 setQpackStreams();
                 codecChannel.checkException();
             }
-            fail();
-        } catch (Exception e) {
-            assertException(code, e);
-        }
+        });
+        assertException(code, e);
         verifyClose(code, parent);
     }
 

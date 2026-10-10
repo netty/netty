@@ -16,7 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class DefaultSocks5PasswordAuthRequestTest {
     @Test
@@ -24,12 +24,12 @@ public class DefaultSocks5PasswordAuthRequestTest {
         try {
             new DefaultSocks5PasswordAuthRequest(null, "");
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
         try {
             new DefaultSocks5PasswordAuthRequest("", null);
         } catch (Exception e) {
-            assertTrue(e instanceof NullPointerException);
+            assertInstanceOf(NullPointerException.class, e);
         }
     }
 
@@ -38,12 +38,12 @@ public class DefaultSocks5PasswordAuthRequestTest {
         try {
             new DefaultSocks5PasswordAuthRequest("παράδειγμα.δοκιμή", "password");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
         try {
             new DefaultSocks5PasswordAuthRequest("username", "παράδειγμα.δοκιμή");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 
@@ -61,7 +61,7 @@ public class DefaultSocks5PasswordAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword",
                     "password");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
         try {
             new DefaultSocks5PasswordAuthRequest("password",
@@ -74,7 +74,7 @@ public class DefaultSocks5PasswordAuthRequestTest {
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword" +
                     "passwordpasswordpasswordpasswordpasswordpasswordpassword");
         } catch (Exception e) {
-            assertTrue(e instanceof IllegalArgumentException);
+            assertInstanceOf(IllegalArgumentException.class, e);
         }
     }
 }

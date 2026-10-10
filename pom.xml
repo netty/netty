@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.19.Final-SNAPSHOT</version>
+  <version>4.2.20.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -956,7 +956,7 @@
       <dependency>
         <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
-        <version>1.11.2</version>
+        <version>1.12.0</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1510,6 +1510,14 @@
                   <new>method void io.netty.handler.codec.spdy.SpdySessionHandler::channelActive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</new>
                   <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
                   <justification>Change is harmless for compatibility. Needed for a security fix.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelInboundHandlerAdapter::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception @ io.netty.handler.codec.http2.Http2MultiplexHandler</old>
+                  <new>method void io.netty.handler.codec.http2.Http2MultiplexHandler::channelInactive(io.netty.channel.ChannelHandlerContext) throws java.lang.Exception</new>
+                  <annotation>@io.netty.channel.ChannelHandlerMask.Skip</annotation>
+                  <justification>Change is harmless for compatibility. Needed to close outbound child channels whose stream was never created when the parent channel becomes inactive.</justification>
                 </item>
               </differences>
             </revapi.differences>

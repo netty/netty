@@ -223,6 +223,11 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 final ChannelPipeline pipeline = pipeline();
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
+                    if (nativeCallResult == 0) {
+                        // EOF: the peer closed the connection, so there is no control message to inspect.
+                        shutdownInput(true);
+                        return;
+                    }
                     int nativeFd = readMsgHdrMemory.getScmRightsFd();
                     allocHandle.lastBytesRead(nativeFd);
                     allocHandle.incMessagesRead(1);

@@ -1013,6 +1013,15 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                     //shouldn't reach here
                     throw new DecoderException("Unknown property type: " + propertyIdValue);
             }
+            if (numberOfBytesConsumed - propertiesLengthNumBytes > totalPropertiesLength) {
+                // The typed value of the last decoded property read past the declared Property
+                // Length, e.g. a Content Type string whose length prefix claims more bytes than
+                // are left in the Properties field. MQTT 5.0 section 2.2.2.2 states a Property
+                // whose value is not of the specified data type is a Malformed Packet, so reject
+                // it instead of letting the read spill into the following packet section.
+                throw new DecoderException(
+                    "MQTT5 property overran declared Property Length: propertyId=" + propertyIdValue);
+            }
         }
 
         return new Result<MqttProperties>(decodedProperties, numberOfBytesConsumed);
