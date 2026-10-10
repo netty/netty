@@ -2497,7 +2497,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    static final class IntStack {
+    static final class IntStack implements IntConsumer {
 
         private final int[] stack;
         private int top;
@@ -2534,6 +2534,12 @@ final class AdaptivePoolingAllocator {
         public void push(int value) {
             stack[top + 1] = value;
             top++;
+        }
+
+        /** {@link #push}, for an {@link MpscIntQueue#drain} into this stack. */
+        @Override
+        public void accept(int value) {
+            push(value);
         }
 
         public int size() {
@@ -2639,8 +2645,14 @@ final class AdaptivePoolingAllocator {
         void takeBuffer(AbstractByteBuf buffer) {
             assert delegate == null && state == DEALLOCATED : "the object is still a chunk";
             assert buffer.capacity() == capacity : "a buffer of another chunk size";
+            assert ownerThread == null || ownerThread == Thread.currentThread() : "not the owner thread";
             delegate = buffer;
             allocatedBytes = 0;
+            if (ownerThread != null) {
+                // Start from the stack, as a new chunk does: what other threads gave back to the previous buffer
+                // moves over now. A slot a releaser claimed but has not written yet stops the drain; it stays queued.
+                externalFreeList.drain(segments, localFreeList);
+            }
             STATE.lazySet(this, AVAILABLE);
         }
 
@@ -2651,6 +2663,7 @@ final class AdaptivePoolingAllocator {
          */
         void retire(SizeClassChunkRecycler recycler, int sizeClassIndex) {
             assert hasFullCapacity() : "a segment is still out";
+            assert state == AVAILABLE : "retired after its cache died";
             STATE.set(this, DEALLOCATED);
             if (recycler == null || !recycler.offer(delegate, sizeClassIndex)) {
                 deallocate();
@@ -2773,8 +2786,8 @@ final class AdaptivePoolingAllocator {
                     } else {
                         // The chunk just gained capacity but we could not take the lock to apply the
                         // resulting list transition. Leave a note instead; the next drain applies it.
-                        // A chunk whose state is not AVAILABLE is never on a cache list, so there is
-                        // nothing to notify about on that branch.
+                        // A chunk whose state is not AVAILABLE is spare or belongs to a dead cache: no list a
+                        // note acts on, so there is nothing to notify about on that branch.
                         cache.notifyHasCapacity(this);
                     }
                 }
