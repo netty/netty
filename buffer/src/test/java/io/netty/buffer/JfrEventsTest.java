@@ -72,7 +72,7 @@ public class JfrEventsTest {
             List<ByteBuf> bufs = new ArrayList<ByteBuf>();
 
             // A working set above the retention floor, then fully released, so eviction fires and
-            // recycleOrDeallocate hands buffers to the recycler.
+            // the retired chunks hand their buffers to the recycler.
             for (int i = 0; i < 40 * buffersPerChunk; i++) {
                 bufs.add(alloc.heapBuffer(256));
             }

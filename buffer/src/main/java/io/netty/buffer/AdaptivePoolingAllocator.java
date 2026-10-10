@@ -33,6 +33,7 @@ import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,10 +53,11 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntConsumer;
+import java.util.function.IntUnaryOperator;
 
 /**
- * A pooling allocator that follows an anti-generational hypothesis: buffers are expected to die young, so the memory
- * behind them is kept close to the thread that allocated it and handed out again as soon as it comes back.
+ * A pooling allocator built on the generational hypothesis: most buffers die young, so the memory behind them is
+ * kept close to the thread that allocated it and handed out again as soon as it comes back.
  * <p>
  * Memory is held in chunks, and a buffer is a range of one chunk. Which chunk serves a request depends on its size:
  * <ul>
@@ -231,6 +233,12 @@ final class AdaptivePoolingAllocator {
     };
 
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
+    /**
+     * The smallest block a {@link BuddyTree} hands out: the smallest power of two above the largest size class, which
+     * is the smallest block the buddy path is ever asked for, since every request up to that class is a segment.
+     */
+    static final int BUDDY_MIN_BLOCK_SIZE =
+            MathUtil.safeFindNextPositivePowerOfTwo(SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] + 1);
     private static final byte[] SIZE_INDEXES = new byte[SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32 + 1];
 
     /**
@@ -405,7 +413,7 @@ final class AdaptivePoolingAllocator {
      * The distinct chunk sizes of {@code sizeClasses}, in order of first appearance. Nothing is assumed about the
      * order of the chunk sizes. Size classes with the same chunk size need not be adjacent.
      */
-    // Visible for testing.
+    @VisibleForTesting
     static int[] distinctChunkSizes(int[] sizeClasses) {
         int[] distinct = new int[sizeClasses.length];
         int count = 0;
@@ -421,7 +429,7 @@ final class AdaptivePoolingAllocator {
     /**
      * For each of {@code sizeClasses}, the index of its chunk size in {@code chunkSizes}.
      */
-    // Visible for testing.
+    @VisibleForTesting
     static byte[] chunkPools(int[] sizeClasses, int[] chunkSizes) {
         assert chunkSizes.length <= Byte.MAX_VALUE;
         byte[] pools = new byte[sizeClasses.length];
@@ -442,7 +450,7 @@ final class AdaptivePoolingAllocator {
         return -1;
     }
 
-    // Visible for testing.
+    @VisibleForTesting
     static int chunkPoolOf(int sizeClassIndex) {
         return SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex];
     }
@@ -577,16 +585,12 @@ final class AdaptivePoolingAllocator {
     }
 
     /**
-     * Per-heap pool of chunk buffers that were fully free when their chunk was evicted, kept for the next
-     * chunk of the same chunk size on this heap. A buffer travels with the two free lists of the chunk
-     * that owned it, so re-creating a chunk from the pool only allocates the chunk object: the lists have
-     * the lifetime and count of the buffers, and the pool is sized by a single number.
+     * Per-heap pool of chunk buffers that were fully free when their chunk was given up, kept for the next
+     * chunk of the same chunk size on this heap. Only the buffer is pooled: the chunk object that served it stays
+     * with its size class, spare, and takes the next buffer (see {@link SizeClassedChunkCache#spare}).
      * <p>
      * Pools are keyed by chunk size, not size class: the size classes up to 4 KiB share one chunk size, and a
-     * buffer freed by one of them serves the next. The free lists are sized for the class that freed them; the
-     * recycling {@link SizeClassedChunk} constructor replaces a list that is too small and keeps one that is
-     * larger than needed, so within a shared pool the lists drift towards the largest need (up to 4096 entries,
-     * for the 32-byte class).
+     * buffer freed by one of them serves the next.
      * <p>
      * The pool is bounded by one number of bytes per heap, {@link #RECYCLED_BYTES_BUDGET}, across every chunk size:
      * whichever chunk sizes are churning get the room. A bound per chunk size left one or two buffers to the large
@@ -610,8 +614,6 @@ final class AdaptivePoolingAllocator {
                 "io.netty.allocator.recycledChunkBytes", IS_LOW_MEM ? 4 * 1024 * 1024 : 32 * 1024 * 1024));
 
         private final AbstractByteBuf[][] buffers = new AbstractByteBuf[CHUNK_POOL_COUNT][];
-        private final MpscIntQueue[][] freeLists = new MpscIntQueue[CHUNK_POOL_COUNT][];
-        private final IntStack[][] localFreeLists = new IntStack[CHUNK_POOL_COUNT][];
         private final int[] sizes = new int[CHUNK_POOL_COUNT];
         /** Bytes of the buffers held by all the pools; never above {@link #RECYCLED_BYTES_BUDGET}. */
         private int retainedBytes;
@@ -623,18 +625,10 @@ final class AdaptivePoolingAllocator {
          */
         private final int[] coldCounts = new int[CHUNK_POOL_COUNT];
 
-        // What the last successful poll() returned, read once by the caller.
-        private AbstractByteBuf polledBuffer;
-        private MpscIntQueue polledFreeList;
-        private IntStack polledLocalFreeList;
-
         SizeClassChunkRecycler(AdaptivePoolingAllocator allocator) {
             this.allocator = allocator;
             for (int i = 0; i < CHUNK_POOL_COUNT; i++) {
-                int capacity = capacityOf(i);
-                buffers[i] = new AbstractByteBuf[capacity];
-                freeLists[i] = new MpscIntQueue[capacity];
-                localFreeLists[i] = new IntStack[capacity];
+                buffers[i] = new AbstractByteBuf[capacityOf(i)];
             }
         }
 
@@ -642,23 +636,17 @@ final class AdaptivePoolingAllocator {
             return Math.max(1, RECYCLED_BYTES_BUDGET / CHUNK_SIZES[pool]);
         }
 
-        // Visible for testing.
+        @VisibleForTesting
         static int poolCapacity(int sizeClassIndex) {
             return capacityOf(SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex]);
         }
 
-        /**
-         * Take a buffer, and the free lists that came with it, for a chunk of {@code sizeClassIndex}.
-         * On {@code true}, read them through {@link #takeBuffer()}, {@link #takeFreeList()} and
-         * {@link #takeLocalFreeList()} before the next poll.
-         */
-        boolean poll(int sizeClassIndex) {
-            assert polledBuffer == null && polledFreeList == null && polledLocalFreeList == null :
-                    "the previous poll was not fully taken";
+        /** Take the newest pooled buffer of {@code sizeClassIndex}'s chunk size, or {@code null}. */
+        AbstractByteBuf poll(int sizeClassIndex) {
             int pool = SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex];
             int size = sizes[pool];
             if (size == 0) {
-                return false;
+                return null;
             }
             int idx = --size;
             sizes[pool] = size;
@@ -666,31 +654,9 @@ final class AdaptivePoolingAllocator {
                 coldCounts[pool] = size;
             }
             retainedBytes -= CHUNK_SIZES[pool];
-            polledBuffer = buffers[pool][idx];
-            polledFreeList = freeLists[pool][idx];
-            polledLocalFreeList = localFreeLists[pool][idx];
+            AbstractByteBuf buffer = buffers[pool][idx];
             buffers[pool][idx] = null;
-            freeLists[pool][idx] = null;
-            localFreeLists[pool][idx] = null;
-            return true;
-        }
-
-        AbstractByteBuf takeBuffer() {
-            AbstractByteBuf buf = polledBuffer;
-            polledBuffer = null;
-            return buf;
-        }
-
-        MpscIntQueue takeFreeList() {
-            MpscIntQueue fl = polledFreeList;
-            polledFreeList = null;
-            return fl;
-        }
-
-        IntStack takeLocalFreeList() {
-            IntStack fl = polledLocalFreeList;
-            polledLocalFreeList = null;
-            return fl;
+            return buffer;
         }
 
         /** Whether {@link #offer} would keep a buffer of {@code sizeClassIndex}'s chunk size now. */
@@ -701,11 +667,11 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Keep {@code delegate} and its free lists for the next chunk of this chunk size, or refuse when that would
-         * take the heap's pools above {@link #RECYCLED_BYTES_BUDGET}.
+         * Keep {@code delegate} for the next chunk of this chunk size, or refuse when that would take the heap's
+         * pools above {@link #RECYCLED_BYTES_BUDGET}.
          */
-        boolean offer(AbstractByteBuf delegate, MpscIntQueue freeList, IntStack localFreeList, int sizeClassIndex) {
-            assert delegate != null && freeList != null && localFreeList != null;
+        boolean offer(AbstractByteBuf delegate, int sizeClassIndex) {
+            assert delegate != null;
             if (!hasRoomFor(sizeClassIndex)) {
                 return false;
             }
@@ -714,18 +680,16 @@ final class AdaptivePoolingAllocator {
             int chunkSize = CHUNK_SIZES[pool];
             retainedBytes += chunkSize;
             buffers[pool][size] = delegate;
-            freeLists[pool][size] = freeList;
-            localFreeLists[pool][size] = localFreeList;
             sizes[pool] = size + 1;
             return true;
         }
 
-        // Visible for testing.
+        @VisibleForTesting
         int size(int sizeClassIndex) {
             return sizes[SIZE_CLASS_TO_CHUNK_POOL[sizeClassIndex]];
         }
 
-        // Visible for testing.
+        @VisibleForTesting
         int retainedBytes() {
             return retainedBytes;
         }
@@ -761,8 +725,6 @@ final class AdaptivePoolingAllocator {
                     allocator.recycledChunkBufferFreed(buffer);
                     buffer.release();
                     buffers[pool][i] = null;
-                    freeLists[pool][i] = null;
-                    localFreeLists[pool][i] = null;
                 }
                 sizes[pool] = 0;
                 coldCounts[pool] = 0;
@@ -794,11 +756,7 @@ final class AdaptivePoolingAllocator {
                     }
                     int kept = size - free;
                     System.arraycopy(buffers, free, buffers, 0, kept);
-                    System.arraycopy(freeLists[pool], free, freeLists[pool], 0, kept);
-                    System.arraycopy(localFreeLists[pool], free, localFreeLists[pool], 0, kept);
                     Arrays.fill(buffers, kept, size, null);
-                    Arrays.fill(freeLists[pool], kept, size, null);
-                    Arrays.fill(localFreeLists[pool], kept, size, null);
                     retainedBytes -= free * CHUNK_SIZES[pool];
                     size = kept;
                     sizes[pool] = size;
@@ -848,9 +806,9 @@ final class AdaptivePoolingAllocator {
         SizeClassMagazine[] magazines;
         /** Set once the heap has one: a stripe's, or a thread-local heap's for its buffers above the size classes. */
         BuddyMagazine buddyMagazine;
-        // Visible for testing.
+        @VisibleForTesting
         long allocationsSinceCheck;
-        // Visible for testing.
+        @VisibleForTesting
         long lastDecayNanos = System.nanoTime();
 
         /** The heap made {@code allocations} more allocations. */
@@ -869,7 +827,7 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        // Visible for testing.
+        @VisibleForTesting
         void decay(long now) {
             lastDecayNanos = now;
             allocationsSinceCheck = 0;
@@ -1021,7 +979,7 @@ final class AdaptivePoolingAllocator {
         private final SizeClassChunkRecycler chunkRecycler;
         /** Buffers above the size classes; {@code null} until the first one. */
         private BuddyMagazine buddyMagazine;
-        // Visible for testing.
+        @VisibleForTesting
         final IdleDecay idleDecay = new IdleDecay();
         private final AdaptivePoolingAllocator allocator;
 
@@ -1218,7 +1176,8 @@ final class AdaptivePoolingAllocator {
             HEAD.lazySet(this, null);
         }
 
-        // Visible for testing: how many chunks are queued.
+        /** How many chunks are queued. */
+        @VisibleForTesting
         int size() {
             int count = 0;
             Chunk cur = head;
@@ -1249,6 +1208,8 @@ final class AdaptivePoolingAllocator {
      *       ownership registry: it keeps chunks reachable for {@link #free()} and gives the
      *       notification drain somewhere to move a chunk out of. It is <em>not</em> the discovery
      *       mechanism, and is never walked.</li>
+     *   <li><b>Spare</b> — chunk objects without a buffer, see {@link #spare}. Not a retention candidate: the
+     *       floor counts the other two lists only.</li>
      * </ul>
      *
      * <p><b>The active chunk.</b> The chunk the magazine allocates from is the cache's {@link #active}
@@ -1296,8 +1257,8 @@ final class AdaptivePoolingAllocator {
      *
      * <p><b>Eviction only ever operates on the reusable list</b> — {@link #evictIfAboveFloor} calls
      * {@code reusable.remove} unconditionally, and every caller either walks the reusable list
-     * or moves the chunk there first. So an exhausted-list chunk never has its free lists stripped,
-     * and {@link #probeExhausted()} cannot encounter one that does.
+     * or moves the chunk there first. So an exhausted-list chunk never has its buffer taken away,
+     * and {@link #probeExhausted()} cannot encounter one that has.
      *
      * <p>Note that route 3 can hand out a chunk that route 2 would have evicted. That is intended:
      * reusing a fully-free chunk beats evicting it and allocating a fresh one.
@@ -1312,6 +1273,14 @@ final class AdaptivePoolingAllocator {
 
         final ChunkQueue exhausted = new ChunkQueue();
         final ChunkQueue reusable = new ChunkQueue();
+        /**
+         * Chunk objects of this size class whose buffer went to the recycler or was freed, waiting to become the
+         * chunk over the next buffer (see {@link SizeClassChunkController#newChunkAllocation}). An object never
+         * changes size class or heap, so its free lists serve every buffer it gets; they are built once, when the
+         * object is. Emptied with the other lists when the class stays idle through a decay interval, and when the
+         * cache dies.
+         */
+        final ChunkQueue spare = new ChunkQueue();
         /**
          * The chunk the magazine allocates from, or {@code null}. It is on neither queue, and neither the purge nor
          * the drain acts on it: only the magazine allocates from it, until {@link #deactivate} files it by capacity
@@ -1365,8 +1334,34 @@ final class AdaptivePoolingAllocator {
             // Every caller filters on the reusable queue, which the active chunk is never on.
             assert chunk != active : "the active chunk must never be evicted";
             if (chunk.hasFullCapacity() && !atOrBelowFloor()) {
-                reusable.remove(chunk);
-                chunk.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                giveUp(chunk);
+            }
+        }
+
+        /**
+         * The one exit of a wholly free reusable chunk: its buffer goes to the heap's recycler, or back to the chunk
+         * allocator when the recycler has no room; the object waits on {@link #spare} for the next buffer.
+         */
+        private void giveUp(SizeClassedChunk chunk) {
+            reusable.remove(chunk);
+            chunk.retire(chunkRecycler, sizeClassIndex);
+            spare.pushFront(chunk);
+        }
+
+        /** A spare chunk object for the next buffer, or {@code null} when there is none. */
+        SizeClassedChunk takeSpare() {
+            SizeClassedChunk chunk = (SizeClassedChunk) spare.head;
+            if (chunk != null) {
+                spare.remove(chunk);
+            }
+            return chunk;
+        }
+
+        /** Let go of the spare chunk objects: for a size class that stayed idle, and for a dying cache. */
+        void dropSpare() {
+            Chunk cur;
+            while ((cur = spare.head) != null) {
+                spare.remove(cur);
             }
         }
 
@@ -1432,7 +1427,8 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        // Visible for testing: how many chunks are queued for the next drain.
+        /** How many chunks are queued for the next drain. */
+        @VisibleForTesting
         int pendingCount() {
             return pending.size();
         }
@@ -1452,10 +1448,12 @@ final class AdaptivePoolingAllocator {
                 }
                 moveToReusable(chunk);
             } else if (queue != reusable) {
-                // On no queue: either gone (evicted, recycled, or its cache freed), not ours to move - its capacity
-                // is never read, because such a chunk may have had its free lists stripped by recycleOrDeallocate - or
-                // the active chunk, which consumes its own returned segments and is filed by capacity when the
-                // magazine gives it up (see deactivate). A polled chunk is activated before any drain can run.
+                // On the spare list or on no queue: not ours to move. A spare chunk has no buffer, and its counts
+                // are those of its last buffer, whose every segment came back; a chunk on no queue is gone (its
+                // cache freed) or is the active chunk, which consumes its own returned segments and is filed by
+                // capacity when the magazine gives it up (see deactivate). A polled chunk is activated before any
+                // drain can run.
+                // The note may be about an earlier buffer of the object; it only says "look at this chunk".
                 return;
             }
             evictIfAboveFloor(chunk);
@@ -1485,7 +1483,8 @@ final class AdaptivePoolingAllocator {
             stripeLock.unlockWrite(stamp);
         }
 
-        /** Visible for testing: runs a purge tick without waiting for {@link #CHUNK_PURGE_INTERVAL}, then polls. */
+        /** Runs a purge tick without waiting for {@link #CHUNK_PURGE_INTERVAL}, then polls. */
+        @VisibleForTesting
         SizeClassedChunk forcePurge() {
             tickPurge();
             return pollChunkInternal();
@@ -1556,8 +1555,7 @@ final class AdaptivePoolingAllocator {
             while (cur != null && !atOrBelowFloor()) {
                 SizeClassedChunk next = (SizeClassedChunk) cur.nextInQueue;
                 if (cur.hasFullCapacity()) {
-                    reusable.remove(cur);
-                    cur.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                    giveUp(cur);
                 }
                 cur = next;
             }
@@ -1578,8 +1576,7 @@ final class AdaptivePoolingAllocator {
                     if (chunkRecycler != null && !chunkRecycler.hasRoomFor(sizeClassIndex)) {
                         return;
                     }
-                    reusable.remove(cur);
-                    cur.recycleOrDeallocate(chunkRecycler, sizeClassIndex);
+                    giveUp(cur);
                 }
                 cur = next;
             }
@@ -1643,6 +1640,8 @@ final class AdaptivePoolingAllocator {
             assert active == null : "free with an active chunk";
             freeAll(exhausted);
             freeAll(reusable);
+            // Spare objects hold no buffer: nothing to deallocate, and a dead cache never gives them another one.
+            dropSpare();
         }
 
         private static void freeAll(ChunkQueue queue) {
@@ -1653,7 +1652,8 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        // Visible for testing: no chunk linked on either list.
+        /** No chunk linked on either list. */
+        @VisibleForTesting
         boolean isEmpty() {
             return exhausted.size + reusable.size == 0;
         }
@@ -1705,21 +1705,15 @@ final class AdaptivePoolingAllocator {
             return freeList;
         }
 
+        /** Every segment's offset, offset 0 on top: handed out in ascending order like {@link #createFreeList}. */
         private IntStack createLocalFreeList() {
             final int segmentsCount = chunkSize / segmentSize;
-            int segmentOffset = chunkSize;
-            int[] offsets = new int[segmentsCount];
-            for (int i = 0; i < segmentsCount; i++) {
-                segmentOffset -= segmentSize;
-                offsets[i] = segmentOffset;
-            }
-            return new IntStack(offsets);
+            final int segmentSize = this.segmentSize;
+            return new IntStack(segmentsCount, segmentsCount, i -> (segmentsCount - 1 - i) * segmentSize);
         }
 
         private IntStack createEmptyLocalFreeList() {
-            final int segmentsCount = chunkSize / segmentSize;
-            int[] offsets = new int[segmentsCount];
-            return new IntStack(offsets, -1);
+            return new IntStack(chunkSize / segmentSize);
         }
 
         /**
@@ -1731,21 +1725,23 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Allocate a new {@link SizeClassedChunk} for the given {@link SizeClassMagazine}: re-create one from a
-         * buffer of its heap's {@link SizeClassChunkRecycler}, or allocate a new buffer.
+         * A new chunk for {@code magazine}: a spare chunk object of its cache, or a new one, over a buffer of its
+         * heap's {@link SizeClassChunkRecycler}, or a new one.
          */
         SizeClassedChunk newChunkAllocation(SizeClassMagazine magazine) {
-            SizeClassChunkRecycler recycler = magazine.chunkRecycler;
-            if (recycler.poll(magazine.sizeClassIndex)) {
-                AbstractByteBuf recycledBuf = recycler.takeBuffer();
-                MpscIntQueue recycledFL = recycler.takeFreeList();
-                IntStack recycledLocal = recycler.takeLocalFreeList();
-                // Still counted in usedMemory() since the recycler took it: nothing to announce.
-                return new SizeClassedChunk(recycledBuf, recycledFL, recycledLocal, magazine, this);
+            SizeClassedChunk chunk = magazine.chunkCache.takeSpare();
+            if (chunk == null) {
+                chunk = new SizeClassedChunk(magazine, this);
             }
-            AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
-            assert chunkBuffer.capacity() == chunkSize;
-            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, this);
+            AbstractByteBuf buffer = magazine.chunkRecycler.poll(magazine.sizeClassIndex);
+            if (buffer != null) {
+                // Still counted in usedMemory() since the recycler took it: nothing to announce.
+                chunk.takeBuffer(buffer);
+                return chunk;
+            }
+            buffer = chunkAllocator.allocate(chunkSize, chunkSize);
+            assert buffer.capacity() == chunkSize;
+            chunk.takeBuffer(buffer);
             magazine.allocator.chunkBufferAllocated(chunk, true, magazine.ownerThread != null);
             return chunk;
         }
@@ -1904,9 +1900,9 @@ final class AdaptivePoolingAllocator {
         /**
          * Called by the heap's {@link IdleDecay}: a size class that made no allocation since the previous decay gives
          * up its current chunk and every wholly free chunk it keeps, the one it keeps as its floor included, to the
-         * heap's recycler. Its floor is for a class in use; one unused through a whole interval keeps nothing, and
-         * the recycler gives the buffers back by halves unless a size class takes them first. Chunks with buffers
-         * out stay. Reads only counters the allocations already keep.
+         * heap's recycler, and lets go of its spare chunk objects. Its floor is for a class in use; one unused
+         * through a whole interval keeps nothing, and the recycler gives the buffers back by halves unless a size
+         * class takes them first. Chunks with buffers out stay. Reads only counters the allocations already keep.
          */
         void decayIfIdle() {
             int ticks = purgeTicks;
@@ -1923,6 +1919,7 @@ final class AdaptivePoolingAllocator {
                 curr.releaseFromMagazine();
             }
             chunkCache.evictWhollyFree();
+            chunkCache.dropSpare();
         }
 
         /**
@@ -2080,8 +2077,8 @@ final class AdaptivePoolingAllocator {
      * release is a note.
      */
     private static final class BuddyMagazine {
-        /** One queue per order of largest free block: {@link BuddyTree#MIN_BLOCK_SIZE} up to the largest chunk. */
-        private static final int ORDERS = Integer.numberOfTrailingZeros(MAX_CHUNK_SIZE / BuddyTree.MIN_BLOCK_SIZE) + 1;
+        /** One queue per order of largest free block: {@link #BUDDY_MIN_BLOCK_SIZE} up to the largest chunk. */
+        private static final int ORDERS = Integer.numberOfTrailingZeros(MAX_CHUNK_SIZE / BUDDY_MIN_BLOCK_SIZE) + 1;
         /** Bound on the last-resort look at the full chunks; see {@link #probeFull}. */
         private static final int MAX_FULL_PROBE = 8;
         /**
@@ -2184,7 +2181,7 @@ final class AdaptivePoolingAllocator {
          * again (measured: about half of the allocations came down here, against under a tenth).
          */
         private BuddyChunk poll(int blockSize) {
-            int order = Integer.numberOfTrailingZeros(blockSize / BuddyTree.MIN_BLOCK_SIZE);
+            int order = Integer.numberOfTrailingZeros(blockSize / BUDDY_MIN_BLOCK_SIZE);
             int candidates = ordersInUse & -(1 << order);
             while (candidates != 0) {
                 int candidate = 31 - Integer.numberOfLeadingZeros(candidates);
@@ -2455,9 +2452,14 @@ final class AdaptivePoolingAllocator {
          *               {@link SizeClassChunkRecycler}, or is a one-shot chunk for a single buffer
          */
         Chunk(AbstractByteBuf delegate, AdaptivePoolingAllocator allocator, boolean pooled) {
+            this(allocator, pooled, delegate.capacity());
             this.delegate = delegate;
+        }
+
+        /** A chunk without its buffer yet, of a fixed {@code capacity} every buffer it gets must have. */
+        Chunk(AdaptivePoolingAllocator allocator, boolean pooled, int capacity) {
             this.pooled = pooled;
-            capacity = delegate.capacity();
+            this.capacity = capacity;
             this.allocator = allocator;
         }
 
@@ -2473,14 +2475,10 @@ final class AdaptivePoolingAllocator {
             return false;
         }
 
+        /** Give the buffer back to the chunk allocator. */
         protected void deallocate() {
-            AbstractByteBuf delegate = this.delegate;
-            // A null delegate went to a SizeClassChunkRecycler (recycleOrDeallocate): the memory was not freed, the
-            // recycler holds it and still counts it, and it is freed, with its event, when the recycler frees it.
-            if (delegate != null) {
-                allocator.chunkBufferFreed(this, pooled);
-                delegate.release();
-            }
+            allocator.chunkBufferFreed(this, pooled);
+            delegate.release();
         }
 
         @Override
@@ -2504,14 +2502,23 @@ final class AdaptivePoolingAllocator {
         private final int[] stack;
         private int top;
 
-        IntStack(int[] initialValues) {
-            stack = initialValues;
-            top = initialValues.length - 1;
+        /** An empty stack with room for {@code capacity} values. */
+        IntStack(int capacity) {
+            stack = new int[capacity];
+            top = -1;
         }
 
-        IntStack(int[] backingArray, int initialTop) {
-            stack = backingArray;
-            top = initialTop;
+        /**
+         * A stack with room for {@code capacity} values, holding {@code values.applyAsInt(i)} for {@code i} below
+         * {@code count}: the value for {@code count - 1} is popped first.
+         */
+        IntStack(int capacity, int count, IntUnaryOperator values) {
+            int[] stack = new int[capacity];
+            for (int i = 0; i < count; i++) {
+                stack[i] = values.applyAsInt(i);
+            }
+            this.stack = stack;
+            top = count - 1;
         }
 
         public boolean isEmpty() {
@@ -2532,22 +2539,15 @@ final class AdaptivePoolingAllocator {
         public int size() {
             return top + 1;
         }
-
-        public int capacity() {
-            return stack.length;
-        }
-
-        void refill(int count, int segmentSize) {
-            int offset = count * segmentSize;
-            for (int i = 0; i < count; i++) {
-                offset -= segmentSize;
-                stack[i] = offset;
-            }
-            top = count - 1;
-        }
     }
 
     /**
+     * A chunk cut into equal segments of one size class. The object is made for one magazine and stays with it, and
+     * serves one buffer at a time: {@link #takeBuffer} gives it a buffer; once every segment is back, {@link #retire}
+     * gives the buffer up and the object waits on its cache's spare list for the next one. The two free lists are
+     * built once, with every segment offset of this chunk size, and are never refilled or reset: when a buffer is
+     * given up every offset is on one of them, and the next buffer is handed out from them as they are.
+     * <p>
      * Removes per-allocation retain()/release() atomic ops from the hot path by replacing ref counting
      * with a segment-count state machine. Atomics are only needed on the cold deallocation path
      * ({@link #markToDeallocate()}), which is rare for long-lived chunks that cycle segments many times.
@@ -2559,12 +2559,20 @@ final class AdaptivePoolingAllocator {
      *   <li>{@link #AVAILABLE} (-1): chunk is in use, no deallocation tracking needed</li>
      *   <li>0..N: local free list size at the time {@link #markToDeallocate()} was called;
      *       used to track when all segments have been returned</li>
-     *   <li>{@link #DEALLOCATED} (Integer.MIN_VALUE): all segments returned, chunk deallocated</li>
+     *   <li>{@link #DEALLOCATED} (Integer.MIN_VALUE): all segments returned, chunk deallocated; also a spare object,
+     *       between {@link #retire} and the next {@link #takeBuffer}</li>
      * </ul>
      * <p>
      * Ordering: external {@link #releaseSegment} pushes to the MPSC queue (which has an implicit
      * StoreLoad barrier via its {@code offer()}), then reads {@code state} — this guarantees
      * visibility of any preceding {@link #markToDeallocate()} write.
+     * <p>
+     * A thread releasing a segment of the previous buffer may still be between its offer and its read of
+     * {@code state} when the owner gives that buffer up and takes the next: its offset is already counted by the
+     * queue (the offer's CAS came first), so the next buffer starts with every segment free, and the owner's
+     * {@code poll()} waits for the value when it reaches that slot. What that releaser then reads is
+     * {@link #DEALLOCATED} (a no-op), {@link #AVAILABLE} (a note, which the cache applies to the object whatever
+     * buffer it serves by then), or the mark of a dying cache (the usual late release).
      */
     static class SizeClassedChunk extends Chunk {
         private static final int FREE_LIST_EMPTY = -1;
@@ -2577,8 +2585,10 @@ final class AdaptivePoolingAllocator {
         private volatile int state;
         private final int segments;
         private final int segmentSize;
-        MpscIntQueue externalFreeList;
-        private IntStack localFreeList;
+        /** Segments released by other threads; any thread offers, the owner side polls. */
+        final MpscIntQueue externalFreeList;
+        /** Segments released by the owner thread or under the stripe lock, which also take from it first. */
+        private final IntStack localFreeList;
         private final Thread ownerThread;
         /**
          * Snapshot behind {@link #remainingCapacity()}: bytes handed out since the last refresh from the free lists.
@@ -2595,16 +2605,22 @@ final class AdaptivePoolingAllocator {
         SizeClassedChunk() {
             segmentSize = 0;
             segments = 0;
+            externalFreeList = null;
+            localFreeList = null;
             ownerThread = null;
             owningCache = null;
         }
 
-        SizeClassedChunk(AbstractByteBuf delegate, SizeClassMagazine magazine,
-                         SizeClassChunkController controller) {
-            super(delegate, magazine.allocator, true);
+        /**
+         * A chunk object for {@code magazine}, without a buffer yet, every offset on one free list: on the local one
+         * for a thread-local magazine, on the external one for a stripe's. Its first {@link #takeBuffer} makes it a
+         * chunk.
+         */
+        SizeClassedChunk(SizeClassMagazine magazine, SizeClassChunkController controller) {
+            super(magazine.allocator, true, controller.chunkSize);
             segmentSize = controller.segmentSize;
             segments = controller.chunkSize / segmentSize;
-            STATE.lazySet(this, AVAILABLE);
+            state = DEALLOCATED;
             ownerThread = magazine.ownerThread;
             owningCache = magazine.chunkCache;
             if (ownerThread == null) {
@@ -2617,40 +2633,29 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Constructor for recycled parts: reuses a recycled delegate buffer and the two free lists that came with it.
-         * The lists were sized for the size class that freed the buffer; one that holds fewer than this chunk's
-         * segments is replaced, one that holds more is kept.
+         * Owner side: this object becomes the chunk over {@code buffer}, every segment free and none handed out. The
+         * free lists already hold every offset, from construction or from the buffer given up before.
          */
-        SizeClassedChunk(AbstractByteBuf recycledDelegate, MpscIntQueue recycledFreeList,
-                         IntStack recycledLocalFreeList,
-                         SizeClassMagazine magazine, SizeClassChunkController controller) {
-            super(recycledDelegate, magazine.allocator, true);
-            segmentSize = controller.segmentSize;
-            segments = controller.chunkSize / segmentSize;
-            MpscIntQueue externalFreeList = recycledFreeList.capacity() >= segments ?
-                    recycledFreeList : controller.createEmptyFreeList();
-            boolean reuseLocal = recycledLocalFreeList.capacity() >= segments;
-            this.externalFreeList = externalFreeList;
+        void takeBuffer(AbstractByteBuf buffer) {
+            assert delegate == null && state == DEALLOCATED : "the object is still a chunk";
+            assert buffer.capacity() == capacity : "a buffer of another chunk size";
+            delegate = buffer;
+            allocatedBytes = 0;
             STATE.lazySet(this, AVAILABLE);
-            ownerThread = magazine.ownerThread;
-            owningCache = magazine.chunkCache;
-            if (ownerThread != null) {
-                if (reuseLocal) {
-                    localFreeList = recycledLocalFreeList;
-                    localFreeList.refill(segments, segmentSize);
-                } else {
-                    localFreeList = controller.createLocalFreeList();
-                }
-                externalFreeList.resetAndFill(0, segmentSize);
-            } else {
-                if (reuseLocal) {
-                    localFreeList = recycledLocalFreeList;
-                    localFreeList.refill(0, segmentSize);
-                } else {
-                    localFreeList = controller.createEmptyLocalFreeList();
-                }
-                externalFreeList.resetAndFill(segments, segmentSize);
+        }
+
+        /**
+         * Owner side, every segment back: the buffer goes to {@code recycler} for the next chunk of its size, or back
+         * to the chunk allocator when the recycler is {@code null} or has no room. The free lists keep every offset
+         * for the next buffer.
+         */
+        void retire(SizeClassChunkRecycler recycler, int sizeClassIndex) {
+            assert hasFullCapacity() : "a segment is still out";
+            STATE.set(this, DEALLOCATED);
+            if (recycler == null || !recycler.offer(delegate, sizeClassIndex)) {
+                deallocate();
             }
+            delegate = null;
         }
 
         /**
@@ -2834,34 +2839,18 @@ final class AdaptivePoolingAllocator {
 
         private void deallocateIfNeeded(int localSize) {
             // Check if all segments have been returned.
-            MpscIntQueue fl = externalFreeList;
-            int externalSize = fl != null ? fl.size() : 0;
-            int totalFreeSegments = localSize + externalSize;
+            int totalFreeSegments = localSize + externalFreeList.size();
             if (totalFreeSegments == segments && STATE.compareAndSet(this, localSize, DEALLOCATED)) {
                 deallocate();
             }
         }
 
-        void recycleOrDeallocate(SizeClassChunkRecycler recycler, int sizeClassIndex) {
-            if (recycler != null && recycler.offer(delegate, externalFreeList, localFreeList, sizeClassIndex)) {
-                delegate = null;
-            }
-            externalFreeList = null;
-            localFreeList = null;
-            markToDeallocate();
-        }
-
+        /**
+         * Owner side, as its cache dies: deallocate now if every segment is back, else when the last one returns.
+         * The object is never reused afterwards.
+         */
         void markToDeallocate() {
-            MpscIntQueue fl = externalFreeList;
-            if (fl == null) {
-                // The free lists went to the recycler with the buffer, or were dropped with it when its pool was
-                // full. No outstanding segments are possible since the chunk had full capacity when it was stripped.
-                STATE.set(this, DEALLOCATED);
-                deallocate();
-                return;
-            }
-            IntStack localFreeList = this.localFreeList;
-            int localSize = localFreeList != null ? localFreeList.size() : 0;
+            int localSize = localFreeList.size();
             STATE.set(this, localSize);
             deallocateIfNeeded(localSize);
         }
@@ -2875,7 +2864,7 @@ final class AdaptivePoolingAllocator {
      * is released.
      */
     private static final class BuddyChunk extends Chunk implements IntConsumer {
-        private static final int MIN_BUDDY_SIZE = BuddyTree.MIN_BLOCK_SIZE;
+        private static final int MIN_BUDDY_SIZE = BUDDY_MIN_BLOCK_SIZE;
         private static final int PACK_OFFSET_MASK = 0xFFFF;
         private static final int PACK_SIZE_SHIFT = Integer.SIZE - Integer.numberOfLeadingZeros(PACK_OFFSET_MASK);
 
@@ -2909,7 +2898,7 @@ final class AdaptivePoolingAllocator {
             this.owner = owner;
             freeListCapacity = delegate.capacity() / MIN_BUDDY_SIZE;
             freeList = MpscIntQueue.create(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
-            tree = new BuddyTree(delegate.capacity());
+            tree = new BuddyTree(delegate.capacity(), MIN_BUDDY_SIZE);
         }
 
         /**
@@ -3059,111 +3048,6 @@ final class AdaptivePoolingAllocator {
             return "BuddyChunk[capacity: " + capacity +
                     ", largest free order: " + tree.largestFreeOrder() +
                     ", free list: " + freeList.size() + ']';
-        }
-    }
-
-    /**
-     * The buddy tree of a {@link BuddyChunk}: hands out power-of-two blocks of at least {@link #MIN_BLOCK_SIZE} from
-     * a capacity that is a power-of-two multiple of it, and merges freed buddies back. Not thread-safe: used by the
-     * chunk's magazine only (frees from other threads reach it through the chunk's free list).
-     * <p>
-     * An implicit binary tree over the blocks: node 1 is the whole chunk, the children of node {@code i} are its two
-     * halves {@code 2i} and {@code 2i + 1}, and the leaves are the {@link #MIN_BLOCK_SIZE} blocks. Each node stores
-     * the order of the largest free block in its subtree plus one, 0 when nothing in it is free (order {@code k} is a
-     * block of {@code MIN_BLOCK_SIZE << k}). A claim follows the leftmost child that fits down to the order asked
-     * for, and a release walks up merging buddies: both are one pass along a root-to-leaf path.
-     */
-    static final class BuddyTree {
-        static final int MIN_BLOCK_SIZE = 32768;
-
-        private final byte[] nodes;
-        private final int maxOrder;
-
-        BuddyTree(int capacity) {
-            int leaves = capacity / MIN_BLOCK_SIZE;
-            assert leaves > 0 && (leaves & leaves - 1) == 0 : "capacity " + capacity;
-            maxOrder = Integer.numberOfTrailingZeros(leaves);
-            byte[] nodes = new byte[leaves << 1];
-            // All free: the nodes at depth d, [2^d, 2^(d+1)), are whole blocks of order maxOrder - d,
-            // one constant per level.
-            for (int depth = 0; depth <= maxOrder; depth++) {
-                Arrays.fill(nodes, 1 << depth, 2 << depth, (byte) (maxOrder - depth + 1));
-            }
-            this.nodes = nodes;
-        }
-
-        /**
-         * The order of the largest free block, or -1 when no block is free: exact, it is the root's value.
-         */
-        int largestFreeOrder() {
-            return nodes[1] - 1;
-        }
-
-        /**
-         * Whether no block is claimed.
-         */
-        boolean isWhollyFree() {
-            return nodes[1] == maxOrder + 1;
-        }
-
-        /**
-         * Claim the leftmost free block of {@code size} and return its offset, or -1 if there is none. Blocks are
-         * powers of two of at least {@link #MIN_BLOCK_SIZE}: any other size is never claimed, and returns -1.
-         */
-        int claim(int size) {
-            if (size < MIN_BLOCK_SIZE || (size & size - 1) != 0) {
-                return -1;
-            }
-            int order = Integer.numberOfTrailingZeros(size / MIN_BLOCK_SIZE);
-            byte[] nodes = this.nodes;
-            int wanted = order + 1;
-            if (order > maxOrder || nodes[1] < wanted) {
-                return -1;
-            }
-            int index = 1;
-            for (int depth = maxOrder - order; depth > 0; depth--) {
-                index <<= 1;
-                if (nodes[index] < wanted) {
-                    index++;
-                }
-            }
-            nodes[index] = 0;
-            updateAncestors(index, order);
-            return (index - (1 << maxOrder - order)) * size;
-        }
-
-        /**
-         * Give back the block of {@code size} at {@code offset}, claimed earlier.
-         */
-        void release(int offset, int size) {
-            int order = Integer.numberOfTrailingZeros(size / MIN_BLOCK_SIZE);
-            if ((offset & size - 1) != 0) {
-                throw new IllegalStateException("No block of size " + size + " at offset " + offset);
-            }
-            int index = (1 << maxOrder - order) + offset / size;
-            assert nodes[index] == 0 : "no block of size " + size + " claimed at offset " + offset;
-            nodes[index] = (byte) (order + 1);
-            updateAncestors(index, order);
-        }
-
-        /**
-         * Recompute the ancestors of {@code index}, a node of {@code order}, after its value changed; stops at the
-         * first ancestor whose value stays the same.
-         */
-        private void updateAncestors(int index, int order) {
-            byte[] nodes = this.nodes;
-            while (index > 1) {
-                index >>= 1;
-                order++;
-                int left = nodes[index << 1];
-                int right = nodes[(index << 1) + 1];
-                // Two whole free halves (each of this node's order minus one, stored plus one) merge into one block.
-                int value = left == order && right == order ? order + 1 : Math.max(left, right);
-                if (nodes[index] == value) {
-                    return;
-                }
-                nodes[index] = (byte) value;
-            }
         }
     }
 

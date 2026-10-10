@@ -17,17 +17,16 @@ package io.netty.buffer;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.SplittableRandom;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.StampedLock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,23 +54,6 @@ class AdaptivePoolingAllocatorTest {
                          () -> "size = " + sizeToTest);
         }
     }
-
-    /**
-     * Fresh chunk allocations and used memory at fixed checkpoints of a seeded allocation trace, the same on a stripe
-     * and on a thread-local heap. One row per checkpoint: {@code {fresh chunks allocated so far, usedMemory}}. The
-     * values pin the allocator's reuse and retention decisions: they move when a poll picks a different chunk, when
-     * the retention floor, the recycler's budget or the chunk sizes change, or when the notes other threads leave are
-     * applied at a different point. {@code usedMemory} counts the chunk buffers the heap's recycler holds too. No
-     * decay runs during the trace (it takes well under the decay interval), so the values do not depend on time.
-     */
-    private static final long[][] EXPECTED = {
-            {0, 0}, {38, 17563648}, {67, 31981568}, {67, 31981568},
-            {67, 31981568}, {67, 31981568}, {69, 36175872}, {69, 36175872},
-            {69, 36175872}, {69, 36175872}, {69, 36175872}, {69, 36175872},
-            {69, 36175872}, {69, 36175872}, {72, 37355520}, {72, 37355520},
-            {72, 37355520}, {72, 37355520}, {72, 37355520}, {72, 37355520},
-            {72, 37355520}, {72, 37355520}, {72, 37355520},
-    };
 
     private static final int[] TRACE_SIZES = {64, 1024, 4096, 16384, 65536};
     private static final int TRACE_OPS = 40000;
@@ -117,46 +99,77 @@ class AdaptivePoolingAllocatorTest {
     }
 
     /**
+     * A seeded allocation trace replayed on a stripe and on a thread-local heap. One row per checkpoint:
+     * {@code {fresh chunks allocated so far, usedMemory}}, where {@code usedMemory} counts the chunk buffers the
+     * heap's recycler holds too. The two heaps must go through the same rows (the notes a foreign release leaves are
+     * applied before any decision they could change), {@link AdaptivePoolingAllocator#usedMemory()} must agree with
+     * the chunk allocator's own view at every row, and what a heap holds once the trace has settled must stay under
+     * the bound its parts document. The rows themselves are not pinned: they move with the chunk sizes, the floors
+     * and the recycler's budget, and none of those is what this test is about. No decay runs during the trace (it
+     * takes well under the decay interval), so the rows do not depend on time.
+     */
+    @Test
+    void seededTraceKeepsChunkAllocationsAndUsedMemory() throws Throwable {
+        assumeFalse(isLowMemory(), "low-memory mode pools fewer size classes and has no thread-local heaps");
+        long[][] stripe = traceOnNewThread(false);
+        long[][] threadLocal = traceOnNewThread(true);
+        assertTrue(Arrays.deepEquals(stripe, threadLocal), "the two heaps diverged; stripe: "
+                + Arrays.deepToString(stripe).replace("], [", "],\n [") + "\nthread-local: "
+                + Arrays.deepToString(threadLocal).replace("], [", "],\n ["));
+        long settled = stripe[stripe.length - 1][1];
+        assertTrue(settled <= idleBound(), "settled on " + settled + " bytes, bound " + idleBound());
+    }
+
+    /**
      * A deterministic replay: one thread allocates (so one stripe, or its own thread-local heap), and every
      * cross-thread release is handed to a helper thread while the allocating thread waits for it. On the shared
      * stripe, some of those releases run while the allocating thread holds every stripe lock, so they cannot take
      * the lock and must leave a note; the rest take the lock. On the thread-local heap every foreign release leaves
      * a note.
      */
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void seededTraceKeepsChunkAllocationsAndUsedMemory(boolean threadLocal) throws Throwable {
-        assumeFalse(isLowMemory(), "low-memory mode pools fewer size classes and has no thread-local heaps");
-        // The recorded memory column keeps three idle 2 MiB chunks of the reallocated buffers above the size classes
-        // (their byte bound is never below 8 MiB); with fewer (one processor gives two) one of them is freed instead.
-        assumeTrue(AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE >= 3, "keeps fewer than three idle large-buffer chunks");
-        final AtomicReference<Object> result = new AtomicReference<Object>();
+    private static long[][] traceOnNewThread(boolean threadLocal) throws Throwable {
         final CountingChunkAllocator counter = new CountingChunkAllocator();
         final AdaptivePoolingAllocator allocator = new AdaptivePoolingAllocator(counter, true);
+        final CompletableFuture<long[][]> result = new CompletableFuture<long[][]>();
         Runnable trace = () -> {
             try {
-                result.set(runTrace(counter, allocator, threadLocal));
+                result.complete(runTrace(counter, allocator, threadLocal));
             } catch (Throwable t) {
-                result.set(t);
+                result.completeExceptionally(t);
             }
         };
+        // A FastThreadLocalThread for the thread-local heap, which is freed when the thread ends: hence the join.
         Thread thread = threadLocal ? new FastThreadLocalThread(trace) : new Thread(trace);
         long start = System.nanoTime();
         thread.start();
-        thread.join();
-        if (result.get() instanceof Throwable) {
-            throw (Throwable) result.get();
+        long[][] checkpoints;
+        try {
+            checkpoints = result.get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            thread.join();
         }
-        // A trace that took a whole decay interval may have seen a decay, which the recorded values do not include.
+        // A trace that took a whole decay interval may have seen a decay, which the other heap's run did not.
         assumeTrue(System.nanoTime() - start < AdaptivePoolingAllocator.IdleDecay.DECAY_INTERVAL_NANOS,
                 "the trace ran longer than a decay interval");
         // The thread is gone: a thread-local heap has been freed, chunks and recycler alike.
         assertEquals(counter.unreleasedBytes(), allocator.usedMemory(), "after the allocating thread ended");
-        long[][] actual = (long[][]) result.get();
-        // Both heaps go through the same checkpoints: the notes a foreign release leaves are applied before any
-        // decision they could change.
-        assertTrue(Arrays.deepEquals(EXPECTED, actual), "trace diverged (threadLocal=" + threadLocal
-                + "); actual checkpoints: " + Arrays.deepToString(actual).replace("], [", "],\n ["));
+        return checkpoints;
+    }
+
+    /**
+     * What one heap may hold once a trace has settled, from the bounds its parts document: the recycler's byte
+     * budget, the wholly free chunks above the size classes plus the one allocated from (each within their byte
+     * bound), and for every size class the chunk allocated from plus the one it keeps.
+     */
+    private static long idleBound() {
+        long bound = AdaptivePoolingAllocator.SizeClassChunkRecycler.RECYCLED_BYTES_BUDGET
+                + 2L * AdaptivePoolingAllocator.CHUNK_REUSE_QUEUE_BYTES;
+        for (int sizeClass : AdaptivePoolingAllocator.getSizeClasses()) {
+            bound += 2L * AdaptivePoolingAllocator.chunkSizeOf(sizeClass);
+        }
+        return bound;
     }
 
     private static long[][] runTrace(CountingChunkAllocator counter, AdaptivePoolingAllocator allocator,

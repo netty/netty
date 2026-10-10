@@ -48,7 +48,12 @@ import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -321,13 +326,11 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             bufs[i] = direct ? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size);
         }
         long used = direct ? metric.usedDirectMemory() : metric.usedHeapMemory();
-        Thread releaser = new Thread(() -> {
+        CompletableFuture.runAsync(() -> {
             for (ByteBuf buf : bufs) {
                 buf.release();
             }
-        });
-        releaser.start();
-        releaser.join();
+        }).get();
         for (int i = 0; i < bufs.length; i++) {
             bufs[i] = direct ? allocator.directBuffer(size, size) : allocator.heapBuffer(size, size);
         }
@@ -419,50 +422,51 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         final int threads = 8;
         final int rounds = 3000;
         final BlockingQueue<ByteBuf> handoff = new ArrayBlockingQueue<ByteBuf>(64);
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
-        List<Thread> workers = new ArrayList<Thread>();
+        // One worker fails: the others stop early instead of running their rounds out.
+        final AtomicBoolean stop = new AtomicBoolean();
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<CompletableFuture<Void>> workers = new ArrayList<CompletableFuture<Void>>();
         for (int t = 0; t < threads; t++) {
             final int seed = t;
-            Thread worker = new Thread(() -> {
+            CompletableFuture<Void> worker = CompletableFuture.runAsync(() -> {
                 SplittableRandom rng = new SplittableRandom(seed);
-                try {
-                    for (int i = 0; i < rounds && failure.get() == null; i++) {
-                        int size = sizes[rng.nextInt(sizes.length)];
-                        ByteBuf buf = rng.nextBoolean() ? allocator.heapBuffer(size, size) :
-                                allocator.directBuffer(size, size);
-                        byte mark = (byte) rng.nextInt();
-                        buf.writerIndex(size);
-                        buf.setByte(0, mark);
-                        buf.setByte(size - 1, mark);
-                        buf.setByte(size / 2, mark);
-                        if (!handoff.offer(buf)) {
-                            buf.release();
-                        }
-                        ByteBuf other = handoff.poll();
-                        if (other != null) {
-                            int n = other.capacity();
-                            byte m = other.getByte(0);
-                            assertEquals(m, other.getByte(n - 1));
-                            assertEquals(m, other.getByte(n / 2));
-                            other.release();
-                        }
+                for (int i = 0; i < rounds && !stop.get(); i++) {
+                    int size = sizes[rng.nextInt(sizes.length)];
+                    ByteBuf buf = rng.nextBoolean() ? allocator.heapBuffer(size, size) :
+                            allocator.directBuffer(size, size);
+                    byte mark = (byte) rng.nextInt();
+                    buf.writerIndex(size);
+                    buf.setByte(0, mark);
+                    buf.setByte(size - 1, mark);
+                    buf.setByte(size / 2, mark);
+                    if (!handoff.offer(buf)) {
+                        buf.release();
                     }
-                } catch (Throwable e) {
-                    failure.compareAndSet(null, e);
+                    ByteBuf other = handoff.poll();
+                    if (other != null) {
+                        int n = other.capacity();
+                        byte m = other.getByte(0);
+                        assertEquals(m, other.getByte(n - 1));
+                        assertEquals(m, other.getByte(n / 2));
+                        other.release();
+                    }
+                }
+            }, pool).whenComplete((v, e) -> {
+                if (e != null) {
+                    stop.set(true);
                 }
             });
             workers.add(worker);
-            worker.start();
         }
-        for (Thread worker : workers) {
-            worker.join();
-        }
+        // Every worker done, failed or not, before the buffers still in flight are released.
+        CompletableFuture.allOf(workers.toArray(new CompletableFuture[0])).exceptionally(e -> null).get();
+        pool.shutdown();
         ByteBuf left;
         while ((left = handoff.poll()) != null) {
             left.release();
         }
-        if (failure.get() != null) {
-            throw failure.get();
+        for (CompletableFuture<Void> worker : workers) {
+            worker.get();
         }
     }
 
@@ -811,14 +815,12 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         int recycledBefore = cache.chunkRecycler.retainedBytes();
         underStripeLocks(allocator, sharedStripe, () -> {
             try {
-                Thread t = new Thread(() -> {
+                CompletableFuture.runAsync(() -> {
                     for (ByteBuf buf : released) {
                         buf.release();
                     }
-                });
-                t.start();
-                t.join();
-            } catch (InterruptedException e) {
+                }).get();
+            } catch (Exception e) {
                 throw new AssertionError(e);
             }
         });
@@ -829,24 +831,40 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     /** Run on the thread that owns a thread-local heap, or on a plain thread that allocates from a stripe. */
     private static void onHeapThread(boolean threadLocal, final ThrowingRunnable body) throws Exception {
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
-        Runnable task = () -> {
-            try {
-                body.run();
-            } catch (Throwable t) {
-                failure.set(t);
-            }
-        };
+        // A thread of the right kind rather than runAsync: a thread-local heap needs a FastThreadLocalThread, and
+        // it is freed when that thread ends, which the join waits for.
+        final CompletableFuture<Void> done = new CompletableFuture<Void>();
+        Runnable task = completing(body, done);
         Thread thread = threadLocal ? new FastThreadLocalThread(task) : new Thread(task);
         thread.start();
-        thread.join();
-        if (failure.get() != null) {
-            throw new AssertionError(failure.get());
+        try {
+            done.get();
+        } finally {
+            thread.join();
         }
     }
 
     private interface ThrowingRunnable {
         void run() throws Exception;
+    }
+
+    /** {@code body} as a task that completes {@code done} with what it threw, if anything. */
+    private static Runnable completing(final ThrowingRunnable body, final CompletableFuture<Void> done) {
+        return () -> {
+            try {
+                body.run();
+                done.complete(null);
+            } catch (Throwable t) {
+                done.completeExceptionally(t);
+            }
+        };
+    }
+
+    /** {@link CompletableFuture#runAsync(Runnable, Executor)} for a body that throws checked exceptions. */
+    private static CompletableFuture<Void> async(ThrowingRunnable body, Executor executor) {
+        CompletableFuture<Void> done = new CompletableFuture<Void>();
+        executor.execute(completing(body, done));
+        return done;
     }
 
     /**
@@ -1213,7 +1231,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         underStripeLocks(allocator, true, () -> {
             try {
                 release(victim, true);
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 throw new AssertionError(e);
             }
         });
@@ -1279,18 +1297,15 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     /** Runs {@code body} on a new thread whose heap is thread-local, freed when the body returns. */
     private static void onThreadLocalHeap(final ThrowingRunnable body) throws Throwable {
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
-        Thread thread = new Thread(() -> FastThreadLocalThread.runWithFastThreadLocal(() -> {
-            try {
-                body.run();
-            } catch (Throwable t) {
-                failure.set(t);
-            }
-        }));
+        final CompletableFuture<Void> done = new CompletableFuture<Void>();
+        Thread thread = new Thread(() -> FastThreadLocalThread.runWithFastThreadLocal(completing(body, done)));
         thread.start();
-        thread.join();
-        if (failure.get() != null) {
-            throw failure.get();
+        try {
+            done.get();
+        } catch (ExecutionException e) {
+            throw e.getCause();
+        } finally {
+            thread.join();
         }
     }
 
@@ -1705,13 +1720,11 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             while (held.size() < perChunk + 1) {
                 held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
             }
-            Thread releaser = new Thread(() -> {
+            CompletableFuture.runAsync(() -> {
                 for (int i = 0; i < perChunk; i++) {
                     held.get(i).release();
                 }
-            });
-            releaser.start();
-            releaser.join();
+            }).get();
             IdleDecay idleDecay = threadLocalIdleDecay(allocator);
             assertEquals(0, buddyIdleChunks(idleDecay), "only noted, not filed yet");
             // The decay itself, with no allocation before it that could apply the note first.
@@ -1771,13 +1784,11 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             }
             ByteBuf last = held.remove(held.size() - 1);
             try {
-                Thread releaser = new Thread(() -> {
+                CompletableFuture.runAsync(() -> {
                     for (ByteBuf buf : held) {
                         buf.release();
                     }
-                });
-                releaser.start();
-                releaser.join();
+                }).get();
                 IdleDecay idleDecay = threadLocalIdleDecay(allocator);
                 assertEquals(0, buddyIdleChunks(idleDecay), "only noted so far");
                 assertEquals(chunks * chunk, allocator.usedHeapMemory());
@@ -1901,14 +1912,12 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         return (SizeClassedChunk) ((AdaptivePoolingAllocator.AdaptiveByteBuf) buf).chunk;
     }
 
-    private static void release(ByteBuf buf, boolean foreignThread) throws InterruptedException {
+    private static void release(ByteBuf buf, boolean foreignThread) throws Exception {
         if (!foreignThread) {
             buf.release();
             return;
         }
-        Thread t = new Thread(buf::release);
-        t.start();
-        t.join();
+        CompletableFuture.runAsync(buf::release).get();
     }
 
     // Regression: on the shared (striped) path a segment returned after the allocator was
@@ -1924,9 +1933,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         freeHeap(allocator);
 
         // last outstanding segment comes back from another thread
-        Thread t = new Thread(buf::release);
-        t.start();
-        t.join();
+        CompletableFuture.runAsync(buf::release).get();
 
         assertEquals(0, allocator.usedHeapMemory(),
                 "chunk must deallocate once its last segment is returned");
@@ -1939,24 +1946,21 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assumeFalse(isLowMemory(), "low-memory mode has no thread-local heaps");
         final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator(false, true);
         final List<ByteBuf> live = new ArrayList<ByteBuf>();
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
-        Thread owner = new Thread(() -> FastThreadLocalThread.runWithFastThreadLocal(() -> {
-            try {
-                for (int i = 0; i < 4; i++) {
-                    live.add(allocator.heapBuffer(256));
-                }
-                // Some segments come back on the owner thread, some stay live past the heap's removal.
-                live.remove(0).release();
-                live.remove(0).release();
-                assertSame(live.get(0).array(), live.get(1).array(), "both live buffers share the active chunk");
-            } catch (Throwable t) {
-                failure.set(t);
+        final CompletableFuture<Void> done = new CompletableFuture<Void>();
+        Thread owner = new Thread(() -> FastThreadLocalThread.runWithFastThreadLocal(completing(() -> {
+            for (int i = 0; i < 4; i++) {
+                live.add(allocator.heapBuffer(256));
             }
-        }));
+            // Some segments come back on the owner thread, some stay live past the heap's removal.
+            live.remove(0).release();
+            live.remove(0).release();
+            assertSame(live.get(0).array(), live.get(1).array(), "both live buffers share the active chunk");
+        }, done)));
         owner.start();
-        owner.join();
-        if (failure.get() != null) {
-            throw new AssertionError(failure.get());
+        try {
+            done.get();
+        } finally {
+            owner.join();
         }
         assertTrue(allocator.usedHeapMemory() > 0, "the live buffers still hold their chunk");
 
@@ -2119,89 +2123,81 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             final boolean forceNotifyPath) throws Exception {
         final BlockingQueue<ByteBuf> toRelease = new ArrayBlockingQueue<ByteBuf>(1024);
         final AtomicBoolean handedOver = new AtomicBoolean();
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
         final AtomicReference<Long> peak = new AtomicReference<Long>(0L);
-        final CountDownLatch releasersDone = new CountDownLatch(8);
-
-        Thread[] releasers = new Thread[8];
-        for (int i = 0; i < releasers.length; i++) {
-            releasers[i] = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        for (;;) {
-                            ByteBuf buf = toRelease.poll(1, TimeUnit.MILLISECONDS);
-                            if (buf != null) {
-                                buf.release();
-                            } else if (handedOver.get() && toRelease.isEmpty()) {
-                                return;
-                            }
-                        }
-                    } catch (Throwable t) {
-                        failure.compareAndSet(null, t);
-                    } finally {
-                        releasersDone.countDown();
-                    }
-                }
-            }, "releaser-" + i);
-            releasers[i].start();
-        }
-
-        Thread allocatorThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        final int releaserCount = 8;
+        final CountDownLatch releasersDone = new CountDownLatch(releaserCount);
+        // Every releaser and the allocating thread run at once: a pool of their own, not the common pool.
+        ExecutorService pool = Executors.newFixedThreadPool(releaserCount + 1);
+        List<CompletableFuture<Void>> releasers = new ArrayList<CompletableFuture<Void>>();
+        for (int i = 0; i < releaserCount; i++) {
+            releasers.add(async(() -> {
                 try {
-                    int burstBuffers = BURST_CHUNKS * BURST_SEGMENTS_PER_CHUNK;
-                    ByteBuf[] live = new ByteBuf[burstBuffers];
-                    for (int i = 0; i < burstBuffers; i++) {
-                        live[i] = allocator.heapBuffer(BURST_BUF_SIZE);
+                    for (;;) {
+                        ByteBuf buf = toRelease.poll(1, TimeUnit.MILLISECONDS);
+                        if (buf != null) {
+                            buf.release();
+                        } else if (handedOver.get() && toRelease.isEmpty()) {
+                            return;
+                        }
                     }
-                    peak.set(allocator.usedHeapMemory());
-
-                    // Optionally hold every stripe write lock across the release phase. Contention
-                    // alone only makes *most* returns take the notify path - how many is up to the
-                    // scheduler, and if every releaser happens to win the lock the assertions below
-                    // test nothing. With the locks held no releaser can win, so the notification is
-                    // the only thing that can move a chunk, deterministically.
-                    List<Long> stamps = new ArrayList<Long>();
-                    List<StampedLock> locks = forceNotifyPath ?
-                            stripeLocks(allocator) : Collections.<StampedLock>emptyList();
-                    for (StampedLock l : locks) {
-                        stamps.add(l.writeLock());
-                    }
-
-                    // Hand the live set to the releasers, which now contend with each other.
-                    for (int i = 0; i < burstBuffers; i++) {
-                        toRelease.put(live[i]);
-                        live[i] = null;
-                    }
-                    handedOver.set(true);
-                    releasersDone.await();
-                    for (int i = 0; i < locks.size(); i++) {
-                        locks.get(i).unlockWrite(stamps.get(i));
-                    }
-
-                    // Settle on a tiny working set, on the same thread and so the same stripe. These
-                    // allocations are what drives the heap-wide drain and the purge tick; the releases
-                    // are uncontended now, so they take the inline path and leave no new notes.
-                    int allocations = 8 * BURST_SEGMENTS_PER_CHUNK
-                            * (int) AdaptivePoolingAllocator.CHUNK_PURGE_INTERVAL * 4;
-                    for (int i = 0; i < allocations; i++) {
-                        allocator.heapBuffer(BURST_BUF_SIZE).release();
-                    }
-                } catch (Throwable t) {
-                    failure.compareAndSet(null, t);
-                    handedOver.set(true);
+                } finally {
+                    releasersDone.countDown();
                 }
-            }
-        }, "burst-allocator");
-        allocatorThread.start();
-        allocatorThread.join();
-        for (Thread t : releasers) {
-            t.join();
+            }, pool));
         }
-        if (failure.get() != null) {
-            throw new AssertionError(failure.get());
+
+        CompletableFuture<Void> allocating = async(() -> {
+        try {
+            int burstBuffers = BURST_CHUNKS * BURST_SEGMENTS_PER_CHUNK;
+            ByteBuf[] live = new ByteBuf[burstBuffers];
+            for (int i = 0; i < burstBuffers; i++) {
+                live[i] = allocator.heapBuffer(BURST_BUF_SIZE);
+            }
+            peak.set(allocator.usedHeapMemory());
+
+            // Optionally hold every stripe write lock across the release phase. Contention
+            // alone only makes *most* returns take the notify path - how many is up to the
+            // scheduler, and if every releaser happens to win the lock the assertions below
+            // test nothing. With the locks held no releaser can win, so the notification is
+            // the only thing that can move a chunk, deterministically.
+            List<Long> stamps = new ArrayList<Long>();
+            List<StampedLock> locks = forceNotifyPath ?
+                    stripeLocks(allocator) : Collections.<StampedLock>emptyList();
+            for (StampedLock l : locks) {
+                stamps.add(l.writeLock());
+            }
+
+            // Hand the live set to the releasers, which now contend with each other.
+            for (int i = 0; i < burstBuffers; i++) {
+                toRelease.put(live[i]);
+                live[i] = null;
+            }
+            handedOver.set(true);
+            releasersDone.await();
+            for (int i = 0; i < locks.size(); i++) {
+                locks.get(i).unlockWrite(stamps.get(i));
+            }
+
+            // Settle on a tiny working set, on the same thread and so the same stripe. These
+            // allocations are what drives the heap-wide drain and the purge tick; the releases
+            // are uncontended now, so they take the inline path and leave no new notes.
+            int allocations = 8 * BURST_SEGMENTS_PER_CHUNK
+                    * (int) AdaptivePoolingAllocator.CHUNK_PURGE_INTERVAL * 4;
+            for (int i = 0; i < allocations; i++) {
+                allocator.heapBuffer(BURST_BUF_SIZE).release();
+            }
+        } finally {
+            // Also on failure, so the releasers do not wait for a hand-over that never comes.
+            handedOver.set(true);
+        }
+        }, pool);
+        // Wait for all of them, failed or not, then rethrow the first failure.
+        releasers.add(allocating);
+        CompletableFuture.allOf(releasers.toArray(new CompletableFuture[0])).exceptionally(e -> null).get();
+        pool.shutdown();
+        allocating.get();
+        for (CompletableFuture<Void> releaser : releasers) {
+            releaser.get();
         }
         return peak.get();
     }
@@ -2432,57 +2428,51 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         final BlockingQueue<ByteBuf> toRelease = new ArrayBlockingQueue<ByteBuf>(256);
         final java.util.concurrent.ConcurrentHashMap<Long, Boolean> inUse =
                 new java.util.concurrent.ConcurrentHashMap<Long, Boolean>();
-        final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+        // A releaser that fails stops the owner, which would otherwise block on a queue nobody drains.
+        final AtomicBoolean stop = new AtomicBoolean();
         final ByteBuf poison = Unpooled.buffer(1);
-        Thread[] threads = new Thread[releasers];
+        ExecutorService pool = Executors.newFixedThreadPool(releasers);
+        List<CompletableFuture<Void>> releasing = new ArrayList<CompletableFuture<Void>>();
         for (int i = 0; i < releasers; i++) {
-            threads[i] = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        for (;;) {
-                            ByteBuf buf = toRelease.take();
-                            if (buf == poison) {
-                                return;
-                            }
-                            // Forget the segment before releasing it: it can only be handed out again afterwards.
-                            inUse.remove(buf.memoryAddress());
-                            buf.release();
-                        }
-                    } catch (Throwable t) {
-                        failure.compareAndSet(null, t);
+            releasing.add(async(() -> {
+                for (;;) {
+                    ByteBuf buf = toRelease.take();
+                    if (buf == poison) {
+                        return;
                     }
+                    // Forget the segment before releasing it: it can only be handed out again afterwards.
+                    inUse.remove(buf.memoryAddress());
+                    buf.release();
                 }
-            });
-            threads[i].start();
+            }, pool).whenComplete((v, e) -> {
+                if (e != null) {
+                    stop.set(true);
+                }
+            }));
         }
-        Thread owner = new FastThreadLocalThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i < allocations && failure.get() == null; i++) {
-                        ByteBuf buf = allocator.directBuffer(64, 64);
-                        if (inUse.putIfAbsent(buf.memoryAddress(), Boolean.TRUE) != null) {
-                            throw new AssertionError("segment at " + buf.memoryAddress() + " handed out twice");
-                        }
-                        toRelease.put(buf);
-                    }
-                } catch (Throwable t) {
-                    failure.compareAndSet(null, t);
+        // The owner must be a FastThreadLocalThread, for its own heap: a future carries what it threw.
+        final CompletableFuture<Void> ownerDone = new CompletableFuture<Void>();
+        Thread owner = new FastThreadLocalThread(completing(() -> {
+            for (int i = 0; i < allocations && !stop.get(); i++) {
+                ByteBuf buf = allocator.directBuffer(64, 64);
+                if (inUse.putIfAbsent(buf.memoryAddress(), Boolean.TRUE) != null) {
+                    throw new AssertionError("segment at " + buf.memoryAddress() + " handed out twice");
                 }
+                toRelease.put(buf);
             }
-        });
+        }, ownerDone));
         owner.start();
+        ownerDone.exceptionally(e -> null).get();
         owner.join();
         for (int i = 0; i < releasers; i++) {
             toRelease.put(poison);
         }
-        for (Thread thread : threads) {
-            thread.join();
-        }
+        CompletableFuture.allOf(releasing.toArray(new CompletableFuture[0])).exceptionally(e -> null).get();
+        pool.shutdown();
         poison.release();
-        if (failure.get() != null) {
-            throw new AssertionError(failure.get());
+        ownerDone.get();
+        for (CompletableFuture<Void> releaser : releasing) {
+            releaser.get();
         }
         assertTrue(inUse.isEmpty());
     }

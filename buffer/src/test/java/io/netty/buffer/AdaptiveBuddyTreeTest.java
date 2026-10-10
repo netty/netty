@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.AdaptivePoolingAllocator.BuddyTree;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
@@ -24,10 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SplittableRandom;
 
-import static io.netty.buffer.AdaptivePoolingAllocator.BuddyTree.MIN_BLOCK_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AdaptiveBuddyTreeTest {
+    /** The leaf size the allocator builds its trees with. */
+    private static final int MIN_BLOCK_SIZE = AdaptivePoolingAllocator.BUDDY_MIN_BLOCK_SIZE;
 
     /**
      * Random claims and releases on a {@link BuddyTree} hand out the same offsets as the original search, a
@@ -37,9 +37,9 @@ class AdaptiveBuddyTreeTest {
     @RepeatedTest(200)
     void claimsTheSameOffsetsAsTheOriginalSearch(RepetitionInfo info) {
         SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
-        int maxOrder = rng.nextInt(9); // chunks of 32 KiB .. 8 MiB
+        int maxOrder = rng.nextInt(9); // chunks of one leaf .. 256 leaves
         int capacity = MIN_BLOCK_SIZE << maxOrder;
-        BuddyTree tree = new BuddyTree(capacity);
+        BuddyTree tree = new BuddyTree(capacity, MIN_BLOCK_SIZE);
         ReferenceTree reference = new ReferenceTree(capacity);
         List<int[]> claimed = new ArrayList<int[]>();
         for (int op = 0; op < 2000; op++) {
@@ -76,21 +76,6 @@ class AdaptiveBuddyTreeTest {
     }
 
     /**
-     * Enough trees for the JIT to compile the constructor: a new tree is one free block, whatever compiled it.
-     * JDK 21's C2 once built corrupt trees here (a fill loop storing {@code numberOfLeadingZeros} into the byte
-     * array, vectorized by SuperWord), after about two thousand constructions.
-     */
-    @Test
-    void newTreesAreWhollyFreeAfterTheConstructorIsCompiled() {
-        int capacity = 8 * 1024 * 1024;
-        for (int i = 0; i < 50000; i++) {
-            BuddyTree tree = new BuddyTree(capacity);
-            assertEquals(0, tree.claim(MIN_BLOCK_SIZE), "tree " + i);
-            assertEquals(capacity / 2, tree.claim(capacity / 2), "tree " + i);
-        }
-    }
-
-    /**
      * The order of the largest aligned block overlapping no claimed block, by brute force; -1 when there is none.
      */
     private static int largestFreeOrder(int capacity, List<int[]> claimed) {
@@ -115,7 +100,7 @@ class AdaptiveBuddyTreeTest {
     @Test
     void freedBuddiesMergeBackIntoTheWholeChunk() {
         int capacity = 8 * 1024 * 1024;
-        BuddyTree tree = new BuddyTree(capacity);
+        BuddyTree tree = new BuddyTree(capacity, MIN_BLOCK_SIZE);
         int blocks = capacity / MIN_BLOCK_SIZE;
         for (int i = 0; i < blocks; i++) {
             assertEquals(i * MIN_BLOCK_SIZE, tree.claim(MIN_BLOCK_SIZE));

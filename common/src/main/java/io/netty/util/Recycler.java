@@ -139,6 +139,7 @@ public abstract class Recycler<T> {
     }
 
     /**
+     * USE IT CAREFULLY!<br>
      * As {@link #Recycler(int, boolean)}, for a pool whose {@link #get()} is only ever called by one thread at a time
      * (for example under a lock the caller holds), while any thread may recycle into it: the pool can then take
      * instances without contending with other takers. Only supported with {@code unguarded}.
@@ -177,6 +178,7 @@ public abstract class Recycler<T> {
     }
 
     /**
+     * USE IT CAREFULLY!<br>
      * As {@link #Recycler(boolean)}, but with an explicit recycling {@code interval} instead of the
      * global default.
      *
@@ -556,7 +558,8 @@ public abstract class Recycler<T> {
             this.owner = null;
             batch = null;
             batchSize = 0;
-            pooledHandles = exclusiveGet ? (MessagePassingQueue<H>) newFixedMpscQueue(maxCapacity)
+            // The blocking pool is the escape hatch for JIT bugs seen on some ARM JDKs: it wins over the MPSC queue.
+            pooledHandles = exclusiveGet && !BLOCKING_POOL ? (MessagePassingQueue<H>) newFixedMpscQueue(maxCapacity)
                     : createExternalMcPool(maxCapacity);
             ratioCounter = 0;
         }

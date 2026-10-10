@@ -21,7 +21,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -211,7 +216,7 @@ public class SizeClassedChunkCacheTest {
 
         // Purge should evict the fully-free chunk (above floor)
         cache.tickPurge();
-        verify(idle).recycleOrDeallocate(null, 0);
+        verify(idle).retire(null, 0);
     }
 
     @Test
@@ -223,7 +228,7 @@ public class SizeClassedChunkCacheTest {
         cache.offerChunk(idle);
 
         cache.tickPurge();
-        verify(idle, never()).recycleOrDeallocate(null, 0);
+        verify(idle, never()).retire(null, 0);
     }
 
     @Test
@@ -251,9 +256,9 @@ public class SizeClassedChunkCacheTest {
         cache.tickPurge();
 
         for (SizeClassedChunk chunk : excessChunks) {
-            verify(chunk, atLeastOnce()).recycleOrDeallocate(null, 0);
+            verify(chunk, atLeastOnce()).retire(null, 0);
         }
-        verify(workingSet, never()).recycleOrDeallocate(null, 0);
+        verify(workingSet, never()).retire(null, 0);
     }
 
     // --- A chunk that is not fully free is never evicted ---
@@ -278,7 +283,7 @@ public class SizeClassedChunkCacheTest {
             cache.offerChunk(chunk);
         }
 
-        verify(chunk, never()).recycleOrDeallocate(null, 0);
+        verify(chunk, never()).retire(null, 0);
         verify(chunk, never()).markToDeallocate();
     }
 
@@ -334,7 +339,7 @@ public class SizeClassedChunkCacheTest {
         cache.tickPurge();
         assertSame(active, cache.active);
         assertNull(active.queue);
-        verify(active, never()).recycleOrDeallocate(null, 0);
+        verify(active, never()).retire(null, 0);
         verify(active, never()).markToDeallocate();
     }
 
@@ -352,15 +357,15 @@ public class SizeClassedChunkCacheTest {
 
         // floor chunks besides the active one: at the floor, nothing is evicted.
         cache.tickPurge();
-        verify(idle, never()).recycleOrDeallocate(null, 0);
+        verify(idle, never()).retire(null, 0);
 
         // Once the magazine gives it up, the same chunk counts, and the cache is above the floor.
         cache.deactivate(active);
         assertNull(cache.active);
         assertSame(cache.reusable, active.queue);
         cache.tickPurge();
-        verify(idle).recycleOrDeallocate(null, 0);
-        verify(active, never()).recycleOrDeallocate(null, 0);
+        verify(idle).retire(null, 0);
+        verify(active, never()).retire(null, 0);
     }
 
     @Test
@@ -480,7 +485,7 @@ public class SizeClassedChunkCacheTest {
         cache.evictIfAboveFloor(chunk);
 
         assertEquals(countBefore - 1, cache.reusable.size);
-        verify(chunk).recycleOrDeallocate(null, 0);
+        verify(chunk).retire(null, 0);
     }
 
     @Test
@@ -495,7 +500,7 @@ public class SizeClassedChunkCacheTest {
 
         // Chunk stays in reusable list
         assertEquals(1, cache.reusable.size);
-        verify(chunk, never()).recycleOrDeallocate(null, 0);
+        verify(chunk, never()).retire(null, 0);
     }
 
     // --- free: draining all chunks ---
@@ -573,25 +578,28 @@ public class SizeClassedChunkCacheTest {
         final int threads = 8;
         final int notificationsPerThread = 10000;
         final CyclicBarrier start = new CyclicBarrier(threads);
-        Thread[] releasers = new Thread[threads];
-        for (int i = 0; i < threads; i++) {
-            releasers[i] = new Thread(new Runnable() {
-                @Override
-                public void run() {
+        // The barrier needs every releaser running at once: a pool of exactly that many threads, not the common
+        // pool, whose parallelism follows the processor count.
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        List<CompletableFuture<Void>> releasers = new ArrayList<CompletableFuture<Void>>();
+        try {
+            for (int i = 0; i < threads; i++) {
+                releasers.add(CompletableFuture.runAsync(() -> {
                     try {
                         start.await();
                     } catch (Exception e) {
-                        throw new AssertionError(e);
+                        throw new IllegalStateException(e);
                     }
                     for (int n = 0; n < notificationsPerThread; n++) {
                         cache.notifyHasCapacity(chunk);
                     }
-                }
-            });
-            releasers[i].start();
-        }
-        for (Thread t : releasers) {
-            t.join();
+                }, pool));
+            }
+            for (CompletableFuture<Void> releaser : releasers) {
+                releaser.get();
+            }
+        } finally {
+            pool.shutdown();
         }
 
         assertEquals(1, cache.pendingCount(), "80000 returns on one chunk must leave one note");
@@ -665,8 +673,8 @@ public class SizeClassedChunkCacheTest {
         cache.drainPending();
 
         assertEquals(countBefore - 1, cache.reusable.size);
-        assertNull(chunk.queue);
-        verify(chunk).recycleOrDeallocate(null, 0);
+        assertSame(cache.spare, chunk.queue, "the object waits for the next buffer");
+        verify(chunk).retire(null, 0);
     }
 
     // Regression for Invariant N property 4: offerChunk classifies a chunk by reading
