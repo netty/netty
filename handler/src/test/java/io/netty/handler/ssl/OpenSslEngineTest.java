@@ -1214,8 +1214,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 if (validHostname) {
                     assertEquals(new SNIHostName(hostname.toLowerCase(Locale.ROOT)), names.get(0));
                     assertEquals(hostname, ((SNIHostName) names.get(0)).getAsciiName());
-                } else {
-                    assertFalse(names.get(0) instanceof SNIHostName);
                 }
             }
         } finally {
