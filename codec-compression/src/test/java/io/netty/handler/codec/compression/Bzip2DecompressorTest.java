@@ -44,4 +44,21 @@ public class Bzip2DecompressorTest extends AbstractDecompressorTest {
             assertThrows(DecompressionException.class, decompressor::endOfInput);
         }
     }
+
+    /**
+     * Regression test: the unary-coded MTF selector index read in {@code RECEIVE_SELECTORS} was
+     * never validated against the number of declared Huffman tables before being used to index
+     * into {@link Bzip2MoveToFrontTable} and later the per-table code-limit array, allowing a
+     * crafted stream to trigger an {@link ArrayIndexOutOfBoundsException} instead of a clean
+     * {@link DecompressionException}.
+     */
+    @Test
+    public void testSelectorIndexOutOfRange() throws DecompressionException {
+        try (Decompressor decompressor = createDecompressor().build(ByteBufAllocator.DEFAULT)) {
+            assertEquals(Decompressor.Status.NEED_INPUT, decompressor.status());
+            assertThrows(DecompressionException.class, () -> decompressor.addInput(
+                    Unpooled.wrappedBuffer(Bzip2MalformedStreams.selectorIndexOutOfRange())),
+                    "incorrect selector index");
+        }
+    }
 }

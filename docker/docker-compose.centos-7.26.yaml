@@ -16,6 +16,9 @@ services:
   build:
     image: netty:centos-7-26
 
+  build-affected-only:
+    image: netty:centos-7-26
+
   build-leak:
     image: netty:centos-7-26
 

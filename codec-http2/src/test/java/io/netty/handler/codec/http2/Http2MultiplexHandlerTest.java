@@ -17,12 +17,15 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -108,5 +111,34 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
             }
         });
         assertEquals(testExc, exc);
+    }
+
+    @Test
+    public void idleOutboundStreamClosedWhenParentCloses() {
+        EmbeddedChannel parent = new EmbeddedChannel(Http2FrameCodecBuilder.forClient().build(),
+                new Http2MultiplexHandler(new ChannelInboundHandlerAdapter()));
+        try {
+            final AtomicInteger inactive = new AtomicInteger();
+            Http2StreamChannel childChannel = new Http2StreamChannelBootstrap(parent)
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelInactive(ChannelHandlerContext ctx) {
+                            inactive.incrementAndGet();
+                            ctx.fireChannelInactive();
+                        }
+                    }).open().syncUninterruptibly().getNow();
+            // No HEADERS frame was written yet, so the stream is not known to the connection.
+            assertTrue(childChannel.isActive());
+            assertEquals(Http2Stream.State.IDLE, childChannel.stream().state());
+
+            parent.close();
+            parent.runPendingTasks();
+
+            assertFalse(childChannel.isOpen());
+            assertTrue(childChannel.closeFuture().isDone());
+            assertEquals(1, inactive.get());
+        } finally {
+            parent.finishAndReleaseAll();
+        }
     }
 }

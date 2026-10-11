@@ -51,6 +51,18 @@ services:
       ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
 
+  # Same as "build" but only builds and tests the modules affected by a change, as given by the
+  # NETTY_AFFECTED_MODULES environment variable (see .github/scripts/mvn_affected.sh). Behaves like "build"
+  # when it is not set to a list of modules.
+  build-affected-only:
+    <<: *common
+    environment:
+      LD_LIBRARY_PATH: /opt/aws-lc/lib64
+      NETTY_AFFECTED_MODULES:
+    command: '/bin/bash -cl "
+      ./.github/scripts/mvn_affected.sh -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
+    "'
+
   build-leak:
     <<: *common
     command: '/bin/bash -cl "

@@ -79,31 +79,53 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
 
     private final int maxFrameLength;
 
+    private boolean openingBracketFound;
+    private boolean atLeastOneXmlElementFound;
+    private boolean inCDATASection;
+    private boolean inCommentBlock;
+    private boolean inProcessingInstruction;
+    private boolean inClosingTag;
+    private long openBracketsCount;
+
+    /**
+     * Index, relative to the current reader index, of the byte right after the last {@code '>'}
+     * seen so far. Netty's cumulation buffer may be compacted (rebasing both the reader index and
+     * the bytes) in between two {@link #decode(ChannelHandlerContext, ByteBuf, List)} invocations,
+     * which would silently invalidate an absolute buffer index stored across calls; storing this
+     * relative to the reader index keeps it valid across such compactions, just like {@link
+     * #scanOffset}.
+     */
+    private int length;
+    private int leadingWhiteSpaceCount;
+
+    /**
+     * Index, relative to the current reader index, of the next byte that still needs to be scanned.
+     * This lets {@link #decode(ChannelHandlerContext, ByteBuf, List)} resume scanning where the
+     * previous invocation left off instead of rescanning the whole accumulated buffer every time,
+     * which would otherwise make a slowly trickled, never-balanced element run in quadratic time.
+     */
+    private int scanOffset;
+
     public XmlFrameDecoder(int maxFrameLength) {
         this.maxFrameLength = checkPositive(maxFrameLength, "maxFrameLength");
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        boolean openingBracketFound = false;
-        boolean atLeastOneXmlElementFound = false;
-        boolean inCDATASection = false;
-        boolean inCommentBlock = false;
-        boolean inProcessingInstruction = false;
-        boolean inClosingTag = false;
-        long openBracketsCount = 0;
-        int length = 0;
-        int leadingWhiteSpaceCount = 0;
         final int bufferLength = in.writerIndex();
 
         if (bufferLength > maxFrameLength) {
             // bufferLength exceeded maxFrameLength; dropping frame
             in.skipBytes(in.readableBytes());
+            resetState();
             fail(bufferLength);
             return;
         }
 
-        for (int i = in.readerIndex(); i < bufferLength; i++) {
+        final int readerIndex = in.readerIndex();
+        int i;
+        scan:
+        for (i = readerIndex + scanOffset; i < bufferLength; i++) {
             final byte readByte = in.getByte(i);
             if (!openingBracketFound && Character.isWhitespace(readByte)) {
                 // xml has not started and whitespace char found
@@ -112,10 +134,12 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                 // garbage found before xml start
                 fail(ctx);
                 in.skipBytes(in.readableBytes());
+                resetState();
                 return;
             } else if (inClosingTag && readByte == '<') {
                 fail(ctx);
                 in.skipBytes(in.readableBytes());
+                resetState();
                 return;
             } else if (!inCDATASection && !inCommentBlock && !inProcessingInstruction && readByte == '<') {
                 openingBracketFound = true;
@@ -131,28 +155,54 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
                         // incrementing openBracketsCount
                         openBracketsCount++;
                     } else if (peekAheadByte == '!') {
-                        if (isCommentBlockStart(in, i)) {
-                            // <!-- comment --> start found
-                            openBracketsCount++;
-                            inCommentBlock = true;
-                        } else if (isCDATABlockStart(in, i)) {
-                            // <![CDATA[ start found
-                            openBracketsCount++;
-                            inCDATASection = true;
+                        final BangMarkupKind markupKind = classifyBangMarkup(in, i, bufferLength);
+                        switch (markupKind) {
+                            case INDETERMINATE:
+                                // Not enough data has been received yet to tell whether this is
+                                // a <!-- comment -->, a <![CDATA[ block, or some other markup
+                                // declaration (e.g. <!DOCTYPE ...> or an unknown <!x>); wait for
+                                // more bytes before resuming the scan from this position.
+                                break scan;
+                            case COMMENT:
+                                // <!-- comment --> start found
+                                openBracketsCount++;
+                                inCommentBlock = true;
+                                break;
+                            case CDATA:
+                                // <![CDATA[ start found
+                                openBracketsCount++;
+                                inCDATASection = true;
+                                break;
+                            case NONE:
+                                // some other markup declaration (e.g. <!DOCTYPE ...> or <!x>);
+                                // treated as inert content, same as everything else between tags.
+                                break;
+                            default:
+                                throw new Error();
                         }
                     } else if (peekAheadByte == '?') {
                         // <?xml ?> start found
                         openBracketsCount++;
                         inProcessingInstruction = true;
                     }
+                } else {
+                    // not enough data yet to peek at the byte following '<'; wait for more
+                    // and resume the scan from this same position.
+                    break;
                 }
             } else if (!inCDATASection && !inCommentBlock && !inProcessingInstruction && readByte == '/') {
-                if (i < bufferLength - 1 && in.getByte(i + 1) == '>') {
-                    // found />, decrementing openBracketsCount
-                    openBracketsCount--;
+                if (i < bufferLength - 1) {
+                    if (in.getByte(i + 1) == '>') {
+                        // found />, decrementing openBracketsCount
+                        openBracketsCount--;
+                    }
+                } else {
+                    // not enough data yet to peek at the byte following '/'; wait for more
+                    // and resume the scan from this same position.
+                    break;
                 }
             } else if (readByte == '>') {
-                length = i + 1;
+                length = i + 1 - readerIndex;
 
                 if (i - 1 > -1) {
                     final byte peekBehindByte = in.getByte(i - 1);
@@ -194,8 +244,7 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
             }
         }
 
-        final int readerIndex = in.readerIndex();
-        int xmlElementLength = length - readerIndex;
+        int xmlElementLength = length;
 
         if (openBracketsCount == 0 && xmlElementLength > 0) {
             if (readerIndex + xmlElementLength >= bufferLength) {
@@ -204,8 +253,28 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
             final ByteBuf frame =
                     extractFrame(in, readerIndex + leadingWhiteSpaceCount, xmlElementLength - leadingWhiteSpaceCount);
             in.skipBytes(xmlElementLength);
+            // a full element was extracted; reset all parser state (including the scan offset)
+            // so the next invocation starts scanning a fresh element from the current reader index.
+            resetState();
             out.add(frame);
+        } else {
+            // no complete, balanced element yet; remember how far we scanned so the next
+            // invocation resumes from here instead of rescanning the whole buffer.
+            scanOffset = i - readerIndex;
         }
+    }
+
+    private void resetState() {
+        openingBracketFound = false;
+        atLeastOneXmlElementFound = false;
+        inCDATASection = false;
+        inCommentBlock = false;
+        inProcessingInstruction = false;
+        inClosingTag = false;
+        openBracketsCount = 0;
+        length = 0;
+        leadingWhiteSpaceCount = 0;
+        scanOffset = 0;
     }
 
     private void fail(long frameLength) {
@@ -241,21 +310,56 @@ public class XmlFrameDecoder extends ByteToMessageDecoder {
         return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b == ':' || b == '_';
     }
 
-    private static boolean isCommentBlockStart(final ByteBuf in, final int i) {
-        return i < in.writerIndex() - 3
-                && in.getByte(i + 2) == '-'
-                && in.getByte(i + 3) == '-';
+    /**
+     * The outcome of classifying a {@code '<!'} construct against the {@code <!--} and
+     * {@code <![CDATA[} start markers.
+     */
+    private enum BangMarkupKind {
+        /** Not enough data has been received yet to determine the kind of construct. */
+        INDETERMINATE,
+        /** Neither a comment nor a CDATA start, e.g. {@code <!DOCTYPE ...>} or {@code <!x>}. */
+        NONE,
+        /** A {@code <!-- comment -->} start. */
+        COMMENT,
+        /** A {@code <![CDATA[} start. */
+        CDATA
     }
 
-    private static boolean isCDATABlockStart(final ByteBuf in, final int i) {
-        return i < in.writerIndex() - 8
-                && in.getByte(i + 2) == '['
-                && in.getByte(i + 3) == 'C'
-                && in.getByte(i + 4) == 'D'
-                && in.getByte(i + 5) == 'A'
-                && in.getByte(i + 6) == 'T'
-                && in.getByte(i + 7) == 'A'
-                && in.getByte(i + 8) == '[';
+    private static final byte[] CDATA_START_SUFFIX = {'C', 'D', 'A', 'T', 'A', '['};
+
+    /**
+     * Classifies the markup declaration starting at {@code in.getByte(i) == '<'} followed by
+     * {@code '!'}, matching it incrementally against the {@code <!--} and {@code <![CDATA[}
+     * prefixes so a genuinely different declaration (e.g. {@code <!DOCTYPE ...>} or an unknown
+     * {@code <!x>}) is recognised as such immediately, without waiting for bytes that would only
+     * be needed to confirm a comment or CDATA start.
+     */
+    private static BangMarkupKind classifyBangMarkup(final ByteBuf in, final int i, final int bufferLength) {
+        final int commentOrCDATAMarker = i + 2;
+        if (commentOrCDATAMarker >= bufferLength) {
+            return BangMarkupKind.INDETERMINATE;
+        }
+        final byte b = in.getByte(commentOrCDATAMarker);
+        if (b == '-') {
+            final int secondDash = i + 3;
+            if (secondDash >= bufferLength) {
+                return BangMarkupKind.INDETERMINATE;
+            }
+            return in.getByte(secondDash) == '-' ? BangMarkupKind.COMMENT : BangMarkupKind.NONE;
+        }
+        if (b == '[') {
+            for (int k = 0; k < CDATA_START_SUFFIX.length; k++) {
+                final int idx = i + 3 + k;
+                if (idx >= bufferLength) {
+                    return BangMarkupKind.INDETERMINATE;
+                }
+                if (in.getByte(idx) != CDATA_START_SUFFIX[k]) {
+                    return BangMarkupKind.NONE;
+                }
+            }
+            return BangMarkupKind.CDATA;
+        }
+        return BangMarkupKind.NONE;
     }
 
 }

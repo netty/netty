@@ -16,10 +16,16 @@ services:
   build:
     image: netty:centos-7-21
 
+  build-affected-only:
+    image: netty:centos-7-21
+
   build-leak:
     image: netty:centos-7-21
 
   build-with-oio-testsuite:
+    image: netty:centos-7-21
+
+  build-with-oio-testsuite-affected-only:
     image: netty:centos-7-21
 
   build-boringssl-static:

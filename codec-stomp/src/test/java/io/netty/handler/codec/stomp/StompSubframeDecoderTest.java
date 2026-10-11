@@ -23,6 +23,8 @@ import io.netty.handler.codec.TooLongFrameException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static io.netty.util.CharsetUtil.*;
@@ -589,5 +591,42 @@ public class StompSubframeDecoderTest {
         // rather than producing any (partial) content subframes.
         assertNull(channel.readInbound());
         assertTrue(channel.finishAndReleaseAll());
+    }
+
+    // Read sizes: byte by byte, a few bytes, about half of the frame, and the whole frame in one read.
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersNotExceededWhenHeadersSplitAcrossReads(int readSize) {
+        // 10 headers and a limit of 10: the frame must be accepted however it is split into reads.
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(10), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isSuccess(), String.valueOf(headersSubFrame.decoderResult()));
+        assertEquals(10, headersSubFrame.headers().size());
+    }
+
+    @ParameterizedTest(name = "read size {0}")
+    @ValueSource(ints = { 1, 7, 90, Integer.MAX_VALUE })
+    void testMaxNumHeadersEnforcedWhenHeadersSplitAcrossReads(int readSize) {
+        StompHeadersSubframe headersSubFrame = decodeHeaders(frameWithHeaders(11), readSize, 10);
+        assertTrue(headersSubFrame.decoderResult().isFailure());
+        assertInstanceOf(TooLongFrameException.class, headersSubFrame.decoderResult().cause());
+    }
+
+    private static byte[] frameWithHeaders(int numHeaders) {
+        StringBuilder frame = new StringBuilder("SEND\ndestination:/queue/a\n");
+        for (int i = 1; i < numHeaders; i++) {
+            frame.append("header").append(i).append(":value").append(i).append('\n');
+        }
+        return frame.append("\nbody\0").toString().getBytes(UTF_8);
+    }
+
+    private static StompHeadersSubframe decodeHeaders(byte[] frame, int readSize, int maxNumHeaders) {
+        EmbeddedChannel channel = new EmbeddedChannel(new StompSubframeDecoder(1024, 1024, maxNumHeaders, true));
+        for (int i = 0; i < frame.length; i += Math.min(readSize, frame.length - i)) {
+            channel.writeInbound(Unpooled.wrappedBuffer(frame, i, Math.min(readSize, frame.length - i)));
+        }
+        StompHeadersSubframe headersSubFrame = channel.readInbound();
+        assertNotNull(headersSubFrame);
+        channel.finishAndReleaseAll();
+        return headersSubFrame;
     }
 }
