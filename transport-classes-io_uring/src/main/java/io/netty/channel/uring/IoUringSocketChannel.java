@@ -212,9 +212,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             int offset = iovArray.count();
             IovArrayReferenceCollector collector = handler.iovArrayReferenceCollector();
             try {
-                // Limit to the maximum number of fragments to ensure we don't get an error when we have too many
-                // buffers.
-                iovArray.maxCount(Native.MAX_SKB_FRAGS);
                 try {
                     in.forEachFlushedMessage((ChannelOutboundBuffer.MessageProcessor) msg -> {
                         if (msg instanceof ByteBuf) {
