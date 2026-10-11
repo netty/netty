@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -34,6 +35,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -236,6 +238,35 @@ public class IpSubnetFilterTest {
         IpSubnetFilterRule rule = new IpSubnetFilterRule("2001:db8::", 32, IpFilterRuleType.ACCEPT);
         assertFalse(rule.matches(newSockAddress("FFFF:FFFF::1")));
      }
+
+    @Test
+    public void testOverlappingRulesWithDifferentRuleTypeThrows() {
+        // ACCEPT 10.0.0.0/8 followed by REJECT 10.5.0.0/16: the REJECT rule is fully contained within
+        // the broader ACCEPT supernet. Silently dropping it during de-duplication would turn the REJECT
+        // into an implicit ACCEPT, so construction must fail loudly instead.
+        List<IpSubnetFilterRule> rules = new ArrayList<IpSubnetFilterRule>();
+        rules.add(new IpSubnetFilterRule("10.0.0.0", 8, IpFilterRuleType.ACCEPT));
+        rules.add(new IpSubnetFilterRule("10.5.0.0", 16, IpFilterRuleType.REJECT));
+
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new IpSubnetFilter(rules);
+            }
+        });
+    }
+
+    @Test
+    public void testOverlappingRulesWithSameRuleTypeDoesNotThrow() {
+        // Both rules are ACCEPT, so coalescing the more specific one is semantically safe.
+        List<IpSubnetFilterRule> rules = new ArrayList<IpSubnetFilterRule>();
+        rules.add(new IpSubnetFilterRule("10.0.0.0", 8, IpFilterRuleType.ACCEPT));
+        rules.add(new IpSubnetFilterRule("10.5.0.0", 16, IpFilterRuleType.ACCEPT));
+
+        IpSubnetFilter filter = new IpSubnetFilter(false, rules);
+        assertTrue(filter.accept(null, newSockAddress("10.5.1.1")));
+        assertTrue(filter.accept(null, newSockAddress("10.1.1.1")));
+    }
 
     private static IpSubnetFilterRule buildRejectIP(String ipAddress, int mask) {
         return new IpSubnetFilterRule(ipAddress, mask, IpFilterRuleType.REJECT);
