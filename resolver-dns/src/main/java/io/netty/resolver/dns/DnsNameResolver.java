@@ -1251,45 +1251,51 @@ public class DnsNameResolver extends InetNameResolver {
                                       int ndots,
                                       SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
         List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
-                && !StringUtil.endsWith(hostname, '.')) {
+
+        // Prefer a positive cache hit for the bare hostname immediately. A negative entry here
+        // (cause != null) only tells us that the exact FQDN lookup failed, not whether any
+        // search-domain expansion might succeed, so we fall through to the search-domain walkthrough.
+        if (hasEntries(cachedEntries) && cachedEntries.get(0).cause() == null) {
+            return tryCachedSuccess(promise, cachedEntries, resolvedInternetProtocolFamilies);
+        }
+
+        if (searchDomains != null && ndots != 0 && !StringUtil.endsWith(hostname, '.')) {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
                 cachedEntries = resolveCache.get(initialHostname, additionals);
-                if (hasEntries(cachedEntries)) {
-                    break;
+                // Skip negative entries: a cached NXDOMAIN for <host>.<searchDomain> only tells us
+                // that this one permutation does not exist. It says nothing about later search
+                // domains, so keep walking until we find a positive entry or run out of domains.
+                if (hasEntries(cachedEntries) && cachedEntries.get(0).cause() == null) {
+                    return tryCachedSuccess(promise, cachedEntries, resolvedInternetProtocolFamilies);
                 }
             }
         }
-        if (!hasEntries(cachedEntries)) {
-            return false;
-        }
+        return false;
+    }
 
-        Throwable cause = cachedEntries.get(0).cause();
-        if (cause == null) {
-            List<InetAddress> result = null;
-            final int numEntries = cachedEntries.size();
-            for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
-                for (int i = 0; i < numEntries; i++) {
-                    final DnsCacheEntry e = cachedEntries.get(i);
-                    Class<? extends InetAddress> addressType = addressType(f);
-                    if (addressType != null && addressType.isInstance(e.address())) {
-                        if (result == null) {
-                            result = new ArrayList<InetAddress>(numEntries);
-                        }
-                        result.add(e.address());
+    private static boolean tryCachedSuccess(Promise<List<InetAddress>> promise,
+                                            List<? extends DnsCacheEntry> cachedEntries,
+                                            SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
+        List<InetAddress> result = null;
+        final int numEntries = cachedEntries.size();
+        for (SocketProtocolFamily f : resolvedInternetProtocolFamilies) {
+            for (int i = 0; i < numEntries; i++) {
+                final DnsCacheEntry e = cachedEntries.get(i);
+                Class<? extends InetAddress> addressType = addressType(f);
+                if (addressType != null && addressType.isInstance(e.address())) {
+                    if (result == null) {
+                        result = new ArrayList<InetAddress>(numEntries);
                     }
+                    result.add(e.address());
                 }
             }
-            if (result != null) {
-                trySuccess(promise, result);
-                return true;
-            }
-            return false;
-        } else {
-            tryFailure(promise, cause);
+        }
+        if (result != null) {
+            trySuccess(promise, result);
             return true;
         }
+        return false;
     }
 
     private void doResolveAllUncached(final Channel channel,
