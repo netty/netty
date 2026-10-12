@@ -615,9 +615,12 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     }
 
     private static void assertIdleChunksEvictedAfterRelease(AdaptiveByteBufAllocator allocator) {
-        ByteBuf probe = allocator.heapBuffer(256);
+        // A large class, pooled in low-memory mode too: 32 buffers per chunk. The burst is measured in chunks, and
+        // few buffers keep a run with paranoid leak detection, which tracks each of them, small.
+        int size = 16 * 1024;
+        ByteBuf probe = allocator.heapBuffer(size);
         long chunkSize = allocator.usedHeapMemory();
-        int buffersPerChunk = (int) (chunkSize / 256);
+        int buffersPerChunk = (int) (chunkSize / size);
         probe.release();
 
         // Create a burst: allocate many chunks' worth of buffers, twice what the heap's recycler keeps, so that some
@@ -628,7 +631,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         int totalBuffers = totalChunks * buffersPerChunk;
         List<ByteBuf> bufs = new ArrayList<>(totalBuffers);
         for (int i = 0; i < totalBuffers; i++) {
-            bufs.add(allocator.heapBuffer(256));
+            bufs.add(allocator.heapBuffer(size));
         }
         long memoryDuringBurst = allocator.usedHeapMemory();
 
@@ -642,7 +645,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         // Do a few allocation cycles to trigger purge for cross-thread return detection
         for (int poll = 0; poll < 20; poll++) {
             for (int i = 0; i < buffersPerChunk; i++) {
-                bufs.add(allocator.heapBuffer(256));
+                bufs.add(allocator.heapBuffer(size));
             }
             for (ByteBuf buf : bufs) {
                 buf.release();

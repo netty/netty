@@ -403,8 +403,9 @@ public class SizeClassChunkRecyclerTest {
                                                       int reusingSize) {
         int chunkSize = AdaptivePoolingAllocator.chunkSizeOf(freedSize);
         assertEquals(chunkSize, AdaptivePoolingAllocator.chunkSizeOf(reusingSize));
-        // 64 chunks: well past the one chunk a size class keeps, so the rest go to the recycler.
-        int chunks = 64;
+        // 4 chunks: one stays active and one is the size class's floor, so at least two go to the recycler. Few,
+        // because a chunk of the 32-byte class is 4096 buffers, and paranoid leak detection tracks each of them.
+        int chunks = 4;
 
         Set<byte[]> freedArrays = Collections.newSetFromMap(new IdentityHashMap<byte[], Boolean>());
         List<ByteBuf> bufs = new ArrayList<ByteBuf>();
