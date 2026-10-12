@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -650,6 +651,59 @@ public class WebSocketServerProtocolHandlerTest {
 
     private static String getResponseMessage(FullHttpResponse response) {
         return response.content().toString(CharsetUtil.UTF_8);
+    }
+
+    // Reproduces https://github.com/netty/netty/issues/17776
+    @Test
+    void testCloseHandshakePromiseAlreadyDone() {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new HttpServerCodec(), new HttpObjectAggregator(65536),
+                new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                        .websocketPath("/ws")
+                        .forceCloseTimeoutMillis(-1L)
+                        .build()));
+
+        FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/ws");
+        request.headers()
+                .set(HttpHeaderNames.HOST, "localhost")
+                .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
+                .set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
+        channel.writeInbound(request);
+        drainAndRelease(channel);
+
+        // Server initiates close handshake.
+        channel.writeOutbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
+        drainAndRelease(channel);
+
+        // The client responds with its own close frame. Before the fix this blew up with
+        // "promise already done" because closeSent() tried to attach a listener to a promise
+        // that had already been completed by the first write's synchronous flush in
+        // EmbeddedChannel.
+        channel.writeInbound(new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE));
+        drainAndRelease(channel);
+
+        // Close the channel and assert clean shutdown (no "promise already done" exception).
+        assertTrue(channel.close().syncUninterruptibly().isSuccess());
+        assertFalse(channel.finish());
+    }
+
+    private static void drainAndRelease(EmbeddedChannel channel) {
+        for (;;) {
+            Object msg = channel.readOutbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
+        for (;;) {
+            Object msg = channel.readInbound();
+            if (msg == null) {
+                break;
+            }
+            ReferenceCountUtil.release(msg);
+        }
     }
 
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
