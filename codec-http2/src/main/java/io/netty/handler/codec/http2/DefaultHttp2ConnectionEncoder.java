@@ -325,9 +325,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         }
         SimpleChannelPromiseAggregator aggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
                 ctx.executor());
-        // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
-        // remote peer applies these settings before any subsequent frames that we may send which depend upon
-        // these new settings. See https://github.com/netty/netty/issues/6520.
+
+        // Mirror of the auto-ACK path in DefaultHttp2ConnectionDecoder#onSettingsRead: write the ACK frame to the
+        // outbound buffer first, then apply the settings. This ordering is compliant with RFC 9113 §6.5.3
+        // because remoteSettings runs synchronously and any flow-control triggered flush it performs happens
+        // with the settings already applied. The ACK remains buffered until that (or a subsequent) flush, so the
+        // peer only observes the ACK after the updated settings are actually in effect.
         frameWriter.writeSettingsAck(ctx, aggregator.newPromise());
 
         // We create a "new promise" to make sure that status from both the write and the application are taken into
