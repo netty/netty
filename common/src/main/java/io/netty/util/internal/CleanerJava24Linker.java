@@ -91,7 +91,7 @@ public class CleanerJava24Linker implements Cleaner {
 
     @Override
     public CleanableDirectBuffer allocate(int capacity) {
-        return new CleanableDirectBufferImpl(capacity);
+        return CleanableDirectBufferImpl.allocate(capacity);
     }
 
     @Override
@@ -209,7 +209,14 @@ public class CleanerJava24Linker implements Cleaner {
         private final ByteBuffer buffer;
         private final long memoryAddress;
 
-        private CleanableDirectBufferImpl(int capacity) {
+        CleanableDirectBufferImpl(ByteBuffer buffer, long memoryAddress) {
+            this.buffer = buffer;
+            this.memoryAddress = memoryAddress;
+        }
+
+        // Creates the ByteBuffer close to the caller: C2 only scalar-replaces it when the whole (deep)
+        // DirectByteBuffer construction fits within MaxInlineLevel of the caller.
+        static CleanableDirectBuffer allocate(int capacity) {
             PlatformDependent.incrementMemoryCounter(capacity);
             long addr;
             try {
@@ -219,8 +226,8 @@ public class CleanerJava24Linker implements Cleaner {
                 throw e;
             }
             try {
-                memoryAddress = addr;
-                buffer = MemorySegment.ofAddress(addr).reinterpret(capacity).asByteBuffer();
+                return new CleanableDirectBufferImpl(
+                        MemorySegment.ofAddress(addr).reinterpret(capacity).asByteBuffer(), addr);
             } catch (Throwable throwable) {
                 PlatformDependent.decrementMemoryCounter(capacity);
                 Error error = new Error(throwable);
