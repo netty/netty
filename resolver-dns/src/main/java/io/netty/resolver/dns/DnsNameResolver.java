@@ -1256,7 +1256,7 @@ public class DnsNameResolver extends InetNameResolver {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
                 cachedEntries = resolveCache.get(initialHostname, additionals);
-                if (hasEntries(cachedEntries)) {
+                if (hasEntries(cachedEntries) && cachedEntries.get(0).cause() == null) {
                     break;
                 }
             }
