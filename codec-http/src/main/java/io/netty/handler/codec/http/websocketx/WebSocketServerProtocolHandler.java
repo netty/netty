@@ -238,9 +238,14 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
                 frame.retain();
-                ChannelPromise promise = ctx.newPromise();
-                closeSent(promise);
-                handshaker.close(ctx, (CloseWebSocketFrame) frame, promise);
+                // Separate promises: closeSent() must be authoritative for the close handshake
+                // lifecycle (timeout, channel close), but it must not cascade onto the write
+                // promise that handshaker.close() will complete on its own — if closeSent was
+                // already resolved by an earlier close frame write, PromiseNotifier would mark
+                // this promise done before the write finishes, causing "promise already done".
+                ChannelPromise writePromise = ctx.newPromise();
+                closeSent(writePromise.unvoid());
+                handshaker.close(ctx, (CloseWebSocketFrame) frame, ctx.newPromise());
                 // handshaker.close() bypasses this handler's own write()/flush() overrides (it writes
                 // directly on ctx), so the force-close timeout must be armed explicitly here. Doing so
                 // after the close0() write-and-flush attempt above mirrors close()'s ordering and avoids
