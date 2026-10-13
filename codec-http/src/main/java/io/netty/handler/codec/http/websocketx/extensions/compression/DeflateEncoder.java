@@ -114,7 +114,11 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                 cleanup();
             }
         } else {
-            throw new CodecException("cannot compress content buffer");
+            // Empty non-final fragment: pass through without compression.
+            // The decoder handles empty payloads without special handling.
+            // Previously threw CodecException while the decoder accepted it.
+            out.add(msg);
+            return;
         }
 
         final WebSocketFrame outMsg;
