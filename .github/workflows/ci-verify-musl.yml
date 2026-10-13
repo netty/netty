@@ -94,6 +94,22 @@ jobs:
       - name: Build the native quic jars
         run: docker compose ${{ matrix.docker-compose-run }}
 
+      # The Maven cache restored via cache-maven-* keys can carry SNAPSHOT versions from earlier
+      # builds. When pom.xml bumps the SNAPSHOT number (e.g. 4.2.19 → 4.2.20 after a release) the
+      # old directory is still in ~/.m2/repository/io/netty/<artifact>/<old-version>/. Uploading
+      # the whole tree would hand the verify legs two different native quic jars on the classpath,
+      # which makes NativeLibraryLoader fail with "Multiple resources found with different content".
+      # Drop any non-current version before we ship the artifact.
+      - name: Remove stale SNAPSHOT versions before upload
+        run: |
+          CURRENT_VERSION=$(./mvnw -q help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "Current version: $CURRENT_VERSION"
+          echo "Contents of ~/.m2/repository/io/netty before cleanup:"
+          find ~/.m2/repository/io/netty -maxdepth 2 -mindepth 2 -type d | sort
+          find ~/.m2/repository/io/netty -mindepth 2 -maxdepth 2 -type d ! -name "$CURRENT_VERSION" -exec rm -rf {} + 2>/dev/null || true
+          echo "Contents of ~/.m2/repository/io/netty after cleanup:"
+          find ~/.m2/repository/io/netty -maxdepth 2 -mindepth 2 -type d | sort
+
       # Pinned to v6.0.0
       - name: Upload the netty jars
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
