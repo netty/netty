@@ -249,7 +249,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         switch (messageType) {
             case PUBLISH:
                 if (qosLevel == 3) {
-                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal QOS Level in fixed header of PUBLISH message ("
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal QOS Level in fixed header of PUBLISH message ("
                             + qosLevel + ')');
                 }
                 break;
@@ -262,7 +263,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 1) {
-                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal QOS Level in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal QOS Level in fixed header of " + messageType
                             + " message, must be 1, found " + qosLevel);
                 }
                 if (retain) {
@@ -287,7 +289,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 0) {
-                    throw new MqttDecoderException(MALFORMED_PACKET, "Illegal BIT 2 or 1 in fixed header of " + messageType
+                    throw new MqttDecoderException(MALFORMED_PACKET,
+                            "Illegal BIT 2 or 1 in fixed header of " + messageType
                             + " message, must be 0, found " + qosLevel);
                 }
                 if (retain) {
@@ -296,7 +299,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 }
                 break;
             default:
-                throw new MqttDecoderException(MALFORMED_PACKET, "Unknown message type, do not know how to validate fixed header");
+                throw new MqttDecoderException(MALFORMED_PACKET,
+                        "Unknown message type, do not know how to validate fixed header");
         }
 
         int remainingLength = parseRemainingLength(buffer, messageType, maxAllowedRemainingBytes);
@@ -367,7 +371,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 return null;
             default:
                 //shouldn't reach here
-                throw new MqttDecoderException(MALFORMED_PACKET, "Unknown message type: " + mqttFixedHeader.messageType());
+                throw new MqttDecoderException(MALFORMED_PACKET,
+                        "Unknown message type: " + mqttFixedHeader.messageType());
         }
     }
 
@@ -538,7 +543,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         final MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(ctx);
         final Result<String> decodedTopic = decodeString(buffer, maxAllowedRemainingBytes);
         if (!isValidPublishTopicName(decodedTopic.value)) {
-            throw new MqttDecoderException(TOPIC_NAME_INVALID, "invalid publish topic name: " + decodedTopic.value + " (contains wildcards)");
+            throw new MqttDecoderException(TOPIC_NAME_INVALID,
+                    "invalid publish topic name: " + decodedTopic.value + " (contains wildcards)");
         }
         int numberOfBytesConsumed = decodedTopic.numberOfBytesConsumed;
         maxAllowedRemainingBytes -= decodedTopic.numberOfBytesConsumed;
@@ -768,7 +774,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private void validateNoBytesRemain(int numberOfBytesConsumed) {
         bytesRemainingInVariablePart -= numberOfBytesConsumed;
         if (bytesRemainingInVariablePart != 0) {
-            throw new MqttDecoderException(MALFORMED_PACKET, 
+            throw new MqttDecoderException(MALFORMED_PACKET,
                     "non-zero remaining payload bytes: " +
                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
         }
@@ -1021,7 +1027,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 // are left in the Properties field. MQTT 5.0 section 2.2.2.2 states a Property
                 // whose value is not of the specified data type is a Malformed Packet, so reject
                 // it instead of letting the read spill into the following packet section.
-                throw new MqttDecoderException(MALFORMED_PACKET, 
+                throw new MqttDecoderException(MALFORMED_PACKET,
                     "MQTT5 property overran declared Property Length: propertyId=" + propertyIdValue);
             }
         }
