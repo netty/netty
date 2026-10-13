@@ -496,7 +496,12 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         Object chunkA = anyChunkOf(bufs.get(0));
         Object chunkB = anyChunkOf(bufs.get(perChunk));
         Object chunkC = anyChunkOf(bufs.get(2 * perChunk));
-        assumeTrue(chunkA != chunkB && chunkB != chunkC, "one chunk per " + perChunk + " buffers");
+        if (chunkA == chunkB || chunkB == chunkC) {
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+            fail("one chunk per " + perChunk + " buffers");
+        }
 
         // A is left with one free block; B with four neighbours, which merge into a block four times as large.
         bufs.get(0).release();
@@ -1225,7 +1230,10 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         BuddyHeld b = new BuddyHeld();
         b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));
         b.perChunk = (int) (allocator.usedHeapMemory() / BUDDY_NOTE_SIZE);
-        assumeTrue(b.perChunk >= 2, "a buddy chunk holds " + b.perChunk + " buffers");
+        if (b.perChunk < 2) {
+            b.held.get(0).release();
+            fail("a buddy chunk holds " + b.perChunk + " buffers");
+        }
         // fullChunks full, and one more block that opens the chunk the magazine allocates from next.
         while (b.held.size() < fullChunks * b.perChunk + 1) {
             b.held.add(allocator.heapBuffer(BUDDY_NOTE_SIZE, BUDDY_NOTE_SIZE));

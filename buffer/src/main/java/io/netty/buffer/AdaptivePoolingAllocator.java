@@ -164,9 +164,9 @@ final class AdaptivePoolingAllocator {
      * class of its heap, including the idle ones that no longer allocate. Default: 4. Read from
      * {@code io.netty.allocator.chunkPurgePollsThreadLocal} when only that, its former name, is set.
      */
-    static final long CHUNK_PURGE_INTERVAL = Math.max(1, SystemPropertyUtil.getLong(
+    static final long CHUNK_PURGE_INTERVAL = Math.min(Integer.MAX_VALUE, Math.max(1, SystemPropertyUtil.getLong(
             "io.netty.allocator.chunkPurgeInterval",
-            SystemPropertyUtil.getLong("io.netty.allocator.chunkPurgePollsThreadLocal", 4L)));
+            SystemPropertyUtil.getLong("io.netty.allocator.chunkPurgePollsThreadLocal", 4L))));
 
     /**
      * {@code io.netty.allocator.magazineBufferQueueCapacity}: how many {@link AdaptiveByteBuf} instances a stripe, and
@@ -233,12 +233,6 @@ final class AdaptivePoolingAllocator {
     };
 
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
-    /**
-     * The smallest block a {@link BuddyTree} hands out: the smallest power of two above the largest size class, which
-     * is the smallest block the buddy path is ever asked for, since every request up to that class is a segment.
-     */
-    static final int BUDDY_MIN_BLOCK_SIZE =
-            MathUtil.safeFindNextPositivePowerOfTwo(SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] + 1);
     private static final byte[] SIZE_INDEXES = new byte[SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32 + 1];
 
     /**
@@ -278,6 +272,13 @@ final class AdaptivePoolingAllocator {
     /** Number of size classes that are pooled: all of them, except in low-memory mode. */
     private static final int POOLED_SIZE_CLASSES_COUNT =
             IS_LOW_MEM ? sizeClassIndexOf(LOW_MEM_MAX_SIZE_CLASS) + 1 : SIZE_CLASSES_COUNT;
+
+    /**
+     * The smallest block a {@link BuddyTree} hands out: the smallest power of two above the largest pooled size class,
+     * since every request up to that class is a segment.
+     */
+    static final int BUDDY_MIN_BLOCK_SIZE =
+            MathUtil.safeFindNextPositivePowerOfTwo(SIZE_CLASSES[POOLED_SIZE_CLASSES_COUNT - 1] + 1);
 
     private final ChunkAllocator chunkAllocator;
     private final ChunkRegistry chunkRegistry;
