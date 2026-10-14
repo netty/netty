@@ -65,7 +65,7 @@ final class OpenSslKeyMaterialManager {
         // signature algorithms instead. This is consistent with what OpenJDK does:
         // https://github.com/openjdk/jdk/blob/jdk-26-ga/
         // src/java.base/share/classes/sun/security/ssl/CertificateMessage.java#L995-L1029
-        if (engine.isTLSv13()) {
+        if (engine.isTLSv13() && engine instanceof ExtendedSSLSession) {
             ExtendedSSLSession session = (ExtendedSSLSession) engine.getHandshakeSession();
             int seenTypes = 0;
             for (String algorithm : session.getPeerSupportedSignatureAlgorithms()) {
