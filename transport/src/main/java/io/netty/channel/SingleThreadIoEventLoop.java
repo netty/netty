@@ -27,6 +27,7 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -52,7 +53,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             assert inEventLoop();
             // Don't block if we are about to suspend but the IoHandler still needs to process cancelled
             // registrations, as otherwise we would never suspend.
-            return !hasTasks() && !hasScheduledTasks() && (cancelledRegistrations.get() == 0 || !isSuspended());
+            return !hasTasks() && !hasScheduledTasks() && (!cancelledRegistration.get() || !isSuspended());
         }
 
         @Override
@@ -85,10 +86,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private final AtomicInteger numRegistrations = new AtomicInteger();
 
-    // The number of registrations that were cancelled since the IoHandler did run the last time. We must not suspend
-    // before the IoHandler did process these, as for example NIO only closes the file descriptor of a channel that was
+    // Set when a registration was cancelled since the IoHandler did run the last time. We must not suspend before the
+    // IoHandler did process the cancellation, as for example NIO only closes the file descriptor of a channel that was
     // closed while still registered during the next select operation.
-    private final AtomicInteger cancelledRegistrations = new AtomicInteger();
+    private final AtomicBoolean cancelledRegistration = new AtomicBoolean();
 
     /**
      *  Creates a new instance
@@ -267,7 +268,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     protected boolean canSuspend(int state) {
         // We should only allow to suspend if there are no registrations on this loop atm.
-        return super.canSuspend(state) && numRegistrations.get() == 0 && cancelledRegistrations.get() == 0;
+        return super.canSuspend(state) && numRegistrations.get() == 0 && !cancelledRegistration.get();
     }
 
     /**
@@ -278,15 +279,13 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      */
     protected int runIo() {
         assert inEventLoop();
-        int cancelled = cancelledRegistrations.get();
-        try {
-            return ioHandler.run(context);
-        } finally {
-            if (cancelled != 0) {
-                // The IoHandler did process these cancellations.
-                cancelledRegistrations.addAndGet(-cancelled);
-            }
+        // Clear the flag before running the IoHandler, so the run below processes every cancellation that happened
+        // until now, while a cancellation that happens during the run (for example from another thread) sets the
+        // flag again and is processed by the next run.
+        if (cancelledRegistration.get()) {
+            cancelledRegistration.set(false);
         }
+        return ioHandler.run(context);
     }
 
     @Override
@@ -380,7 +379,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         @Override
         public boolean cancel() {
             if (registration.cancel()) {
-                cancelledRegistrations.incrementAndGet();
+                cancelledRegistration.set(true);
                 numRegistrations.decrementAndGet();
                 return true;
             }
