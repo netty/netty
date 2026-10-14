@@ -1373,8 +1373,8 @@ public class LocalChannelTest {
         final CountDownLatch releaseWriteListener = new CountDownLatch(1);
         final CountDownLatch dataReceived = new CountDownLatch(1);
         final CountDownLatch clientInactive = new CountDownLatch(1);
-        final AtomicReference<Boolean> receivedBeforeInactive = new AtomicReference<>();
-        final BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+        final AtomicReference<Boolean> receivedBeforeInactive = new AtomicReference<Boolean>();
+        final BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<LocalChannel>();
 
         ServerBootstrap sb = new ServerBootstrap()
                 .group(group1, group2)
