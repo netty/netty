@@ -47,6 +47,7 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -60,6 +61,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PkiTestingTlsTest {
@@ -255,8 +257,9 @@ public class PkiTestingTlsTest {
                 .protocols("TLSv1.3")
                 .build();
 
-        assertThrows(SSLException.class, () -> testTlsConnection(
+        CompletionException ex = assertThrows(CompletionException.class, () -> testTlsConnection(
                 serverContext, clientContext, null, new String[] {"ecdsa_secp256r1_sha256"}));
+        assertInstanceOf(SSLException.class, ex.getCause());
     }
 
     /**
