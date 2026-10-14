@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -27,6 +28,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.PromiseNotifier;
 
 import java.util.List;
 
@@ -243,9 +245,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 // promise that handshaker.close() will complete on its own — if closeSent was
                 // already resolved by an earlier close frame write, PromiseNotifier would mark
                 // this promise done before the write finishes, causing "promise already done".
-                ChannelPromise writePromise = ctx.newPromise();
-                closeSent(writePromise.unvoid());
-                handshaker.close(ctx, (CloseWebSocketFrame) frame, ctx.newPromise());
+                // We instead create our own closeSent promise that handshaker.close() completion
+                // will cascade into, while giving handshaker.close() a fresh promise that is
+                // guaranteed not to be pre-resolved.
+                ChannelPromise closeSentPromise = ctx.newPromise();
+                closeSent(closeSentPromise.unvoid());
+                ChannelFuture closeFuture = handshaker.close(ctx, (CloseWebSocketFrame) frame, ctx.newPromise());
+                closeFuture.addListener(new PromiseNotifier<Void, ChannelFuture>(false, closeSentPromise));
                 // handshaker.close() bypasses this handler's own write()/flush() overrides (it writes
                 // directly on ctx), so the force-close timeout must be armed explicitly here. Doing so
                 // after the close0() write-and-flush attempt above mirrors close()'s ordering and avoids
