@@ -141,7 +141,6 @@ final class OpenSslKeyMaterialManager {
         return 0;
     }
 
-
     private static String keyTypeString(int typeBit) {
         switch (typeBit) {
             case TYPE_RSA: return KEY_TYPE_RSA;
