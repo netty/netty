@@ -725,14 +725,19 @@ public final class IoUringIoHandler implements IoHandler {
 
         void handle(int res, int flags, byte op, long userData, ByteBuffer extraCqeData) {
             event.update(res, flags, op, userData, extraCqeData);
-            handle.handle(this, event);
-            // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
-            // receive more completions for the intial request.
-            if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
-                // No more outstanding completions, remove the registration now.
-                removeLater = false;
-                pendingRemovals--;
-                remove();
+            try {
+                handle.handle(this, event);
+            } finally {
+                // Do this even if handle(...) threw, as otherwise the registration would never be removed and the
+                // event loop could never suspend (see hasPendingCancellations()).
+                // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we
+                // will receive more completions for the intial request.
+                if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
+                    // No more outstanding completions, remove the registration now.
+                    removeLater = false;
+                    pendingRemovals--;
+                    remove();
+                }
             }
         }
     }

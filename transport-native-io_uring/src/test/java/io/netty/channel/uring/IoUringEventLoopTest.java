@@ -165,13 +165,64 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
         }
     }
 
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCancelledRegistrationWithThrowingCompletionBeforeSuspend() throws Exception {
+        PollHandle handle = new PollHandle(true);
+        Semaphore loopThreadExited = new Semaphore(0);
+        Executor executor = task -> new Thread(() -> {
+            try {
+                task.run();
+            } finally {
+                loopThreadExited.release();
+            }
+        }).start();
+        // The loop thread changes when the loop is resumed, so we can't use a single issuer ring.
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, executor,
+                IoUringIoHandler.newFactory(new IoUringIoHandlerConfig().setSingleIssuer(false)));
+        FileDescriptor eventFd = Native.newBlockingEventFd();
+        try {
+            SingleThreadIoEventLoop loop = (SingleThreadIoEventLoop) group.next();
+            IoRegistration registration = loop.register(handle).syncUninterruptibly().getNow();
+            registration.submit(IoUringIoOps.newPollAdd(eventFd.intValue(), (byte) 0, Native.POLLIN, 0, (short) 1));
+
+            assertTrue(loop.trySuspend());
+            assertTrue(loop.submit(registration::cancel).syncUninterruptibly().getNow());
+
+            // Even though the handle throws while handling the last outstanding completion, the registration must
+            // be removed and the loop must suspend.
+            Native.eventFdWrite(eventFd.intValue(), 1L);
+            assertTrue(handle.completed.await(5, TimeUnit.SECONDS));
+            assertTrue(handle.unregistered.await(5, TimeUnit.SECONDS));
+            assertTrue(loopThreadExited.tryAcquire(5, TimeUnit.SECONDS));
+            assertTrue(loop.isSuspended());
+        } finally {
+            // Complete the poll in any case, as otherwise the shutdown would wait for it forever.
+            Native.eventFdWrite(eventFd.intValue(), 1L);
+            group.shutdownGracefully().syncUninterruptibly();
+            eventFd.close();
+        }
+    }
+
     private static final class PollHandle implements IoUringIoHandle {
         final CountDownLatch completed = new CountDownLatch(1);
         final CountDownLatch unregistered = new CountDownLatch(1);
+        private final boolean throwOnCompletion;
+
+        PollHandle() {
+            this(false);
+        }
+
+        PollHandle(boolean throwOnCompletion) {
+            this.throwOnCompletion = throwOnCompletion;
+        }
 
         @Override
         public void handle(IoRegistration registration, IoEvent ioEvent) {
             completed.countDown();
+            if (throwOnCompletion) {
+                throw new IllegalStateException("expected by the test");
+            }
         }
 
         @Override
