@@ -1259,15 +1259,16 @@ public class DnsNameResolver extends InetNameResolver {
             return tryCachedSuccess(promise, cachedEntries, resolvedInternetProtocolFamilies);
         }
 
-        if (searchDomains != null && ndots != 0 && !StringUtil.endsWith(hostname, '.')) {
+        boolean resolvedWithSearchDomains = searchDomains != null && ndots > 0 && !StringUtil.endsWith(hostname, '.');
+        if (resolvedWithSearchDomains) {
             for (String searchDomain : searchDomains) {
                 final String initialHostname = hostname + '.' + searchDomain;
-                cachedEntries = resolveCache.get(initialHostname, additionals);
-                // Skip negative entries: a cached NXDOMAIN for <host>.<searchDomain> only tells us
-                // that this one permutation does not exist. It says nothing about later search
-                // domains, so keep walking until we find a positive entry or run out of domains.
-                if (hasEntries(cachedEntries) && cachedEntries.get(0).cause() == null) {
-                    return tryCachedSuccess(promise, cachedEntries, resolvedInternetProtocolFamilies);
+                final List<? extends DnsCacheEntry> entries = resolveCache.get(initialHostname, additionals);
+                // Only a positive cache entry lets us draw a conclusion about the bare hostname. A negative entry
+                // just means that this specific search domain permutation does not exist, which must neither
+                // short-circuit the remaining search domains nor the lookup of the bare hostname itself.
+                if (hasEntries(entries) && entries.get(0).cause() == null) {
+                    return tryCachedSuccess(promise, entries, resolvedInternetProtocolFamilies);
                 }
             }
         }
