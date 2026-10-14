@@ -15,6 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
+
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -81,22 +84,9 @@ final class OpenSslKeyMaterialManager {
         // signature algorithms instead. This is consistent with what OpenJDK does:
         // https://github.com/openjdk/jdk/blob/jdk-26-ga/
         // src/java.base/share/classes/sun/security/ssl/CertificateMessage.java#L995-L1029
-        if (engine.isTLSv13() && engine.getHandshakeSession() instanceof ExtendedSSLSession) {
-            ExtendedSSLSession session = (ExtendedSSLSession) engine.getHandshakeSession();
-            int seenTypes = 0;
-            for (String algorithm : session.getPeerSupportedSignatureAlgorithms()) {
-                int typeBit = resolveSignatureAlgorithmKeyTypeBit(algorithm);
-                if (typeBit == 0 || (seenTypes & typeBit) != 0) {
-                    continue;
-                }
-
-                seenTypes |= typeBit; // mark as seen
-
-                String alias = chooseServerAlias(engine, keyTypeString(typeBit));
-                if (alias != null) {
-                    setKeyMaterial(engine, alias);
-                    return;
-                }
+        if (engine.isTLSv13() && PlatformDependent.javaVersion() >= 7) {
+            if (setKeyMaterialServerSideTLS13(engine)) {
+                return;
             }
         }
 
@@ -126,6 +116,29 @@ final class OpenSslKeyMaterialManager {
         }
         throw new SSLHandshakeException("Unable to find key material for auth method(s): "
                 + Arrays.toString(authMethods));
+    }
+
+    @SuppressJava6Requirement(reason = "guarded by java version check")
+    private boolean setKeyMaterialServerSideTLS13(ReferenceCountedOpenSslEngine engine) throws SSLException {
+        if (engine.getHandshakeSession() instanceof ExtendedSSLSession) {
+            ExtendedSSLSession session = (ExtendedSSLSession) engine.getHandshakeSession();
+            int seenTypes = 0;
+            for (String algorithm : session.getPeerSupportedSignatureAlgorithms()) {
+                int typeBit = resolveSignatureAlgorithmKeyTypeBit(algorithm);
+                if (typeBit == 0 || (seenTypes & typeBit) != 0) {
+                    continue;
+                }
+
+                seenTypes |= typeBit; // mark as seen
+
+                String alias = chooseServerAlias(engine, keyTypeString(typeBit));
+                if (alias != null) {
+                    setKeyMaterial(engine, alias);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static int resolveSignatureAlgorithmKeyTypeBit(String algorithm) {
