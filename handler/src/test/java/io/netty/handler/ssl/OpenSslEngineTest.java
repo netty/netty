@@ -1164,11 +1164,39 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testSNIMatchersWithInvalidRequestedSNIName(SSLEngineTestParam param) throws Exception {
+        byte[] name = "example.com".getBytes(CharsetUtil.UTF_8);
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                        .sslProvider(sslServerProvider())
+                                        .protocols(param.protocols())
+                                        .ciphers(param.ciphers())
+                                        .build());
+
+        SSLEngine engine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            SSLParameters parameters = new SSLParameters();
+            Java8SslTestUtils.setSNIMatcher(parameters, name);
+            engine.setSSLParameters(parameters);
+            // SNIHostName rejects names with a trailing dot or an empty label, this must not throw.
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("example.com."));
+            assertFalse(unwrapEngine(engine).checkSniHostnameMatch("example..com"));
+            assertTrue(unwrapEngine(engine).checkSniHostnameMatch("example.com"));
+        } finally {
+            cleanupServerSslEngine(engine);
+        }
+    }
+
     @CsvSource({
             "TLSv1.2, host_name.example.com, false",
             "TLSv1.3, host_name.example.com, false",
             "TLSv1.2, HostName.Example.COM, true",
             "TLSv1.3, HostName.Example.COM, true",
+            // always rejected by the SNIHostName byte constructor (empty label)
+            "TLSv1.2, example..com, false",
+            "TLSv1.3, example..com, false",
             "TLSv1.2, , false",
             "TLSv1.3, , false"
     })
