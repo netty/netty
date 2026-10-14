@@ -378,7 +378,12 @@ public class RedisDecoderTest {
 
     @Test
     public void shouldRejectLineFeedWithoutCarriageReturn() {
-        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("+\nab")))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeInbound(byteBufOf("+\nab"));
+            }
+        })
                 .isInstanceOf(DecoderException.class)
                 .cause()
                 .isInstanceOf(RedisCodecException.class)
@@ -388,7 +393,12 @@ public class RedisDecoderTest {
     @Test
     public void shouldRejectInlineCommandStartingWithLineFeed() {
         channel = newChannel(true);
-        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("\nab")))
+        assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+            @Override
+            public void call() throws Throwable {
+                channel.writeInbound(byteBufOf("\nab"));
+            }
+        })
                 .isInstanceOf(DecoderException.class)
                 .cause()
                 .isInstanceOf(RedisCodecException.class)
