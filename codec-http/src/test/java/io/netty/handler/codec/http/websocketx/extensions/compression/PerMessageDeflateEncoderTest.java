@@ -310,21 +310,24 @@ public class PerMessageDeflateEncoderTest {
     }
 
     @Test
-    public void testCodecExceptionForNotFinEmptyFrame() {
+    public void testEmptyNotFinFramePassesThrough() {
         final EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
 
         final TextWebSocketFrame emptyNotFinFrame = new TextWebSocketFrame(false, 0, "");
 
         try {
-            assertThrows(EncoderException.class, new Executable() {
-                @Override
-                public void execute() {
-                    encoderChannel.writeOutbound(emptyNotFinFrame);
-                }
-            });
+            // Empty non-final fragments pass through without compression (per RFC 7692, the
+            // decoder accepts empty payloads without special handling).
+            assertTrue(encoderChannel.writeOutbound(emptyNotFinFrame));
+            Object outbound = encoderChannel.readOutbound();
+            assertTrue(outbound instanceof TextWebSocketFrame);
+            TextWebSocketFrame result = (TextWebSocketFrame) outbound;
+            // Verify the frame is not compressed (unmodified pass-through).
+            assertFalse(result.isFinalFragment());
+            assertEquals(0, result.rsv());
+            assertEquals(0, result.content().readableBytes());
+            result.release();
         } finally {
-            // EmptyByteBuf buffer
-            assertFalse(emptyNotFinFrame.release());
             assertFalse(encoderChannel.finish());
         }
     }
