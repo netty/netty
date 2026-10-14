@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.IoHandle;
@@ -108,9 +108,9 @@ public class IoUringSendmsgZCIovTest {
                 .group(group)
                 .channel(IoUringSocketChannel.class)
                 .option(ChannelOption.AUTO_READ, false)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .connect(server.localAddress())
-                .sync().channel();
+                .sync().getNow();
     }
 
     private static ServerChannel server(MultiThreadIoEventLoopGroup group) throws InterruptedException {
@@ -123,7 +123,7 @@ public class IoUringSendmsgZCIovTest {
                 }
             })
             .bind(0)
-            .sync().channel();
+            .sync().getNow();
     }
 
     private static int sendmsgIovLength(IoUringIoOps ops) {
