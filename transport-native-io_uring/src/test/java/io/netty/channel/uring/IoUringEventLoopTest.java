@@ -18,18 +18,26 @@ package io.netty.channel.uring;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.SingleThreadIoEventLoop;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -107,6 +115,73 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
             loop.schedule(EMPTY_RUNNABLE, 1, TimeUnit.SECONDS).sync();
         } finally {
             group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCancelledRegistrationWithOutstandingCompletionBeforeSuspend() throws Exception {
+        PollHandle handle = new PollHandle();
+        Semaphore loopThreadExited = new Semaphore(0);
+        AtomicBoolean unregisteredBeforeExit = new AtomicBoolean();
+        Executor executor = task -> new Thread(() -> {
+            try {
+                task.run();
+            } finally {
+                unregisteredBeforeExit.set(handle.unregistered.getCount() == 0);
+                loopThreadExited.release();
+            }
+        }).start();
+        // The loop thread changes when the loop is resumed, so we can't use a single issuer ring.
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, executor,
+                IoUringIoHandler.newFactory(new IoUringIoHandlerConfig().setSingleIssuer(false)));
+        FileDescriptor eventFd = Native.newBlockingEventFd();
+        try {
+            SingleThreadIoEventLoop loop = (SingleThreadIoEventLoop) group.next();
+            IoRegistration registration = loop.register(handle).syncUninterruptibly().getNow();
+            // A poll on the eventfd only completes once we write to it, so the registration has an outstanding
+            // completion until then.
+            registration.submit(IoUringIoOps.newPollAdd(eventFd.intValue(), (byte) 0, Native.POLLIN, 0, (short) 1));
+
+            // The loop will only suspend once the handle is not registered anymore.
+            assertTrue(loop.trySuspend());
+            assertTrue(loop.submit(registration::cancel).syncUninterruptibly().getNow());
+
+            // The registration can only be removed once the poll completed, so the loop must not suspend before.
+            assertFalse(loopThreadExited.tryAcquire(500, TimeUnit.MILLISECONDS));
+            assertFalse(handle.unregistered.await(0, TimeUnit.MILLISECONDS));
+
+            Native.eventFdWrite(eventFd.intValue(), 1L);
+            assertTrue(handle.completed.await(5, TimeUnit.SECONDS));
+            assertTrue(handle.unregistered.await(5, TimeUnit.SECONDS));
+            loopThreadExited.acquire();
+            assertTrue(loop.isSuspended());
+            assertTrue(unregisteredBeforeExit.get());
+        } finally {
+            // Complete the poll in any case, as otherwise the shutdown would wait for it forever.
+            Native.eventFdWrite(eventFd.intValue(), 1L);
+            group.shutdownGracefully().syncUninterruptibly();
+            eventFd.close();
+        }
+    }
+
+    private static final class PollHandle implements IoUringIoHandle {
+        final CountDownLatch completed = new CountDownLatch(1);
+        final CountDownLatch unregistered = new CountDownLatch(1);
+
+        @Override
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
+            completed.countDown();
+        }
+
+        @Override
+        public void unregistered() {
+            unregistered.countDown();
+        }
+
+        @Override
+        public void close() {
+            // Noop
         }
     }
 }

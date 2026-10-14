@@ -52,6 +52,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             assert inEventLoop();
             // Don't block if we are about to suspend but the IoHandler still needs to process cancelled
             // registrations, as otherwise we would never suspend.
+            // IoHandler.hasPendingCancellations() is not checked here on purpose: the handler waits for IO to
+            // complete in this case (for example io_uring completions of operations that were submitted before the
+            // cancellation), and that IO wakes up a blocking run. Not blocking would only make the loop spin until
+            // it completes.
             return !hasTasks() && !hasScheduledTasks() && (cancelledRegistrations == 0 || !isSuspended());
         }
 
@@ -266,8 +270,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     @Override
     protected boolean canSuspend(int state) {
-        // We should only allow to suspend if there are no registrations on this loop atm.
-        return super.canSuspend(state) && numRegistrations.get() == 0 && cancelledRegistrations == 0;
+        // We should only allow to suspend if there are no registrations on this loop atm, and the IoHandler is done
+        // with the registrations that were cancelled.
+        return super.canSuspend(state) && numRegistrations.get() == 0 && cancelledRegistrations == 0
+                && !ioHandler.hasPendingCancellations();
     }
 
     /**
