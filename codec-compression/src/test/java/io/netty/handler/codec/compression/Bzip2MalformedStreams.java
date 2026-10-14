@@ -58,6 +58,41 @@ final class Bzip2MalformedStreams {
         return out.toByteArray();
     }
 
+    /**
+     * A stream whose Huffman table starts the code-length delta coding at 31, which is outside the
+     * valid range (1..23). The length is written straight into the per-table code-length array and
+     * later used to index the code-base array (sized for lengths up to 23), so an unvalidated value
+     * drives that index out of bounds.
+     */
+    static byte[] codeLengthOutOfRange() {
+        BitWriter bits = new BitWriter();
+        bits.writeBit(0);            // randomised = false
+        bits.writeBits(0, 24);       // bwtStartPointer
+        bits.writeBits(0x0001, 16);  // huffmanInUse16: only the range 0xF0-0xFF is in use
+        bits.writeBits(0x8000, 16);  // symbol sub-bitmap: only 0xF0 is used -> alphabet size 3
+        bits.writeBits(2, 3);        // totalTables = 2
+        bits.writeBits(1, 15);       // totalSelectors = 1
+        bits.writeBit(0);            // unary-coded selector index = 0 (valid)
+        // Huffman code lengths for 2 tables of 3 symbols each. Each table starts the delta coding
+        // at 31 and never alters it, so every code length is 31 (out of the valid 1..23 range).
+        for (int table = 0; table < 2; table++) {
+            bits.writeBits(31, 5);   // start_huffman_length = 31
+            for (int symbol = 0; symbol < 3; symbol++) {
+                bits.writeBit(0);    // 0 => commit current length without alteration
+            }
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        writeMedium(out, MAGIC_NUMBER);
+        out.write('1');              // block size digit
+        writeMedium(out, BLOCK_HEADER_MAGIC_1);
+        writeMedium(out, BLOCK_HEADER_MAGIC_2);
+        writeInt(out, 0);            // block CRC (irrelevant, the fault triggers earlier)
+        byte[] bitBytes = bits.toByteArray();
+        out.write(bitBytes, 0, bitBytes.length);
+        return out.toByteArray();
+    }
+
     private static void writeMedium(ByteArrayOutputStream out, int value) {
         out.write(value >>> 16);
         out.write(value >>> 8);
