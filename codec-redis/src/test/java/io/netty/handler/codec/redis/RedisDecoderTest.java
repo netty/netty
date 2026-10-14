@@ -23,7 +23,6 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
-import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -347,6 +346,25 @@ public class RedisDecoderTest {
         assertFalse(channel.writeInbound(buf));
 
         assertThrows(DecoderException.class, () -> channel.writeInbound(byteBufOf("1")));
+    }
+
+    @Test
+    public void shouldRejectLineFeedWithoutCarriageReturn() {
+        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("+\nab")))
+                .isInstanceOf(DecoderException.class)
+                .cause()
+                .isInstanceOf(RedisCodecException.class)
+                .hasNoCause();
+    }
+
+    @Test
+    public void shouldRejectInlineCommandStartingWithLineFeed() {
+        channel = newChannel(true);
+        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("\nab")))
+                .isInstanceOf(DecoderException.class)
+                .cause()
+                .isInstanceOf(RedisCodecException.class)
+                .hasNoCause();
     }
 
     @Test
