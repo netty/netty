@@ -22,7 +22,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -45,6 +44,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -309,7 +309,7 @@ public class ParameterizedSslHandlerTest {
             byte[] bytes = new byte[40000];
             ThreadLocalRandom.current().nextBytes(bytes);
             // The handshake is not done yet, so the SSLEngine can not consume any of the data.
-            ChannelFuture writeFuture = client.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+            Future<Void> writeFuture = client.writeAndFlush(Unpooled.wrappedBuffer(bytes));
             assertFalse(writeFuture.isDone());
 
             while (forward(client, server) | forward(server, client)) {
@@ -343,7 +343,7 @@ public class ParameterizedSslHandlerTest {
         }
     }
 
-    private static boolean forward(EmbeddedChannel from, EmbeddedChannel to) {
+    private static boolean forward(EmbeddedChannel from, EmbeddedChannel to) throws Exception {
         boolean forwarded = false;
         for (;;) {
             Object msg = from.readOutbound();
