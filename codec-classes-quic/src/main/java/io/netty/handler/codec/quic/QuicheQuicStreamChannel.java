@@ -578,9 +578,20 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             } else {
                 deregister(voidPromise(), true);
             }
-            if (readable) {
+            // If we are in recv() already, it drops what is left once the loop is done and the parent flushes after
+            // it processed the received packets.
+            if (readable && !inRecv) {
                 // Drop what is left to read, see recv().
                 recv();
+
+                // As the stream was readable, and we called recv() ourselves we also need to call
+                // connectionSendAndFlush(). This is needed as recv() consumes data and so a window update frame
+                // might be produced. If close() was not triggered while processing received packets (for example
+                // by a timeout or a cancellation from another task) nobody else will send it. If we miss to call
+                // connectionSendAndFlush() the remote peer may not learn about the new credit and so might never
+                // send more data, on this stream or on the connection.
+                // See also https://docs.rs/quiche/latest/quiche/struct.Connection.html#method.send.
+                parent().connectionSendAndFlush();
             }
         }
 
