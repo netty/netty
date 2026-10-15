@@ -2298,6 +2298,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public long memoryAddress() {
             ensureAccessible();
+            if (!hasMemoryAddress) {
+                throw new UnsupportedOperationException();
+            }
             return rootParent().memoryAddress() + startIndex;
         }
 
