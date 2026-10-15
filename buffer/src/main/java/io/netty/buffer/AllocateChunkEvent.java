@@ -22,7 +22,8 @@ import jdk.jfr.Name;
 @SuppressWarnings("Since15")
 @Name(AllocateChunkEvent.NAME)
 @Label("Chunk Allocation")
-@Description("Triggered when a new memory chunk is allocated for an allocator")
+@Description("Triggered when an allocator allocates a new memory chunk; a chunk rebuilt from memory the allocator "
+        + "still holds does not trigger it")
 final class AllocateChunkEvent extends AbstractChunkEvent {
     static final String NAME = "io.netty.AllocateChunk";
     private static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();

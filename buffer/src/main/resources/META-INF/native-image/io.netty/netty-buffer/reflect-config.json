@@ -40,6 +40,30 @@
     ]
   },
   {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueConsumerIndexField",
+    "fields": [
+      {
+        "name": "consumerIndex"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerIndexField",
+    "fields": [
+      {
+        "name": "producerIndex"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerLimitField",
+    "fields": [
+      {
+        "name": "producerLimit"
+      }
+    ]
+  },
+  {
     "name": "io.netty.buffer.AbstractByteBufAllocator",
     "queryAllDeclaredMethods": true
   },
@@ -52,18 +76,34 @@
     ]
   },
   {
-    "name": "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
+    "name": "io.netty.buffer.AdaptivePoolingAllocator",
     "fields": [
       {
-        "name": "refCnt"
+        "name": "stripeScanLength"
       }
     ]
   },
   {
-    "name": "io.netty.buffer.AdaptivePoolingAllocator$Magazine",
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
     "fields": [
       {
-        "name": "nextInLine"
+        "name": "pendingNext"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$PendingChunks",
+    "fields": [
+      {
+        "name": "head"
+      }
+    ]
+  },
+  {
+    "name": "io.netty.buffer.AdaptivePoolingAllocator$SizeClassedChunk",
+    "fields": [
+      {
+        "name": "state"
       }
     ]
   },
