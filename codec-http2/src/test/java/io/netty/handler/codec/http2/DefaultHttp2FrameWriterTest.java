@@ -154,7 +154,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @ParameterizedTest
     @ValueSource(ints = {-1, MAX_PADDING + 1})
-    public void writeHeadersRejectsInvalidPadding(int padding) {
+    public void writeHeadersRejectsInvalidPadding(final int padding) {
         final int streamId = 1;
         final Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
