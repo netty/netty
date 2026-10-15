@@ -309,14 +309,14 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         final HAProxyTLV.Type type = HAProxyTLV.Type.typeForByteValue(typeAsByte);
 
         final int length = header.readUnsignedShort();
+        if (length > header.readableBytes()) {
+            throw new HAProxyProtocolException("TLV length must be smaller or equal the readable bytes (" +
+                    header.readableBytes() + ") but was: " + length);
+        }
         switch (type) {
         case PP2_TYPE_SSL:
             if (length < 5) {
                 throw new HAProxyProtocolException("TLV length must be at least 5 but was: " + length);
-            }
-            if (length > header.readableBytes()) {
-                throw new HAProxyProtocolException("TLV length must be smaller or equal the readable bytes (" +
-                        header.readableBytes() + ") but was: " + length);
             }
             // Slice the rawContent but only retain it if we didn't see an error as otherwise we might
             // leak.
