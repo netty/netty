@@ -37,6 +37,7 @@ import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -331,6 +332,58 @@ public class QpackEncoderDecoderTest {
         verifyKnownReceivedCount(6);
         assertThat(decHeaders.size(), is(1));
         verifyDecodedHeader(oldEntry.name, oldEntry.value);
+    }
+
+    @Test
+    public void unacknowledgedEntryNotReferencedWithoutBlockedStreams() throws Exception {
+        setup(128, 0);
+        // The decoder does not acknowledge the insert (yet), e.g. the Insert Count Increment is still in flight.
+        stateSyncStrategyAckNextInsert = false;
+
+        encHeaders.add("foo", "bar");
+        encode(out, encHeaders);
+        assertThat(encDynamicTable.insertCount(), is(1));
+        decode(out, decHeaders);
+        verifyDecodedHeader("foo", "bar");
+
+        // SETTINGS_QPACK_BLOCKED_STREAMS is 0, so the next field section must not reference the entry that is not
+        // acknowledged yet, as the stream could become blocked.
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#section-2.1.2
+        resetState();
+        encHeaders.add("foo", "bar");
+        encode(out, encHeaders);
+        assertThat("Required Insert Count", out.getByte(0), is((byte) 0));
+        decode(out, decHeaders);
+        verifyDecodedHeader("foo", "bar");
+
+        // Once acknowledged the entry is used.
+        encoder.insertCountIncrement(1);
+        resetState();
+        encHeaders.add("foo", "bar");
+        encode(out, encHeaders);
+        verifyRequiredInsertCount(1);
+        assertThat("Required Insert Count", out.getByte(0), is((byte) (1 % (2 * maxEntries) + 1)));
+        decode(out, decHeaders);
+        verifyDecodedHeader("foo", "bar");
+    }
+
+    @Test
+    public void unacknowledgedEntryReferencesRespectMaxBlockedStreams() throws Exception {
+        setup(128, 2);
+
+        int sectionsReferencingUnacknowledgedEntries = 0;
+        for (int i = 0; i < 3; i++) {
+            resetState();
+            encHeaders.add("foo", "bar");
+            encode(out, encHeaders);
+            // Nothing was acknowledged by the decoder, so every field section with a Required Insert Count may
+            // block.
+            if (out.getByte(0) != 0) {
+                sectionsReferencingUnacknowledgedEntries++;
+            }
+        }
+        drainAllSuspendedEncoderInstructions();
+        assertThat(sectionsReferencingUnacknowledgedEntries, lessThanOrEqualTo(2));
     }
 
     private void testDynamicTableIndexed(CharSequence name, CharSequence value) throws Exception {
