@@ -359,7 +359,7 @@ public final class HttpConversionUtil {
          // HTTP/1.x object can still distinguish an Extended CONNECT request from a regular CONNECT request.
          boolean isConnect = isRequest && HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(inputHeaders.method());
          Http3ToHttpHeaderTranslator translator =
-                 new Http3ToHttpHeaderTranslator(streamId, outputHeaders, isRequest, isConnect);
+                 new Http3ToHttpHeaderTranslator(streamId, outputHeaders, isRequest, isConnect, isTrailer);
         try {
             translator.translateHeaders(inputHeaders);
         } catch (Http3Exception ex) {
@@ -778,6 +778,7 @@ public final class HttpConversionUtil {
         private final long streamId;
         private final HttpHeaders output;
         private final CharSequenceMap<AsciiString> translations;
+        private final boolean trailer;
 
         /**
          * Create a new instance
@@ -788,10 +789,14 @@ public final class HttpConversionUtil {
          * @param connect if {@code true}, translates headers using the CONNECT request translation map, which
          *        additionally preserves the ':path' and ':protocol' pseudo-headers of an Extended CONNECT
          *        (RFC 9220) request as extension headers. Ignored unless {@code request} is {@code true}.
+         * @param trailer if {@code true}, the headers are trailers, and fields that are not permitted in trailers
+         *        (see {@link #isPermittedTrailingHeader(CharSequence)}) are dropped.
          */
-        Http3ToHttpHeaderTranslator(long streamId, HttpHeaders output, boolean request, boolean connect) {
+        Http3ToHttpHeaderTranslator(long streamId, HttpHeaders output, boolean request, boolean connect,
+                boolean trailer) {
             this.streamId = streamId;
             this.output = output;
+            this.trailer = trailer;
             if (request) {
                 translations = connect ? CONNECT_REQUEST_HEADER_TRANSLATIONS : REQUEST_HEADER_TRANSLATIONS;
             } else {
@@ -824,6 +829,12 @@ public final class HttpConversionUtil {
                                 null);
                     }
                     if (HTTP3_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+                        continue;
+                    }
+                    if (trailer && !isPermittedTrailingHeader(name)) {
+                        // https://www.rfc-editor.org/rfc/rfc9110#section-6.5
+                        // Drop fields that are not permitted in trailers, like HttpObjectDecoder does, instead of
+                        // failing the whole stream when adding them to validating HTTP/1.x trailers.
                         continue;
                     }
                     if (COOKIE.equals(name)) {
@@ -860,6 +871,18 @@ public final class HttpConversionUtil {
             if (cookies != null) {
                 output.add(COOKIE, cookies.toString());
             }
+        }
+
+        /**
+         * Checks whether the given trailer field name is permitted per
+         * <a href="https://www.rfc-editor.org/rfc/rfc9110#section-6.5.1">RFC 9110 section 6.5.1</a>. This is the
+         * same set of fields that {@link io.netty.handler.codec.http.HttpObjectDecoder} drops from HTTP/1.x
+         * trailers.
+         */
+        private static boolean isPermittedTrailingHeader(CharSequence name) {
+            return !contentEqualsIgnoreCase(HttpHeaderNames.CONTENT_LENGTH, name) &&
+                    !contentEqualsIgnoreCase(HttpHeaderNames.TRANSFER_ENCODING, name) &&
+                    !contentEqualsIgnoreCase(HttpHeaderNames.TRAILER, name);
         }
     }
 
