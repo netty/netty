@@ -171,8 +171,11 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private static int parseInt(String text, int start, int end) {
         int result = 0;
         for (int i = start; i < end; i++) {
-            char ch = text.charAt(i);
-            result = result * 10 + toDecimal(ch);
+            int digit = toDecimal(text.charAt(i));
+            if (result > (Integer.MAX_VALUE - digit) / 10) {
+                throw new IllegalArgumentException("Invalid version number, too large: " + text);
+            }
+            result = result * 10 + digit;
         }
         return result;
     }
