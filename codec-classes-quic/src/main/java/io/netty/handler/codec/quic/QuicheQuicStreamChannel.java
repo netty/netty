@@ -986,24 +986,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         while (!finReceived && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
                             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-                            QuicheQuicChannel.StreamRecvResult result = parent.streamRecv(streamId(), byteBuf);
-                            switch (result) {
-                                case DONE:
-                                    // Nothing left to read;
-                                    readable = false;
-                                    break;
-                                case FIN:
-                                    // If we received a FIN we also should mark the channel as non-readable as
-                                    // there is nothing left to read really.
-                                    readable = false;
-                                    finReceived = true;
-                                    inputShutdown = true;
-                                    break;
-                                case OK:
-                                    break;
-                                default:
-                                    throw new Error("Unexpected StreamRecvResult: " + result);
-                            }
+                            handleRecvResult(parent.streamRecv(streamId(), byteBuf));
                             allocHandle.lastBytesRead(byteBuf.readableBytes());
                             if (allocHandle.lastBytesRead() <= 0) {
                                 byteBuf.release();
@@ -1055,6 +1038,26 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
+        private void handleRecvResult(QuicheQuicChannel.StreamRecvResult result) {
+            switch (result) {
+                case DONE:
+                    // Nothing left to read;
+                    readable = false;
+                    break;
+                case FIN:
+                    // If we received a FIN we also should mark the channel as non-readable as
+                    // there is nothing left to read really.
+                    readable = false;
+                    finReceived = true;
+                    inputShutdown = true;
+                    break;
+                case OK:
+                    break;
+                default:
+                    throw new Error("Unexpected StreamRecvResult: " + result);
+            }
+        }
+
         /**
          * The channel was closed before the end of the stream was read. Read and drop what is left: as long as quiche
          * holds the data it keeps its connection flow control credit, and the stream is never completed and collected,
@@ -1067,21 +1070,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 allocHandle.reset(config());
                 ByteBuf byteBuf = allocHandle.allocate(allocator);
                 try {
-                    QuicheQuicChannel.StreamRecvResult result = parent.streamRecv(streamId(), byteBuf);
-                    switch (result) {
-                        case DONE:
-                            readable = false;
-                            break;
-                        case FIN:
-                            readable = false;
-                            finReceived = true;
-                            inputShutdown = true;
-                            break;
-                        case OK:
-                            break;
-                        default:
-                            throw new Error("Unexpected StreamRecvResult: " + result);
-                    }
+                    handleRecvResult(parent.streamRecv(streamId(), byteBuf));
                 } catch (Exception e) {
                     // The stream was reset by the remote peer or the connection was closed, there is nothing left
                     // to read.
