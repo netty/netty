@@ -2470,6 +2470,15 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+            if (PlatformDependent.hasUnsafe() && hasMemoryAddress) {
+                // Copies from a source with a memory address or an array without an NIO buffer view of the source,
+                // which src.nioBuffer(...) below would allocate for each copy from a buffer of another kind, such
+                // as a slice or a buffer of another allocator. Without Unsafe, a direct buffer can still have a
+                // memory address (Java 25+), but the copy needs Unsafe; checking hasUnsafe() first lets the JIT
+                // drop this branch then.
+                UnsafeByteBufUtil.setBytes(this, _memoryAddress() + index, index, src, srcIndex, length);
+                return this;
+            }
             checkIndex(index, length);
             if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
                 AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
