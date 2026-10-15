@@ -1562,4 +1562,53 @@ public class HAProxyMessageDecoderTest {
         assertTrue(header.release(), "buffer fully released");
         assertEquals(0, header.refCnt());
     }
+
+    @Test
+    public void testEmptyTLVsAtEndOfHeader() {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x1A, // 12 bytes of addresses and ports + 14 bytes of TLVs
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                0x20, 0x00, 0x08, 0x01, 0x00, 0x00, 0x00, 0x00, // PP2_TYPE_SSL, client=1, verify=0
+                0x21, 0x00, 0x00, // with an empty PP2_SUBTYPE_SSL_VERSION
+                0x04, 0x00, 0x00  // empty PP2_TYPE_NOOP
+        });
+
+        assertTrue(ch.writeInbound(data));
+        HAProxyMessage msg = ch.readInbound();
+        List<HAProxyTLV> tlvs = msg.tlvs();
+        assertEquals(3, tlvs.size());
+        HAProxySSLTLV ssl = (HAProxySSLTLV) tlvs.get(0);
+        assertEquals(1, ssl.encapsulatedTLVs().size());
+        assertEquals(HAProxyTLV.Type.PP2_TYPE_SSL_VERSION, ssl.encapsulatedTLVs().get(0).type());
+        assertEquals(0, ssl.encapsulatedTLVs().get(0).content().readableBytes());
+        assertEquals(HAProxyTLV.Type.OTHER, tlvs.get(2).type());
+        assertEquals(0x04, tlvs.get(2).typeByteValue());
+        assertEquals(0, tlvs.get(2).content().readableBytes());
+        assertTrue(msg.release());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testIncompleteTLVAtEndOfHeader() {
+        final ByteBuf data = Unpooled.buffer();
+        data.writeBytes(new byte[] {
+                0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A,
+                0x21, 0x11, // v2, cmd=PROXY, TCP over IPv4
+                0x00, 0x0F, // 12 bytes of addresses and ports + 3 bytes of TLV
+                0x7F, 0x00, 0x00, 0x01,
+                0x7F, 0x00, 0x00, 0x01,
+                0x04, (byte) 0xD2,
+                0x00, 0x50,
+                0x01, 0x00, 0x01 // PP2_TYPE_ALPN with a length of 1, but no value
+        });
+
+        assertThrows(HAProxyProtocolException.class, () -> ch.writeInbound(data));
+        assertFalse(ch.isActive());
+    }
 }
