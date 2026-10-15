@@ -2279,13 +2279,16 @@ final class AdaptivePoolingAllocator {
         @Override
         public long memoryAddress() {
             ensureAccessible();
+            if (!hasMemoryAddress) {
+                throw new UnsupportedOperationException();
+            }
             return _memoryAddress();
         }
 
         @Override
         long _memoryAddress() {
             AbstractByteBuf root = rootParent;
-            return root != null ? root._memoryAddress() + startIndex : 0L;
+            return root != null && hasMemoryAddress ? root._memoryAddress() + startIndex : 0L;
         }
 
         @Override
