@@ -22,6 +22,7 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.StandardConstants;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -79,7 +80,20 @@ final class Java8SslUtils {
         if (hostname == null || hostname.length == 0) {
             return Collections.emptyList();
         }
-        return Collections.singletonList(new SNIHostName(hostname));
+        return Collections.singletonList(toServerName(hostname));
+    }
+
+    /**
+     * Converts the given hostname to a {@link SNIServerName}. We convert to bytes as we do not want to do any strict
+     * validation of the {@link SNIHostName} while creating it. If the byte constructor still rejects the name we
+     * expose it as a plain {@link SNIServerName} of type host_name instead of failing.
+     */
+    private static SNIServerName toServerName(byte[] encoded) {
+        try {
+            return new SNIHostName(encoded);
+        } catch (IllegalArgumentException ignored) {
+            return new SNIServerName(StandardConstants.SNI_HOST_NAME, encoded) { };
+        }
     }
 
     static boolean getUseCipherSuitesOrder(SSLParameters sslParameters) {
@@ -98,7 +112,7 @@ final class Java8SslUtils {
     @SuppressWarnings("unchecked")
     static boolean checkSniHostnameMatch(Collection<?> matchers, byte[] hostname) {
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname);
+            SNIServerName name = toServerName(hostname);
             Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();
             while (matcherIt.hasNext()) {
                 SNIMatcher matcher = matcherIt.next();
