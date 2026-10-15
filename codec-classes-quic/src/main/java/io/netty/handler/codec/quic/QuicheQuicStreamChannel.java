@@ -1084,11 +1084,17 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     handleRecvResult(parent.streamRecv(streamId(), byteBuf));
                 } catch (Throwable cause) {
                     // The stream was reset by the remote peer or the connection was closed, there is nothing left
-                    // to read. Let the user know about the cause as the data that was dropped is lost.
+                    // to read.
                     readable = false;
                     finReceived = true;
                     inputShutdown = true;
-                    pipeline().fireExceptionCaught(cause);
+                    // A ClosedChannelException means the connection was closed or freed already. This is expected
+                    // when the streams are closed as part of closing the connection, and the user is notified about
+                    // the closure of the stream and the connection anyway, so there is no need to fire it. Everything
+                    // else is reported as the data that was dropped is lost.
+                    if (!(cause instanceof ClosedChannelException)) {
+                        pipeline().fireExceptionCaught(cause);
+                    }
                 } finally {
                     byteBuf.release();
                 }
