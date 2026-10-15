@@ -508,9 +508,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
             verifyStreamId(streamId, STREAM_ID);
+            verifyPadding(padding);
             if (hasPriority) {
                 verifyStreamOrConnectionId(streamDependency, STREAM_DEPENDENCY);
-                verifyPadding(padding);
                 verifyWeight(weight);
             }
 
