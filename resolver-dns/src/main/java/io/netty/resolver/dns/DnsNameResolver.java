@@ -58,7 +58,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -1453,23 +1452,20 @@ public class DnsNameResolver extends InetNameResolver {
                 return executor().newFailedFuture(e);
             }
         } else {
-            final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> p = executor().newPromise();
             f.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture f) {
                     if (f.isSuccess()) {
-                        Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
-                                f.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                                additionalsArray, true, promise);
-                        PromiseNotifier.cascade(qf, p);
+                        // doQuery(...) completes and returns the caller's own promise, so just run the query
+                        // against it and return that same promise below; no separate promise to bridge is needed.
+                        doQuery(f.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                            additionalsArray, true, promise);
                     } else {
-                        UnknownHostException e = toException(f, question.name(), question, additionalsArray);
-                        promise.setFailure(e);
-                        p.setFailure(e);
+                        promise.tryFailure(toException(f, question.name(), question, additionalsArray));
                     }
                 }
             });
-            return p;
+            return cast(promise);
         }
     }
 
