@@ -1105,6 +1105,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // reader index so its included again in the next slice.
                 in.readerIndex(in.readerIndex() - wrapBuf.readableBytes());
             }
+
+            if (result.bytesConsumed() == 0 && result.bytesProduced() == 0) {
+                // The engine did neither consume nor produce anything, for example because the handshake is not done
+                // yet. Break out so the caller handles the handshake status, as otherwise we would loop forever.
+                break;
+            }
         } while (in.readableBytes() > 0);
 
         return result;

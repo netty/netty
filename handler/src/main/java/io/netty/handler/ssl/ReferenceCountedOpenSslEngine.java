@@ -65,6 +65,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionBindingEvent;
 import javax.net.ssl.SSLSessionBindingListener;
+import javax.net.ssl.StandardConstants;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
@@ -129,6 +130,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
     private static final SSLEngineResult NEED_WRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_WRAP, 0, 0);
     private static final SSLEngineResult CLOSED_NOT_HANDSHAKING = new SSLEngineResult(CLOSED, NOT_HANDSHAKING, 0, 0);
+
+    // See https://www.rfc-editor.org/rfc/rfc8446#section-4.2.1
+    private static final int TLS1_3_VERSION = 0x0304;
 
     // OpenSSL state
     private long ssl;
@@ -259,11 +263,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 requestedServerNames = Collections.emptyList();
                             } else {
                                 String name = SSL.getSniHostname(ssl);
-                                requestedServerNames = (name == null || name.isEmpty()) ?
-                                        Collections.emptyList() :
-                                        // Convert to bytes as we do not want to do any strict validation of the
-                                        // SNIHostName while creating it.
-                                        Collections.singletonList(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
+
+                                if (name == null || name.isEmpty()) {
+                                    requestedServerNames = Collections.emptyList();
+                                } else {
+                                    requestedServerNames = Collections.singletonList(toServerName(name));
+                                }
                             }
                         }
                         return requestedServerNames;
@@ -444,6 +449,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
+    }
+
+    final synchronized boolean isTLSv13() {
+        return !destroyed && SSL.getVersionInt(ssl) == TLS1_3_VERSION;
     }
 
     final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
@@ -2295,10 +2304,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
 
+    /**
+     * Converts the given hostname to a {@link SNIServerName}. We convert to bytes as we do not want to do any strict
+     * validation of the {@link SNIHostName} while creating it. If the byte constructor still rejects the name we
+     * expose it as a plain {@link SNIServerName} of type host_name instead of failing.
+     */
+    private static SNIServerName toServerName(String hostname) {
+        byte[] encoded = hostname.getBytes(CharsetUtil.UTF_8);
+        try {
+            return new SNIHostName(encoded);
+        } catch (IllegalArgumentException ignored) {
+            return new SNIServerName(StandardConstants.SNI_HOST_NAME, encoded) { };
+        }
+    }
+
     final boolean checkSniHostnameMatch(String hostname) {
         Collection<SNIMatcher> matchers = this.matchers;
         if (matchers != null && !matchers.isEmpty()) {
-            SNIHostName name = new SNIHostName(hostname.getBytes(CharsetUtil.UTF_8));
+            SNIServerName name = toServerName(hostname);
             for (SNIMatcher matcher : matchers) {
                 // type 0 is for hostname
                 if (matcher.getType() == 0 && matcher.matches(name)) {

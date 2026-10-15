@@ -2288,13 +2288,17 @@ final class AdaptivePoolingAllocator {
         @Override
         public long memoryAddress() {
             ensureAccessible();
+            if (!hasMemoryAddress) {
+                throw new UnsupportedOperationException();
+            }
             return _memoryAddress();
         }
 
         @Override
         long _memoryAddress() {
             // Use the address kept at init() instead of asking the root buffer, which would check its accessibility
-            // on every call. The root stays accessible while this buffer holds a segment of its chunk.
+            // on every call. The root stays accessible while this buffer holds a segment of its chunk. The address is
+            // 0 when the root buffer has none, and after deallocation.
             return memoryAddress;
         }
 

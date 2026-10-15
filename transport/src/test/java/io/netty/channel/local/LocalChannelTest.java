@@ -1331,6 +1331,93 @@ public class LocalChannelTest {
     }
 
     @Test
+    @Timeout(30)
+    public void testPeerWriteAndCloseWhileWriteInProgressDeliversData() throws Exception {
+        final CountDownLatch writeListenerEntered = new CountDownLatch(1);
+        final CountDownLatch releaseWriteListener = new CountDownLatch(1);
+        final CountDownLatch dataReceived = new CountDownLatch(1);
+        final CountDownLatch clientInactive = new CountDownLatch(1);
+        final AtomicReference<Boolean> receivedBeforeInactive = new AtomicReference<>();
+        final BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
+
+        ServerBootstrap sb = new ServerBootstrap()
+                .group(group1, group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) {
+                        accepted.add(ch);
+                    }
+                });
+        Bootstrap cb = new Bootstrap()
+                .group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                ReferenceCountUtil.release(msg);
+                                dataReceived.countDown();
+                            }
+
+                            @Override
+                            public void channelInactive(ChannelHandlerContext ctx) {
+                                receivedBeforeInactive.set(dataReceived.getCount() == 0);
+                                clientInactive.countDown();
+                            }
+                        });
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            final LocalChannel child = accepted.poll(5, SECONDS);
+            assertNotNull(child);
+            while (!child.isActive()) {
+                Thread.sleep(10);
+            }
+
+            // Block the client inside doWrite(...) (the promise listener is run while writeInProgress is true) so
+            // that the peer sees the client as writing.
+            cc.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 'X' })).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    writeListenerEntered.countDown();
+                    try {
+                        releaseWriteListener.await();
+                    } catch (InterruptedException ignore) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            });
+            assertTrue(writeListenerEntered.await(5, SECONDS));
+
+            // Write and close from the peer while the client is still writing, then unblock the client.
+            child.eventLoop().submit(new Runnable() {
+                @Override
+                public void run() {
+                    child.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 'P' }));
+                    child.close();
+                }
+            }).sync();
+            releaseWriteListener.countDown();
+
+            assertTrue(clientInactive.await(5, SECONDS));
+            assertEquals(Boolean.TRUE, receivedBeforeInactive.get(),
+                    "Data written by the peer before it closed must not be dropped");
+        } finally {
+            releaseWriteListener.countDown();
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test
     public void testClientCloseWhileConnectionIsQueued() throws Exception {
         BlockingQueue<LocalChannel> accepted = new LinkedBlockingQueue<>();
         Channel sc = bindServerWithAutoReadDisabled(accepted);
