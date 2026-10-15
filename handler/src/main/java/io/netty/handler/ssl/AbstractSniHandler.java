@@ -35,7 +35,8 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
 
-    private static String extractSniHostname(ByteBuf in) {
+    // Package-private for testing purposes.
+    static String extractSniHostname(ByteBuf in) {
         // See https://tools.ietf.org/html/rfc5246#section-7.4.1.2
         //
         // Decode the ssl client hello packet.
@@ -64,57 +65,64 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
             final int sessionIdLength = in.getUnsignedByte(offset);
             offset += sessionIdLength + 1;
 
-            final int cipherSuitesLength = in.getUnsignedShort(offset);
-            offset += cipherSuitesLength + 2;
+            if (endOffset - offset >= 2) {
+                final int cipherSuitesLength = in.getUnsignedShort(offset);
+                offset += cipherSuitesLength + 2;
 
-            final int compressionMethodLength = in.getUnsignedByte(offset);
-            offset += compressionMethodLength + 1;
+                if (endOffset - offset >= 1) {
+                    final int compressionMethodLength = in.getUnsignedByte(offset);
+                    offset += compressionMethodLength + 1;
 
-            final int extensionsLength = in.getUnsignedShort(offset);
-            offset += 2;
-            final int extensionsLimit = offset + extensionsLength;
-
-            // Extensions should never exceed the record boundary.
-            if (extensionsLimit <= endOffset) {
-                while (extensionsLimit - offset >= 4) {
-                    final int extensionType = in.getUnsignedShort(offset);
-                    offset += 2;
-
-                    final int extensionLength = in.getUnsignedShort(offset);
-                    offset += 2;
-
-                    if (extensionsLimit - offset < extensionLength) {
-                        break;
-                    }
-
-                    // SNI
-                    // See https://tools.ietf.org/html/rfc6066#page-6
-                    if (extensionType == 0) {
+                    if (endOffset - offset >= 2) {
+                        final int extensionsLength = in.getUnsignedShort(offset);
                         offset += 2;
-                        if (extensionsLimit - offset < 3) {
-                            break;
-                        }
+                        final int extensionsLimit = offset + extensionsLength;
 
-                        final int serverNameType = in.getUnsignedByte(offset);
-                        offset++;
+                        // Extensions should never exceed the record boundary.
+                        if (extensionsLimit <= endOffset) {
+                            while (extensionsLimit - offset >= 4) {
+                                final int extensionType = in.getUnsignedShort(offset);
+                                offset += 2;
 
-                        if (serverNameType == 0) {
-                            final int serverNameLength = in.getUnsignedShort(offset);
-                            offset += 2;
+                                final int extensionLength = in.getUnsignedShort(offset);
+                                offset += 2;
 
-                            if (extensionsLimit - offset < serverNameLength) {
-                                break;
+                                if (extensionsLimit - offset < extensionLength) {
+                                    break;
+                                }
+
+                                // SNI
+                                // See https://tools.ietf.org/html/rfc6066#page-6
+                                if (extensionType == 0) {
+                                    offset += 2;
+                                    if (extensionsLimit - offset < 3) {
+                                        break;
+                                    }
+
+                                    final int serverNameType = in.getUnsignedByte(offset);
+                                    offset++;
+
+                                    if (serverNameType == 0) {
+                                        final int serverNameLength = in.getUnsignedShort(offset);
+                                        offset += 2;
+
+                                        if (extensionsLimit - offset < serverNameLength) {
+                                            break;
+                                        }
+
+                                        final String hostname = in.toString(
+                                                offset, serverNameLength, CharsetUtil.US_ASCII);
+                                        return hostname.toLowerCase(Locale.US);
+                                    } else {
+                                        // invalid enum value
+                                        break;
+                                    }
+                                }
+
+                                offset += extensionLength;
                             }
-
-                            final String hostname = in.toString(offset, serverNameLength, CharsetUtil.US_ASCII);
-                            return hostname.toLowerCase(Locale.US);
-                        } else {
-                            // invalid enum value
-                            break;
                         }
                     }
-
-                    offset += extensionLength;
                 }
             }
         }

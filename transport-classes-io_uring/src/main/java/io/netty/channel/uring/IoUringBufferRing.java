@@ -214,7 +214,8 @@ final class IoUringBufferRing {
      * @param read          the number of bytes that could be read. This value might be larger then what a single
      *                      {@link ByteBuf} can hold. Because of this, the caller should call
      *                      @link #useBuffer(short, int, boolean)} in a loop (obtaining the next bid to use by calling
-     *                      {@link #nextBid(short)}) until all buffers could be obtained.
+     *                      {@link #nextBid(short, int)} with an {@link #allocatedBuffers()} snapshot taken before
+     *                      this call) until all buffers could be obtained.
      * @return              the buffer.
      */
     ByteBuf useBuffer(short bid, int read, boolean more) {
@@ -222,9 +223,13 @@ final class IoUringBufferRing {
         ByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.writableBytes(), read);
+        // The kernel might report a bundle total (RECVSEND_BUNDLE) that spans more than this single ring
+        // entry can hold. Clamp to what this entry can actually provide; the caller loops over the
+        // remainder using the next bid (see nextBid(short, int)).
+        int len = Math.min(read, byteBuf.writableBytes());
         // We always slice so the user will not mess up things later.
-        ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), read);
-        byteBuf.writerIndex(byteBuf.writerIndex() + read);
+        ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), len);
+        byteBuf.writerIndex(byteBuf.writerIndex() + len);
 
         if (incremental && more && byteBuf.isWritable()) {
             // The buffer will be used later again, just slice out what we did read so far.
@@ -264,8 +269,35 @@ final class IoUringBufferRing {
         return buffer;
     }
 
-    short nextBid(short bid) {
-        return (short) ((bid + 1) & allocatedBuffers - 1);
+    /**
+     * The number of buffers that are currently allocated (and so posted) in this buffer ring. This value can
+     * change every time {@link #useBuffer(short, int, boolean)} is called as it might grow the ring. Because of
+     * this, callers that need to walk a sequence of consecutive buffer ids that belong to the same completion
+     * (for example a {@code IORING_RECVSEND_BUNDLE} completion) must capture this value <strong>before</strong>
+     * calling {@link #useBuffer(short, int, boolean)} and pass it to {@link #nextBid(short, int)} afterwards,
+     * so the wrap-around is computed using the size of the ring as the kernel observed it when it produced the
+     * bundle, not the (possibly already grown) size afterwards.
+     *
+     * @return the number of allocated buffers.
+     */
+    int allocatedBuffers() {
+        return allocatedBuffers;
+    }
+
+    /**
+     * Return the next buffer id that follows {@code bid} in ring order, wrapping around after
+     * {@code allocatedBuffers} ids.
+     *
+     * @param bid               the current buffer id.
+     * @param allocatedBuffers  the number of allocated buffers to use for the wrap-around computation. This should
+     *                          be a value obtained from {@link #allocatedBuffers()} <strong>before</strong> the
+     *                          corresponding {@link #useBuffer(short, int, boolean)} call for {@code bid}, as that
+     *                          call might have grown the ring already.
+     * @return the next buffer id.
+     */
+    short nextBid(short bid, int allocatedBuffers) {
+        // Use the real modulo (and not a bitmask) as allocatedBuffers is not guaranteed to be a power of two.
+        return (short) ((bid + 1) % allocatedBuffers);
     }
 
     /**

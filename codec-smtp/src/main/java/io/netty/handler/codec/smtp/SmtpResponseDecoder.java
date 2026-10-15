@@ -81,7 +81,7 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
         try {
             final int readable = frame.readableBytes();
             final int readerIndex = frame.readerIndex();
-            if (readable < 3) {
+            if (readable < 4) {
                 reset();
                 throw newDecoderException(buffer, readerIndex, readable);
             }

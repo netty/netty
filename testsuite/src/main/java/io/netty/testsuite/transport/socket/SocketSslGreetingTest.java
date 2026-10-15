@@ -58,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -247,12 +248,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {
                     SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
-                    try {
-                        session.getPeerCertificates();
-                        fail();
-                    } catch (SSLPeerUnverifiedException e) {
-                        // expected
-                    }
+                    assertThrows(SSLPeerUnverifiedException.class, () -> session.getPeerCertificates());
                     try {
                         session.getPeerCertificateChain();
                         fail();
@@ -265,12 +261,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
                             throw e;
                         }
                     }
-                    try {
-                        session.getPeerPrincipal();
-                        fail();
-                    } catch (SSLPeerUnverifiedException e) {
-                        // expected
-                    }
+                    assertThrows(SSLPeerUnverifiedException.class, () -> session.getPeerPrincipal());
                 }
             }
             ctx.fireUserEventTriggered(evt);

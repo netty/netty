@@ -71,7 +71,7 @@ public class RedisDecoderTest {
         assertTrue(channel.writeInbound(byteBufOf("\n")));
 
         RedisMessage msg = channel.readInbound();
-        assertTrue(msg instanceof FullBulkStringRedisMessage);
+        assertInstanceOf(FullBulkStringRedisMessage.class, msg);
         ReferenceCountUtil.release(msg);
     }
 
@@ -369,6 +369,25 @@ public class RedisDecoderTest {
                 channel.writeInbound(byteBufOf("1"));
             }
         });
+    }
+
+    @Test
+    public void shouldRejectLineFeedWithoutCarriageReturn() {
+        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("+\nab")))
+                .isInstanceOf(DecoderException.class)
+                .cause()
+                .isInstanceOf(RedisCodecException.class)
+                .hasNoCause();
+    }
+
+    @Test
+    public void shouldRejectInlineCommandStartingWithLineFeed() {
+        channel = newChannel(true);
+        assertThatThrownBy(() -> channel.writeInbound(byteBufOf("\nab")))
+                .isInstanceOf(DecoderException.class)
+                .cause()
+                .isInstanceOf(RedisCodecException.class)
+                .hasNoCause();
     }
 
     @Test

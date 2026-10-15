@@ -224,6 +224,9 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
                     int index = 0;
                     while (reader.readBoolean()) {
                         index++;
+                        if (index >= huffmanStageDecoder.totalTables) {
+                            throw new DecompressionException("incorrect selector index " + index);
+                        }
                     }
                     selectors[currSelector] = tableMtf.indexToFront(index);
                 }

@@ -44,8 +44,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class SingleThreadEventLoopTest {
 
@@ -137,12 +137,7 @@ public class SingleThreadEventLoopTest {
     }
 
     private static void assertRejection(EventExecutor loop) {
-        try {
-            loop.execute(NOOP);
-            fail("A task must be rejected after shutdown() is called.");
-        } catch (RejectedExecutionException e) {
-            // Expected
-        }
+        assertThrows(RejectedExecutionException.class, () -> loop.execute(NOOP));
     }
 
     @Test
@@ -467,15 +462,12 @@ public class SingleThreadEventLoopTest {
             loopA.execute(NOOP);
         }
 
-        try {
+        assertThrows(RejectedExecutionException.class, () -> {
             for (int i = 0; i < 20; i ++) {
                 Thread.sleep(100);
                 loopA.execute(NOOP);
             }
-            fail("shutdownGracefully() must reject a task after timeout.");
-        } catch (RejectedExecutionException e) {
-            // Expected
-        }
+        });
 
         assertTrue(loopA.isShuttingDown());
         assertTrue(loopA.isShutdown());

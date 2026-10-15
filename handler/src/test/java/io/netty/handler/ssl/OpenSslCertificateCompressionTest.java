@@ -320,7 +320,7 @@ public class OpenSslCertificateCompressionTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new CertCompressionTestChannelInitializer(serverPromise, serverSslContext));
-            Channel serverChannel = sb.bind(new LocalAddress("testCertificateCompression"))
+            Channel serverChannel = sb.bind(new LocalAddress(OpenSslCertificateCompressionTest.class))
                     .syncUninterruptibly().channel();
 
             Bootstrap bootstrap = new Bootstrap();

@@ -91,7 +91,6 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -781,30 +780,27 @@ public class DnsNameResolverTest {
     }
 
     private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
-        try {
-            resolver.resolve("non-existent.netty.io").sync();
-            fail();
-            return null;
-        } catch (Exception e) {
-            assertInstanceOf(UnknownHostException.class, e);
+        Exception e = assertThrows(Exception.class, () -> resolver.resolve("non-existent.netty.io").sync());
+        assertInstanceOf(UnknownHostException.class, e);
 
-            TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
-                    (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
-            TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
-            if (observer != null) {
-                Object o = observer.events.poll();
+        TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
+                (TestRecursiveCacheDnsQueryLifecycleObserverFactory) resolver.dnsQueryLifecycleObserverFactory();
+        // Queries which are not answered from the cache (e.g. the AAAA query until its negative answer is cached)
+        // complete asynchronously on the EventLoop, so the observer may only have seen some of its events yet.
+        // Only verify that no unexpected event was recorded.
+        TestDnsQueryLifecycleObserver observer;
+        while ((observer = lifecycleObserverFactory.observers.poll()) != null) {
+            Object o;
+            while ((o = observer.events.poll()) != null) {
                 if (o instanceof QueryCancelledEvent) {
                     assertTrue(observer.question.type() == CNAME || observer.question.type() == AAAA,
-                        "unexpected type: " + observer.question);
-                } else if (o instanceof QueryWrittenEvent) {
-                    QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
-                } else if (!(o instanceof QueryFailedEvent)) {
+                            "unexpected type: " + observer.question);
+                } else if (!(o instanceof QueryWrittenEvent) && !(o instanceof QueryFailedEvent)) {
                     fail("unexpected event type: " + o);
                 }
-                assertTrue(observer.events.isEmpty());
             }
-            return (UnknownHostException) e;
         }
+        return (UnknownHostException) e;
     }
 
     @ParameterizedTest
@@ -1864,7 +1860,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(4, redirected.size());
@@ -1997,7 +1993,7 @@ public class DnsNameResolverTest {
 
         try {
             Throwable cause = resolver.resolveAll(hostname).await().cause();
-            assertTrue(cause instanceof UnknownHostException);
+            assertInstanceOf(UnknownHostException.class, cause);
             DnsServerAddressStream redirected = redirectedRef.get();
             assertNotNull(redirected);
             assertEquals(6, redirected.size());
@@ -2245,7 +2241,7 @@ public class DnsNameResolverTest {
     }
 
     private static final class TestDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
-        final Queue<Object> events = new ArrayDeque<Object>();
+        final Queue<Object> events = new ConcurrentLinkedQueue<Object>();
         final DnsQuestion question;
 
         TestDnsQueryLifecycleObserver(DnsQuestion question) {
@@ -2898,6 +2894,115 @@ public class DnsNameResolverTest {
             resolver.close();
             server.stop();
         }
+    }
+
+    /**
+     * A {@link DnsCache} that serves pre-seeded entries, so cache lookup semantics can be exercised without
+     * an {@link io.netty.channel.EventLoop} or a DNS server.
+     */
+    private static final class FixedDnsCache implements DnsCache {
+        private final Map<String, List<DnsCacheEntry>> entries = new HashMap<String, List<DnsCacheEntry>>();
+
+        void put(String hostname, final InetAddress address, final Throwable cause) {
+            entries.put(hostname, Collections.<DnsCacheEntry>singletonList(new DnsCacheEntry() {
+                @Override
+                public InetAddress address() {
+                    return address;
+                }
+
+                @Override
+                public Throwable cause() {
+                    return cause;
+                }
+            }));
+        }
+
+        @Override
+        public void clear() {
+            entries.clear();
+        }
+
+        @Override
+        public boolean clear(String hostname) {
+            return entries.remove(hostname) != null;
+        }
+
+        @Override
+        public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
+            return entries.get(hostname);
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, InetAddress address, long originalTtl,
+                                   EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowPositiveOne() throws Exception {
+        // Mirrors a Kubernetes resolv.conf: the pod's own namespace is the first search domain, so a service in
+        // another namespace always yields NXDOMAIN for the first permutation and resolves via the second.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+        InetAddress expected = InetAddress.getByAddress(
+                hostname + '.' + searchDomains[1], new byte[] { 10, 96, 0, 42 });
+        cache.put(hostname + '.' + searchDomains[1], expected, null);
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertTrue(promise.isSuccess(), "a negatively cached '" + hostname + '.' + searchDomains[0] +
+                "' must not shadow the positively cached '" + hostname + '.' + searchDomains[1] + '\'');
+        assertEquals(Collections.singletonList(expected), promise.getNow());
+    }
+
+    @Test
+    public void testNegativelyCachedSearchDomainDoesNotShadowUncachedOne() {
+        // If a positively cached permutation expired and only a negative entry remains, the remaining search
+        // domains and the bare hostname must still be queried.
+        String[] searchDomains = { "ns1.svc.cluster.local", "svc.cluster.local" };
+        String hostname = "other-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname + '.' + searchDomains[0], null,
+                new UnknownHostException("failed to resolve " + hostname + '.' + searchDomains[0]));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertFalse(isCached);
+        assertFalse(promise.isDone());
+    }
+
+    @Test
+    public void testNegativelyCachedBareHostnameStillShortCircuits() throws Exception {
+        // A negative entry for the hostname that is actually being resolved must keep failing fast.
+        String[] searchDomains = { "ns1.svc.cluster.local" };
+        String hostname = "missing-service";
+
+        FixedDnsCache cache = new FixedDnsCache();
+        cache.put(hostname, null, new UnknownHostException("failed to resolve " + hostname));
+
+        Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+        boolean isCached = DnsNameResolver.doResolveAllCached(hostname, null, promise, cache, searchDomains, 5,
+                new SocketProtocolFamily[] { SocketProtocolFamily.INET });
+
+        assertTrue(isCached);
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause()).isInstanceOf(UnknownHostException.class);
     }
 
     @ParameterizedTest
@@ -3571,7 +3676,17 @@ public class DnsNameResolverTest {
             serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
             try {
                 dns.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
-                return serverSocket;
+                if (dns.localAddress() != null) {
+                    return serverSocket;
+                }
+                // The underlying UDP acceptor sometimes fails to bind without throwing (observed on Windows),
+                // leaving localAddress() null. Treat this the same as a failed bind and retry.
+                dns.stop();
+                serverSocket.close();
+                if (i == 10) {
+                    Assumptions.abort(
+                            "Unable to bind TestDnsServer and ServerSocket to the same address: localAddress is null");
+                }
             } catch (IOException e) {
                 serverSocket.close();
                 if (i == 10) {
@@ -3714,12 +3829,8 @@ public class DnsNameResolverTest {
                 .datagramChannelStrategy(strategy)
                 .build();
 
-        try {
-            resolver.resolve("non-existent.netty.io", promise).sync();
-            fail();
-        } catch (Exception e) {
-            assertInstanceOf(CancellationException.class, e);
-        }
+        Exception e = assertThrows(Exception.class, () -> resolver.resolve("non-existent.netty.io", promise).sync());
+        assertInstanceOf(CancellationException.class, e);
         assertFalse(isQuerySentToSecondServer.get());
     }
 
@@ -4393,9 +4504,8 @@ public class DnsNameResolverTest {
             // setup call to fail and verify
             returnSuccess.set(false);
             try {
-                resolver.resolve("yahoo.com").syncUninterruptibly().getNow();
-                fail();
-            } catch (Exception e) {
+                Exception e = assertThrows(Exception.class, () ->
+                        resolver.resolve("yahoo.com").syncUninterruptibly().getNow());
                 // expected
                 assertInstanceOf(UnknownHostException.class, e);
             } finally {

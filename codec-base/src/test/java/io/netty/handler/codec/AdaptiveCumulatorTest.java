@@ -41,8 +41,8 @@ import static org.assertj.core.api.Assertions.in;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -126,9 +126,8 @@ public class AdaptiveCumulatorTest {
                 }
             };
             try {
-                cumulator.cumulate(alloc, composite, in);
-                fail("Cumulator didn't throw");
-            } catch (UnsupportedOperationException actualError) {
+                UnsupportedOperationException actualError = assertThrows(UnsupportedOperationException.class, () ->
+                        cumulator.cumulate(alloc, composite, in));
                 assertSame(throwingCumulatorError, actualError);
                 assertEquals(0, in.refCnt());
                 assertEquals(1, composite.refCnt());
@@ -155,15 +154,12 @@ public class AdaptiveCumulatorTest {
             ByteBufAllocator mockAlloc = mock(ByteBufAllocator.class);
             when(mockAlloc.compositeBuffer(anyInt())).thenReturn(newComposite);
 
-            try {
-                cumulator.cumulate(mockAlloc, contiguous, in);
-                fail("Cumulator didn't throw");
-            } catch (UnsupportedOperationException actualError) {
-                assertSame(throwingCumulatorError, actualError);
-                assertEquals(0, in.refCnt());
-                assertEquals(0, newComposite.refCnt());
-                assertEquals(1, contiguous.refCnt());
-            }
+            UnsupportedOperationException actualError = assertThrows(UnsupportedOperationException.class, () ->
+                    cumulator.cumulate(mockAlloc, contiguous, in));
+            assertSame(throwingCumulatorError, actualError);
+            assertEquals(0, in.refCnt());
+            assertEquals(0, newComposite.refCnt());
+            assertEquals(1, contiguous.refCnt());
         }
 
         @Test
@@ -536,10 +532,10 @@ public class AdaptiveCumulatorTest {
             };
 
             try {
-                AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
-                compositeThrows = (CompositeByteBuf) cumulator.cumulate(alloc, compositeThrows, in);
-                fail("Cumulator didn't throw");
-            } catch (UnsupportedOperationException actualError) {
+                UnsupportedOperationException actualError = assertThrows(UnsupportedOperationException.class, () -> {
+                    AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+                    cumulator.cumulate(alloc, compositeThrows, in);
+                });
                 assertSame(expectedError, actualError);
                 assertEquals(0, tail.refCnt());
                 assertEquals(1, compositeThrows.refCnt());
@@ -571,10 +567,10 @@ public class AdaptiveCumulatorTest {
             when(mockAlloc.buffer(anyInt())).thenReturn(newTail);
 
             try {
-                AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
-                compositeRo = (CompositeByteBuf) cumulator.cumulate(mockAlloc, compositeRo, in);
-                fail("Cumulator didn't throw");
-            } catch (UnsupportedOperationException actualError) {
+                UnsupportedOperationException actualError = assertThrows(UnsupportedOperationException.class, () -> {
+                    AdaptiveCumulator cumulator = new AdaptiveCumulator(Integer.MAX_VALUE);
+                    cumulator.cumulate(mockAlloc, compositeRo, in);
+                });
                 assertSame(expectedError, actualError);
                 assertEquals(1, compositeRo.refCnt());
                 assertEquals(0, compositeRo.numComponents());

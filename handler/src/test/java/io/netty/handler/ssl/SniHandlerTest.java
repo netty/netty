@@ -310,7 +310,7 @@ public class SniHandlerTest {
 
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
-    public void testFallbackToDefaultContext(SslProvider provider) throws Exception {
+    public void testZeroLengthHandshakeRecordFailsHandshake(SslProvider provider) throws Exception {
         SslContext nettyContext = makeSslContext(provider, false);
         SslContext leanContext = makeSslContext(provider, false);
         SslContext leanContext2 = makeSslContext(provider, false);
@@ -325,37 +325,111 @@ public class SniHandlerTest {
                     .add("chat4.leancloud.cn", leanContext2)
                     .build();
 
-            SniHandler handler = new SniHandler(mapping);
-            EmbeddedChannel ch = new EmbeddedChannel(handler);
+            final SniHandler handler = new SniHandler(mapping);
+            final EmbeddedChannel ch = new EmbeddedChannel(handler);
 
-            // invalid
-            byte[] message = {22, 3, 1, 0, 0};
             try {
-                // Push the handshake message.
-                ch.writeInbound(Unpooled.wrappedBuffer(message));
-                // TODO(scott): This should fail because the engine should reject zero length records during handshake.
-                // See https://github.com/netty/netty/issues/6348.
-                // fail();
-            } catch (Exception e) {
-                // expected
+                // Zero-length handshake records are forbidden and must not fall back to the default context.
+                // Otherwise a TLS implementation that skips them could process a ClientHello that follows and
+                // bypass the SNI based selection.
+                DecoderException e = assertThrows(DecoderException.class, new Executable() {
+                    @Override
+                    public void execute() {
+                        ch.writeInbound(Unpooled.wrappedBuffer(new byte[] {22, 3, 1, 0, 0}));
+                    }
+                });
+                assertInstanceOf(NotSslRecordException.class, e.getCause());
+                assertFalse(ch.isActive());
+            } finally {
+                ch.finishAndReleaseAll();
             }
 
-            ch.close();
-
-            // When the channel is closed the SslHandler will write an empty buffer to the channel.
-            ByteBuf buf = ch.readOutbound();
-            // TODO(scott): if the engine is shutdown correctly then this buffer shouldn't be null!
-            // See https://github.com/netty/netty/issues/6348.
-            if (buf != null) {
-                assertFalse(buf.isReadable());
-                buf.release();
-            }
-
-            assertFalse(ch.finish());
             assertNull(handler.hostname());
-            assertEquals(nettyContext, handler.sslContext());
+            assertNull(handler.sslContext());
         } finally {
             releaseAll(leanContext, leanContext2, nettyContext);
+        }
+    }
+
+    @ParameterizedTest(name = "{index}: sslProvider={0}")
+    @MethodSource("data")
+    public void testMalformedClientHelloWithOversizedSessionIdLengthFallsBackToDefaultContext(SslProvider provider)
+            throws Exception {
+        SslContext nettyContext = makeSslContext(provider, false);
+        SslContext secureContext = makeSslContext(provider, false);
+
+        try {
+            DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext)
+                    .add("secure.example", secureContext)
+                    .build();
+
+            // decode() swallows any exception thrown while resolving the SslContext for a record and
+            // silently falls back to the default context (see testFallbackToDefaultContext above), so an
+            // IndexOutOfBoundsException thrown while SniHandler parses the SNI extension would never be
+            // observable from the pipeline's perspective. Intercept the internal ByteBuf-based lookup()
+            // call -- where extractSniHostname() actually runs -- to assert it completes without throwing.
+            final AtomicReference<Throwable> clientHelloLookupFailure = new AtomicReference<Throwable>();
+            SniHandler handler = new SniHandler(mapping) {
+                @Override
+                protected Future<SslContext> lookup(ChannelHandlerContext ctx, ByteBuf clientHello)
+                        throws Exception {
+                    try {
+                        return super.lookup(ctx, clientHello);
+                    } catch (Exception e) {
+                        clientHelloLookupFailure.compareAndSet(null, e);
+                        throw e;
+                    }
+                }
+            };
+            EmbeddedChannel ch = new EmbeddedChannel(handler);
+            try {
+                // A single, non-fragmented ClientHello record whose SessionID length field (0xFF)
+                // pushes the offset for the subsequent cipher_suites/compression_methods/extensions
+                // reads past the end of the record. This used to throw an IndexOutOfBoundsException
+                // while SniHandler was still parsing the SNI extension, instead of gracefully falling
+                // back to the default SslContext.
+                ByteBuf buffer = ch.alloc().buffer();
+                buffer.writeByte(0x16);      // Content Type: Handshake
+                buffer.writeShort(0x0303);   // TLS 1.2
+                buffer.writeShort(44);       // Record length: 4 (handshake header) + 40 (body)
+                buffer.writeByte(0x01);      // Handshake Type: ClientHello
+                buffer.writeMedium(40);      // Handshake length
+                buffer.writeZero(34);        // client_version (2) + random (32)
+                buffer.writeByte(0xFF);      // SessionID length -- attacker controlled, way too big
+                buffer.writeZero(5);         // padding so the body is exactly 40 bytes
+
+                try {
+                    // Once SniHandler resolves the (default) SslContext it hands the record off to a
+                    // real SslHandler, which may legitimately reject it as it isn't a well-formed
+                    // ClientHello. That failure is unrelated to the bug under test and is asserted
+                    // against separately via clientHelloLookupFailure.
+                    ch.writeInbound(buffer);
+                } catch (Exception e) {
+                    // expected: the garbage ClientHello isn't valid enough for a real SSLEngine handshake
+                }
+
+                assertNull(clientHelloLookupFailure.get(), "extractSniHostname() must not throw: "
+                        + clientHelloLookupFailure.get());
+
+                ch.close();
+
+                // Discard any outbound alert bytes produced while shutting down the SSLEngine.
+                for (;;) {
+                    ByteBuf buf = ch.readOutbound();
+                    if (buf == null) {
+                        break;
+                    }
+                    buf.release();
+                }
+
+                assertFalse(ch.finish());
+                assertNull(handler.hostname());
+                assertEquals(nettyContext, handler.sslContext());
+            } finally {
+                ch.finishAndReleaseAll();
+            }
+        } finally {
+            releaseAll(secureContext, nettyContext);
         }
     }
 
@@ -505,7 +579,7 @@ public class SniHandlerTest {
             case OPENSSL:
             case OPENSSL_REFCNT:
                 final String sniHost = "sni.netty.io";
-                LocalAddress address = new LocalAddress("testReplaceHandler-" + Math.random());
+                LocalAddress address = new LocalAddress(SniHandlerTest.class);
                 EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
                 Channel sc = null;
                 Channel cc = null;

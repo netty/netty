@@ -36,6 +36,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -248,6 +249,15 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
+        if (localAddress instanceof InetSocketAddress) {
+            InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
+            if (socketAddress.getAddress().isAnyLocalAddress() &&
+                    socketAddress.getAddress() instanceof Inet4Address) {
+                if (socket.family() == SocketProtocolFamily.INET6) {
+                    localAddress = new InetSocketAddress(Native.INET6_ANY, socketAddress.getPort());
+                }
+            }
+        }
         super.doBind(localAddress);
         active = true;
     }

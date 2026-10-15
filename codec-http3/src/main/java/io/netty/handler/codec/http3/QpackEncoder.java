@@ -168,7 +168,13 @@ final class QpackEncoder {
      * @param streamId For which the header fields section is acknowledged.
      */
     void sectionAcknowledgment(long streamId) throws QpackException {
-        assert streamSectionTrackers != null;
+        // If a configureDynamicTable(...) was called with a maxTableCapacity of 0 we will have not instanced
+        // streamSectionTrackers. The remote peer might still (incorrectly) send a section acknowledgment for a
+        // stream, so this must be treated as a protocol error instead of throwing an NPE.
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#section-4.4.1
+        if (streamSectionTrackers == null) {
+            throw INVALID_SECTION_ACKNOWLEDGMENT;
+        }
         final Queue<Indices> tracker = streamSectionTrackers.get(streamId);
         if (tracker == null) {
             throw INVALID_SECTION_ACKNOWLEDGMENT;

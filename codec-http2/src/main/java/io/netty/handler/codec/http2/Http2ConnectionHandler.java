@@ -32,7 +32,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
@@ -453,6 +455,15 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         encoder.flowController().channelHandlerContext(ctx);
         decoder.flowController().channelHandlerContext(ctx);
         byteDecoder = new PrefaceDecoder(ctx);
+        // Streams are not only closed via closeStream(...): the connection also closes them itself, for example
+        // when a GOAWAY is received or the channel becomes inactive. Check if a pending graceful shutdown can
+        // complete whenever a stream is closed, whatever the reason.
+        connection().addListener(new Http2ConnectionAdapter() {
+            @Override
+            public void onStreamClosed(Http2Stream stream) {
+                checkCloseConnection(ctx.newSucceededFuture());
+            }
+        });
     }
 
     @Override
@@ -694,8 +705,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             onStreamError(ctx, outbound, cause, (StreamException) embedded);
         } else if (embedded instanceof CompositeStreamException) {
             CompositeStreamException compositException = (CompositeStreamException) embedded;
+            // Each contained StreamException is generally an independent error for a distinct stream (e.g.
+            // one per active stream that overflowed its flow-control window when SETTINGS_INITIAL_WINDOW_SIZE
+            // changed), so every affected stream must still be reset individually; otherwise it would be left
+            // open with a corrupted flow-control window. Should the composite ever contain more than one
+            // exception for the same stream id, only report the first one, per RFC 9113, Section 5.4's
+            // guidance to report at most one stream error per stream.
+            Set<Integer> handledStreamIds = new HashSet<Integer>();
             for (StreamException streamException : compositException) {
-                onStreamError(ctx, outbound, cause, streamException);
+                if (handledStreamIds.add(streamException.streamId())) {
+                    onStreamError(ctx, outbound, cause, streamException);
+                }
             }
         } else {
             onConnectionError(ctx, outbound, cause, embedded);

@@ -36,6 +36,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
+import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -130,6 +132,68 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         assertEquals(0, window(STREAM_C));
         assertEquals(0, window(STREAM_D));
         assertWritabilityChanged(1, false);
+    }
+
+    @Test
+    public void initialWindowSizeMayReachMaxValue() throws Http2Exception {
+        incrementWindowSize(STREAM_C, Integer.MAX_VALUE - DEFAULT_WINDOW_SIZE - 1);
+
+        controller.initialWindowSize(DEFAULT_WINDOW_SIZE + 1);
+
+        assertEquals(Integer.MAX_VALUE, window(STREAM_C));
+        assertEquals(DEFAULT_WINDOW_SIZE + 1, window(STREAM_A));
+        assertEquals(DEFAULT_WINDOW_SIZE + 1, window(STREAM_B));
+        assertEquals(DEFAULT_WINDOW_SIZE + 1, window(STREAM_D));
+        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+    }
+
+    @Test
+    public void initialWindowSizeOverflowShouldThrowConnectionError() throws Http2Exception {
+        incrementWindowSize(STREAM_C, Integer.MAX_VALUE - DEFAULT_WINDOW_SIZE);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                controller.initialWindowSize(DEFAULT_WINDOW_SIZE + 1);
+            }
+        });
+
+        assertEquals(FLOW_CONTROL_ERROR, e.error());
+        assertFalse(isStreamError(e));
+        assertEquals(Integer.MAX_VALUE, window(STREAM_C));
+        assertEquals(DEFAULT_WINDOW_SIZE, window(CONNECTION_STREAM_ID));
+    }
+
+    @Test
+    public void windowUpdateOverflowShouldThrowStreamError() throws Http2Exception {
+        incrementWindowSize(STREAM_A, Integer.MAX_VALUE - DEFAULT_WINDOW_SIZE);
+
+        Http2Exception.StreamException e = assertThrows(Http2Exception.StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                incrementWindowSize(STREAM_A, 1);
+            }
+        });
+
+        assertEquals(FLOW_CONTROL_ERROR, e.error());
+        assertEquals(STREAM_A, e.streamId());
+        assertEquals(Integer.MAX_VALUE, window(STREAM_A));
+    }
+
+    @Test
+    public void windowUpdateOverflowShouldThrowConnectionError() throws Http2Exception {
+        incrementWindowSize(CONNECTION_STREAM_ID, Integer.MAX_VALUE - DEFAULT_WINDOW_SIZE);
+
+        Http2Exception e = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Http2Exception {
+                incrementWindowSize(CONNECTION_STREAM_ID, 1);
+            }
+        });
+
+        assertEquals(FLOW_CONTROL_ERROR, e.error());
+        assertFalse(isStreamError(e));
+        assertEquals(Integer.MAX_VALUE, window(CONNECTION_STREAM_ID));
     }
 
     @Test

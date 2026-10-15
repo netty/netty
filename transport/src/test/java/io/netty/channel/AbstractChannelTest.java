@@ -93,7 +93,7 @@ public class AbstractChannelTest {
     public void ensureDefaultChannelId() {
         TestChannel channel = new TestChannel();
         final ChannelId channelId = channel.id();
-        assertTrue(channelId instanceof DefaultChannelId);
+        assertInstanceOf(DefaultChannelId.class, channelId);
     }
 
     @Test
@@ -329,7 +329,7 @@ public class AbstractChannelTest {
     private static void assertClosedChannelException(ChannelFuture future, IOException expected)
             throws InterruptedException {
         Throwable cause = future.await().cause();
-        assertTrue(cause instanceof ClosedChannelException);
+        assertInstanceOf(ClosedChannelException.class, cause);
         assertSame(expected, cause.getCause());
     }
 

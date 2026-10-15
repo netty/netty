@@ -223,6 +223,9 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     int index = 0;
                     while (reader.readBoolean()) {
                         index++;
+                        if (index >= huffmanStageDecoder.totalTables) {
+                            throw new DecompressionException("incorrect selector index " + index);
+                        }
                     }
                     selectors[currSelector] = tableMtf.indexToFront(index);
                 }
