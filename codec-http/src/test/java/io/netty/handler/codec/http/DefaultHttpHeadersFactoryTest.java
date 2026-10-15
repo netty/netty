@@ -63,6 +63,16 @@ public class DefaultHttpHeadersFactoryTest {
     }
 
     @Test
+    void trailersFactoryReturnsSharedInstanceWhenRevalidated() {
+        DefaultHttpHeadersFactory factory = DefaultHttpHeadersFactory.trailersFactory();
+        assertSame(factory, factory.withValidation(false).withValidation(true));
+        assertSame(factory, factory.withNameValidation(false).withNameValidation(true));
+        assertSame(factory, factory.withValueValidation(false).withValueValidation(true));
+        assertSame(factory, factory.withCombiningHeaders(true).withCombiningHeaders(false)
+                .withValidation(false).withValidation(true));
+    }
+
+    @Test
     void headersFactoryAllowsContentLength() {
         DefaultHttpHeadersFactory factory = DefaultHttpHeadersFactory.headersFactory();
         assertSame(factory, factory.withValidation(false).withValidation(true));

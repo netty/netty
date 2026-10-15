@@ -184,10 +184,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (nameValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (!trailers && validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
-            return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
-        }
-        return new DefaultHttpHeadersFactory(validator, valueValidator, combiningHeaders, trailers);
+        return withValidators(validator, valueValidator);
     }
 
     /**
@@ -228,10 +225,20 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (valueValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (!trailers && nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
-            return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
+        return withValidators(nameValidator, validator);
+    }
+
+    private DefaultHttpHeadersFactory withValidators(
+            NameValidator<CharSequence> nameValidator, ValueValidator<CharSequence> valueValidator) {
+        if (valueValidator == DEFAULT_VALUE_VALIDATOR) {
+            if (!trailers && nameValidator == DEFAULT_NAME_VALIDATOR) {
+                return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
+            }
+            if (trailers && !combiningHeaders && nameValidator == DEFAULT_TRAILER_NAME_VALIDATOR) {
+                return DEFAULT_TRAILER;
+            }
         }
-        return new DefaultHttpHeadersFactory(nameValidator, validator, combiningHeaders, trailers);
+        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders, trailers);
     }
 
     /**
