@@ -454,9 +454,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
      */
     void readable() {
         assert eventLoop().inEventLoop();
-        // Mark as readable and if a read is pending execute it.
+        // Mark as readable and if a read is pending execute it. If the channel was closed already, what is left
+        // must be dropped, see QuicStreamChannelUnsafe.recv().
         readable = true;
-        if (readPending) {
+        if (readPending || !active) {
             unsafe().recv();
         }
     }
@@ -576,6 +577,21 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 invokeLater(() -> deregister(voidPromise(), true));
             } else {
                 deregister(voidPromise(), true);
+            }
+            // If we are in recv() already, it drops what is left once the loop is done and the parent flushes after
+            // it processed the received packets.
+            if (readable && !inRecv) {
+                // Drop what is left to read, see recv().
+                recv();
+
+                // As the stream was readable, and we called recv() ourselves we also need to call
+                // connectionSendAndFlush(). This is needed as recv() consumes data and so a window update frame
+                // might be produced. If close() was not triggered while processing received packets (for example
+                // by a timeout or a cancellation from another task) nobody else will send it. If we miss to call
+                // connectionSendAndFlush() the remote peer may not learn about the new credit and so might never
+                // send more data, on this stream or on the connection.
+                // See also https://docs.rs/quiche/latest/quiche/struct.Connection.html#method.send.
+                parent().connectionSendAndFlush();
             }
         }
 
@@ -981,24 +997,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         while (!finReceived && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
                             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-                            QuicheQuicChannel.StreamRecvResult result = parent.streamRecv(streamId(), byteBuf);
-                            switch (result) {
-                                case DONE:
-                                    // Nothing left to read;
-                                    readable = false;
-                                    break;
-                                case FIN:
-                                    // If we received a FIN we also should mark the channel as non-readable as
-                                    // there is nothing left to read really.
-                                    readable = false;
-                                    finReceived = true;
-                                    inputShutdown = true;
-                                    break;
-                                case OK:
-                                    break;
-                                default:
-                                    throw new Error("Unexpected StreamRecvResult: " + result);
-                            }
+                            handleRecvResult(parent.streamRecv(streamId(), byteBuf));
                             allocHandle.lastBytesRead(byteBuf.readableBytes());
                             if (allocHandle.lastBytesRead() <= 0) {
                                 byteBuf.release();
@@ -1040,10 +1039,65 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         handleReadException(pipeline, byteBuf, cause, allocHandle, readFrames);
                     }
                 }
+                if (!active) {
+                    discardInput(allocator, allocHandle);
+                }
             } finally {
                 // About to leave the method lets reset so we can enter it again.
                 inRecv = false;
                 removeStreamFromParent();
+            }
+        }
+
+        private void handleRecvResult(QuicheQuicChannel.StreamRecvResult result) {
+            switch (result) {
+                case DONE:
+                    // Nothing left to read;
+                    readable = false;
+                    break;
+                case FIN:
+                    // If we received a FIN we also should mark the channel as non-readable as
+                    // there is nothing left to read really.
+                    readable = false;
+                    finReceived = true;
+                    inputShutdown = true;
+                    break;
+                case OK:
+                    break;
+                default:
+                    throw new Error("Unexpected StreamRecvResult: " + result);
+            }
+        }
+
+        /**
+         * The channel was closed before the end of the stream was read. Read and drop what is left: as long as quiche
+         * holds the data it keeps its connection flow control credit, and the stream is never completed and collected,
+         * so its stream credit is never returned to the remote peer either.
+         */
+        private void discardInput(DirectIoByteBufAllocator allocator,
+                                  @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle) {
+            QuicheQuicChannel parent = parent();
+            while (readable && !finReceived) {
+                allocHandle.reset(config());
+                ByteBuf byteBuf = allocHandle.allocate(allocator);
+                try {
+                    handleRecvResult(parent.streamRecv(streamId(), byteBuf));
+                } catch (Throwable cause) {
+                    // The stream was reset by the remote peer or the connection was closed, there is nothing left
+                    // to read.
+                    readable = false;
+                    finReceived = true;
+                    inputShutdown = true;
+                    // A ClosedChannelException means the connection was closed or freed already. This is expected
+                    // when the streams are closed as part of closing the connection, and the user is notified about
+                    // the closure of the stream and the connection anyway, so there is no need to fire it. Everything
+                    // else is reported as the data that was dropped is lost.
+                    if (!(cause instanceof ClosedChannelException)) {
+                        pipeline().fireExceptionCaught(cause);
+                    }
+                } finally {
+                    byteBuf.release();
+                }
             }
         }
 
