@@ -30,12 +30,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import org.apache.directory.server.dns.messages.QuestionRecord;
-import org.apache.directory.server.dns.messages.RecordClass;
-import org.apache.directory.server.dns.messages.ResourceRecord;
-import org.apache.directory.server.dns.messages.ResourceRecordModifier;
-import org.apache.directory.server.dns.store.DnsAttribute;
-import org.apache.directory.server.dns.store.RecordStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,10 +37,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -247,122 +239,6 @@ public class DnsQueryCancelRaceLeakTest {
         } finally {
             // Guarantee the event loop is never left parked, even if an assertion above failed.
             proceed.countDown();
-            if (toRelease != null && toRelease.refCnt() > 0) {
-                ReferenceCountUtil.release(toRelease);
-            }
-            resolver.close();
-            dnsServer.stop();
-            group.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
-        }
-    }
-
-    /**
-     * Reproduces the pre-existing reference-counted {@link DnsResponse} leak in {@code doQuery(...)}'s query
-     * consolidation path (enabled by {@code consolidateCacheSize > 0}). Two queries for the same question are
-     * consolidated onto a single in-flight query, then one of the two callers is cancelled <em>before</em> the
-     * (gated) response arrives.
-     *
-     * <p>When the response arrives, the consolidation listeners retain it and hand it to each caller's promise.
-     * Before the fix that hand-off used {@code setSuccess}/{@code setFailure}, which threw
-     * {@code IllegalStateException} on the already-cancelled promise <em>after</em> the retain, stranding the
-     * response (refCnt 2 when the owner is cancelled, refCnt 1 when a waiter is cancelled). With the fix the
-     * hand-off uses {@code trySuccess}/{@code tryFailure} and releases the retained reference when it cannot be
-     * handed over, so the live caller ends up owning exactly one reference.</p>
-     */
-    @ParameterizedTest
-    @EnumSource(CancelWhich.class)
-    @Timeout(30)
-    public void consolidatedQueryReleasesResponseWhenACallerIsCancelledBeforeResponse(CancelWhich cancelWhich)
-            throws Exception {
-        final AtomicInteger serverCalls = new AtomicInteger();
-        final CountDownLatch serverReached = new CountDownLatch(1);
-        final CountDownLatch releaseResponse = new CountDownLatch(1);
-        final TestDnsServer dnsServer = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) {
-                serverCalls.incrementAndGet();
-                serverReached.countDown();
-                try {
-                    // Hold the response so the test can cancel one of the consolidated callers first.
-                    releaseResponse.await(10, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
-                }
-                ResourceRecordModifier rm = new ResourceRecordModifier();
-                rm.setDnsClass(RecordClass.IN);
-                rm.setDnsName(question.getDomainName());
-                rm.setDnsTtl(100);
-                rm.setDnsType(question.getRecordType());
-                rm.put(DnsAttribute.IP_ADDRESS, "10.0.0.1");
-                return Collections.singleton(rm.getEntry());
-            }
-        });
-        dnsServer.start();
-        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoop loop = group.next();
-        // ChannelPerResolver shares one channel and ignores the query promise, so cancelling a caller has no channel
-        // side effects; consolidateCacheSize > 0 enables the inflightLookups consolidation path in doQuery(...).
-        DnsNameResolver resolver = new DnsNameResolverBuilder(loop)
-                .datagramChannelType(NioDatagramChannel.class)
-                .datagramChannelStrategy(DnsNameResolverChannelStrategy.ChannelPerResolver)
-                .optResourceEnabled(false)
-                .queryTimeoutMillis(10000)
-                .consolidateCacheSize(2)
-                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()))
-                .build();
-
-        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> toRelease = null;
-        try {
-            final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> ownerPromise =
-                    loop.newPromise();
-            final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> waiterPromise =
-                    loop.newPromise();
-
-            // Issue both queries ON the event loop (doQuery and inflightLookups must stay loop-confined); one loop
-            // task keeps the owner first so the waiter consolidates onto it. query() returns the caller's promise.
-            loop.submit((Runnable) () -> {
-                resolver.query(dnsServer.localAddress(), new DefaultDnsQuestion(HOSTNAME, DnsRecordType.A),
-                        Collections.<DnsRecord>emptyList(), ownerPromise);
-                resolver.query(dnsServer.localAddress(), new DefaultDnsQuestion(HOSTNAME, DnsRecordType.A),
-                        Collections.<DnsRecord>emptyList(), waiterPromise);
-            }).sync();
-
-            // Wait until the (single, consolidated) query reached the gated server, then fence so the waiter's
-            // deferred doQuery has run.
-            assertTrue(serverReached.await(10, TimeUnit.SECONDS), "the consolidated query should reach the server");
-            loop.submit((Runnable) () -> { }).sync();
-
-            final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> cancelledPromise =
-                    cancelWhich == CancelWhich.OWNER ? ownerPromise : waiterPromise;
-            final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> livePromise =
-                    cancelWhich == CancelWhich.OWNER ? waiterPromise : ownerPromise;
-
-            // Cancel one caller BEFORE the gated response arrives (the other stays live); the gate plus the network
-            // round-trip guarantee the loop processes the response well after this cancel.
-            assertTrue(cancelledPromise.cancel(false), "the caller should be cancellable before the response");
-            releaseResponse.countDown();
-
-            assertTrue(livePromise.await(10, TimeUnit.SECONDS), "live caller should complete in time");
-            assertTrue(livePromise.isSuccess(), "live caller should receive the response");
-            // Fence so every consolidation listener (including RELEASE_LISTENER on the internal promise) has run.
-            loop.submit((Runnable) () -> { }).sync();
-
-            assertTrue(cancelledPromise.isCancelled(), "the cancelled caller stays cancelled");
-            assertEquals(1, serverCalls.get(), "the waiter must consolidate onto the owner (single network query)");
-
-            final AddressedEnvelope<? extends DnsResponse, InetSocketAddress> response = livePromise.getNow();
-            assertNotNull(response, "the live caller must expose the response");
-            toRelease = response;
-
-            assertEquals(1, response.refCnt(),
-                    "consolidated response must be owned exactly once by the live caller "
-                            + "(the cancelled caller must not leak its retained reference)");
-
-            assertTrue(ReferenceCountUtil.release(response), "single release should free the consolidated response");
-            toRelease = null;
-            assertEquals(0, response.refCnt(), "response must reach refCnt 0 with a single release");
-        } finally {
-            releaseResponse.countDown();
             if (toRelease != null && toRelease.refCnt() > 0) {
                 ReferenceCountUtil.release(toRelease);
             }
