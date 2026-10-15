@@ -32,6 +32,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     static final String HTTP_1_0_STRING = "HTTP/1.0";
     static final String HTTP_1_1_STRING = "HTTP/1.1";
+    private static final int MAX_INT_DIV_10 = Integer.MAX_VALUE / 10;
+    private static final int MAX_INT_MOD_10 = Integer.MAX_VALUE % 10;
 
     /**
      * HTTP/1.0
@@ -172,7 +174,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         int result = 0;
         for (int i = start; i < end; i++) {
             int digit = toDecimal(text.charAt(i));
-            if (result > (Integer.MAX_VALUE - digit) / 10) {
+            if (result > MAX_INT_DIV_10 || result == MAX_INT_DIV_10 && digit > MAX_INT_MOD_10) {
                 throw new IllegalArgumentException("Invalid version number, too large: " + text);
             }
             result = result * 10 + digit;
